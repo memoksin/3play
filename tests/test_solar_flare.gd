@@ -74,6 +74,7 @@ func _run() -> void:
 	await process_frame
 	fit.time_scale = 0.0
 	_check("scene: no start art, no snow", fit._snow == null and fit._zones[&"surface"].art == null)
+	_check("scene: animated backdrop behind the zones", fit._bg != null and fit._bg.get_index() < fit._world.get_index())
 	_check("scene: badge text from skin", fit._zones[&"bunker"].badge_label.text == tr("SF_FIT_LIFE_NO"))
 	_check("scene: clock starts 13:52", fit._clock.text == "13:52")
 	fit.seek(19.9)
@@ -82,6 +83,7 @@ func _run() -> void:
 	fit.seek(42.0)
 	_check("scene: radio warning 2", fit._toast.get_node("Label").text == tr("SF_FIT_RADIO_2"))
 	_check("scene: warnings do not shake", fit._shake_left == 0.0)
+	_check("scene: backdrop follows the minigame clock", absi(fit._bg.frame - int(42.0 * fit._bg.FPS)) <= 1)
 	fit.seek(75.1)
 	_check("scene: locked at impact", fit.locked)
 	_check("scene: flash rising, no shake", fit._flare.visible and fit._shake_left == 0.0)
@@ -95,10 +97,52 @@ func _run() -> void:
 	root.remove_child(fit)
 	fit.free()
 
-	# Kahramanmaras keeps the old look
+	await _backdrop()
+
+	# Kahramanmaras keeps a static backdrop
 	var k: FitSkin = load("res://data/skins/kahramanmaras_fit.tres")
+	_check("kahr: static backdrop, not animated", k.background_scene == null and k.background != null)
 	_check("kahr defaults: building art, collapse, snow, old colours",
 			k.start_art == FitSkin.StartArt.BUILDING and k.ending == FitSkin.Ending.COLLAPSE and k.snow
 			and k.sky_color == Color("323353") and k.snow_color == Color("c7dcd0") and k.show_warmth)
 	print("test_solar_flare ok" if ok else "test_solar_flare FAIL")
 	quit(0 if ok else 1)
+
+
+## Animated backdrop: damage is a pure function of time, grows toward impact, beams spare the shuttle.
+func _backdrop() -> void:
+	var scene: PackedScene = skin.background_scene
+	_check("backdrop: skin has a background scene", scene != null)
+	var a: Control = scene.instantiate()
+	var b: Control = scene.instantiate()
+	root.add_child(a)
+	root.add_child(b)
+	await process_frame
+	for i in 760:  # step by step, like real play (15 fps)
+		a.set_time(i / 15.0)
+	b.set_time(30.0)  # jump, like seek()
+	b.set_time(50.6)
+	var same: bool = a.damage_count(50.6) == b.damage_count(50.6) and a._scorch_img.get_data() == b._scorch_img.get_data()
+	for i in a.Data.BUILDINGS.size():
+		same = same and is_equal_approx(a.burn(i, 50.6), b.burn(i, 50.6))
+	_check("backdrop: same picture stepped or seeked", same and a.frame == b.frame)
+	var early: Vector2i = a.damage_count(15.0)
+	var late: Vector2i = a.damage_count(74.0)
+	_check("backdrop: scorch and fires build up", late.x > early.x * 3 and late.y > early.y + 10)
+	var broken := 0
+	for i in a.Data.BUILDINGS.size():
+		if a.cut_rows(i, a.burn(i, 74.0)) > 0.0:
+			broken += 1
+	_check("backdrop: skyline breaks (%d buildings)" % broken, broken >= 8 and a.cut_rows(0, a.burn(0, 5.0)) == 0.0)
+	_check("backdrop: beams intensify", a.level(70.0) > a.level(10.0) * 3.0 and a._beam_width(0, 70.0, a.level(70.0)) > a._beam_width(0, 10.0, a.level(10.0)))
+	var clear := true
+	for s in 760:
+		for i in a.BEAMS.size():
+			var tg: Vector2 = a.target(i, s * 0.1)
+			var o: Vector2 = a.origin(tg)
+			var x_at_nose: float = o.x + (tg.x - o.x) * (90.0 - o.y) / (tg.y - o.y)
+			clear = clear and tg.x <= 160.0 and tg.y > a.Data.HORIZON and x_at_nose < 210.0
+	_check("backdrop: beams strike the ground left of the shuttle", clear)
+	a.free()
+	b.free()
+

@@ -44,6 +44,12 @@ func _run() -> void:
 	print("start min clicks: ", ConnectLogic.min_clicks(s.skin, s.rots))
 	await _shot("connect_start")
 
+	# ambient bay: clouds, palms, smoke, birds, glints, boat at two moments
+	s.seek(14.0)
+	await _shot("connect_amb_a")
+	s.seek(41.0)
+	await _shot("connect_amb_b")
+
 	# mid: half the pipes fixed, sea rising, hovering a pipe
 	var solved := ConnectLogic.solved_rotations(s.skin)
 	for i in s.rots.size():
@@ -56,8 +62,10 @@ func _run() -> void:
 	s._hover = Vector2i(-1, -1)
 	s.locked = false
 
-	s.seek(60.2)
+	s.seek(60.6)
 	await _shot("connect_hit")
+	s.seek(61.5)
+	await _shot("connect_break")
 
 	# flow: line 4 left broken, water running
 	s.solve()

@@ -1,11 +1,12 @@
 ; PLACEHOLDER CONTENT for burcubaran22 (#17): names, roles, labels and texts (SF_* keys in locale/strings.csv) are drafts to rewrite.
-[gd_resource type="Resource" script_class="FitSkin" load_steps=27 format=3]
+[gd_resource type="Resource" script_class="FitSkin" load_steps=28 format=3]
 
 [ext_resource type="Script" path="res://scripts/fit_skin.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/fit_zone.gd" id="2"]
 [ext_resource type="Script" path="res://scripts/fit_item_type.gd" id="3"]
 [ext_resource type="Script" path="res://scripts/fit_item.gd" id="4"]
 [ext_resource type="Texture2D" path="res://assets/sprites/solar_flare/sf_bg.png" id="bg"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/solar_flare/sf_background.tscn" id="bg_scene"]
 
 [sub_resource type="Resource" id="zone_surface"]
 script = ExtResource("2")
@@ -164,5 +165,6 @@ ending = 1
 snow = false
 sky_color = Color(0.36, 0.17, 0.12, 1)
 background = ExtResource("bg")
+background_scene = ExtResource("bg_scene")
 warm_key = "SF_FIT_LIFE_OK"
 cold_key = "SF_FIT_LIFE_NO"

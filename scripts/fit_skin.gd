@@ -34,6 +34,8 @@ enum Ending { COLLAPSE, FLARE }
 @export var sky_color := Color("323353")
 ## Optional full-screen backdrop drawn behind the zones. Null = flat sky_color fill.
 @export var background: Texture2D
+## Optional animated backdrop (a Control with set_time(seconds)); replaces `background` when set.
+@export var background_scene: PackedScene
 @export var snow_color := Color("c7dcd0")
 ## Warm/cold badge on every zone. warm_key/cold_key override its text (empty = FIT_WARM/FIT_COLD).
 @export var show_warmth := true

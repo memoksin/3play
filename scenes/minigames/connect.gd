@@ -14,6 +14,7 @@ const VILLAGE: Texture2D = preload("res://assets/sprites/indian_ocean/side/side_
 const WAVE: Texture2D = preload("res://assets/sprites/indian_ocean/side/side_tsunami.png")
 const FLOOD: Texture2D = preload("res://assets/sprites/indian_ocean/side/side_flood.png")
 const BG: Texture2D = preload("res://assets/sprites/indian_ocean/side/side_bg.png")
+const AMBIENT: Texture2D = preload("res://assets/sprites/indian_ocean/side/side_ambient.png")
 
 const UP := 4.0
 const TILE := 64.0
@@ -31,10 +32,31 @@ const WAVE_SIZE := 96
 const FLOOD_WIDTH := 150
 const ROCK_ORDER: Array[int] = [0, 1, 2, 0, 2, 1]
 
+## Ambient bay motion (sheet layout: tools/sprites/indian_ocean/side/ambient.py). Calm until
+## AMBIENT_FADE s before the hit, then it slows to a stop and fades so the wave reads clearly.
+const AMBIENT_FADE := 6.0
+const CLOUD_BAKED: Array[Vector3i] = [Vector3i(18, 10, 28), Vector3i(84, 24, 20), Vector3i(200, 8, 30), Vector3i(276, 26, 22)]
+const CLOUD_SHEET_X: Array[int] = [0, 30, 52, 84]
+const CLOUD_SPEED: Array[float] = [0.45, 0.3, 0.55, 0.35]  # logical px per second
+const PALM_RECT := Rect2i(134, 34, 46, 34)
+const PALM_PERIOD := 3.2
+const CHIMNEYS: Array[Vector2i] = [Vector2i(180, 48), Vector2i(214, 50), Vector2i(295, 49)]
+const SMOKE_LIFE := 3.6
+const SMOKE_PUFFS := 3
+## Bird flocks: start time, y, x speed (negative: flies left), flock size.
+const FLOCKS: Array[Vector4] = [Vector4(8.0, 26.0, 9.0, 3.0), Vector4(30.0, 15.0, -7.0, 2.0)]
+const GLINTS := 12
+const GLINT_X := 106
+const BOAT_START := 10.0
+const BOAT_SPEED := 2.0
+
 const TURN_DUR := 0.1
 ## Seconds before the hit that the wave comes into view.
 const WAVE_LEAD := 15.0
-const WAVE_BREAK_DUR := 1.0
+const WAVE_BREAK_DUR := 1.8  # the wave crosses the bay and breaks on the beach
+const WAVE_FRONT_X := 58.0  # logical x of the sprite at the break: crest lands on the beach
+const SURGE_RISE := 9  # logical px the sea surges up behind the wave
+const SURGE_REACH := 178  # logical x the surge runs up to (the beach, short of the villages)
 ## After the hit: pause, then water flows tile by tile.
 const FLOW_DELAY := 0.6
 const FLOW_STEP := 0.3
@@ -279,10 +301,12 @@ func _bob() -> float:
 func _draw() -> void:
 	draw_texture_rect(BG, Rect2(0, 0, 1280, 720), false)
 	var level := roundi(_sea_level() + _bob())
-	_draw_flood(level)
+	_draw_ambient_sky()
+	_draw_flood(level - _surge_rise(), _surge_width())
 	var line_col := Palette.DANGER if _red and not _hit else Palette.WHITE
 	line_col.a = 0.55
 	draw_rect(Rect2(0, _px(level - 5), _px(FLOOD_WIDTH), 2.0), line_col)
+	_draw_ambient_sea(level)
 	_draw_wave(level)
 	_draw_grid()
 	_draw_villages()
@@ -293,11 +317,101 @@ func _px(v: float) -> float:
 	return v * UP
 
 
-func _draw_flood(level: int) -> void:
+# --- ambient bay ---------------------------------------------------------------
+# Everything below is a pure function of `elapsed`, snapped to whole logical px, so seek() just works.
+
+## 1 while calm, 0 from the hit; drives alpha and sway size.
+func _amb_k() -> float:
+	if _hit:
+		return 0.0
+	return clampf((skin.timer_seconds - elapsed) / AMBIENT_FADE, 0.0, 1.0)
+
+
+## Ambient clock: runs with game time, then eases to a stop over the fade (so clouds and the boat do not jump).
+func _amb_clock() -> float:
+	var a := skin.timer_seconds - AMBIENT_FADE
+	if elapsed <= a:
+		return elapsed
+	var u := clampf((elapsed - a) / AMBIENT_FADE, 0.0, 1.0)
+	return a + AMBIENT_FADE * (u - u * u / 2.0)
+
+
+func _amb(sx: int, sy: int, w: int, h: int, dx: int, dy: int, a := 1.0) -> void:
+	draw_texture_rect_region(AMBIENT, Rect2(_px(dx), _px(dy), _px(w), _px(h)),
+		Rect2(_px(sx), _px(sy), _px(w), _px(h)), Color(1, 1, 1, a))
+
+
+## Deterministic 0..1 noise from two ints.
+func _noise(a: int, b: int) -> float:
+	var h := (a * 73856093) ^ (b * 19349663)
+	h = (h ^ (h >> 13)) * 1274126177
+	h = h ^ (h >> 16)
+	return float(h & 0xffff) / 65535.0
+
+
+func _draw_ambient_sky() -> void:
+	var ph := _amb_clock()
+	var k := _amb_k()
+	for i in CLOUD_BAKED.size():  # clean sky over the baked clouds, then the drifting ones
+		var c := CLOUD_BAKED[i]
+		_amb(CLOUD_SHEET_X[i], 6, c.z, 5, c.x, c.y)
+	for i in CLOUD_BAKED.size():
+		var c := CLOUD_BAKED[i]
+		var x := posmod(c.x + floori(ph * CLOUD_SPEED[i]) + c.z, 320 + 2 * c.z) - c.z
+		_amb(CLOUD_SHEET_X[i], 0, c.z, 5, x, c.y)
+	var o1 := roundi(k * sin(ph * TAU / PALM_PERIOD))  # palm crowns lean a pixel; the sheet holds the 3x3 poses
+	var o2 := roundi(k * sin(ph * TAU / PALM_PERIOD + 1.7))
+	if o1 != 0 or o2 != 0:
+		_amb(PALM_RECT.size.x * ((o1 + 1) * 3 + o2 + 1), 44, PALM_RECT.size.x, PALM_RECT.size.y, PALM_RECT.position.x, PALM_RECT.position.y)
+	for c in CHIMNEYS:
+		_amb(44, 12, 3, 5, c.x, c.y)
+	if k <= 0.0:
+		return
+	for ci in CHIMNEYS.size():
+		for n in SMOKE_PUFFS:
+			var u := fposmod(ph / SMOKE_LIFE + float(n) / SMOKE_PUFFS + ci * 0.37, 1.0)
+			var px := CHIMNEYS[ci].x + 1 + roundi(u * 6.0 + sin(u * TAU + ci))
+			var py := CHIMNEYS[ci].y - 2 - roundi(u * 14.0)
+			_amb(mini(3, int(u * 4.0)) * 6, 18, 6, 6, px - 3, py - 3, k * minf(1.0, (1.0 - u) * 2.5) * 0.9)
+	for fl in FLOCKS:
+		var t := ph - fl.x
+		if t < 0.0:
+			continue
+		for b in int(fl.w):
+			var x0 := (-10.0 if fl.z > 0.0 else 330.0) + fl.z * t - signf(fl.z) * b * 11.0
+			var bx := roundi(x0)
+			if bx < -10 or bx > 330:
+				continue
+			var by := roundi(fl.y + b * 3 % 5 + 1.5 * sin(ph * 1.7 + b))
+			_amb(([0, 1, 2, 1][int(ph * 6.0 + b) % 4]) * 9, 12, 8, 4, bx, by, k)
+
+
+func _draw_ambient_sea(level: int) -> void:
+	var ph := _amb_clock()
+	var k := _amb_k()
+	if ph > BOAT_START and not _hit:  # the wave takes it
+		var x := -20 + floori((ph - BOAT_START) * BOAT_SPEED)
+		if x < FLOOD_WIDTH:
+			_amb([0, 1, 0, 2][int(ph * 1.3) % 4] * 20, 26, 20, 16, x, level - 11)
+	if k <= 0.0:
+		return
+	for i in GLINTS:  # a sparkle every few seconds per slot, at a new spot each time
+		var period := 2.4 + (i % 5) * 0.35
+		var t := ph + i * 0.83
+		var n := floori(t / period)
+		var local := fposmod(t, period)
+		if local >= 0.6:
+			continue
+		var gx := 3 + int(_noise(i, n) * (GLINT_X - 3))
+		var r := _noise(n, i + 99)
+		_amb(30 + int(local / 0.2) * 4, 12, 4, 1, gx, level + 2 + int(r * r * 10.0), k)
+
+
+func _draw_flood(level: int, width := FLOOD_WIDTH) -> void:
 	var y0 := level - 5
 	var y_end := SEA_Y + 3
 	var frame := _water_frame() % 4
-	for x in FLOOD_WIDTH:
+	for x in width:
 		var top := y0 + ceili(maxf(x - 112, 0) * 0.45)
 		var sx := (x % 16) * 4.0
 		var ty := y0
@@ -324,10 +438,10 @@ func _draw_wave(level: int) -> void:
 		var e := p * p * (3.0 - 2.0 * p)
 		wx = lerpf(-90.0, -4.0, e)
 	elif _hit and t < WAVE_BREAK_DUR:
-		k = 5
 		var q := t / WAVE_BREAK_DUR
-		wx = lerpf(-4.0, 60.0, q * q)
-		big = 1.0 + 0.5 * q
+		k = 3 + mini(2, int(q * 3.0))  # crest, curl, break
+		wx = lerpf(-4.0, WAVE_FRONT_X, 1.0 - (1.0 - q) * (1.0 - q))
+		big = 1.0 + 0.3 * q
 	if k < 0:
 		return
 	var sz := WAVE_SIZE * big
@@ -438,3 +552,21 @@ func _draw_hover(rect: Rect2) -> void:
 		var sy := 1.0 if corner.y == 0.0 else -1.0
 		draw_rect(Rect2(p, Vector2(arm * sx, px)).abs(), col)
 		draw_rect(Rect2(p, Vector2(px, arm * sy)).abs(), col)
+
+
+## 0..1 surge of the sea behind the wave: up while it crosses, back down as the water drains.
+func _surge() -> float:
+	if not _hit:
+		return 0.0
+	var t := _hit_t()
+	var up := clampf(t / WAVE_BREAK_DUR, 0.0, 1.0)
+	var down := clampf((t - _drain_start()) / DRAIN, 0.0, 1.0)
+	return up * up * (3.0 - 2.0 * up) * (1.0 - down)
+
+
+func _surge_rise() -> int:
+	return roundi(SURGE_RISE * _surge())
+
+
+func _surge_width() -> int:
+	return roundi(lerpf(FLOOD_WIDTH, SURGE_REACH, _surge()))
