@@ -1,18 +1,13 @@
 extends Control
 
-var _done := false
+const INTRO := preload("res://scenes/ui/intro_text.tscn")
 
 
 func _ready() -> void:
 	Game.ensure_disaster(&"citizen")
 	var d := Game.disaster
-	var box := PlaceholderUI.build(self, [d.text("PLACE"), d.text("YEAR"), d.text("INTRO_1"), d.text("INTRO_2")])
-	PlaceholderUI.button(box, "Next", _advance)
-	get_tree().create_timer(2.0).timeout.connect(_advance)
-
-
-func _advance() -> void:
-	if _done or not is_inside_tree():
-		return
-	_done = true
-	Game.next()
+	var intro: IntroText = INTRO.instantiate()
+	intro.auto_advance = 4.0
+	add_child(intro)
+	intro.show_text(d.text("PLACE"), d.text("YEAR"), [d.text("INTRO_1"), d.text("INTRO_2")])
+	intro.done.connect(Game.next)
