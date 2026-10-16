@@ -1,80 +1,67 @@
-# Spec: Fit minigame, Kahramanmaras (DRAFT)
+# Fit minigame: Kahramanmaras (Citizen)
 
-Mechanic: **Fit** (drag items into limited space before the timer ends). Skin: Kahramanmaras, Turkey, 6 Feb 2023. Role: Citizen.
-Status: draft for burcubaran22 to review. Items marked `VERIFY` need a source check before they reach the result card.
+Mechanic: Fit (`minigames/fit`). Design: `docs/design.md`. Issue #15.
 
-## Story beat
+Approved prototype (HTML, reference for feel + numbers): https://claude.ai/artifact/TjbftKKFP1PgAMNf92BFWf
 
-The 04:17 quake (Mw 7.8) just hit. The player is a parent in a damaged but standing flat. It is morning, the shaking has stopped. The task looks harmless: **tidy the hallway and put things back into the cupboard.**
-The player does not know a second big quake (Mw 7.5, Elbistan) hits at **13:24**. Whatever is in the cupboard is what the family will have to grab.
+## Real event
+
+- 6 Feb 2023, 04:17: Mw 7.8 Pazarcik quake.
+- 13:24 same day: Mw 7.5 Elbistan quake (USGS), ~9 h later.
+- Snow, below zero. Many people went back into damaged buildings for warmth or belongings, and died in the second quake.
+- Lesson: after a big quake, stay out of damaged buildings. A second big quake can come.
 
 ## What the player sees
 
-- Fixed side view of the hallway, 320x180 logical px (see `docs/design.md` pixel rules).
-- Left: pile of fallen items on the floor. Right: the **cupboard**, a grid of **4x4 tiles** (16 px each). This is the limited space.
-- Top: timer bar. Family of 5 standing in the doorway (parent, grandmother, teen, child, baby).
-- Prompt text (one line, `tr()` key): "Clear the hallway before they come back."
-- Nothing says "emergency kit" or "earthquake prep".
+- Time: morning after the 04:17 quake. Place: in front of a cracked apartment block, snow.
+- Player is a family member. Neighbors and family stand around.
+- Task text (the harmless framing): "Keep everyone warm and comfortable until help arrives."
+- Nothing says "second quake". The real goal is hidden.
 
-## Controls
+## Zones
 
-Drag an item onto the cupboard grid. It snaps to tiles, no rotation, no overlap. Drag back out to remove. Mouse only.
-
-## Items (pile has 14, cupboard fits 16 tiles, about 6 items)
-
-Size is tiles (w x h). Prep value is hidden from the player.
-
-| Item | Size | Hidden role |
+| Zone | Slots | Warm |
 |---|---|---|
-| Water bottles | 1x2 | Needed by everyone |
-| Flashlight | 1x1 | Needed by parent |
-| Phone + power bank | 1x1 | Needed by parent |
-| Documents folder (ID, deeds) | 2x1 | Needed by parent |
-| First aid kit | 2x1 | Needed by grandmother |
-| Warm blankets | 2x2 | Needed by baby |
-| Winter coat + shoes | 2x2 | Needed by teen and child |
-| Baby formula + diapers | 2x1 | Needed by baby |
-| Medicine box (grandmother) | 1x1 | Needed by grandmother |
-| Toys box | 2x2 | Decoy |
-| Photo albums | 2x1 | Decoy |
-| Decorative vase | 1x2 | Decoy |
-| Board games | 2x1 | Decoy |
-| Slippers pile | 2x1 | Decoy (looks like shoes) |
+| Building (cracked) | unlimited | yes |
+| Car | 4 | yes |
+| Tent / open area | 6 | only with a stove, or 2+ blankets inside |
 
-Useful items add up to 19 tiles and the cupboard has 16, so the player must choose. Decoys are emotionally tempting on purpose.
+## Items
 
-## Hidden scoring at 13:24
+| Item | Count | Slots each | Role |
+|---|---|---|---|
+| Person | 8 | 1 | scored |
+| Stove | 1 | 2 | warms tent |
+| Blanket | 3 | 1 | 2 in tent = warm |
+| Water | 1 | 1 | distractor (Tier 1) |
+| Medicine | 1 | 1 | distractor (Tier 1) |
 
-When the timer ends, show a short cut: clock 13:24, screen shake. Then score.
-
-1. Each family member has a **need list** (table above).
-2. A member is **safe** if every item on their list is in the cupboard. Water counts for all members and is only required once.
-3. Score = `safe members / 5`, shown as "X/5 safe".
-4. Optional tie-break for a nicer card: a member with half their list gets "injured" in the card text, not counted as safe.
-
-Time over before the player stops dragging = whatever is in the cupboard now counts. No penalty for empty tiles.
+- Start: everything is in the Building. Doing nothing = everyone stays inside.
+- Drag any item between any zones, back into the Building too.
+- Drop on a full zone = rejected, item snaps back.
+- 8/8 warm is possible: Car 4 people; Tent 4 people + 2 blankets (or 4 people + stove).
 
 ## Timer
 
-**75 s** (inside the 60-90 s budget). Tunable in the disaster `.tres` file. The bar turns red in the last 15 s.
+- 75 s real time.
+- HUD clock runs 05:00 -> 13:24 (~400x). No countdown bar.
+- Aftershock hints at ~25 s and ~50 s: 0.5 s screen shake, building crack grows, text "The building creaks...". Nothing is lost.
+- At 13:24: Elbistan quake hits without warning. Building collapses.
 
-## Result card text (draft)
+## Scoring at 13:24
 
-- Line 1: "X/5 safe" and the 13:24 time.
-- Line 2: real fact. Two major quakes hit within 9 hours; many buildings that survived the first collapsed in the second. `VERIFY` numbers and source before use.
-- Line 3: what would have helped: a packed emergency bag by the door, and leaving damaged buildings after the first shock.
-- Closing line: "life has dimensions we cannot see".
+- Person in Building = not saved.
+- Person outside = saved (counts in X). Y = 8.
+- Person outside in a cold zone = still saved, but counted as "N people left in the cold".
+- Result card: "X/8 safe", "N people left in the cold" (if N > 0), real-event fact (second quake 9 h later), one line: never go back into a damaged building.
+- Tier 1: result card also gets one line warning that a stove in a closed car/tent can cause CO poisoning.
 
-## Data for the `.tres` (so no code change per skin)
+## Tier 2
 
-Cupboard size, timer, family list, item list (id, size, sprite, need ids, decoy flag), prompt text key, result text keys, real-number fields with source.
+- CO rule: stove in Car = everyone in Car not saved.
+- Water/medicine get a use.
+- Grid shapes instead of slot counts (only if time).
 
-## Art needs (for sudeimete, issue #10)
+## Data (`.tres` skin)
 
-Hallway background, cupboard grid, 14 item sprites (16 px tiles), 5 family characters (32 px), pile on floor, 13:24 clock cut.
-
-## Open points for Burcu
-
-- Is "family of 5 and 14 items" the right size for 75 s? Play it on paper first.
-- Confirm real figures and source for the result card (17).
-- Does the story fit the tone you want (serious, respectful, no gore)?
+Zones (name, slots, warm rule), items (name, count, slots, sprite), start zone, clock start/end, timer seconds, aftershock times, result texts. Solar flare reuses the same shape with seats.
