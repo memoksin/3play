@@ -67,7 +67,11 @@ Spec for role select, HUD timer, result card. Scenes are built in #14. Mockups b
 ![hud timer](ui/hud_timer.png)
 
 - `HudPanel`, anchored top-left, 16 px margin. `HUD_TIME` (MutedLabel) + `m:ss` (TimerLabel) on one row, `TimerBar` 240x16 below.
-- > 30 s: SAFE number and bar. 10-30 s: WARN. < 10 s: DANGER (optional: blink every 0.5 s).
+- > 30 s: SAFE number and bar. 10-30 s: WARN. < 10 s: DANGER, number blinks every 0.5 s.
+- Use in a minigame: instance `scenes/ui/hud_timer.tscn`, connect `timeout`, then call `Game.finish_minigame(...)` from your handler.
+  - `start_countdown(seconds)`: `m:ss` + bar (Connect).
+  - `start_clock(seconds, "05:00", "13:24")`: time of day, no caption or bar, neutral color (Fit).
+  - `pause()` / `resume()`, `time_left`. The widget owns the time; `timeout` fires once.
 
 ## Result card (`scenes/result.tscn`)
 
