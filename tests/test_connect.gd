@@ -197,6 +197,20 @@ func _scene() -> void:
 	s.queue_free()
 	await process_frame
 
+	# juice: shake during the hit, none after; hover cursor; turn tween clears
+	s = _new_scene()
+	await process_frame
+	s.time_scale = 0.0
+	s.submit = false
+	s.solve()
+	s.rotate_cell(0, 0, true)
+	s.seek(60.1)
+	_check("juice: shake offsets the scene", s.position != Vector2.ZERO)
+	s.seek(63.0)
+	_check("juice: shake settled", s.position == Vector2.ZERO and s._turning.is_empty())
+	s.queue_free()
+	await process_frame
+
 	# one broken line -> 3/4
 	s = _new_scene()
 	await process_frame

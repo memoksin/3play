@@ -82,11 +82,11 @@ func _leave_globe(role: StringName, space: bool) -> void:
 func _run() -> void:
 	_check_sun_fixed()
 	var game := root.get_node("Game")
+	game.store_path = ""  # never touch the real play counts
 	for role in [&"citizen", &"state"]:
 		for win in [true, false]:
 			game.start(role)
-			var want := "kahramanmaras" if role == &"citizen" else "indian_ocean"
-			_check("%s disaster" % role, game.disaster.id == want)
+			_check("%s disaster is from its pool" % role, game.disaster.role == role)
 			await _at(&"globe", role)
 			await _leave_globe(role, win)
 			await _at(&"diorama", role)

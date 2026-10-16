@@ -3,9 +3,12 @@ extends SceneTree
 ## Run windowed (needs a real renderer): godot --path . -s res://tools/globe/shots.gd
 ## Exits 1 on any failure and always quits after MAX_FRAMES, even if a coroutine dies.
 
-const DISASTERS := ["res://data/disasters/indian_ocean.tres", "res://data/disasters/kahramanmaras.tres"]
+const DISASTERS := ["res://data/disasters/indian_ocean.tres", "res://data/disasters/kahramanmaras.tres",
+		"res://data/disasters/solar_flare.tres"]
 ## -1 = idle, waiting for the flick (hint shown); others are timeline seconds after a flick.
 const TIMES := [-1.0, 1.0, 5.5, 7.4]
+## Glitch runs (solar flare): before, hiccup, meltdown, swap flash, tearing into 3026, future spin, lock, zoom.
+const GLITCH_TIMES := [-1.0, 1.0, 1.2, 1.6, 1.78, 2.05, 3.0, 5.5, 7.4]
 const FLICK := 12.0
 const OUT := "res://export/shots"
 const SETTLE_FRAMES := 6
@@ -51,7 +54,7 @@ func _run() -> void:
 		if d == null:
 			_fail("cannot load " + path)
 			return
-		for time in TIMES:
+		for time in (GLITCH_TIMES if d.glitch else TIMES):
 			game.disaster = d
 			var globe := packed.instantiate()
 			globe.paused = true

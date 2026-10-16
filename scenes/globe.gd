@@ -32,6 +32,20 @@ const FLICK_MAX := 30.0
 const FRICTION := 1.6
 const IDLE_DRIFT := 0.02
 const FLICK_WINDOW := 0.1
+## Glitch run (Disaster.glitch, the year-3026 easter egg): the rewind tears GLITCH_AT s after the launch,
+## for GLITCH_LEN s. GLITCH_SWAP s into it the timeline flips: a negative flash, the spin reverses, the
+## counter settles back on NOW and then races forward to the disaster year. GLITCH_RATE: reshuffles per s.
+const GLITCH_AT := 1.15
+const GLITCH_LEN := 1.35
+const GLITCH_SWAP := 0.62
+const GLITCH_RATE := 30.0
+## Years the counter rewinds toward before it tears.
+const GLITCH_PAST := 1000
+## Orbital ring, fixed in world space (the Earth turns inside it): main band radius, tilt toward the
+## camera and roll on screen (rad).
+const RING_R := 1.545
+const RING_PITCH := 0.2
+const RING_ROLL := -0.32
 
 const RED := Color("#ff5a3c")
 const BLUE := Color("#9fd8ff")
@@ -61,9 +75,27 @@ var _from_y := 0.0
 var _to_y := 0.0
 var _from_pitch := START_PITCH
 var _to_pitch := 0.0
+## Glitch run: the year the timeline jumps to (-1 = normal run), when the tear starts (s after launch),
+## and the post-swap spin that turns the Earth back the other way onto the target.
 var _glitch_year := -1
+var _glitch_at := GLITCH_AT
+var _rev_from := 0.0
+var _rev_to := 0.0
+var _tear_seed := 0.0
+var _tear_amount := 0.0
+var _tear_flash := 0.0
+var _ring: MeshInstance3D
+var _flare: ColorRect
+var _tear: ColorRect
+var _fov := 32.0
+var _year_pos := Vector2.ZERO
+## Glitch run state (read by tests): true while the timeline tears; 0 = present Earth, 1 = year 3026.
+var glitching := false
+var future := 0.0
 var _done := false
 var _target_local := Vector3.ZERO
+## False when the disaster has no detail patch (assets/globe/patch_<id>.jpg): patch_on stays 0.
+var _has_patch := false
 var _font_bold: FontVariation
 var _font_mono: Font
 var _prev_msaa := Viewport.MSAA_DISABLED
@@ -114,6 +146,8 @@ func _ready() -> void:
 	_stars.mesh = _make_stars()
 	_axial.rotation.z = -AXIAL_TILT
 	_setup_labels()
+	_fov = _cam.fov
+	_year_pos = _year.position
 	_hint.label_settings = _label_settings(FONT_SIZE.skip, WHITE, 0.14, false)
 	_overlay.draw.connect(_draw_hud)
 	_start()
@@ -132,11 +166,15 @@ func seek(time: float) -> void:
 	_pose()
 
 
-## Stub: jump the counter to `year` and freeze it there, tinted red.
+## Arm the timeline glitch for this run: the rewind tears and lands on `year` (Disaster.glitch runs arm it
+## on start). Armed after the launch, it fires now, or at GLITCH_AT if that is still ahead.
 func glitch_to(year: int) -> void:
 	_glitch_year = year
-	_year.text = str(year)
-	_year.label_settings.font_color = RED
+	_glitch_at = maxf(GLITCH_AT, t) if launched else GLITCH_AT
+	_build_future()
+	if launched:
+		_arm_reverse()
+	_pose()
 
 
 ## Debug: release a drag at `speed` rad/s of spin (+ = rightward). Launches at |speed| >= FLICK_MIN.
@@ -169,6 +207,8 @@ func _start() -> void:
 	_spin_vel = IDLE_DRIFT
 	_skip.text = "SPACE · SKIP"
 	_cam.position.z = CAM_FAR
+	if _disaster.glitch:
+		glitch_to(_disaster.year)
 	_pose()
 
 
@@ -195,6 +235,8 @@ func _launch(speed: float) -> void:
 		_ease_a = 3.0 - speed * SPIN / (_to_y - _from_y)
 	_skip.text = "CLICK / SPACE · SKIP"
 	t = 0.0
+	if _glitch_year >= 0:
+		_arm_reverse()
 
 
 func _process(delta: float) -> void:
@@ -221,7 +263,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			and event.keycode == KEY_SPACE
 	if (space or (click and launched)) and t < SPIN + LOCK:
 		get_viewport().set_input_as_handled()
-		seek(SPIN + LOCK)
+		# A glitch run's skip runs into the tear: the jump to the future can't be skipped past
+		seek(_glitch_at if _glitch_year >= 0 and (not launched or t < _glitch_at) else SPIN + LOCK)
 		return
 	if launched:
 		return
@@ -273,15 +316,17 @@ func _release(speed: float) -> void:
 func _pose() -> void:
 	var e := _spin_ease(_clamp01(t / SPIN))
 	if launched:
-		_earth.rotation.y = lerpf(_from_y, _to_y, e)
+		_earth.rotation.y = _spin_y(t)
 	_pitch.rotation.x = lerpf(_from_pitch, _to_pitch, _in_out(_clamp01(t / SPIN)))
 	if _glitch_year < 0:
 		_year.text = str(roundi(NOW + (_disaster.year - NOW) * e))
 	_cam.position.z = lerpf(CAM_FAR, CAM_NEAR, _in_out(_clamp01((t - SPIN - LOCK) / ZOOM)))
+	if _glitch_year >= 0:
+		_pose_glitch(e)
 	_pose_clouds()
 	# The detail patch only matters up close; keep it off during the fast spin
 	(_earth.get_surface_override_material(0) as ShaderMaterial).set_shader_parameter(
-			&"patch_on", _clamp01((t - SPIN + 0.5) / 0.5))
+			&"patch_on", _clamp01((t - SPIN + 0.5) / 0.5) if _has_patch else 0.0)
 	_update_sun()
 
 
@@ -291,6 +336,224 @@ func _update_sun() -> void:
 	(_earth.get_surface_override_material(0) as ShaderMaterial).set_shader_parameter(&"sun_dir", sun)
 	(_atmo.get_surface_override_material(0) as ShaderMaterial).set_shader_parameter(&"sun_dir", sun)
 	(_clouds.get_surface_override_material(0) as ShaderMaterial).set_shader_parameter(&"sun_dir", sun)
+	_update_future()
+
+
+## Spin angle at timeline `time`. Glitch run: after the swap the Earth turns back the other way.
+func _spin_y(time: float) -> float:
+	var ts := _glitch_at + GLITCH_SWAP
+	if _glitch_year < 0 or time < ts or ts >= SPIN:
+		return lerpf(_from_y, _to_y, _spin_ease(_clamp01(time / SPIN)))
+	return lerpf(_rev_from, _rev_to, _out_cubic(_clamp01((time - ts) / (SPIN - ts))))
+
+
+## Post-swap spin: from where the swap catches the Earth, back the other way at about the speed it had,
+## landing on the target (a whole number of turns away) at SPIN.
+func _arm_reverse() -> void:
+	var ts := _glitch_at + GLITCH_SWAP
+	if ts >= SPIN:
+		return
+	var x := ts / SPIN
+	_rev_from = lerpf(_from_y, _to_y, _spin_ease(x))
+	var dir := signf(_to_y - _from_y)
+	var v := absf(_to_y - _from_y) * (_spin_ease(x + 1e-3) - _spin_ease(x - 1e-3)) / 2e-3 / SPIN
+	var ty := -atan2(_target_local.x, _target_local.z)
+	_rev_to = ty + TAU * roundf((_rev_from - dir * maxf(v, 6.0) * (SPIN - ts) / 3.0 - ty) / TAU)
+	while (_rev_from - _rev_to) * dir < PI:
+		_rev_to -= dir * TAU
+
+
+## Glitch run, a pure function of t (seek-safe): tear envelope, timeline mix, camera and spin jolts, counter.
+func _pose_glitch(e: float) -> void:
+	var g := t - _glitch_at if launched else -1.0
+	var step := floorf(g * GLITCH_RATE)
+	var r := _hash(step)
+	var r2 := _hash(step + 0.37)
+	glitching = g >= 0.0 and g < GLITCH_LEN
+	_tear_seed = fmod(step * 7.31 + 3.0, 1000.0)
+	_tear_amount = 0.0
+	_tear_flash = 0.0
+	if g < 0.0:
+		future = 0.0
+	elif g >= GLITCH_LEN:
+		future = 1.0
+	elif g < 0.1:  # hiccup: a couple of torn frames, one band of the future flickers through
+		_tear_amount = 0.65 if r > 0.35 else 0.12
+		future = 0.15 if r > 0.55 else 0.0
+	elif g < 0.24:  # a breath: was that something?
+		_tear_amount = 0.05 + (0.25 if r > 0.8 else 0.0)
+		future = 0.0
+	elif g < GLITCH_SWAP:  # meltdown: more and more bands show the future
+		var k := (g - 0.24) / (GLITCH_SWAP - 0.24)
+		_tear_amount = lerpf(0.4, 1.0, k) * (0.7 + 0.3 * r)
+		future = clampf(k * 0.6 * (0.5 + r), 0.02, 0.6)
+	elif g < GLITCH_SWAP + 0.1:  # the swap: a negative frame burning out to white
+		_tear_amount = 1.0
+		_tear_flash = 1.0 - (g - GLITCH_SWAP) / 0.1
+		future = 1.0
+	elif g < 1.12:  # the present tears away band by band
+		var k := (g - GLITCH_SWAP - 0.1) / (1.12 - GLITCH_SWAP - 0.1)
+		_tear_amount = lerpf(0.95, 0.2, k) * (0.65 + 0.35 * r)
+		future = lerpf(0.5, 0.97, k) if r > 0.15 else 1.0
+	else:  # aftershocks
+		_tear_amount = 0.5 if r > 0.6 else 0.03
+		future = 0.8 if r > 0.7 else 1.0
+
+	# Camera shake, a lens punch at the swap, and the Earth stuttering between frames of time
+	_cam.position.x = (r - 0.5) * 0.05 * _tear_amount
+	_cam.position.y = (r2 - 0.5) * 0.04 * _tear_amount
+	_cam.fov = _fov + (7.0 * exp(-(g - GLITCH_SWAP) * 9.0) if g >= GLITCH_SWAP and glitching else 0.0)
+	if launched and glitching and _hash(step + 0.71) > 0.55:
+		_earth.rotation.y += (_hash(step + 0.13) - 0.5) * 0.5 * _tear_amount
+
+	# Counter: rewinds, scrambles red, settles back on NOW, then races forward to the glitch year
+	var end := _glitch_at + GLITCH_LEN
+	var color := WHITE
+	var pos := _year_pos
+	var calm := g >= 0.1 and g < 0.24 and r <= 0.8  # the breath after the hiccup: was that something?
+	if g < 0.0 or calm:
+		_year.text = str(roundi(NOW - GLITCH_PAST * e))
+	elif glitching:
+		_year.text = _scramble_year(g, step)
+		color = RED if r2 > 0.18 else (WHITE if r2 > 0.08 else BLUE)
+		pos += Vector2((r - 0.5) * 22.0, (r2 - 0.5) * 8.0) * _tear_amount
+	else:
+		var k := _out_cubic(_clamp01((t - end) / maxf(SPIN - end, 0.01)))
+		_year.text = str(roundi(NOW + (_glitch_year - NOW) * k))
+		color = RED
+	_year.label_settings.font_color = color
+	_year.position = pos
+	var small := ["YEAR", "Y#AR", "ERR?", "YE/R", "????"]
+	_year_small.text = small[int(r * small.size())] if glitching and _tear_amount > 0.3 else "YEAR"
+
+
+## The counter mid-tear: digits flip, symbols leak in, the target year flashes once; in the last stretch
+## the digits lock from the left onto NOW, where the forward count starts.
+func _scramble_year(g: float, step: float) -> String:
+	var rewound := str(roundi(NOW - GLITCH_PAST * _spin_ease(_clamp01(_glitch_at / SPIN))))
+	var now := str(NOW)
+	var settle := GLITCH_SWAP + 0.3
+	var locked := 0 if g < settle else int((g - settle) / (GLITCH_LEN - settle) * 5.0)
+	if g < GLITCH_SWAP and g >= GLITCH_SWAP - 0.08:
+		return str(_glitch_year)
+	var out := ""
+	for i in 4:
+		var h := _hash(step * 4.0 + i + 0.5)
+		if i < locked:
+			out += now[i]
+		elif h < 0.45:
+			out += str(int(_hash(step * 4.0 + i + 0.9) * 10.0))
+		elif h < 0.62:
+			out += "#?%/<>!_"[int(_hash(step + i * 0.3) * 8.0)]
+		else:
+			out += rewound[i] if g < GLITCH_SWAP else now[i]
+	return out
+
+
+## Builds the glitch run's extra layers (only then): the orbital ring, the flare, the tear post-process.
+func _build_future() -> void:
+	if _ring:
+		return
+	_ring = MeshInstance3D.new()
+	_ring.name = "Ring"
+	_ring.mesh = _make_ring()
+	_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var rm := ShaderMaterial.new()
+	rm.shader = load("res://scenes/globe/ring.gdshader")
+	rm.render_priority = 2
+	rm.set_shader_parameter(&"r_main", RING_R)
+	_ring.material_override = rm
+	_ring.basis = Basis.from_euler(Vector3(RING_PITCH, 0, RING_ROLL))
+	add_child(_ring)
+	var hud := $Hud
+	_flare = _full_rect("Flare", "res://scenes/globe/flare.gdshader")
+	hud.add_child(_flare)
+	hud.move_child(_flare, $Hud/Vignette.get_index() + 1)  # the corona burns through the vignette
+	# Over the globe and the reticle, under the counter: the scramble stays legible
+	_tear = _full_rect("Tear", "res://scenes/globe/glitch.gdshader")
+	hud.add_child(_tear)
+	hud.move_child(_tear, _year_small.get_index())
+
+
+func _full_rect(node_name: String, shader: String) -> ColorRect:
+	var rect := ColorRect.new()
+	rect.name = node_name
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var mat := ShaderMaterial.new()
+	mat.shader = load(shader)
+	rect.material = mat
+	return rect
+
+
+## Annulus in the local XZ plane, radius RING_R - 0.08 .. RING_R + 0.07.
+func _make_ring() -> ArrayMesh:
+	var n := 512
+	var verts := PackedVector3Array()
+	var idx := PackedInt32Array()
+	for i in n + 1:
+		var a := TAU * i / n
+		var d := Vector3(sin(a), 0, cos(a))
+		verts.append(d * (RING_R - 0.08))
+		verts.append(d * (RING_R + 0.07))
+		if i < n:
+			var k := i * 2
+			idx.append_array([k, k + 1, k + 2, k + 1, k + 3, k + 2])
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_INDEX] = idx
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return mesh
+
+
+## Feeds the timeline state to every layer. Normal runs only reset the shared atmosphere material.
+func _update_future() -> void:
+	var atmo: ShaderMaterial = _atmo.get_surface_override_material(0)
+	atmo.set_shader_parameter(&"future", future)
+	if _ring == null:
+		return
+	var now := Time.get_ticks_msec() / 1000.0
+	var g := t - _glitch_at - GLITCH_SWAP
+	# The flare throbs, and surges as the future arrives
+	var surge := 1.0 + 0.18 * sin(now * 2.3) + 0.12 * sin(now * 5.7 + 1.0) \
+			+ (0.9 * exp(-g * 2.5) if g >= 0.0 and launched else 0.0)
+	var zoom := _clamp01((t - SPIN - LOCK) / ZOOM)
+	var earth: ShaderMaterial = _earth.get_surface_override_material(0)
+	var clouds: ShaderMaterial = _clouds.get_surface_override_material(0)
+	var ring: ShaderMaterial = _ring.material_override
+	var flare: ShaderMaterial = _flare.material
+	for m: ShaderMaterial in [earth, clouds, atmo, ring, flare]:
+		m.set_shader_parameter(&"future", future)
+		m.set_shader_parameter(&"tear_seed", _tear_seed)
+		m.set_shader_parameter(&"flare", surge)
+	earth.set_shader_parameter(&"ring_normal", _ring.global_basis.y.normalized())
+	earth.set_shader_parameter(&"ring_band", Vector2(RING_R - 0.0035, RING_R + 0.0035))
+	atmo.set_shader_parameter(&"pole_dir", _earth.global_basis.y.normalized())
+	atmo.set_shader_parameter(&"earth_inv", _earth.global_basis.orthonormalized().inverse())
+	ring.set_shader_parameter(&"sun_dir", _sun_world)
+	ring.set_shader_parameter(&"fade", 1.0 - smoothstep(0.0, 0.55, zoom))
+	_ring.visible = future > 0.0
+	var view := _overlay.size if _overlay.size.y > 0 else Vector2(1280, 720)
+	var d := _cam.position.length()
+	flare.set_shader_parameter(&"center", _cam.unproject_position(Vector3.ZERO) / view)
+	flare.set_shader_parameter(&"radius", tan(asin(1.0 / d)) / tan(deg_to_rad(_cam.fov / 2)) / 2)
+	flare.set_shader_parameter(&"aspect", view.x / view.y)
+	flare.set_shader_parameter(&"sun2d", Vector2(_sun_world.x, -_sun_world.y).normalized())
+	flare.set_shader_parameter(&"fade", 1.0 - 0.8 * smoothstep(0.1, 0.9, zoom))
+	flare.set_shader_parameter(&"burn", smoothstep(0.25, 1.0, zoom))
+	_flare.visible = future > 0.0
+	var tear: ShaderMaterial = _tear.material
+	tear.set_shader_parameter(&"amount", _tear_amount)
+	tear.set_shader_parameter(&"seed", _tear_seed)
+	tear.set_shader_parameter(&"flash", _tear_flash)
+	_tear.visible = _tear_amount > 0.0 or _tear_flash > 0.0
+
+
+static func _hash(n: float) -> float:
+	var x := sin(n * 12.9898 + 78.233) * 43758.5453
+	return x - floorf(x)
 
 
 ## Subsolar point (lat, lon in degrees) at an ISO UTC time. Low-precision solar ephemeris
@@ -324,6 +587,7 @@ func _load_patch(mat: ShaderMaterial) -> void:
 	if not ResourceLoader.exists(path):
 		return
 	mat.set_shader_parameter(&"patch_tex", load(path))
+	_has_patch = true
 	var lights_path := path.replace(".jpg", "_lights.jpg")
 	if ResourceLoader.exists(lights_path):
 		mat.set_shader_parameter(&"patch_lights", load(lights_path))

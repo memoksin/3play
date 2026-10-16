@@ -2,7 +2,7 @@ extends SceneTree
 ## Drives the Fit scene only through synthetic mouse input.
 ## godot --headless --path . -s res://tests/test_fit_input.gd
 
-const FRAME_CAP := 1500
+const FRAME_CAP := 30000
 
 var ok := true
 var frames := 0
@@ -120,6 +120,20 @@ func _run() -> void:
 	await _click(_zone_pos(&"tent"))
 	_check("click: blanket moved to tent", fit.placement[blanket] == &"tent")
 	_check("click: selection cleared", fit._selected == -1)
+
+	# 3b. hover highlight + slide ghosts clean up
+	var p5 := stove
+	fit._select(p5)
+	fit._set_hover(&"car")
+	_check("hover: car is full -> red", not fit._hover_fits(&"car"))
+	fit._set_hover(&"tent")
+	_check("hover: tent fits -> green", fit._hover_fits(&"tent"))
+	fit._set_hover(&"")
+	fit._select(-1)
+	await create_timer(0.8).timeout
+	_check("drop: hover reset", fit._hover == &"" and fit._drag_item == -1)
+	_check("drop: slide done, no chip hidden", fit._hidden_chip == -1 and fit._fx.get_child_count() == 0)
+	_check("drop: all chips visible", fit._chips[p0].modulate.a == 1.0 and fit._chips[stove].modulate.a == 1.0)
 
 	# 4. after the quake, input does nothing
 	fit.seek(76.0)

@@ -5,6 +5,18 @@ Only CC0 or jam-safe licenses. When a file enters the repo, add it to `assets/CR
 
 Status: `todo` (not chosen), `chosen` (found, not in repo), `in repo` (added and credited).
 
+## How to add a chosen sound to the repo
+
+For whoever has the game on their computer (memoksin or sudeimete).
+
+1. Open the link in the table. Freesound needs a free account to download.
+2. Check the license line on the page says Creative Commons 0 (or Public Domain). If not, stop and tell burcubaran22.
+3. Download the file. For the Dark Sci-Fi Audio Pack (OpenGameArt) take only `Title.mp3`.
+4. Trim it if the Notes column says so (G1 about seconds 4 to 6, G4 first 1 s). Keep the original name plus a suffix, for example `guitar_swell_trim.ogg`.
+5. Put it in `assets/audio/<part>/` (proposed: `globe`, `menu`). No audio folder exists yet, so the first person to add one decides the layout.
+6. Run `godot --headless --path . --import` so Godot picks the file up.
+7. Add a row to `assets/CREDITS.md` (name, author, link, license, where used), then set Status to `in repo` in this table.
+
 ## Globe
 
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
@@ -22,3 +34,16 @@ Status: `todo` (not chosen), `chosen` (found, not in repo), `in repo` (added and
 - Download the chosen files from Freesound (needs a free account). Someone with the game on their computer adds them to the repo.
 - Trim G1 (about seconds 4 to 6) and G4 (first 1 s).
 - Add every file to `assets/CREDITS.md` the moment it enters the repo, then set Status to `in repo`.
+
+## Main menu
+
+| # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
+|---|---|---|---|---|---|---|---|---|
+| M1 | Menu music | Loop while the role select screen is open | Title.mp3 (from Dark Sci-Fi Audio Pack) | SRG774 | https://opengameart.org/content/dark-sci-fi-audio-pack | CC0 | chosen | Cold and mysterious tone. The author suggests a slight crossfade when looping. The pack has 4 more tracks and 3 UI sounds, not used. |
+| M2 | Button hover | The mouse is over the "State" or "Citizen" button | UI_Hover | unfa | https://freesound.org/people/unfa/sounds/565131/ | CC0 | chosen (optional) | Not sure it is needed. Test the menu without it first. About 0.12 s. |
+| M3 | Button click | The player picks State or Citizen | Soft UI Button Click | Jummit | https://freesound.org/people/Jummit/sounds/528561/ | CC0 | chosen | Soft sci-fi click. |
+
+### Still to do for the main menu
+
+- Download the files and add them to the repo, then to `assets/CREDITS.md`, then set Status to `in repo`.
+- Re-check the license line on each page when downloading.
