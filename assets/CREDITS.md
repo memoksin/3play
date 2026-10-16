@@ -16,7 +16,6 @@ Columns required per asset: name, author, link, license, where used.
 
 | Asset | Author | Link | License | Where used |
 |---|---|---|---|---|
-| Earth texture (equirectangular) | NASA Earth Observatory, Blue Marble: Next Generation | https://visibleearth.nasa.gov/ | NASA imagery, not copyrighted. TODO confirm on the download page and keep the exact page URL | Globe sphere |
 | Low-poly 3D kits (nature, city) | Kenney | https://kenney.nl/assets | CC0 1.0 | Diorama scenes. TODO list the exact packs used |
 | Music loop | TODO | TODO | TODO (CC0 only) | TODO |
 | Sound effects | TODO (Freesound) | TODO | TODO (CC0 only; check each file, some Freesound files are CC-BY) | TODO |
