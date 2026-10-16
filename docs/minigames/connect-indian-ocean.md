@@ -1,6 +1,7 @@
 # Spec: Connect minigame, Indian Ocean (DRAFT)
 
 Mechanic: **Connect** (rotate pipe tiles to link a source to targets before the timer ends). Water version: the pipes carry real water. Skin: Indian Ocean tsunami, 26 Dec 2004. Role: State.
+**ON HOLD: do not code #8 yet.** burcubaran22 is revising this spec with sudeimete (water pipes, see #38). Wait until this banner is removed.
 Status: draft for burcubaran22 to review. Items marked `VERIFY` need a source check before they reach the result card.
 
 ## Story beat
