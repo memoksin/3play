@@ -1,5 +1,6 @@
 extends SceneTree
 ## Globe flick launch: idle wait, drag with inertia, weak vs strong flick, Space / click skip.
+## Glitch run (solar flare): rewinds, tears once, lands on 3026; a normal run never glitches.
 
 var ok := true
 
@@ -19,7 +20,9 @@ func _wait(sec: float) -> void:
 
 func _globe() -> Node:
 	var game := root.get_node("Game")
+	game.store_path = ""  # never touch the real play counts
 	game.start(&"state")
+	game.disaster = load("res://data/disasters/indian_ocean.tres")  # the pick is random; this test needs a normal run
 	await process_frame
 	await process_frame
 	var g := current_scene
@@ -104,8 +107,12 @@ func _run() -> void:
 		mono = mono and e >= prev - 1e-6
 		prev = e
 	_check("spin ease monotonic, ends at 1", mono and is_equal_approx(prev, 1.0))
+	var glitched := false
 	while g.t < g.SPIN + 0.05:
 		await process_frame
+		glitched = glitched or g.glitching or g.future > 0.0
+	_check("normal run never glitches", not glitched and g.get_node_or_null("Ring") == null
+			and g.get_node_or_null("Hud/Tear") == null and g._year.label_settings.font_color != g.RED)
 	var d: Disaster = root.get_node("Game").disaster
 	var target: Vector3 = (earth.global_basis * g.surface_point(d.lat, d.lon)).normalized()
 	_check("lock reached (target dot view %.5f)" % target.z, target.z > 0.9999)
@@ -142,4 +149,69 @@ func _run() -> void:
 	while current_scene == g:
 		await process_frame
 	_check("globe continues to diorama", current_scene.scene_file_path == root.get_node("Game").scene_path(&"diorama"))
+	await _glitch_run()
 	quit(0 if ok else 1)
+
+
+func _glitch_globe() -> Node:
+	var game := root.get_node("Game")
+	game.store_path = ""
+	game.start(&"state")
+	game.disaster = load("res://data/disasters/solar_flare.tres")
+	await process_frame
+	await process_frame
+	var g := current_scene
+	_check("glitch globe loaded", g.scene_file_path == game.scene_path(&"globe") and game.disaster.glitch)
+	return g
+
+
+## Real-time flick run on the solar flare: the counter rewinds from NOW, the timeline tears once
+## (red scrambled counter), the spin reverses, then the counter counts forward and locks on 3026.
+func _glitch_run() -> void:
+	var g = await _glitch_globe()
+	var earth: Node3D = g.get_node("Axial/Pitch/Earth")
+	_check("glitch run waits like a normal one", not g.launched and g.t == 0.0 and not g.glitching and g.future == 0.0)
+	_check("glitch counter starts at NOW", g._year.text == str(g.NOW))
+	g.flick(10.0)
+	var rewound := false
+	var tear_frames := 0
+	var red_scramble := false
+	var forward := true
+	var prev_year := -1
+	var dir_before := 0.0
+	var dir_after := 0.0
+	var prev_y := earth.rotation.y
+	var deadline := Time.get_ticks_msec() + 15000
+	while g.t < g.SPIN + 0.05 and Time.get_ticks_msec() < deadline:
+		await process_frame
+		var dy: float = earth.rotation.y - prev_y
+		prev_y = earth.rotation.y
+		var year: int = int(g._year.text) if g._year.text.is_valid_int() else -1
+		if g.t < g._glitch_at:
+			rewound = rewound or (year < g.NOW and year > g.NOW - g.GLITCH_PAST)
+			dir_before += dy
+		elif g.glitching:
+			tear_frames += 1
+			red_scramble = red_scramble or g._year.label_settings.font_color == g.RED
+		else:
+			forward = forward and year >= prev_year and g.future == 1.0
+			prev_year = year
+			dir_after += dy
+	_check("glitch: counter rewinds toward the past first", rewound)
+	_check("glitch: timeline tears once (%d frames)" % tear_frames, tear_frames > 0)
+	_check("glitch: counter turns red mid-tear", red_scramble)
+	_check("glitch: counts forward after the tear", forward and prev_year > g.NOW)
+	_check("glitch: spin reverses after the swap (%.2f / %.2f rad)" % [dir_before, dir_after], dir_before * dir_after < 0.0)
+	var d: Disaster = root.get_node("Game").disaster
+	_check("glitch: lock reached", (earth.global_basis * g.surface_point(d.lat, d.lon)).normalized().z > 0.9999)
+	_check("glitch: year %s at the lock" % g._year.text, g._year.text == "3026" and g._year.label_settings.font_color == g.RED)
+	_check("glitch: future Earth with its ring", g.future == 1.0 and not g.glitching and g.get_node("Ring").visible)
+
+	# Skip on a glitch run runs into the tear, a second skip goes to the lock
+	g = await _glitch_globe()
+	_space()
+	await process_frame
+	_check("glitch: skip lands on the tear", g.launched and is_equal_approx(g.t, g._glitch_at) or g.glitching)
+	_space()
+	await process_frame
+	_check("glitch: second skip locks on 3026", g.t >= g.SPIN + g.LOCK and g._year.text == "3026")

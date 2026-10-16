@@ -3,6 +3,8 @@
 shader_type spatial;
 render_mode unshaded, blend_mix, cull_back, depth_draw_never;
 
+#include "res://scenes/globe/timeline.gdshaderinc"
+
 uniform sampler2D clouds : filter_linear_mipmap_anisotropic, repeat_enable;
 uniform vec3 sun_dir = vec3(-0.78, 0.32, 0.54);
 // 1 = full cover, 0 = gone (zoomed in).
@@ -10,6 +12,9 @@ uniform float fade = 1.0;
 // Target in the cloud mesh's local space; clouds thin out around it while `clear` ramps up.
 uniform vec3 target_local = vec3(0.0, 0.0, 1.0);
 uniform float clear = 0.0;
+// Glitch run: see earth.gdshader. In 3026 the flare lights the cloud tops orange.
+uniform float future = 0.0;
+uniform float tear_seed = 0.0;
 
 varying vec3 v_n;
 varying vec3 v_l;
@@ -42,6 +47,14 @@ void fragment() {
 	float lit = clamp((ndl + 0.08) / 1.08, 0.0, 1.0);
 	float vdn = max(dot(N, V), 0.0);
 	vec3 col = tint * 1.9 * lit * (0.82 + 0.18 * d) + vec3(0.01, 0.013, 0.02);
+	if (timeline(SCREEN_UV, future, tear_seed) > 0.0) {
+		// Only the lit side scorches; the night side keeps its dark, nearly clear cloud deck so the
+		// city lights stay readable under it.
+		float day = smoothstep(-0.05, 0.3, ndl);
+		col = mix(col * 0.25, col * vec3(1.25, 0.8, 0.55), day);
+		col += vec3(1.0, 0.45, 0.12) * pow(1.0 - max(dot(N, V), 0.0), 2.0) * smoothstep(-0.1, 0.5, ndl) * 0.8;
+		a *= mix(0.45, 1.0, day);
+	}
 	col = aces(col * 0.95);
 	// Thin out toward the limb so the atmosphere rim stays clean
 	a *= smoothstep(0.0, 0.25, vdn);
