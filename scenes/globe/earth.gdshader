@@ -10,6 +10,7 @@ uniform sampler2D day : filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D lights : filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D patch_tex : filter_linear_mipmap_anisotropic, repeat_disable;
 // Patch bounds in Godot UV space (v = 0 at the north pole): x0, y0, x1, y1.
+uniform sampler2D patch_lights : filter_linear_mipmap_anisotropic, repeat_disable;
 uniform vec4 patch_rect = vec4(0.0, 0.0, 1.0, 1.0);
 uniform float patch_on = 0.0;
 uniform vec3 sun_dir = vec3(-0.78, 0.32, 0.54);
@@ -76,6 +77,7 @@ void fragment() {
 	vec2 e = smoothstep(0.0, 0.14, pu) * smoothstep(0.0, 0.14, 1.0 - pu);
 	vec3 pc = texture(patch_tex, clamp(pu, 0.0, 1.0)).rgb;
 	c = mix(c, pc, e.x * e.y * patch_on);
+	vec3 lc = mix(texture(lights, UV).rgb, texture(patch_lights, clamp(pu, 0.0, 1.0)).rgb, e.x * e.y * patch_on);
 
 	vec3 alb = pow(c, vec3(2.2));
 	vec3 N = normalize(v_n);
@@ -117,7 +119,7 @@ void fragment() {
 	float spec = a2 / (PI * dd * dd) * fr * 0.25 * max(ndl, 0.0) / max(dot(N, V), 0.2) * water * lit;
 	float fres = pow(1.0 - max(dot(N, V), 0.0), 5.0);
 	// City lights (Black Marble), night side only; sodium-warm
-	vec3 city = pow(texture(lights, UV).rgb, vec3(2.2)) * vec3(1.0, 0.72, 0.4) * 0.9;
+	vec3 city = pow(lc, vec3(2.2)) * vec3(1.0, 0.72, 0.4) * 0.9;
 	vec3 col = alb * sun * diff * (1.0 - water * 0.25)
 			+ sun * spec * vec3(1.0, 0.93, 0.8)
 			+ vec3(0.05, 0.11, 0.22) * fres * water * lit

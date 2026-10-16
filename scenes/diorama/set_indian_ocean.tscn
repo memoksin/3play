@@ -1,0 +1,585 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/pirate-kit/structure.glb" id="1_iasxn"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/pirate-kit/structure-roof.glb" id="2_8e0uy"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/city-kit-suburban/building-type-h.glb" id="3_8q5hg"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/city-kit-suburban/building-type-a.glb" id="4_2p4mu"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/city-kit-suburban/building-type-c.glb" id="5_pkce0"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/survival-kit/barrel.glb" id="6_4ljvk"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/survival-kit/box.glb" id="7_kim1r"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/pirate-kit/palm-detailed-bend.glb" id="8_nde65"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/pirate-kit/palm-detailed-straight.glb" id="9_x1bde"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/pirate-kit/palm-straight.glb" id="10_gqkro"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/nature-kit/tree_palmTall.glb" id="11_c3hs1"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/nature-kit/tree_palmBend.glb" id="12_7v7w4"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/pirate-kit/structure-platform-dock.glb" id="13_1g800"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/pirate-kit/boat-row-small.glb" id="14_b0r0p"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/pirate-kit/boat-row-large.glb" id="15_fmi56"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/pirate-kit/rocks-sand-a.glb" id="16_7lny3"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/pirate-kit/rocks-sand-b.glb" id="17_3r8ks"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/nature-kit/rock_largeA.glb" id="18_8hfgs"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/nature-kit/rock_smallA.glb" id="19_3v488"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/nature-kit/stone_smallA.glb" id="20_8fhh4"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_qsno8"]
+sky_top_color = Color(0.33, 0.56, 0.84, 1)
+sky_horizon_color = Color(0.74, 0.82, 0.9, 1)
+ground_bottom_color = Color(0.7, 0.79, 0.87, 1)
+ground_horizon_color = Color(0.7, 0.79, 0.87, 1)
+sun_angle_max = 20.0
+
+[sub_resource type="Sky" id="Sky_8b05m"]
+sky_material = SubResource("ProceduralSkyMaterial_qsno8")
+
+[sub_resource type="Environment" id="Environment_u6ixn"]
+background_mode = 2
+sky = SubResource("Sky_8b05m")
+ambient_light_source = 2
+ambient_light_color = Color(0.75, 0.8, 0.88, 1)
+ambient_light_energy = 0.7
+tonemap_mode = 2
+fog_enabled = true
+fog_mode = 1
+fog_light_color = Color(0.7, 0.79, 0.87, 1)
+fog_density = 1.0
+fog_sky_affect = 0.0
+fog_depth_curve = 1.6
+fog_depth_begin = 90.0
+fog_depth_end = 320.0
+
+[sub_resource type="Shader" id="Shader_8rs78"]
+code = "shader_type spatial;
+// Diorama ground: gentle bumps, optional beach slope, wet band, fades into the void colour at the rim.
+uniform vec3 base_color : source_color = vec3(0.9);
+uniform vec3 alt_color : source_color = vec3(0.8);
+uniform vec3 wet_color : source_color = vec3(0.5);
+uniform vec3 void_color : source_color = vec3(0.3);
+uniform float radius = 18.0;
+uniform float fade = 6.0;
+uniform float bump = 0.15;
+uniform float slope = 0.0;
+uniform float top = 100.0;
+uniform float wet_level = -100.0;
+uniform float flat_half_width = 0.0;
+uniform float flat_z = 0.0;
+varying vec3 wpos;
+
+float n2(vec2 p) {
+	return sin(p.x * 0.9 + sin(p.y * 0.7)) * 0.5 + sin(p.y * 1.3 + p.x * 0.4) * 0.5;
+}
+
+float height(vec2 p) {
+	float flat_k = flat_half_width > 0.0 ? smoothstep(flat_half_width, flat_half_width + 1.5, abs(p.y - flat_z)) : 1.0;
+	float b = bump * (n2(p * 0.35) + 0.5 * n2(p * 1.1 + 3.0)) * flat_k;
+	float base = slope > 0.0 ? min(p.y * slope, top) : 0.0;
+	return base + b * (slope > 0.0 ? smoothstep(-1.0, 4.0, p.y) : 1.0);
+}
+
+void vertex() {
+	vec3 w = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	float h = height(w.xz);
+	float e = 0.2;
+	vec3 n = normalize(vec3(height(w.xz - vec2(e, 0.0)) - height(w.xz + vec2(e, 0.0)), 2.0 * e,
+			height(w.xz - vec2(0.0, e)) - height(w.xz + vec2(0.0, e))));
+	VERTEX.y += h;
+	NORMAL = normalize((inverse(MODEL_MATRIX) * vec4(n, 0.0)).xyz);
+	wpos = w + vec3(0.0, h, 0.0);
+}
+
+void fragment() {
+	float patch = smoothstep(-0.3, 0.6, n2(wpos.xz * 0.6 + 7.0));
+	vec3 c = mix(base_color, alt_color, patch * 0.6);
+	c = mix(c, wet_color, 1.0 - smoothstep(wet_level - 0.05, wet_level + 0.25, wpos.y));
+	float rim = smoothstep(radius - fade, radius, length(wpos.xz));
+	ALBEDO = c * (1.0 - rim);
+	EMISSION = void_color * rim;
+	ROUGHNESS = 0.95;
+	SPECULAR = 0.2;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_m6pi3"]
+render_priority = 0
+shader = SubResource("Shader_8rs78")
+shader_parameter/base_color = Color(0.93, 0.84, 0.64, 1)
+shader_parameter/alt_color = Color(0.85, 0.78, 0.58, 1)
+shader_parameter/wet_color = Color(0.42, 0.37, 0.3, 1)
+shader_parameter/void_color = Color(0.7, 0.79, 0.87, 1)
+shader_parameter/radius = 44.0
+shader_parameter/fade = 10.0
+shader_parameter/bump = 0.12
+shader_parameter/slope = 0.08
+shader_parameter/top = 0.7
+shader_parameter/wet_level = 0.25
+shader_parameter/flat_half_width = null
+shader_parameter/flat_z = null
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_b0axy"]
+size = Vector2(96, 76)
+subdivide_width = 96
+subdivide_depth = 150
+
+[sub_resource type="Shader" id="Shader_q46qw"]
+code = "shader_type spatial;
+// Diorama ground: gentle bumps, optional beach slope, wet band, fades into the void colour at the rim.
+uniform vec3 base_color : source_color = vec3(0.9);
+uniform vec3 alt_color : source_color = vec3(0.8);
+uniform vec3 wet_color : source_color = vec3(0.5);
+uniform vec3 void_color : source_color = vec3(0.3);
+uniform float radius = 18.0;
+uniform float fade = 6.0;
+uniform float bump = 0.15;
+uniform float slope = 0.0;
+uniform float top = 100.0;
+uniform float wet_level = -100.0;
+uniform float flat_half_width = 0.0;
+uniform float flat_z = 0.0;
+varying vec3 wpos;
+
+float n2(vec2 p) {
+	return sin(p.x * 0.9 + sin(p.y * 0.7)) * 0.5 + sin(p.y * 1.3 + p.x * 0.4) * 0.5;
+}
+
+float height(vec2 p) {
+	float flat_k = flat_half_width > 0.0 ? smoothstep(flat_half_width, flat_half_width + 1.5, abs(p.y - flat_z)) : 1.0;
+	float b = bump * (n2(p * 0.35) + 0.5 * n2(p * 1.1 + 3.0)) * flat_k;
+	float base = slope > 0.0 ? min(p.y * slope, top) : 0.0;
+	return base + b * (slope > 0.0 ? smoothstep(-1.0, 4.0, p.y) : 1.0);
+}
+
+void vertex() {
+	vec3 w = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	float h = height(w.xz);
+	float e = 0.2;
+	vec3 n = normalize(vec3(height(w.xz - vec2(e, 0.0)) - height(w.xz + vec2(e, 0.0)), 2.0 * e,
+			height(w.xz - vec2(0.0, e)) - height(w.xz + vec2(0.0, e))));
+	VERTEX.y += h;
+	NORMAL = normalize((inverse(MODEL_MATRIX) * vec4(n, 0.0)).xyz);
+	wpos = w + vec3(0.0, h, 0.0);
+}
+
+void fragment() {
+	float patch = smoothstep(-0.3, 0.6, n2(wpos.xz * 0.6 + 7.0));
+	vec3 c = mix(base_color, alt_color, patch * 0.6);
+	c = mix(c, wet_color, 1.0 - smoothstep(wet_level - 0.05, wet_level + 0.25, wpos.y));
+	float rim = smoothstep(radius - fade, radius, length(wpos.xz));
+	ALBEDO = c * (1.0 - rim);
+	EMISSION = void_color * rim;
+	ROUGHNESS = 0.95;
+	SPECULAR = 0.2;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_tacs5"]
+render_priority = 0
+shader = SubResource("Shader_q46qw")
+shader_parameter/base_color = Color(0.4, 0.54, 0.28, 1)
+shader_parameter/alt_color = Color(0.47, 0.58, 0.3, 1)
+shader_parameter/wet_color = null
+shader_parameter/void_color = Color(0.7, 0.79, 0.87, 1)
+shader_parameter/radius = 44.0
+shader_parameter/fade = 10.0
+shader_parameter/bump = 0.1
+shader_parameter/slope = null
+shader_parameter/top = null
+shader_parameter/wet_level = null
+shader_parameter/flat_half_width = null
+shader_parameter/flat_z = null
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_sxrt8"]
+size = Vector2(96, 26)
+subdivide_width = 70
+subdivide_depth = 20
+
+[sub_resource type="Shader" id="Shader_rjofv"]
+code = "shader_type spatial;
+// Calm sea: small waves, turquoise over the shallow bed, deep blue further out.
+// level: sea level offset (drawback < 0). swell: 0..1, long low line rising on the horizon.
+uniform float level = 0.0;
+uniform float swell = 0.0;
+uniform float swell_z = -85.0;
+uniform float bed_slope = 0.08;
+uniform vec3 shallow : source_color = vec3(0.2, 0.62, 0.64);
+uniform vec3 deep : source_color = vec3(0.04, 0.2, 0.42);
+uniform vec3 foam : source_color = vec3(0.95, 0.97, 0.97);
+varying vec3 wpos;
+varying float crest;
+
+float waves(vec2 p) {
+	return 0.06 * sin(p.x * 0.35 + TIME * 0.8) + 0.05 * sin(p.y * 0.55 - TIME * 1.1 + p.x * 0.12);
+}
+
+void vertex() {
+	vec3 w = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	float d = (w.z - swell_z) / 9.0;
+	crest = swell * exp(-d * d);
+	float h = waves(w.xz) + level + crest * 2.2;
+	VERTEX.y += h;
+	float e = 0.5;
+	float dx = waves(w.xz + vec2(e, 0.0)) - waves(w.xz - vec2(e, 0.0));
+	float dz = waves(w.xz + vec2(0.0, e)) - waves(w.xz - vec2(0.0, e));
+	dz += swell * 2.2 * (exp(-pow((w.z + e - swell_z) / 9.0, 2.0)) - exp(-pow((w.z - e - swell_z) / 9.0, 2.0)));
+	NORMAL = normalize(vec3(-dx, 2.0 * e, -dz));
+	wpos = w + vec3(0.0, h, 0.0);
+}
+
+void fragment() {
+	float bed = max(wpos.z * bed_slope, -12.0);
+	float depth = wpos.y - bed;
+	vec3 c = mix(shallow, deep, smoothstep(0.2, 3.5, depth));
+	float shore = 1.0 - smoothstep(0.0, 0.18, depth);
+	c = mix(c, deep * 0.55, smoothstep(0.05, 0.6, crest));
+	c = mix(c, foam, clamp(shore * 0.8 + smoothstep(0.75, 0.95, crest) * 0.8, 0.0, 1.0));
+	ALBEDO = c;
+	ROUGHNESS = 0.45;
+	SPECULAR = 0.12;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_bi3la"]
+render_priority = 0
+shader = SubResource("Shader_rjofv")
+shader_parameter/level = null
+shader_parameter/swell = null
+shader_parameter/swell_z = null
+shader_parameter/bed_slope = null
+shader_parameter/shallow = null
+shader_parameter/deep = null
+shader_parameter/foam = null
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_83aal"]
+size = Vector2(520, 300)
+subdivide_width = 130
+subdivide_depth = 300
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_yyqvp"]
+albedo_color = Color(0.72, 0.58, 0.4, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="BoxMesh_pk27r"]
+size = Vector3(3.6, 2.3, 0.15)
+
+[sub_resource type="BoxMesh" id="BoxMesh_31xhi"]
+size = Vector3(0.15, 2.3, 3.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_10g42"]
+size = Vector3(0.15, 2.3, 3.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_tt4o3"]
+size = Vector3(1.2, 2.3, 0.15)
+
+[sub_resource type="BoxMesh" id="BoxMesh_0yqxr"]
+size = Vector3(1.2, 2.3, 0.15)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_874vc"]
+albedo_color = Color(0.62, 0.48, 0.34, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="BoxMesh_xnjup"]
+size = Vector3(3.6, 2.3, 0.15)
+
+[sub_resource type="BoxMesh" id="BoxMesh_o76cl"]
+size = Vector3(0.15, 2.3, 3.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_osr3b"]
+size = Vector3(0.15, 2.3, 3.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ukb1n"]
+size = Vector3(1.2, 2.3, 0.15)
+
+[sub_resource type="BoxMesh" id="BoxMesh_mfvno"]
+size = Vector3(1.2, 2.3, 0.15)
+
+[sub_resource type="BoxMesh" id="BoxMesh_uuruq"]
+size = Vector3(3.6, 2.3, 0.15)
+
+[sub_resource type="BoxMesh" id="BoxMesh_pc0ld"]
+size = Vector3(0.15, 2.3, 3.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_68iiy"]
+size = Vector3(0.15, 2.3, 3.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_1n4qi"]
+size = Vector3(1.2, 2.3, 0.15)
+
+[sub_resource type="BoxMesh" id="BoxMesh_183cb"]
+size = Vector3(1.2, 2.3, 0.15)
+
+[sub_resource type="BoxMesh" id="BoxMesh_arwru"]
+size = Vector3(3.6, 2.3, 0.15)
+
+[sub_resource type="BoxMesh" id="BoxMesh_gf2sw"]
+size = Vector3(0.15, 2.3, 3.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_bsems"]
+size = Vector3(0.15, 2.3, 3.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_juent"]
+size = Vector3(1.2, 2.3, 0.15)
+
+[sub_resource type="BoxMesh" id="BoxMesh_w16sp"]
+size = Vector3(1.2, 2.3, 0.15)
+
+[node name="SetIndianOcean" type="Node3D" unique_id=355792026]
+
+[node name="Env" type="WorldEnvironment" parent="." unique_id=1997962783]
+environment = SubResource("Environment_u6ixn")
+
+[node name="MorningSun" type="DirectionalLight3D" parent="." unique_id=1736758129]
+transform = Transform3D(-0.8660254, 0.26495966, -0.4240241, 0, 0.8480481, 0.52991927, 0.50000006, 0.45892355, -0.73443115, 0, 0, 0)
+light_color = Color(1, 0.92, 0.8, 1)
+light_energy = 1.15
+shadow_enabled = true
+directional_shadow_max_distance = 90.0
+
+[node name="Beach" type="MeshInstance3D" parent="." unique_id=1417687767]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+material_override = SubResource("ShaderMaterial_m6pi3")
+mesh = SubResource("PlaneMesh_b0axy")
+
+[node name="Grass" type="MeshInstance3D" parent="." unique_id=1539917412]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.74, 28)
+material_override = SubResource("ShaderMaterial_tacs5")
+mesh = SubResource("PlaneMesh_sxrt8")
+
+[node name="Sea" type="MeshInstance3D" parent="." unique_id=451177633]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -146)
+material_override = SubResource("ShaderMaterial_bi3la")
+cast_shadow = 0
+mesh = SubResource("PlaneMesh_83aal")
+
+[node name="Village" type="Node3D" parent="." unique_id=1425456741]
+
+[node name="StiltHouse0" type="Node3D" parent="Village" unique_id=1638104495]
+transform = Transform3D(0.9945219, 0, 0.104528464, 0, 1, 0, -0.104528464, 0, 0.9945219, -9, 0.7, 9)
+
+[node name="Structure" type="Node3D" parent="Village/StiltHouse0" unique_id=1719221158 instance=ExtResource("1_iasxn")]
+transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, 0, 0, 0)
+
+[node name="StructureRoof" type="Node3D" parent="Village/StiltHouse0" unique_id=2022703193 instance=ExtResource("2_8e0uy")]
+transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, 0, 3.37, 0)
+
+[node name="WallBack" type="MeshInstance3D" parent="Village/StiltHouse0" unique_id=779068492]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.7, -1.75)
+material_override = SubResource("StandardMaterial3D_yyqvp")
+mesh = SubResource("BoxMesh_pk27r")
+
+[node name="WallL" type="MeshInstance3D" parent="Village/StiltHouse0" unique_id=1691519147]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.8, 4.7, 0)
+material_override = SubResource("StandardMaterial3D_yyqvp")
+mesh = SubResource("BoxMesh_31xhi")
+
+[node name="WallR" type="MeshInstance3D" parent="Village/StiltHouse0" unique_id=1204521435]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 4.7, 0)
+material_override = SubResource("StandardMaterial3D_yyqvp")
+mesh = SubResource("BoxMesh_10g42")
+
+[node name="WallFrontL" type="MeshInstance3D" parent="Village/StiltHouse0" unique_id=1713177589]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 4.7, 1.75)
+material_override = SubResource("StandardMaterial3D_yyqvp")
+mesh = SubResource("BoxMesh_tt4o3")
+
+[node name="WallFrontR" type="MeshInstance3D" parent="Village/StiltHouse0" unique_id=1388838409]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 4.7, 1.75)
+material_override = SubResource("StandardMaterial3D_yyqvp")
+mesh = SubResource("BoxMesh_0yqxr")
+
+[node name="StiltHouse1" type="Node3D" parent="Village" unique_id=618063485]
+transform = Transform3D(0.9975641, 0, -0.06975647, 0, 1, 0, 0.06975647, 0, 0.9975641, -3.5, 0.7, 11)
+
+[node name="Structure" type="Node3D" parent="Village/StiltHouse1" unique_id=494393166 instance=ExtResource("1_iasxn")]
+transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, 0, 0, 0)
+
+[node name="StructureRoof" type="Node3D" parent="Village/StiltHouse1" unique_id=2045622893 instance=ExtResource("2_8e0uy")]
+transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, 0, 3.37, 0)
+
+[node name="WallBack" type="MeshInstance3D" parent="Village/StiltHouse1" unique_id=1520976562]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.7, -1.75)
+material_override = SubResource("StandardMaterial3D_874vc")
+mesh = SubResource("BoxMesh_xnjup")
+
+[node name="WallL" type="MeshInstance3D" parent="Village/StiltHouse1" unique_id=207498132]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.8, 4.7, 0)
+material_override = SubResource("StandardMaterial3D_874vc")
+mesh = SubResource("BoxMesh_o76cl")
+
+[node name="WallR" type="MeshInstance3D" parent="Village/StiltHouse1" unique_id=972342898]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 4.7, 0)
+material_override = SubResource("StandardMaterial3D_874vc")
+mesh = SubResource("BoxMesh_osr3b")
+
+[node name="WallFrontL" type="MeshInstance3D" parent="Village/StiltHouse1" unique_id=865247228]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 4.7, 1.75)
+material_override = SubResource("StandardMaterial3D_874vc")
+mesh = SubResource("BoxMesh_ukb1n")
+
+[node name="WallFrontR" type="MeshInstance3D" parent="Village/StiltHouse1" unique_id=1079188828]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 4.7, 1.75)
+material_override = SubResource("StandardMaterial3D_874vc")
+mesh = SubResource("BoxMesh_mfvno")
+
+[node name="StiltHouse2" type="Node3D" parent="Village" unique_id=1807495608]
+transform = Transform3D(0.9848077, 0, 0.17364818, 0, 1, 0, -0.17364818, 0, 0.9848077, 3, 0.7, 9.5)
+
+[node name="Structure" type="Node3D" parent="Village/StiltHouse2" unique_id=154002726 instance=ExtResource("1_iasxn")]
+transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, 0, 0, 0)
+
+[node name="StructureRoof" type="Node3D" parent="Village/StiltHouse2" unique_id=1646164301 instance=ExtResource("2_8e0uy")]
+transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, 0, 3.37, 0)
+
+[node name="WallBack" type="MeshInstance3D" parent="Village/StiltHouse2" unique_id=1459014386]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.7, -1.75)
+material_override = SubResource("StandardMaterial3D_yyqvp")
+mesh = SubResource("BoxMesh_uuruq")
+
+[node name="WallL" type="MeshInstance3D" parent="Village/StiltHouse2" unique_id=1965924993]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.8, 4.7, 0)
+material_override = SubResource("StandardMaterial3D_yyqvp")
+mesh = SubResource("BoxMesh_pc0ld")
+
+[node name="WallR" type="MeshInstance3D" parent="Village/StiltHouse2" unique_id=2085756221]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 4.7, 0)
+material_override = SubResource("StandardMaterial3D_yyqvp")
+mesh = SubResource("BoxMesh_68iiy")
+
+[node name="WallFrontL" type="MeshInstance3D" parent="Village/StiltHouse2" unique_id=990988982]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 4.7, 1.75)
+material_override = SubResource("StandardMaterial3D_yyqvp")
+mesh = SubResource("BoxMesh_1n4qi")
+
+[node name="WallFrontR" type="MeshInstance3D" parent="Village/StiltHouse2" unique_id=171173760]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 4.7, 1.75)
+material_override = SubResource("StandardMaterial3D_yyqvp")
+mesh = SubResource("BoxMesh_183cb")
+
+[node name="StiltHouse3" type="Node3D" parent="Village" unique_id=597900401]
+transform = Transform3D(0.9781476, 0, -0.2079117, 0, 1, 0, 0.2079117, 0, 0.9781476, -14.5, 0.7, 12)
+
+[node name="Structure" type="Node3D" parent="Village/StiltHouse3" unique_id=1579156265 instance=ExtResource("1_iasxn")]
+transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, 0, 0, 0)
+
+[node name="StructureRoof" type="Node3D" parent="Village/StiltHouse3" unique_id=494519428 instance=ExtResource("2_8e0uy")]
+transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, 0, 3.37, 0)
+
+[node name="WallBack" type="MeshInstance3D" parent="Village/StiltHouse3" unique_id=1817122990]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.7, -1.75)
+material_override = SubResource("StandardMaterial3D_874vc")
+mesh = SubResource("BoxMesh_arwru")
+
+[node name="WallL" type="MeshInstance3D" parent="Village/StiltHouse3" unique_id=1432738020]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.8, 4.7, 0)
+material_override = SubResource("StandardMaterial3D_874vc")
+mesh = SubResource("BoxMesh_gf2sw")
+
+[node name="WallR" type="MeshInstance3D" parent="Village/StiltHouse3" unique_id=585992800]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 4.7, 0)
+material_override = SubResource("StandardMaterial3D_874vc")
+mesh = SubResource("BoxMesh_bsems")
+
+[node name="WallFrontL" type="MeshInstance3D" parent="Village/StiltHouse3" unique_id=22696578]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 4.7, 1.75)
+material_override = SubResource("StandardMaterial3D_874vc")
+mesh = SubResource("BoxMesh_juent")
+
+[node name="WallFrontR" type="MeshInstance3D" parent="Village/StiltHouse3" unique_id=269505999]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 4.7, 1.75)
+material_override = SubResource("StandardMaterial3D_874vc")
+mesh = SubResource("BoxMesh_w16sp")
+
+[node name="BuildingTypeH" type="Node3D" parent="Village" unique_id=1836999979 instance=ExtResource("3_8q5hg")]
+transform = Transform3D(-4.924039, 0, -0.86824113, 0, 5, 0, 0.86824113, 0, -4.924039, 10, 0.7, 13)
+
+[node name="BuildingTypeA" type="Node3D" parent="Village" unique_id=879550367 instance=ExtResource("4_2p4mu")]
+transform = Transform3D(-4.924039, 0, 0.8682415, 0, 5, 0, -0.8682415, 0, -4.924039, -20, 0.7, 18)
+
+[node name="BuildingTypeC" type="Node3D" parent="Village" unique_id=505418770 instance=ExtResource("5_pkce0")]
+transform = Transform3D(-4.9809732, 0, 0.4357794, 0, 5, 0, -0.4357794, 0, -4.9809732, 14.5, 0.7, 20)
+
+[node name="Barrel" type="Node3D" parent="Village" unique_id=1873691378 instance=ExtResource("6_4ljvk")]
+transform = Transform3D(3.5, 0, 0, 0, 3.5, 0, 0, 0, 3.5, 5.5, 0.7, 7.5)
+
+[node name="Box" type="Node3D" parent="Village" unique_id=1959625990 instance=ExtResource("7_kim1r")]
+transform = Transform3D(2.8977776, 0, 0.77645713, 0, 3, 0, -0.77645713, 0, 2.8977776, -6.2, 0.7, 7.2)
+
+[node name="Palms" type="Node3D" parent="." unique_id=885170386]
+
+[node name="Palm0" type="Node3D" parent="Palms" unique_id=924061290 instance=ExtResource("8_nde65")]
+transform = Transform3D(1.7774274, 0, 0, 0, 1.7774274, 0, 0, 0, 1.7774274, -17, 0.7, 6)
+
+[node name="Palm1" type="Node3D" parent="Palms" unique_id=919995827 instance=ExtResource("9_x1bde")]
+transform = Transform3D(1.0330598, 0, 1.107821, 0, 1.514754, 0, -1.107821, 0, 1.0330598, -12, 0.6, 4.5)
+
+[node name="Palm2" type="Node3D" parent="Palms" unique_id=444102244 instance=ExtResource("10_gqkro")]
+transform = Transform3D(-0.11295519, 0, 1.6153345, 0, 1.6192789, 0, -1.6153345, 0, -0.11295519, -6, 0.7, 14.5)
+
+[node name="Palm3" type="Node3D" parent="Palms" unique_id=1855711266 instance=ExtResource("11_c3hs1")]
+transform = Transform3D(-4.4514804, 0, 3.604739, 0, 5.727986, 0, -3.604739, 0, -4.4514804, 0.5, 0.65, 6)
+
+[node name="Palm4" type="Node3D" parent="Palms" unique_id=268970964 instance=ExtResource("12_7v7w4")]
+transform = Transform3D(-5.2072, 0, -0.7318243, 0, 5.258374, 0, 0.7318243, 0, -5.2072, 7.5, 0.7, 9)
+
+[node name="Palm5" type="Node3D" parent="Palms" unique_id=476573000 instance=ExtResource("8_nde65")]
+transform = Transform3D(-0.94969124, 0, -1.3563, 0, 1.6557364, 0, 1.3563, 0, -0.94969124, 13, 0.65, 6.5)
+
+[node name="Palm6" type="Node3D" parent="Palms" unique_id=1335907188 instance=ExtResource("9_x1bde")]
+transform = Transform3D(0.31308204, 0, -1.4729366, 0, 1.5058429, 0, 1.4729366, 0, 0.31308204, 18, 0.7, 10)
+
+[node name="Palm7" type="Node3D" parent="Palms" unique_id=1726282582 instance=ExtResource("10_gqkro")]
+transform = Transform3D(1.4508882, 0, -0.8717817, 0, 1.6926547, 0, 0.8717817, 0, 1.4508882, -1, 0.7, 17)
+
+[node name="Palm8" type="Node3D" parent="Palms" unique_id=1329250463 instance=ExtResource("11_c3hs1")]
+transform = Transform3D(5.0163364, 0, 1.4384115, 0, 5.218492, 0, -1.4384115, 0, 5.0163364, 22, 0.7, 3)
+
+[node name="Palm9" type="Node3D" parent="Palms" unique_id=529090646 instance=ExtResource("12_7v7w4")]
+transform = Transform3D(2.471232, 0, 4.850067, 0, 5.4433575, 0, -4.850067, 0, 2.471232, -22, 0.7, 11)
+
+[node name="Dock" type="Node3D" parent="." unique_id=2116898824]
+
+[node name="DockPart0" type="Node3D" parent="Dock" unique_id=602041995 instance=ExtResource("13_1g800")]
+transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, 8, -1, 1.5)
+
+[node name="DockPart1" type="Node3D" parent="Dock" unique_id=1997018640 instance=ExtResource("13_1g800")]
+transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, 8, -1.05, -2.5)
+
+[node name="DockPart2" type="Node3D" parent="Dock" unique_id=713412551 instance=ExtResource("13_1g800")]
+transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, 8, -1.1, -6.5)
+
+[node name="DockPart3" type="Node3D" parent="Dock" unique_id=706950023 instance=ExtResource("13_1g800")]
+transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, 8, -1.15, -10.5)
+
+[node name="BeachedBoatA" type="Node3D" parent="Dock" unique_id=1067264549 instance=ExtResource("14_b0r0p")]
+transform = Transform3D(0.3882286, 0, 1.4488888, 0, 1.5, 0, -1.4488888, 0, 0.3882286, -4.5, 0.05, 1.6)
+
+[node name="BeachedBoatB" type="Node3D" parent="Dock" unique_id=2052609482 instance=ExtResource("15_fmi56")]
+transform = Transform3D(-0.2604723, 0, 1.4772116, 0, 1.5, 0, -1.4772116, 0, -0.2604723, -8.5, 0.15, 2.4)
+
+[node name="Float" type="Node3D" parent="Dock" unique_id=1877989433]
+
+[node name="MooredBoat" type="Node3D" parent="Dock/Float" unique_id=625979942 instance=ExtResource("14_b0r0p")]
+transform = Transform3D(1.4772116, 0, 0.26047227, 0, 1.5, 0, -0.26047227, 0, 1.4772116, 11.5, -0.25, -11)
+
+[node name="FishingBoat" type="Node3D" parent="Dock/Float" unique_id=576487502 instance=ExtResource("15_fmi56")]
+transform = Transform3D(1.299038, 0, -0.75, 0, 1.5, 0, 0.75, 0, 1.299038, -2, -0.25, -15)
+
+[node name="Rocks" type="Node3D" parent="." unique_id=562021528]
+
+[node name="RocksSandA" type="Node3D" parent="Rocks" unique_id=870968051 instance=ExtResource("16_7lny3")]
+transform = Transform3D(0.6577848, 0, 0.23941408, 0, 0.7, 0, -0.23941408, 0, 0.6577848, -19, -0.6, -2)
+
+[node name="RocksSandB" type="Node3D" parent="Rocks" unique_id=1734625281 instance=ExtResource("17_3r8ks")]
+transform = Transform3D(0.45962667, 0, -0.38567257, 0, 0.6, 0, 0.38567257, 0, 0.45962667, 19.5, -0.5, -3)
+
+[node name="RockLargeA" type="Node3D" parent="Rocks" unique_id=1911314575 instance=ExtResource("18_8hfgs")]
+transform = Transform3D(4.330127, 0, 2.5, 0, 5, 0, -2.5, 0, 4.330127, -12, -0.9, -6)
+
+[node name="RockSmallA" type="Node3D" parent="Rocks" unique_id=1464416623 instance=ExtResource("19_3v488")]
+transform = Transform3D(5, 0, 0, 0, 5, 0, 0, 0, 5, 3, -0.75, -8)
+
+[node name="StoneSmallA" type="Node3D" parent="Rocks" unique_id=877880117 instance=ExtResource("20_8fhh4")]
+transform = Transform3D(1.9999999, 0, 3.4641018, 0, 4, 0, -3.4641018, 0, 1.9999999, -6, -0.7, -9.5)
+
+[node name="RockSmallB" type="Node3D" parent="Rocks" unique_id=765815615 instance=ExtResource("19_3v488")]
+transform = Transform3D(-3.0000005, 0, 5.196152, 0, 6, 0, -5.196152, 0, -3.0000005, 15, -1, -11)
+
+[node name="Focus" type="Marker3D" parent="." unique_id=279910148]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1, 0)
