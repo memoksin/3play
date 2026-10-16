@@ -456,6 +456,8 @@ func _kahr() -> void:
 	snow.add_to_group(&"no_snow", true)
 	_own(snow, root_node)
 
+	_kahr_detail(apt, col, cars, camp, back)
+
 	var focus := Marker3D.new()
 	focus.name = "Focus"
 	focus.position = Vector3(1.5, 7.0, -1.0)
@@ -493,6 +495,508 @@ func _crack(parent: Node, name: String, pts: Array, z: float, w: float, mat: Mat
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.add_to_group(&"no_snow", true)
 	_own(mi, parent)
+
+
+## Tyre tracks in the snowy road: soft darker wheel lanes that fade towards the rim.
+const KAHR_TRACKS := """shader_type spatial;
+render_mode blend_mix, depth_draw_never;
+uniform vec3 color : source_color = vec3(0.42, 0.47, 0.58);
+uniform float radius = 15.0;
+varying vec3 wpos;
+void vertex() {
+	wpos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+}
+float lane(float z, float c) {
+	return 1.0 - smoothstep(0.1, 0.22, abs(z - c));
+}
+void fragment() {
+	float z = wpos.z - sin(wpos.x * 0.31) * 0.14 - sin(wpos.x * 0.83 + 1.3) * 0.05;
+	float t = max(max(lane(z, 3.95), lane(z, 5.35)), 0.6 * max(lane(z + 0.25, 4.1), lane(z + 0.25, 5.5)));
+	float fade = 1.0 - smoothstep(radius - 4.0, radius, length(wpos.xz));
+	ALBEDO = color;
+	ROUGHNESS = 0.6;
+	ALPHA = t * fade * 0.5;
+}
+"""
+
+
+## Detail pass: small secondary shapes merged into one mesh per material (few draw calls),
+## people, rescue and camp props. Positions are local to the given groups.
+func _kahr_detail(apt: Node3D, col: Node3D, cars: Node3D, camp: Node3D, back: Node3D) -> void:
+	# own RNG: the shared global sequence (seed 42) must stay the same for the other sets
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 20230206
+	var cache := {"rng": rng}
+	var m := {
+		"trim": _mat(Color(0.74, 0.7, 0.63)), "stone": _mat(Color(0.42, 0.42, 0.47)),
+		"sill": _mat(Color(0.9, 0.9, 0.92)), "metal": _mat(Color(0.35, 0.37, 0.42)),
+		"light": _mat(Color(0.86, 0.87, 0.9)), "dark": _mat(Color(0.2, 0.21, 0.26)),
+		"panel": _mat(Color(0.2, 0.22, 0.36), 0.4), "brick": _mat(Color(0.66, 0.37, 0.29)),
+		"chimney": _mat(Color(0.55, 0.36, 0.3)), "slab": _mat(Color(0.6, 0.6, 0.62)),
+		"slab_dark": _mat(Color(0.32, 0.31, 0.32)), "kerb": _mat(Color(0.55, 0.56, 0.6)),
+		"snow": _mat(Color(0.95, 0.97, 1.0), 1.0), "wood": _mat(Color(0.42, 0.28, 0.18)),
+		"pole": _mat(Color(0.62, 0.62, 0.6)), "rebar": _mat(Color(0.35, 0.22, 0.15)),
+		"orange": _mat(Color(0.95, 0.42, 0.12)), "yellow": _mat(Color(0.98, 0.76, 0.17)),
+		"white": _mat(Color(0.95, 0.95, 0.95)), "skin": _mat(Color(0.78, 0.5, 0.36)),
+		"pants": _mat(Color(0.24, 0.21, 0.28)), "blue": _mat(Color(0.3, 0.4, 0.7)),
+		"plum": _mat(Color(0.63, 0.29, 0.43)), "green": _mat(Color(0.33, 0.49, 0.39)),
+		"red": _mat(Color(0.62, 0.2, 0.18)), "teal": _mat(Color(0.15, 0.42, 0.47)),
+		"terracotta": _mat(Color(0.7, 0.4, 0.28)), "bin": _mat(Color(0.2, 0.33, 0.26)),
+		"mattress": _mat(Color(0.78, 0.58, 0.62)),
+	}
+	var glow := {
+		"lamp": _mat(Color(1.0, 0.93, 0.75), 1.0, true), "siren_r": _mat(Color(1.0, 0.2, 0.15), 1.0, true),
+		"siren_b": _mat(Color(0.25, 0.45, 1.0), 1.0, true), "tape": _mat(Color(0.92, 0.2, 0.15), 1.0, true),
+	}
+	# one shared batch (and an unshaded, snow-free one) for the whole set: positions stay local to each group
+	var detail := _group("Detail")
+	var db := _kahr_batch(detail, "Detail", cache)
+	var dg := _kahr_batch(detail, "Glow", cache, false, false)
+	cache.people = _kahr_batch(detail, "People", cache, false)
+	_kahr_apartment_detail(_kahr_view(db, apt.position), m)
+	_kahr_collapsed_detail(_kahr_view(db, col.position), _kahr_view(dg, col.position), m, glow)
+	var street := _group("Street")
+	_kahr_street_detail(street, db, dg, m, glow)
+	_model(cars, "car-kit/hatchback-sports", Vector3(-13.2, 0.48, 6.0), 268, 1.6)
+	_model(cars, "car-kit/van", Vector3(11.4, 0.48, 6.0), 270, 1.6, "RescueVan")
+	_kahr_box(db, Vector3(1.6, 0.18, 1.5), Vector3(-13.2, 2.25, 6.0), Vector3(0, 0, -2), m.snow)
+	_kahr_box(dg, Vector3(0.36, 0.14, 0.7), Vector3(11.0, 2.72, 5.65), Vector3.ZERO, glow.siren_r)
+	_kahr_box(dg, Vector3(0.36, 0.14, 0.7), Vector3(11.0, 2.72, 6.35), Vector3.ZERO, glow.siren_b)
+	_kahr_box(db, Vector3(0.4, 0.08, 1.5), Vector3(11.0, 2.62, 6.0), Vector3.ZERO, m.dark)
+	_kahr_camp_detail(camp, _kahr_view(db, camp.position), m)
+	_kahr_excavator(_kahr_view(db, col.position), _kahr_xf(Vector3(5.4, 0, 5.9), Vector3(0, -138, 0)), m)
+	for p in [[Vector3(-14.6, 0, 1.2), 4.0, 20.0], [Vector3(8.0, 0, 11.6), 3.4, 70.0], [Vector3(-6.6, 0, 13.6), 3.0, 140.0],
+			[Vector3(5.6, 0, 12.6), 3.6, 200.0]]:
+		_model(back, "nature-kit/rock_largeA", p[0], p[2], p[1])
+	# snowy shrubs along the fences and houses
+	var bush := _mat(Color(0.2, 0.36, 0.33))
+	for p in [Vector3(-12.6, 0, -5.4), Vector3(-10.4, 0, -6.6), Vector3(-6.9, 0, -9.8), Vector3(-4.4, 0, -10.8),
+			Vector3(8.6, 0, 8.8), Vector3(11.6, 0, 8.6), Vector3(14.6, 0, 5.0), Vector3(-13.8, 0, 9.4), Vector3(10.2, 0, -10.6),
+			Vector3(6.0, 0, -11.8), Vector3(-1.0, 0, -12.6)]:
+		var r := 0.7 + fmod(absf(p.x * 1.7 + p.z), 0.6)
+		_kahr_ball(db, r, p, bush, Transform3D.IDENTITY, Vector3(1.3, 1.5, 1.0))
+		_kahr_ball(db, r * 0.7, p + Vector3(r * 0.8, 0, 0.3), bush, Transform3D.IDENTITY, Vector3(1.2, 1.6, 1.0))
+	_model(back, "city-kit-suburban/fence-1x3", Vector3(-8.0, 0, 13.0), 90, 4.0, "FenceD")
+	_model(back, "city-kit-suburban/fence-1x3", Vector3(8.0, 0, -11.0), 30, 4.0, "FenceE")
+	_kahr_commit(db)
+	_kahr_commit(dg)
+	_kahr_commit(cache.people)
+	cache.clear()  # the people batch points back at the cache: break the cycle
+
+
+func _kahr_apartment_detail(b: Dictionary, m: Dictionary) -> void:
+	var rng: RandomNumberGenerator = b.cache.rng
+	# bevel-like corner pilasters, floor ledges, stone plinth
+	for sx in [-1, 1]:
+		for sz in [-1, 1]:
+			_kahr_box(b, Vector3(0.45, 18.0, 0.45), Vector3(sx * 6.45, 9.0, sz * 4.95), Vector3.ZERO, m.trim)
+	for f in range(1, 6):
+		_kahr_box(b, Vector3(13.2, 0.16, 10.2), Vector3(0, f * 3.0 - 0.05, 0), Vector3.ZERO, m.trim)
+	for sx in [-1, 1]:
+		_kahr_box(b, Vector3(0.2, 0.7, 10.2), Vector3(sx * 6.55, 0.35, 0), Vector3.ZERO, m.stone)
+		_kahr_box(b, Vector3(5.65, 0.7, 0.2), Vector3(sx * 3.775, 0.35, 5.05), Vector3.ZERO, m.stone)
+	_kahr_box(b, Vector3(13.2, 0.7, 0.2), Vector3(0, 0.35, -5.05), Vector3.ZERO, m.stone)
+	# entrance: frame, glass, step
+	for sx in [-1, 1]:
+		_kahr_box(b, Vector3(0.16, 2.55, 0.16), Vector3(sx * 0.88, 1.27, 5.06), Vector3.ZERO, m.trim)
+	_kahr_box(b, Vector3(1.92, 0.16, 0.16), Vector3(0, 2.48, 5.06), Vector3.ZERO, m.trim)
+	_kahr_box(b, Vector3(0.9, 0.9, 0.03), Vector3(0, 1.62, 5.08), Vector3.ZERO, m.panel)
+	_kahr_box(b, Vector3(2.3, 0.16, 0.6), Vector3(0, 0.08, 5.3), Vector3.ZERO, m.stone)
+	# ground floor shops: half-down shutters and plain sign boards
+	for sx in [-1, 1]:
+		for bx in [2.6, 5.2]:
+			_kahr_box(b, Vector3(1.56, 0.92, 0.06), Vector3(sx * bx, 2.0, 5.04), Vector3.ZERO, m.light)
+			_kahr_box(b, Vector3(1.62, 0.08, 0.1), Vector3(sx * bx, 1.54, 5.06), Vector3.ZERO, m.metal)
+		_kahr_box(b, Vector3(4.9, 0.36, 0.08), Vector3(sx * 3.9, 2.68, 5.06), Vector3.ZERO, m.red if sx < 0 else m.teal)
+		_kahr_box(b, Vector3(0.5, 0.2, 0.03), Vector3(sx * 3.9 - 1.6, 2.68, 5.11), Vector3.ZERO, m.white)
+	_kahr_box(b, Vector3(0.08, 0.6, 0.62), Vector3(5.9, 2.15, 5.42), Vector3.ZERO, m.teal)
+	# window sills: centre column of the front and both side faces
+	for f in 6:
+		var y := f * 3.0 + 0.86
+		if f > 0:
+			_kahr_box(b, Vector3(1.6, 0.1, 0.24), Vector3(0, y, 5.1), Vector3.ZERO, m.sill)
+		for sx in [-1, 1]:
+			for z in [-3.75, -1.25, 1.25, 3.75]:
+				_kahr_box(b, Vector3(0.24, 0.1, 1.6), Vector3(sx * 6.6, y, z), Vector3.ZERO, m.sill)
+	# outdoor AC units under some side windows
+	for p in [[-1, 1, 1.25], [-1, 2, -3.75], [-1, 4, 3.75], [-1, 5, -1.25], [1, 1, -3.75], [1, 3, -1.25], [1, 5, 1.25], [-1, 0, -1.25]]:
+		var x: float = p[0] * 6.7
+		var y2: float = p[1] * 3.0 + 0.45
+		_kahr_box(b, Vector3(0.36, 0.55, 0.8), Vector3(x, y2, p[2]), Vector3.ZERO, m.light)
+		_kahr_box(b, Vector3(0.04, 0.38, 0.38), Vector3(x + p[0] * 0.18, y2, p[2] + 0.12), Vector3.ZERO, m.metal)
+	# drain pipe down the left front corner
+	_kahr_cyl(b, 0.09, 18.2, Vector3(-6.8, 9.1, 4.4), Vector3.ZERO, m.metal, 6)
+	# balconies: handrail cap, side panels, pots, dishes, drying racks
+	for f in range(1, 6):
+		for c in [-1, 1]:
+			var tilt := Vector3(0, 0, -9) if f == 3 and c == 1 else Vector3.ZERO
+			var bx := _kahr_xf(Vector3(c * 3.9, f * 3.0, 5.7), tilt)
+			_kahr_box(b, Vector3(3.72, 0.08, 0.16), Vector3(0, 1.12, 0.68), Vector3.ZERO, m.trim, bx)
+			for sx in [-1, 1]:
+				_kahr_box(b, Vector3(0.08, 1.0, 1.3), Vector3(sx * 1.76, 0.6, 0.02), Vector3.ZERO, m.metal, bx)
+			for i in 5:
+				_kahr_box(b, Vector3(0.06, 0.95, 0.05), Vector3(-1.4 + i * 0.7, 0.6, 0.73), Vector3.ZERO, m.trim, bx)
+			for i in 4:
+				_kahr_cyl(b, 0.05, 0.25 + 0.12 * ((f + i + c) % 3), Vector3(-1.3 + i * 0.85, -0.25, 0.55), Vector3.ZERO, m.sill, 6, bx, 0.0)
+			var k: int = (f * 3 + c + 7) % 4
+			if k == 0:
+				_kahr_cyl(b, 0.2, 0.28, Vector3(-1.2, 1.3, 0.62), Vector3.ZERO, m.terracotta, 8, bx, 0.14)
+				_kahr_ball(b, 0.3, Vector3(-1.2, 1.5, 0.62), m.green, bx)
+				_kahr_cyl(b, 0.2, 0.28, Vector3(-0.6, 1.3, 0.62), Vector3.ZERO, m.terracotta, 8, bx, 0.14)
+				_kahr_ball(b, 0.25, Vector3(-0.6, 1.48, 0.62), m.green, bx)
+			elif k == 1:
+				_kahr_cyl(b, 0.34, 0.06, Vector3(1.2, 1.55, 0.72), Vector3(60, 20, 0), m.light, 10, bx)
+				_kahr_box(b, Vector3(0.05, 0.4, 0.05), Vector3(1.2, 1.3, 0.66), Vector3.ZERO, m.metal, bx)
+			elif k == 2:
+				for sx in [-1, 1]:
+					_kahr_box(b, Vector3(0.05, 0.75, 0.05), Vector3(0.6 + sx * 0.7, 0.5, -0.1), Vector3.ZERO, m.metal, bx)
+				_kahr_box(b, Vector3(1.45, 0.04, 0.04), Vector3(0.6, 0.88, -0.1), Vector3.ZERO, m.metal, bx)
+				_kahr_box(b, Vector3(0.45, 0.5, 0.03), Vector3(0.3, 0.62, -0.1), Vector3.ZERO, m.red, bx)
+				_kahr_box(b, Vector3(0.4, 0.42, 0.03), Vector3(0.9, 0.66, -0.1), Vector3.ZERO, m.white, bx)
+			else:
+				_kahr_box(b, Vector3(0.8, 0.55, 0.32), Vector3(-1.0, 0.4, -0.45), Vector3.ZERO, m.light, bx)
+	# roof: parapet ring, stair housing, solar water heaters, chimneys, antennas, dishes, tank
+	var top := 18.35
+	for sz in [-1, 1]:
+		_kahr_box(b, Vector3(13.4, 0.55, 0.25), Vector3(0, top + 0.27, sz * 5.075), Vector3.ZERO, m.trim)
+	for sx in [-1, 1]:
+		_kahr_box(b, Vector3(0.25, 0.55, 9.9), Vector3(sx * 6.575, top + 0.27, 0), Vector3.ZERO, m.trim)
+	# the far roof edge touches the top of the frame in every pose: tall parts sit front-right and inward
+	_kahr_box(b, Vector3(3.2, 1.8, 2.6), Vector3(3.4, top + 0.9, 2.4), Vector3.ZERO, m.trim)
+	_kahr_box(b, Vector3(3.5, 0.18, 2.9), Vector3(3.4, top + 1.89, 2.4), Vector3.ZERO, m.stone)
+	_kahr_box(b, Vector3(0.9, 1.55, 0.06), Vector3(2.8, top + 0.78, 3.72), Vector3.ZERO, m.dark)
+	for p in [Vector2(-1.6, -0.6), Vector2(0.3, -0.6), Vector2(-1.6, 2.4), Vector2(0.3, 2.4)]:
+		_kahr_box(b, Vector3(1.6, 0.1, 1.3), Vector3(p.x, top + 0.62, p.y + 0.55), Vector3(48, 0, 0), m.panel)
+		_kahr_cyl(b, 0.35, 1.7, Vector3(p.x, top + 1.1, p.y - 0.35), Vector3(0, 0, 90), m.light, 12)
+		for sx in [-1, 1]:
+			_kahr_box(b, Vector3(0.08, 0.9, 0.08), Vector3(p.x + sx * 0.6, top + 0.45, p.y - 0.35), Vector3.ZERO, m.metal)
+			_kahr_box(b, Vector3(0.08, 0.3, 0.08), Vector3(p.x + sx * 0.6, top + 0.15, p.y + 1.1), Vector3.ZERO, m.metal)
+	for p in [Vector3(-5.6, 0, 3.9), Vector3(-0.6, 0, 4.4), Vector3(5.4, 0, 0.0)]:
+		_kahr_box(b, Vector3(0.5, 1.3, 0.5), Vector3(p.x, top + 0.65, p.z), Vector3.ZERO, m.chimney)
+		_kahr_box(b, Vector3(0.7, 0.1, 0.7), Vector3(p.x, top + 1.42, p.z), Vector3.ZERO, m.slab_dark)
+	for p in [Vector3(1.0, 0, 4.4), Vector3(-3.0, 0, 4.3)]:
+		_kahr_cyl(b, 0.04, 2.0, Vector3(p.x, top + 1.0, p.z), Vector3.ZERO, m.metal, 4)
+		for i in 3:
+			_kahr_box(b, Vector3(1.1 - i * 0.25, 0.04, 0.04), Vector3(p.x, top + 1.3 + i * 0.3, p.z), Vector3(0, 30, 0), m.metal)
+	for p in [Vector3(4.6, 0, -1.6), Vector3(-4.8, 0, 2.6)]:
+		_kahr_box(b, Vector3(0.06, 0.6, 0.06), Vector3(p.x, top + 0.3, p.z), Vector3.ZERO, m.metal)
+		_kahr_cyl(b, 0.45, 0.07, Vector3(p.x, top + 0.75, p.z + 0.1), Vector3(65, 0, 0), m.light, 12)
+	_kahr_cyl(b, 0.55, 1.1, Vector3(-3.6, top + 0.55, 0.6), Vector3.ZERO, m.dark, 12)
+	for i in 26:
+		var x := -6.3 + i * 0.5 + rng.randf_range(-0.15, 0.15)
+		var h := rng.randf_range(0.25, 0.7)
+		_kahr_cyl(b, 0.07, h, Vector3(x, 17.85 - h * 0.5, 5.15), Vector3.ZERO, m.sill, 6, Transform3D.IDENTITY, 0.0)
+	for i in 20:
+		var z := -4.8 + i * 0.5 + rng.randf_range(-0.15, 0.15)
+		var h := rng.randf_range(0.25, 0.7)
+		_kahr_cyl(b, 0.07, h, Vector3(6.65, 17.85 - h * 0.5, z), Vector3.ZERO, m.sill, 6, Transform3D.IDENTITY, 0.0)
+		_kahr_cyl(b, 0.07, h * 0.8, Vector3(-6.65, 17.85 - h * 0.4, -z), Vector3.ZERO, m.sill, 6, Transform3D.IDENTITY, 0.0)
+	# plaster chunks fallen from the side crack
+	for i in 5:
+		var s := Vector3(rng.randf_range(0.25, 0.6), rng.randf_range(0.15, 0.35), rng.randf_range(0.25, 0.5))
+		_kahr_box(b, s, Vector3(7.2 + rng.randf_range(0, 0.9), s.y * 0.45, 1.5 + rng.randf_range(0, 2.8)),
+				Vector3(rng.randf_range(-20, 20), rng.randf_range(0, 90), rng.randf_range(-20, 20)), m.trim)
+
+
+func _kahr_collapsed_detail(b: Dictionary, g: Dictionary, m: Dictionary, glow: Dictionary) -> void:
+	var rng: RandomNumberGenerator = b.cache.rng
+	# rebar torn out of the slab edges and column tops
+	var slabs := [[Vector3(0, 2.0, 0), Vector3(0, 0, -24), 4.1], [Vector3(-0.4, 3.7, 0.2), Vector3(3, 0, -31), 4.1],
+			[Vector3(-1.0, 5.5, -0.2), Vector3(-4, 0, -20), 4.0]]
+	for s in slabs:
+		var sx := _kahr_xf(s[0], s[1])
+		for i in 7:
+			_kahr_cyl(b, 0.04, rng.randf_range(0.7, 1.3), Vector3(-4.6, rng.randf_range(-0.1, 0.1), -3.4 + i * 1.1),
+					Vector3(rng.randf_range(-20, 20), rng.randf_range(-25, 25), 90 + rng.randf_range(-25, 25)), m.rebar, 4, sx)
+		for i in 6:
+			_kahr_cyl(b, 0.04, rng.randf_range(0.6, 1.1), Vector3(-3.6 + i * 1.4, rng.randf_range(-0.1, 0.1), float(s[2]) + 0.3),
+					Vector3(90 + rng.randf_range(-30, 30), 0, rng.randf_range(-30, 30)), m.rebar, 4, sx)
+		_kahr_box(b, Vector3(8.0, 0.14, 0.12), Vector3(0, -0.2, float(s[2]) + 0.06), Vector3.ZERO, m.slab_dark, sx)
+		_kahr_box(b, Vector3(8.0, 0.1, 0.1), Vector3(0, 0.18, float(s[2]) + 0.05), Vector3.ZERO, m.trim, sx)
+		for i in 5:
+			var cs := Vector3(rng.randf_range(0.3, 0.8), rng.randf_range(0.2, 0.4), rng.randf_range(0.3, 0.7))
+			_kahr_box(b, cs, Vector3(rng.randf_range(-3.5, 3.5), 0.22 + cs.y * 0.4, rng.randf_range(-3.0, 3.6)),
+					Vector3(rng.randf_range(-15, 15), rng.randf_range(0, 90), rng.randf_range(-15, 15)), m.brick if i % 2 else m.slab, sx)
+	for i in 3:
+		var tx := _kahr_xf(Vector3(-3.7, 3.1, -3.6 + i * 3.6), Vector3(0, 0, -4 + i * 2))
+		for c in [Vector2(-0.15, -0.15), Vector2(0.15, -0.15), Vector2(-0.15, 0.15), Vector2(0.15, 0.15)]:
+			_kahr_cyl(b, 0.04, 0.8, Vector3(c.x, 3.45, c.y), Vector3(rng.randf_range(-25, 25), 0, rng.randf_range(-25, 25)), m.rebar, 4, tx)
+	# rubble mound: concrete, dark and red hollow-brick chunks
+	for i in 72:
+		var s := Vector3(rng.randf_range(0.2, 0.6), rng.randf_range(0.15, 0.4), rng.randf_range(0.2, 0.5))
+		var a := rng.randf_range(-1.6, 1.9)
+		var d := rng.randf_range(2.5, 6.6)
+		var mat: Material = m.brick if i % 3 == 0 else (m.slab if i % 3 == 1 else m.slab_dark)
+		_kahr_box(b, s, Vector3(cos(a) * d + 0.6, s.y * 0.4, sin(a) * d * 0.9 + 0.6),
+				Vector3(rng.randf_range(-30, 30), rng.randf_range(0, 180), rng.randf_range(-30, 30)), mat)
+	for p in [[Vector3(-2.6, 0.35, 5.6), Vector3(-15, 30, 8)], [Vector3(5.8, 0.4, -2.4), Vector3(10, 70, -20)], [Vector3(6.4, 0.3, 3.8), Vector3(-8, -20, 12)]]:
+		_kahr_box(b, Vector3(1.3, 0.8, 0.22), p[0], p[1], m.brick)
+	# belongings in the debris: mattress, fridge, armchair
+	_kahr_box(b, Vector3(1.8, 0.22, 0.95), Vector3(-3.4, 0.35, 5.0), Vector3(8, 25, -10), m.mattress)
+	_kahr_box(b, Vector3(0.65, 1.4, 0.6), Vector3(3.9, 0.33, 5.0), Vector3(0, 25, 88), m.white)
+	var chair := _kahr_xf(Vector3(6.6, 0.0, 0.8), Vector3(0, -60, 14))
+	_kahr_box(b, Vector3(0.8, 0.4, 0.8), Vector3(0, 0.3, 0), Vector3.ZERO, m.blue, chair)
+	_kahr_box(b, Vector3(0.8, 0.7, 0.2), Vector3(0, 0.75, -0.35), Vector3.ZERO, m.blue, chair)
+	# work light on a tripod, aimed at the rubble
+	var lt := Vector3(-4.6, 0, -1.6)
+	for i in 3:
+		var a := i * TAU / 3.0
+		_kahr_cyl(b, 0.04, 2.6, lt + Vector3(cos(a) * 0.45, 1.25, sin(a) * 0.45), Vector3(-sin(a) * 12.0, 0, cos(a) * 12.0), m.metal, 4)
+	_kahr_cyl(b, 0.05, 1.4, lt + Vector3(0, 3.1, 0), Vector3.ZERO, m.metal, 4)
+	var head := _kahr_xf(lt + Vector3(0, 3.85, 0), Vector3(-25, 90, 0))
+	_kahr_box(b, Vector3(1.3, 0.55, 0.3), Vector3(0, 0, -0.05), Vector3.ZERO, m.yellow, head)
+	_kahr_box(g, Vector3(1.15, 0.42, 0.05), Vector3(0, 0, 0.13), Vector3.ZERO, glow.lamp, head)
+	# barrier tape on cones along the street edge
+	var cones := [Vector3(-4.2, 0, 5.9), Vector3(-1.2, 0, 6.6), Vector3(2.6, 0, 6.4)]
+	for i in cones.size():
+		var p: Vector3 = cones[i]
+		_kahr_cyl(b, 0.03, 0.75, p + Vector3(0, 0.375, 0), Vector3.ZERO, m.orange, 8, Transform3D.IDENTITY, 0.24)
+		_kahr_box(b, Vector3(0.6, 0.06, 0.6), p + Vector3(0, 0.03, 0), Vector3.ZERO, m.orange)
+		if i > 0:
+			_kahr_beam(g, cones[i - 1] + Vector3(0, 0.66, 0), p + Vector3(0, 0.66, 0), 0.04, glow.tape)
+	# rescuers: two digging, two carrying a stretcher, a search dog
+	_kahr_person(b, m, Vector3(-1.5, 0, 4.6), 200, m.orange, m.yellow, 35, 60)
+	_kahr_person(b, m, Vector3(2.0, 0, 5.0), 150, m.orange, m.yellow, 15, 35)
+	_kahr_person(b, m, Vector3(-1.4, 0, 8.4), 270, m.orange, m.white, 0, 25)
+	_kahr_person(b, m, Vector3(-3.6, 0, 8.4), 270, m.orange, m.yellow, 0, 25)
+	_kahr_box(b, Vector3(1.9, 0.08, 0.6), Vector3(-2.5, 0.92, 8.4), Vector3.ZERO, m.orange)
+	_kahr_box(b, Vector3(1.4, 0.18, 0.5), Vector3(-2.6, 1.05, 8.4), Vector3.ZERO, m.blue)
+	var dog := _kahr_xf(Vector3(0.4, 0, 5.4), Vector3(0, 160, 0))
+	_kahr_box(b, Vector3(0.28, 0.3, 0.75), Vector3(0, 0.45, 0), Vector3.ZERO, m.wood, dog)
+	_kahr_box(b, Vector3(0.24, 0.26, 0.32), Vector3(0, 0.7, 0.45), Vector3(-15, 0, 0), m.wood, dog)
+	for c in [Vector2(-0.09, 0.28), Vector2(0.09, 0.28), Vector2(-0.09, -0.28), Vector2(0.09, -0.28)]:
+		_kahr_box(b, Vector3(0.08, 0.32, 0.08), Vector3(c.x, 0.16, c.y), Vector3.ZERO, m.wood, dog)
+	_kahr_box(b, Vector3(0.3, 0.1, 0.4), Vector3(0, 0.62, -0.02), Vector3.ZERO, m.orange, dog)
+
+
+func _kahr_street_detail(street: Node3D, b: Dictionary, g: Dictionary, m: Dictionary, glow: Dictionary) -> void:
+	# pavement and kerbs: apartment side up to the rubble, camp side across
+	_kahr_box(b, Vector3(16.6, 0.16, 0.62), Vector3(-4.2, 0.08, 1.31), Vector3.ZERO, m.kerb)
+	_kahr_box(b, Vector3(16.6, 0.22, 0.2), Vector3(-4.2, 0.11, 1.68), Vector3.ZERO, m.kerb)
+	_kahr_box(b, Vector3(1.6, 0.22, 0.2), Vector3(4.9, 0.14, 1.75), Vector3(4, 12, 6), m.kerb)
+	_kahr_box(b, Vector3(25.0, 0.2, 0.85), Vector3(0, 0.1, 8.1), Vector3.ZERO, m.kerb)
+	_kahr_box(b, Vector3(25.0, 0.26, 0.2), Vector3(0, 0.13, 7.62), Vector3.ZERO, m.kerb)
+	var tracks := MeshInstance3D.new()
+	tracks.name = "TyreTracks"
+	var tm := PlaneMesh.new()
+	tm.size = Vector2(36, 5.6)
+	tracks.mesh = tm
+	tracks.position = Vector3(0, 0.045, 4.5)
+	tracks.material_override = _shader(KAHR_TRACKS)
+	tracks.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	tracks.add_to_group(&"no_snow", true)
+	_own(tracks, street)
+	# utility poles with street lamps (power is out) and sagging wires; the right one leans
+	var tops := []
+	for p in [[Vector3(-11.5, 0, 8.25), Vector3.ZERO], [Vector3(0.6, 0, 8.25), Vector3(0, 0, 2)], [Vector3(12.0, 0, 8.25), Vector3(-9, 0, 7)]]:
+		var px := _kahr_xf(p[0], p[1])
+		_kahr_cyl(b, 0.1, 7.6, Vector3(0, 3.8, 0), Vector3.ZERO, m.pole, 8, px, 0.17)
+		_kahr_box(b, Vector3(0.12, 0.12, 1.7), Vector3(0, 7.1, 0), Vector3.ZERO, m.pole, px)
+		var ends := []
+		for z in [-0.7, 0.0, 0.7]:
+			_kahr_cyl(b, 0.05, 0.18, Vector3(0, 7.25, z), Vector3.ZERO, m.white, 6, px)
+			ends.append(px * Vector3(0, 7.32, z))
+		tops.append(ends)
+		_kahr_box(b, Vector3(0.08, 0.08, 1.8), Vector3(0, 5.9, -0.9), Vector3(-8, 0, 0), m.metal, px)
+		_kahr_box(b, Vector3(0.36, 0.14, 0.6), Vector3(0, 5.95, -1.8), Vector3.ZERO, m.light, px)
+	for i in tops.size() - 1:
+		for w in 3:
+			var a: Vector3 = tops[i][w]
+			var c: Vector3 = tops[i + 1][w]
+			var mid := (a + c) * 0.5 - Vector3(0, 0.55, 0)
+			_kahr_beam(b, a, mid, 0.05, m.dark)
+			_kahr_beam(b, mid, c, 0.05, m.dark)
+	# snow drifts against kerbs, walls and cars
+	for p in [[Vector3(-9.9, 0, -6.0), 1.4, 0.7], [Vector3(-9.8, 0, -2.0), 1.1, 0.5], [Vector3(-6.0, 0.05, 8.6), 1.2, 0.5],
+			[Vector3(6.0, 0.05, 8.7), 1.3, 0.5], [Vector3(-12.6, 0.1, 1.9), 0.9, 0.45], [Vector3(3.8, 0, 0.5), 0.9, 0.5],
+			[Vector3(-1.0, 0.08, 1.9), 1.0, 0.4], [Vector3(-14.2, 0, -1.0), 1.6, 0.6], [Vector3(-11.4, 0.05, 11.4), 1.5, 0.55],
+			[Vector3(9.0, 0.05, 9.4), 1.2, 0.45], [Vector3(-6.4, 0, -10.6), 1.5, 0.6], [Vector3(2.0, 0, -9.8), 1.3, 0.5]]:
+		_kahr_ball(b, p[1], p[0], m.snow, Transform3D.IDENTITY, Vector3(1.8, p[2] * 2.0 / p[1], 1.0))
+	# rubbish container on the camp-side pavement
+	var bin := _kahr_xf(Vector3(-8.6, 0.2, 8.4), Vector3(0, 6, 0))
+	_kahr_box(b, Vector3(1.5, 1.05, 0.95), Vector3(0, 0.62, 0), Vector3.ZERO, m.bin, bin)
+	_kahr_box(b, Vector3(1.6, 0.08, 1.02), Vector3(0, 1.18, -0.05), Vector3(-8, 0, 0), m.dark, bin)
+	for c in [Vector2(-0.6, -0.35), Vector2(0.6, -0.35), Vector2(-0.6, 0.35), Vector2(0.6, 0.35)]:
+		_kahr_cyl(b, 0.07, 0.06, Vector3(c.x, 0.07, c.y), Vector3(90, 0, 0), m.dark, 6, bin)
+
+
+func _kahr_camp_detail(camp: Node3D, b: Dictionary, m: Dictionary) -> void:
+	_model(camp, "survival-kit/tent", Vector3(-5.6, 0, -0.4), 160, 4.6, "TentB")
+	# seat logs around the fire (fire at 3.6, 0.8) and a firewood stack
+	_kahr_cyl(b, 0.2, 1.7, Vector3(3.5, 0.2, 3.3), Vector3(0, 0, 90), m.wood, 10)
+	_kahr_cyl(b, 0.2, 1.6, Vector3(5.6, 0.2, 1.4), Vector3(0, 70, 90), m.wood, 10)
+	for i in 6:
+		var row := int(i / 3.0)
+		_kahr_cyl(b, 0.12, 1.1, Vector3(0.6 + (i % 3) * 0.26 + row * 0.13, 0.12 + row * 0.22, 2.8), Vector3(90, 0, 0), m.wood, 8)
+	# supply packs next to the crates
+	for i in 4:
+		_kahr_box(b, Vector3(0.5, 0.3, 0.35), Vector3(-1.4 + (i % 2) * 0.55, 0.15 + int(i / 2.0) * 0.3, 2.6), Vector3(0, 8, 0), m.blue)
+	# families at the fire, one child
+	_kahr_person(b, m, Vector3(5.1, 0, 0.5), -100, m.blue, m.dark)
+	_kahr_person(b, m, Vector3(2.9, 0, 2.1), 150, m.plum, m.pants, 0, 40)
+	_kahr_person(b, m, Vector3(4.3, 0, 2.7), 200, m.green, m.red)
+	_kahr_person(b, m, Vector3(3.6, 0, 2.3), 190, m.red, m.dark, 0, 0, 0.62)
+	_kahr_person(b, m, Vector3(2.2, 0, -0.6), 50, m.teal, m.pants, 0, 40)
+
+
+## Tiny low-poly person (about 1.9 m), facing +z after `rot_y`. lean: torso pitch, arms: forward swing (degrees).
+func _kahr_person(b: Dictionary, m: Dictionary, pos: Vector3, rot_y: float, coat: Material, hat: Material,
+		lean := 0.0, arms := 0.0, s := 1.0) -> void:
+	var base := Transform3D(Basis.from_euler(Vector3(0, deg_to_rad(rot_y), 0)).scaled(Vector3.ONE * s), pos)
+	var pv: Dictionary = b.cache.people.duplicate()
+	pv.offset = b.offset
+	b = pv
+	for sx in [-1, 1]:
+		_kahr_box(b, Vector3(0.21, 0.82, 0.26), Vector3(sx * 0.13, 0.41, 0), Vector3.ZERO, m.pants, base)
+	var torso := base * _kahr_xf(Vector3(0, 0.8, 0), Vector3(lean, 0, 0))
+	_kahr_box(b, Vector3(0.56, 0.74, 0.36), Vector3(0, 0.38, 0), Vector3.ZERO, coat, torso)
+	for sx in [-1, 1]:
+		var arm := torso * _kahr_xf(Vector3(sx * 0.36, 0.7, 0), Vector3(-arms, 0, sx * 6))
+		_kahr_box(b, Vector3(0.15, 0.62, 0.18), Vector3(0, -0.28, 0), Vector3.ZERO, coat, arm)
+	_kahr_box(b, Vector3(0.32, 0.32, 0.32), Vector3(0, 0.94, 0.02), Vector3.ZERO, m.skin, torso)
+	_kahr_box(b, Vector3(0.38, 0.14, 0.38), Vector3(0, 1.14, 0.02), Vector3.ZERO, hat, torso)
+
+
+## Small tracked excavator from boxes and cylinders; boom along +z of `base`.
+func _kahr_excavator(b: Dictionary, base: Transform3D, m: Dictionary) -> void:
+	for sx in [-1, 1]:
+		_kahr_box(b, Vector3(0.7, 0.75, 3.4), Vector3(sx * 1.0, 0.38, 0), Vector3.ZERO, m.dark, base)
+		for i in 4:
+			_kahr_cyl(b, 0.3, 0.74, Vector3(sx * 1.0, 0.38, -1.2 + i * 0.8), Vector3(0, 0, 90), m.slab_dark, 12, base)
+	_kahr_box(b, Vector3(1.4, 0.4, 2.2), Vector3(0, 0.9, 0), Vector3.ZERO, m.dark, base)
+	_kahr_box(b, Vector3(2.4, 0.95, 2.6), Vector3(0, 1.55, -0.3), Vector3.ZERO, m.yellow, base)
+	_kahr_box(b, Vector3(2.4, 0.75, 0.6), Vector3(0, 1.5, -1.85), Vector3.ZERO, m.slab_dark, base)
+	_kahr_box(b, Vector3(1.0, 1.25, 1.2), Vector3(0.65, 2.65, 0.35), Vector3.ZERO, m.yellow, base)
+	_kahr_box(b, Vector3(1.04, 0.62, 1.1), Vector3(0.65, 2.8, 0.4), Vector3.ZERO, m.panel, base)
+	_kahr_box(b, Vector3(1.1, 0.08, 1.3), Vector3(0.65, 3.3, 0.35), Vector3.ZERO, m.dark, base)
+	_kahr_cyl(b, 0.07, 0.7, Vector3(-0.8, 2.35, -1.2), Vector3.ZERO, m.metal, 6, base)
+	# boom up, arm down, bucket
+	var pivot := Vector3(-0.35, 1.9, 0.9)
+	var bd := Vector3(0, sin(deg_to_rad(40.0)), cos(deg_to_rad(40.0)))
+	var tip := pivot + bd * 3.0
+	_kahr_box(b, Vector3(0.42, 0.5, 3.2), pivot + bd * 1.5, Vector3(-40, 0, 0), m.yellow, base)
+	_kahr_cyl(b, 0.08, 1.8, pivot + bd * 1.2 + Vector3(0, -0.35, 0), Vector3(50, 0, 0), m.light, 6, base)
+	var ad := Vector3(0, -sin(deg_to_rad(60.0)), cos(deg_to_rad(60.0)))
+	var end := tip + ad * 2.0
+	_kahr_box(b, Vector3(0.34, 0.4, 2.2), tip + ad * 1.0, Vector3(60, 0, 0), m.yellow, base)
+	_kahr_box(b, Vector3(0.9, 0.55, 0.65), end + Vector3(0, -0.1, 0.15), Vector3(25, 0, 0), m.dark, base)
+
+
+# --- Kahramanmaras detail batching: boxes, cylinders and blobs merged per material ---
+
+func _kahr_batch(parent: Node, name: String, cache: Dictionary, snow := true, shadow := true) -> Dictionary:
+	return {"parent": parent, "name": name, "cache": cache, "snow": snow, "shadow": shadow, "sets": {}, "offset": Transform3D.IDENTITY}
+
+
+## Same batch, but positions given relative to `origin` (a group's position).
+func _kahr_view(b: Dictionary, origin: Vector3) -> Dictionary:
+	var v := b.duplicate()
+	v.offset = Transform3D(Basis.IDENTITY, origin)
+	return v
+
+
+func _kahr_xf(pos: Vector3, rot_deg := Vector3.ZERO, base := Transform3D.IDENTITY) -> Transform3D:
+	return base * Transform3D(Basis.from_euler(rot_deg * (PI / 180.0)), pos)
+
+
+func _kahr_put(b: Dictionary, key: String, mat: Material, xf: Transform3D) -> void:
+	var cache: Dictionary = b.cache
+	if not cache.has(key):
+		var p := key.split(":")
+		if p[0] == "box":
+			cache[key] = BoxMesh.new()
+		elif p[0] == "cyl":
+			var cm := CylinderMesh.new()
+			cm.top_radius = float(p[1])
+			cm.bottom_radius = float(p[2])
+			cm.height = 1.0
+			cm.radial_segments = int(p[3])
+			cm.rings = 0
+			cache[key] = cm
+		else:
+			var sm := SphereMesh.new()
+			sm.radius = float(p[1])
+			sm.height = float(p[2])
+			sm.radial_segments = 12
+			sm.rings = 6
+			cache[key] = sm
+	var k := "%s#%d" % [key, mat.get_instance_id()]
+	if not b.sets.has(k):
+		b.sets[k] = {"mesh": cache[key], "mat": mat, "xfs": []}
+	b.sets[k].xfs.append(b.offset * xf)
+
+
+## Box of `size` (unit box scaled: face normals stay exact).
+func _kahr_box(b: Dictionary, size: Vector3, pos: Vector3, rot_deg: Vector3, mat: Material, base := Transform3D.IDENTITY) -> void:
+	_kahr_put(b, "box", mat, _kahr_xf(pos, rot_deg, base) * Transform3D(Basis.from_scale(size), Vector3.ZERO))
+
+
+## Cylinder (or cone/taper with `r_bottom`): a unit mesh scaled (r, h, r), which keeps the normals exact.
+## Segments are snapped to 6 (thin parts) or 12 so the whole set shares a few meshes.
+func _kahr_cyl(b: Dictionary, r: float, h: float, pos: Vector3, rot_deg: Vector3, mat: Material, segs := 8,
+		base := Transform3D.IDENTITY, r_bottom := -1.0) -> void:
+	var rb := r if r_bottom < 0.0 else r_bottom
+	var rm := maxf(r, rb)
+	var n := 6 if rm < 0.1 or segs <= 6 else 12
+	var key := "cyl:%.2f:%.2f:%d" % [r / rm, rb / rm, n]
+	_kahr_put(b, key, mat, _kahr_xf(pos, rot_deg, base) * Transform3D(Basis.from_scale(Vector3(rm, h, rm)), Vector3.ZERO))
+
+
+## Rounded blob: a half-height sphere of radius `r` (uniform scale), optional mild stretch.
+func _kahr_ball(b: Dictionary, r: float, pos: Vector3, mat: Material, base := Transform3D.IDENTITY, stretch := Vector3.ONE) -> void:
+	_kahr_put(b, "ball:1:1", mat, _kahr_xf(pos, Vector3(0, pos.x * 40.0, 0), base) * Transform3D(Basis.from_scale(stretch * r), Vector3.ZERO))
+
+
+## Thin box from `a` to `c` (wires, tape).
+func _kahr_beam(b: Dictionary, a: Vector3, c: Vector3, thick: float, mat: Material) -> void:
+	var d := c - a
+	var basis := Basis.looking_at(d.normalized(), Vector3.UP) * Basis.from_scale(Vector3(thick, thick, d.length()))
+	_kahr_put(b, "box", mat, Transform3D(basis, (a + c) * 0.5))
+
+
+## Bakes the batch into one compressed ArrayMesh per material (the snow cover reaches MeshInstance3D).
+func _kahr_commit(b: Dictionary) -> void:
+	var by_mat := {}
+	for k in b.sets:
+		var e: Dictionary = b.sets[k]
+		if not by_mat.has(e.mat):
+			by_mat[e.mat] = []
+		by_mat[e.mat].append(e)
+	var i := 0
+	for mat in by_mat:
+		var verts := PackedVector3Array()
+		var norms := PackedVector3Array()
+		var idx := PackedInt32Array()
+		for e in by_mat[mat]:
+			var src: Array = (e.mesh as PrimitiveMesh).get_mesh_arrays()
+			var sv: PackedVector3Array = src[Mesh.ARRAY_VERTEX]
+			var sn: PackedVector3Array = src[Mesh.ARRAY_NORMAL]
+			var si: PackedInt32Array = src[Mesh.ARRAY_INDEX]
+			for xf: Transform3D in e.xfs:
+				var nb := xf.basis.inverse().transposed()
+				var o := verts.size()
+				for j in sv.size():
+					verts.append(xf * sv[j])
+					norms.append((nb * sn[j]).normalized())
+				for j in si:
+					idx.append(o + j)
+		var arr := []
+		arr.resize(Mesh.ARRAY_MAX)
+		arr[Mesh.ARRAY_VERTEX] = verts
+		arr[Mesh.ARRAY_NORMAL] = norms
+		arr[Mesh.ARRAY_INDEX] = idx
+		var am := ArrayMesh.new()
+		am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr, [], {}, Mesh.ARRAY_FLAG_COMPRESS_ATTRIBUTES)
+		var mi := MeshInstance3D.new()
+		mi.name = "%s%d" % [b.name, i]
+		mi.mesh = am
+		mi.material_override = mat
+		if not b.snow:
+			mi.add_to_group(&"no_snow", true)
+		if not b.shadow:
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_own(mi, b.parent)
+		i += 1
 
 
 # ---------- Indian Ocean ----------
@@ -677,11 +1181,570 @@ func _io() -> void:
 	_model(rocks, "nature-kit/stone_smallA", Vector3(-6, -0.7, -9.5), 60, 4.0)
 	_model(rocks, "nature-kit/rock_smallA", Vector3(15, -1.0, -11), 120, 6.0, "RockSmallB")
 
+	_io_details(village, huts, [6.0, -4.0, 10.0, -12.0], floats)
+
 	var focus := Marker3D.new()
 	focus.name = "Focus"
 	focus.position = Vector3(3.0, 1.0, 0.0)
 	_own(focus, root_node)
 	_save("res://scenes/diorama/set_indian_ocean.tscn")
+
+
+# ---------- Indian Ocean: detail pass ----------
+# Small props are merged per material (SurfaceTool) so the extra detail costs few draw calls.
+
+var io_parts := {}
+var io_mats := {}
+var io_rng := RandomNumberGenerator.new()
+
+
+func _io_details(village: Node3D, huts: Array, hut_rot: Array, floats: Node3D) -> void:
+	io_rng.seed = 2004
+	var wood := _io_mat(Color(0.55, 0.38, 0.24))
+	var wood_l := _io_mat(Color(0.74, 0.58, 0.4))
+	var dark := _io_mat(Color(0.16, 0.14, 0.13))
+	var white := _io_mat(Color(0.93, 0.92, 0.88))
+	var skin := [_io_mat(Color(0.58, 0.4, 0.27)), _io_mat(Color(0.47, 0.32, 0.21))]
+	var cloth := [_io_mat(Color(0.86, 0.3, 0.24)), _io_mat(Color(0.24, 0.45, 0.72)), _io_mat(Color(0.95, 0.78, 0.3)),
+			_io_mat(Color(0.3, 0.6, 0.42)), _io_mat(Color(0.92, 0.9, 0.84)), _io_mat(Color(0.6, 0.35, 0.6))]
+	var pants := [_io_mat(Color(0.22, 0.24, 0.3)), _io_mat(Color(0.45, 0.38, 0.3)), _io_mat(Color(0.3, 0.3, 0.32))]
+
+	# stilt houses: corner posts, plank battens, framed windows with shutters, door, ladder, jars
+	for i in huts.size():
+		var b := _io_xf(huts[i], Vector3(0, hut_rot[i], 0))
+		for c in [Vector2(-1.8, -1.75), Vector2(1.8, -1.75), Vector2(-1.8, 1.75), Vector2(1.8, 1.75)]:
+			_io_box(b, Vector3(0.2, 2.4, 0.2), Vector3(c.x, 4.7, c.y), Vector3.ZERO, wood)
+		for k in 4:
+			var y := 3.75 + k * 0.55
+			_io_box(b, Vector3(3.62, 0.06, 0.05), Vector3(0, y, -1.84), Vector3.ZERO, wood)
+			_io_box(b, Vector3(0.05, 0.06, 3.52), Vector3(-1.89, y, 0), Vector3.ZERO, wood)
+			_io_box(b, Vector3(0.05, 0.06, 3.52), Vector3(1.89, y, 0), Vector3.ZERO, wood)
+		var shut: Material = cloth[[1, 3, 0, 1][i]]
+		for w in [[Vector3(-0.85, 4.85, -1.83), 0.0], [Vector3(0.85, 4.85, -1.83), 0.0], [Vector3(-1.88, 4.85, 0.3), 90.0], [Vector3(1.88, 4.85, -0.3), -90.0]]:
+			var wb: Transform3D = b * _io_xf(w[0], Vector3(0, w[1], 0))
+			_io_box(wb, Vector3(0.86, 0.8, 0.06), Vector3.ZERO, Vector3.ZERO, wood_l)
+			_io_box(wb, Vector3(0.64, 0.58, 0.06), Vector3(0, 0, -0.02), Vector3.ZERO, dark)
+			_io_box(wb, Vector3(1.0, 0.07, 0.2), Vector3(0, -0.43, -0.06), Vector3.ZERO, wood_l)
+			_io_box(wb, Vector3(0.34, 0.62, 0.04), Vector3(-0.62, 0, -0.14), Vector3(0, 35, 0), shut)
+			_io_box(wb, Vector3(0.34, 0.62, 0.04), Vector3(0.62, 0, -0.14), Vector3(0, -35, 0), shut)
+		_io_box(b, Vector3(1.2, 2.0, 0.06), Vector3(0, 4.55, 1.74), Vector3.ZERO, dark)
+		_io_box(b, Vector3(1.4, 0.1, 0.12), Vector3(0, 5.6, 1.8), Vector3.ZERO, wood_l)
+		for sx in [-0.42, 0.42]:
+			_io_beam(b, Vector3(sx, 3.55, 1.9), Vector3(sx, 0.0, 3.5), 0.09, wood)
+		for k in 7:
+			var t := (k + 0.6) / 7.6
+			_io_box(b, Vector3(0.84, 0.05, 0.14), Vector3(0, lerpf(3.55, 0.0, t), lerpf(1.9, 3.5, t)), Vector3.ZERO, wood_l)
+		_io_cyl(b, 0.26, 0.2, 0.55, Vector3(1.2, 0.27, 2.6), Vector3.ZERO, _io_mat(Color(0.6, 0.32, 0.2)), 10)
+		_io_cyl(b, 0.27, 0.27, 0.05, Vector3(1.2, 0.56, 2.6), Vector3.ZERO, wood, 10)
+	# laundry line between two posts behind the huts
+	var lp := [Vector3(-11.2, 0, 15.2), Vector3(-7.6, 0, 16.4)]
+	for p in lp:
+		_io_cyl(Transform3D.IDENTITY, 0.06, 0.06, 2.2, Vector3(p.x, _io_y(p.x, p.z) + 1.0, p.z), Vector3.ZERO, wood, 6)
+	var la := Vector3(lp[0].x, _io_y(lp[0].x, lp[0].z) + 2.0, lp[0].z)
+	var lb := Vector3(lp[1].x, _io_y(lp[1].x, lp[1].z) + 2.0, lp[1].z)
+	_io_wire(la, lb, 0.15, dark)
+	for k in 5:
+		var t := (k + 0.7) / 5.4
+		var p: Vector3 = la.lerp(lb, t) + Vector3(0, -0.15 * 4.0 * t * (1.0 - t) - 0.3, 0)
+		_io_box(Transform3D.IDENTITY, Vector3(0.5, 0.55, 0.03), p, Vector3(0, -18, 0), cloth[(k * 2 + 1) % cloth.size()])
+	_io_flush(village, "HutDetail")
+
+	_io_beach(wood, wood_l, dark, white, skin, cloth, pants)
+	_io_flush(village, "BeachLife")
+	_io_inland(wood, wood_l, dark, white, skin, cloth, pants)
+	_io_flush(village, "Inland")
+	_io_mosque(Vector3(4.0, _io_y(4.0, 24.0) - 0.1, 24.0), -4.0)
+	_io_flush(village, "Mosque")
+	_io_seabed()
+	var bed := _io_flush(root_node, "Seabed")
+	for m in bed.get_children():
+		(m as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+	# colourful fishing boats afloat: each one its own node so the Float bob/drawback moves it
+	var hulls := [[Vector3(-12.0, -0.5, -17.5), 28.0, 1, 0], [Vector3(17.0, -0.5, -21.0), -38.0, 3, 0]]
+	for i in hulls.size():
+		var h: Array = hulls[i]
+		_io_boat(Transform3D.IDENTITY, Vector3.ZERO, 0.0, cloth[h[2]], cloth[(h[2] + 1) % cloth.size()], white, wood, dark)
+		var n := _io_flush(floats, "PerahuAfloat%d" % i)
+		n.position = h[0]
+		n.rotation_degrees.y = h[1]
+
+
+func _io_mat(c: Color, rough := 0.9) -> StandardMaterial3D:
+	var k := c.to_html() + str(rough)
+	if not io_mats.has(k):
+		io_mats[k] = _mat(c, rough)
+	return io_mats[k]
+
+
+func _io_xf(pos: Vector3, rot_deg := Vector3.ZERO, s := Vector3.ONE) -> Transform3D:
+	return Transform3D(Basis.from_euler(rot_deg * PI / 180.0) * Basis.from_scale(s), pos)
+
+
+func _io_add(mesh: Mesh, xf: Transform3D, mat: Material) -> void:
+	if not io_parts.has(mat):
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		io_parts[mat] = st
+	(io_parts[mat] as SurfaceTool).append_from(mesh, 0, xf)
+
+
+## Commits the pending parts: one MeshInstance3D per material under a new group.
+func _io_flush(parent: Node, name: String) -> Node3D:
+	var g := _group(name, parent)
+	var i := 0
+	for mat in io_parts:
+		var mi := MeshInstance3D.new()
+		mi.name = "Part%d" % i
+		# positions, normals and indices only: keeps the generated .tscn small
+		var src := (io_parts[mat] as SurfaceTool).commit_to_arrays()
+		var arr := []
+		arr.resize(Mesh.ARRAY_MAX)
+		arr[Mesh.ARRAY_VERTEX] = src[Mesh.ARRAY_VERTEX]
+		arr[Mesh.ARRAY_NORMAL] = src[Mesh.ARRAY_NORMAL]
+		arr[Mesh.ARRAY_INDEX] = src[Mesh.ARRAY_INDEX]
+		var am := ArrayMesh.new()
+		am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+		mi.mesh = am
+		mi.material_override = mat
+		_own(mi, g)
+		i += 1
+	io_parts.clear()
+	return g
+
+
+func _io_box(b: Transform3D, size: Vector3, pos: Vector3, rot := Vector3.ZERO, mat: Material = null) -> void:
+	var m := BoxMesh.new()
+	m.size = size
+	_io_add(m, b * _io_xf(pos, rot), mat)
+
+
+func _io_cyl(b: Transform3D, r_top: float, r_bot: float, h: float, pos: Vector3, rot: Vector3, mat: Material, seg := 8) -> void:
+	var m := CylinderMesh.new()
+	m.top_radius = r_top
+	m.bottom_radius = r_bot
+	m.height = h
+	m.radial_segments = seg
+	m.rings = 1
+	_io_add(m, b * _io_xf(pos, rot), mat)
+
+
+func _io_ball(b: Transform3D, r: float, pos: Vector3, mat: Material, s := Vector3.ONE, seg := 8, hemi := false) -> void:
+	var m := SphereMesh.new()
+	m.radius = r
+	m.height = r * (1.0 if hemi else 2.0)
+	m.is_hemisphere = hemi
+	m.radial_segments = seg
+	m.rings = maxi(3, seg / 2)
+	_io_add(m, b * _io_xf(pos, Vector3.ZERO, s), mat)
+
+
+func _io_prism(b: Transform3D, size: Vector3, pos: Vector3, rot: Vector3, mat: Material) -> void:
+	var m := PrismMesh.new()
+	m.size = size
+	_io_add(m, b * _io_xf(pos, rot), mat)
+
+
+## Box of `thick` cross-section spanning from `a` to `c`.
+func _io_beam(b: Transform3D, a: Vector3, c: Vector3, thick: float, mat: Material) -> void:
+	var d := c - a
+	var up := Vector3.UP if absf(d.normalized().y) < 0.98 else Vector3.FORWARD
+	var m := BoxMesh.new()
+	m.size = Vector3(thick, thick, d.length())
+	_io_add(m, b * Transform3D(Basis.looking_at(d, up), (a + c) * 0.5), mat)
+
+
+## Sagging wire in three straight pieces.
+func _io_wire(a: Vector3, c: Vector3, sag: float, mat: Material) -> void:
+	var pts := []
+	for k in 4:
+		var t := k / 3.0
+		pts.append(a.lerp(c, t) + Vector3(0, -sag * 4.0 * t * (1.0 - t), 0))
+	for k in 3:
+		_io_beam(Transform3D.IDENTITY, pts[k], pts[k + 1], 0.035, mat)
+
+
+## Mirrors the GROUND shader height (beach: slope 0.08, top 0.7, bump 0.12; grass: 0.74 + bump 0.1).
+func _io_n2(p: Vector2) -> float:
+	return sin(p.x * 0.9 + sin(p.y * 0.7)) * 0.5 + sin(p.y * 1.3 + p.x * 0.4) * 0.5
+
+
+func _io_y(x: float, z: float) -> float:
+	var p := Vector2(x, z)
+	var n := _io_n2(p * 0.35) + 0.5 * _io_n2(p * 1.1 + Vector2(3, 3))
+	var sand := minf(z * 0.08, 0.7) + 0.12 * n * smoothstep(-1.0, 4.0, z)
+	if z > 15.2:
+		return maxf(sand, 0.74 + 0.1 * n)
+	return sand
+
+
+## Low-poly figure facing -z, feet at `pos`. head: 0 hair, 1 headscarf, 2 cap. arms: 0 down, 1 pointing, 2 carrying.
+func _io_person(pos: Vector3, rot_y: float, shirt: Material, legs: Material, skin: Material, head := 0, s := 1.0, arms := 0) -> void:
+	var b := Transform3D(Basis(Vector3.UP, deg_to_rad(rot_y)).scaled(Vector3.ONE * s), pos)
+	var hair := _io_mat(Color(0.1, 0.08, 0.07))
+	_io_box(b, Vector3(0.14, 0.8, 0.16), Vector3(-0.09, 0.4, 0), Vector3.ZERO, legs)
+	_io_box(b, Vector3(0.14, 0.8, 0.16), Vector3(0.09, 0.4, 0), Vector3.ZERO, legs)
+	_io_box(b, Vector3(0.42, 0.6, 0.24), Vector3(0, 1.08, 0), Vector3.ZERO, shirt)
+	for side in [-1.0, 1.0]:
+		var ang := 8.0
+		if arms == 2 or (arms == 1 and side > 0):
+			ang = 75.0 if arms == 2 else 105.0
+		var sh := Vector3(0.27 * side, 1.34, 0)
+		var basis := Basis(Vector3.RIGHT, deg_to_rad(ang)) if ang > 10.0 else Basis(Vector3.BACK, deg_to_rad(-ang * side))
+		_io_add(_io_boxmesh(Vector3(0.11, 0.56, 0.12)), b * Transform3D(basis, sh + basis * Vector3(0, -0.28, 0)), shirt)
+	_io_ball(b, 0.13, Vector3(0, 1.53, 0), skin, Vector3.ONE, 6)
+	if head == 1:
+		_io_ball(b, 0.16, Vector3(0, 1.53, 0.035), shirt, Vector3(1, 1.1, 1), 6)
+		_io_box(b, Vector3(0.36, 0.2, 0.27), Vector3(0, 1.36, 0.01), Vector3.ZERO, shirt)
+	elif head == 2:
+		_io_cyl(b, 0.12, 0.13, 0.09, Vector3(0, 1.64, 0.01), Vector3.ZERO, hair, 8)
+	else:
+		_io_ball(b, 0.135, Vector3(0, 1.57, 0.02), hair, Vector3(1, 0.7, 1), 6)
+
+
+func _io_boxmesh(size: Vector3) -> BoxMesh:
+	var m := BoxMesh.new()
+	m.size = size
+	return m
+
+
+## Acehnese wooden fishing boat (perahu), bow towards -z, keel at y 0.
+func _io_boat(base: Transform3D, pos: Vector3, rot_y: float, hull: Material, stripe: Material, white: Material, wood: Material, dark: Material, tilt := 0.0) -> void:
+	var b := base * _io_xf(pos, Vector3(0, rot_y, tilt))
+	_io_prism(b, Vector3(1.5, 0.45, 4.4), Vector3(0, 0.225, 0), Vector3(0, 0, 180), hull)
+	_io_box(b, Vector3(1.5, 0.55, 4.4), Vector3(0, 0.725, 0), Vector3.ZERO, hull)
+	_io_prism(b, Vector3(1.5, 1.5, 0.75), Vector3(0, 0.82, -2.95), Vector3(-90, 0, 0), hull)
+	_io_prism(b, Vector3(1.5, 0.7, 0.55), Vector3(0, 0.75, 2.55), Vector3(90, 0, 0), hull)
+	_io_box(b, Vector3(1.54, 0.13, 4.42), Vector3(0, 0.82, 0), Vector3.ZERO, stripe)
+	_io_box(b, Vector3(1.56, 0.06, 4.44), Vector3(0, 1.02, 0), Vector3.ZERO, white)
+	_io_box(b, Vector3(1.3, 0.04, 4.2), Vector3(0, 1.03, 0), Vector3.ZERO, wood)
+	_io_box(b, Vector3(1.1, 0.8, 1.3), Vector3(0, 1.45, 1.0), Vector3.ZERO, white)
+	_io_box(b, Vector3(1.12, 0.22, 0.6), Vector3(0, 1.58, 0.7), Vector3.ZERO, dark)
+	_io_box(b, Vector3(1.35, 0.08, 1.7), Vector3(0, 1.9, 1.0), Vector3.ZERO, stripe)
+	_io_cyl(b, 0.04, 0.05, 2.4, Vector3(0, 2.2, -0.7), Vector3.ZERO, wood, 6)
+	_io_box(b, Vector3(0.02, 0.28, 0.45), Vector3(0, 3.2, -0.48), Vector3.ZERO, stripe)
+	_io_box(b, Vector3(0.08, 0.5, 0.08), Vector3(0, 1.4, -3.25), Vector3(-25, 0, 0), wood)
+
+
+## Fish drying rack: posts, net bed and rows of fish. Long side along local x.
+func _io_rack(pos: Vector3, rot_y: float, length: float, wood: Material) -> void:
+	var b := _io_xf(pos, Vector3(0, rot_y, 0))
+	var net := _io_mat(Color(0.36, 0.33, 0.26))
+	var fish := _io_mat(Color(0.75, 0.76, 0.78), 0.5)
+	for sx in [-0.5, 0.5]:
+		for sz in [-0.5, 0.5]:
+			_io_box(b, Vector3(0.08, 1.1, 0.08), Vector3(sx * length, 0.45, sz * 1.0), Vector3.ZERO, wood)
+		_io_box(b, Vector3(length + 0.2, 0.06, 0.06), Vector3(0, 0.95, sx * 1.0), Vector3.ZERO, wood)
+	_io_box(b, Vector3(length, 0.03, 1.0), Vector3(0, 0.95, 0), Vector3.ZERO, net)
+	var n := int(length / 0.4)
+	for r in 2:
+		for k in n:
+			_io_box(b, Vector3(0.07, 0.03, 0.24), Vector3(-length * 0.5 + (k + 0.5) * length / n, 0.98, -0.2 + r * 0.4),
+					Vector3(0, io_rng.randf_range(-15, 15), 0), fish)
+
+
+func _io_beach(wood: Material, wood_l: Material, dark: Material, white: Material, skin: Array, cloth: Array, pants: Array) -> void:
+	var I := Transform3D.IDENTITY
+	# a perahu pulled up on the sand, two fishermen and a heap of nets
+	_io_boat(I, Vector3(-14.2, _io_y(-14.2, -1.0) - 0.12, -1.0), -12.0, cloth[3], cloth[2], white, wood, dark, 7.0)
+	_io_person(Vector3(-12.9, _io_y(-12.9, 0.3), 0.3), -70.0, cloth[4], pants[0], skin[1], 2)
+	_io_person(Vector3(-15.6, _io_y(-15.6, 1.9), 1.9), 40.0, cloth[1], pants[1], skin[0], 0, 1.0, 2)
+	var netm := _io_mat(Color(0.3, 0.42, 0.36))
+	var buoy := _io_mat(Color(0.95, 0.5, 0.15))
+	_io_ball(I, 0.9, Vector3(-9.4, _io_y(-9.4, 5.9), 5.9), netm, Vector3(1.0, 0.35, 0.8), 10)
+	_io_ball(I, 0.6, Vector3(-8.7, _io_y(-8.7, 6.4) + 0.12, 6.4), netm, Vector3(1.0, 0.45, 1.0), 8)
+	for k in 4:
+		_io_ball(I, 0.12, Vector3(-9.9 + k * 0.4, _io_y(-9.4, 5.9) + 0.32, 5.7 + (k % 2) * 0.3), buoy, Vector3.ONE, 6)
+	# net hung to dry between two poles, floats along the top line
+	var na := Vector3(-3.9, 0, 4.6)
+	var nb := Vector3(-1.3, 0, 4.9)
+	for p in [na, nb]:
+		_io_cyl(I, 0.06, 0.07, 2.2, Vector3(p.x, _io_y(p.x, p.z) + 1.0, p.z), Vector3.ZERO, wood, 6)
+	var ny := _io_y(na.x, na.z) + 1.25
+	var mid := (na + nb) * 0.5
+	_io_box(I, Vector3(2.5, 1.3, 0.03), Vector3(mid.x, ny, mid.z), Vector3(0, -rad_to_deg((nb - na).angle_to(Vector3.RIGHT)), 0), netm)
+	for k in 6:
+		var p := na.lerp(nb, (k + 0.5) / 6.0)
+		_io_ball(I, 0.08, Vector3(p.x, ny + 0.66, p.z), buoy, Vector3.ONE, 6)
+	# fish drying racks and the women tending them
+	_io_rack(Vector3(16.8, _io_y(16.8, 13.0), 13.0), 6.0, 4.2, wood)
+	_io_rack(Vector3(-25.0, _io_y(-25.0, 4.5), 4.5), 78.0, 3.6, wood)
+	_io_rack(Vector3(19.5, _io_y(19.5, 16.0), 16.0), -4.0, 3.2, wood)
+	_io_person(Vector3(15.6, _io_y(15.6, 11.7), 11.7), 10.0, cloth[5], pants[2], skin[0], 1)
+	_io_person(Vector3(-23.6, _io_y(-23.6, 3.4), 3.4), 120.0, cloth[2], pants[0], skin[1], 1)
+	# beach stall (warung): posts, counter, striped awning, blank sign, stools
+	var sb := _io_xf(Vector3(15.6, _io_y(15.6, 3.0) - 0.05, 3.0), Vector3(0, -12, 0))
+	var red: Material = cloth[0]
+	for c in [Vector2(-1.5, -1.0), Vector2(1.5, -1.0), Vector2(-1.5, 1.0), Vector2(1.5, 1.0)]:
+		_io_box(sb, Vector3(0.12, 2.5, 0.12), Vector3(c.x, 1.25, c.y), Vector3.ZERO, wood)
+	_io_box(sb, Vector3(3.0, 0.9, 0.5), Vector3(0, 0.45, -0.75), Vector3.ZERO, wood_l)
+	_io_box(sb, Vector3(3.1, 0.06, 0.6), Vector3(0, 0.92, -0.75), Vector3.ZERO, white)
+	for k in 6:
+		_io_box(sb, Vector3(0.53, 0.06, 2.7), Vector3(-1.33 + k * 0.53, 2.62, -0.15), Vector3(-10, 0, 0), red if k % 2 == 0 else white)
+	_io_box(sb, Vector3(2.2, 0.55, 0.06), Vector3(0, 3.05, 1.0), Vector3.ZERO, cloth[1])
+	_io_box(sb, Vector3(2.3, 0.65, 0.04), Vector3(0, 3.05, 1.02), Vector3.ZERO, white)
+	for k in 4:
+		_io_box(sb, Vector3(0.3, 0.3, 0.3), Vector3(-0.8 + k * 0.4, 1.1, -0.75), Vector3(0, k * 20.0, 0), [cloth[2], cloth[3], cloth[0], cloth[4]][k])
+	for c in [Vector2(-1.0, -1.9), Vector2(0.6, -2.1)]:
+		_io_cyl(sb, 0.2, 0.2, 0.45, Vector3(c.x, 0.23, c.y), Vector3.ZERO, cloth[1], 8)
+	_io_person(Vector3(15.6, 0, 3.0) + Vector3(0, _io_y(15.6, 3.6), 0.5), 168.0, cloth[3], pants[1], skin[0], 2)
+	_io_person(Vector3(14.4, _io_y(14.4, 1.0), 1.0), 165.0, cloth[2], pants[0], skin[1], 0)
+	# beach umbrella
+	var ux := 12.6
+	var uz := 1.6
+	_io_cyl(I, 0.04, 0.04, 2.3, Vector3(ux, _io_y(ux, uz) + 1.1, uz), Vector3.ZERO, white, 6)
+	_io_cyl(I, 0.05, 1.2, 0.45, Vector3(ux, _io_y(ux, uz) + 2.25, uz), Vector3.ZERO, cloth[2], 10)
+	# family between the huts, children at the waterline looking at the sea
+	_io_person(Vector3(-3.6, _io_y(-3.6, 7.0), 7.0), 200.0, cloth[1], pants[2], skin[0], 1)
+	_io_person(Vector3(-3.0, _io_y(-3.0, 7.3), 7.3), 190.0, cloth[2], pants[0], skin[0], 0, 0.62)
+	_io_person(Vector3(2.4, _io_y(2.4, 5.0), 5.0), 150.0, cloth[4], pants[1], skin[1], 2, 1.0, 2)
+	_io_person(Vector3(0.6, _io_y(0.6, 0.9), 0.9), 15.0, cloth[0], pants[0], skin[1], 0, 0.64, 1)
+	_io_person(Vector3(1.5, _io_y(1.5, 1.4), 1.4), -10.0, cloth[1], pants[2], skin[0], 0, 0.6)
+	_io_person(Vector3(-0.6, _io_y(-0.6, 1.8), 1.8), 30.0, cloth[2], pants[1], skin[0], 1, 0.66)
+	# men on the jetty, one wading with a hand net
+	_io_person(Vector3(8.6, 0.25, -10.6), 10.0, cloth[4], pants[0], skin[1], 2)
+	_io_person(Vector3(7.4, 0.25, -9.6), -20.0, cloth[1], pants[1], skin[0], 0, 1.0, 1)
+	_io_person(Vector3(-6.0, _io_y(-6.0, -4.2), -4.2), 140.0, cloth[3], pants[2], skin[1], 2)
+	# tide pools, pebbles and a wrack line of seaweed on the wet sand
+	var pool := _io_mat(Color(0.32, 0.5, 0.52), 0.3)
+	for p in [Vector3(-17.5, 1.7, 1.1), Vector3(-1.0, 2.4, 0.7), Vector3(12.0, 1.0, 1.0), Vector3(21.0, 1.9, 0.9), Vector3(5.0, 2.8, 0.55), Vector3(-21.5, 2.6, 0.8)]:
+		_io_cyl(I, p.z, p.z, 0.05, Vector3(p.x, _io_y(p.x, p.y) + 0.02, p.y), Vector3.ZERO, pool, 10)
+	var pebble := _io_mat(Color(0.55, 0.52, 0.48))
+	var weed := _io_mat(Color(0.3, 0.32, 0.18))
+	for k in 22:
+		var x := io_rng.randf_range(-26, 26)
+		var z := io_rng.randf_range(0.4, 3.6)
+		var r := io_rng.randf_range(0.15, 0.35)
+		_io_box(I, Vector3(r, r * 0.6, r * 0.8), Vector3(x, _io_y(x, z) + 0.04, z), Vector3(io_rng.randf_range(-20, 20), io_rng.randf_range(0, 90), 0), pebble)
+	for k in 20:
+		var x := io_rng.randf_range(-26, 26)
+		var z := 3.2 + io_rng.randf_range(-0.4, 0.4)
+		_io_box(I, Vector3(io_rng.randf_range(0.3, 0.8), 0.04, 0.12), Vector3(x, _io_y(x, z) + 0.02, z), Vector3(0, io_rng.randf_range(-40, 40), 0), weed)
+	# coconuts under the palms, dune grass where the sand meets the village
+	var nut := _io_mat(Color(0.42, 0.3, 0.16))
+	for p in [Vector2(-17, 6), Vector2(-12, 4.5), Vector2(0.5, 6), Vector2(7.5, 9), Vector2(13, 6.5), Vector2(18, 10), Vector2(22, 3)]:
+		for k in 1:
+			var x: float = p.x + io_rng.randf_range(-0.9, 0.9)
+			var z: float = p.y + io_rng.randf_range(-0.9, 0.9)
+			_io_ball(I, 0.17, Vector3(x, _io_y(x, z) + 0.1, z), nut, Vector3.ONE, 6)
+	var dune := _io_mat(Color(0.56, 0.6, 0.3))
+	for k in 18:
+		var x := io_rng.randf_range(-27, 27)
+		var z := io_rng.randf_range(6.0, 15.0)
+		if absf(x - 8.0) < 2.5 and z < 9.0:
+			continue
+		_io_tuft(Vector3(x, _io_y(x, z), z), dune, io_rng.randf_range(0.7, 1.2))
+
+
+func _io_tuft(pos: Vector3, mat: Material, s: float) -> void:
+	for k in 2:
+		_io_prism(Transform3D.IDENTITY, Vector3(0.24, 0.6, 0.05) * s, pos + Vector3(0, 0.27 * s, 0), Vector3(io_rng.randf_range(-20, 20), k * 90.0 + io_rng.randf_range(0, 40), 0), mat)
+
+
+func _io_inland(wood: Material, wood_l: Material, dark: Material, white: Material, skin: Array, cloth: Array, pants: Array) -> void:
+	var I := Transform3D.IDENTITY
+	# coastal road (fades into the void at the rim like the ground), kerbs, dashed centre line
+	var rz := 24.3
+	var road := MeshInstance3D.new()
+	road.name = "Road"
+	road.mesh = _io_boxmesh(Vector3(32, 0.5, 3.0))
+	road.position = Vector3(-20, 0.72, rz)
+	road.material_override = _shader(GROUND, {"base_color": Color(0.36, 0.36, 0.38), "alt_color": Color(0.4, 0.4, 0.41),
+			"void_color": Color(0.7, 0.79, 0.87), "radius": 44.0, "fade": 10.0, "bump": 0.0})
+	_own(road, root_node)
+	var kerb := MeshInstance3D.new()
+	kerb.name = "Kerbs"
+	var km := _io_boxmesh(Vector3(32, 0.5, 0.3))
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st.append_from(km, 0, Transform3D(Basis.IDENTITY, Vector3(0, 0, -1.65)))
+	st.append_from(km, 0, Transform3D(Basis.IDENTITY, Vector3(0, 0, 1.65)))
+	kerb.mesh = st.commit()
+	kerb.position = Vector3(-20, 0.77, rz)
+	kerb.material_override = _shader(GROUND, {"base_color": Color(0.78, 0.76, 0.72), "alt_color": Color(0.74, 0.72, 0.68),
+			"void_color": Color(0.7, 0.79, 0.87), "radius": 44.0, "fade": 10.0, "bump": 0.0})
+	_own(kerb, root_node)
+	var paint := _io_mat(Color(0.95, 0.93, 0.85))
+	for k in 7:
+		_io_box(I, Vector3(1.4, 0.02, 0.12), Vector3(-32 + k * 4.0, 0.98, rz), Vector3.ZERO, paint)
+	# utility poles with sagging wires, one service drop to each roadside house
+	var pole := _io_mat(Color(0.62, 0.6, 0.57))
+	var wire := _io_mat(Color(0.12, 0.12, 0.13))
+	var tops := []
+	for px in [-27.0, -17.0, -7.0]:
+		var pz := rz + 2.2
+		var y0 := _io_y(px, pz)
+		_io_cyl(I, 0.09, 0.14, 7.5, Vector3(px, y0 + 3.75, pz), Vector3.ZERO, pole, 8)
+		_io_box(I, Vector3(1.8, 0.12, 0.12), Vector3(px, y0 + 7.0, pz), Vector3.ZERO, pole)
+		for sx in [-0.75, 0.75]:
+			_io_cyl(I, 0.04, 0.05, 0.16, Vector3(px + sx, y0 + 7.13, pz), Vector3.ZERO, white, 6)
+		if px == -17.0:
+			_io_cyl(I, 0.22, 0.22, 0.6, Vector3(px + 0.3, y0 + 6.3, pz + 0.2), Vector3.ZERO, pole, 8)
+		tops.append(Vector3(px, y0 + 7.2, pz))
+	for k in tops.size() - 1:
+		for sx in [-0.75, 0.75]:
+			_io_wire(tops[k] + Vector3(sx, 0, 0), tops[k + 1] + Vector3(sx, 0, 0), 0.5, wire)
+	_io_wire(tops[0] + Vector3(0.75, 0, 0), Vector3(-26.0, 4.6, 18.5), 0.3, wire)
+	# picket fence along the mosque grounds, water tank tower
+	_io_fence(Vector3(-27.0, 0, 26.9), Vector3(-23.5, 0, 26.9), white)
+	_io_tank(Vector3(-15.0, 0, 19.5), cloth[1], pole)
+	# motorbikes on the road and pedestrians
+	_io_moto(Vector3(-8.0, 0.98, rz - 0.8), 90.0, cloth[0], dark, white)
+	_io_person(Vector3(-8.0, 1.0, rz - 0.8), 90.0, cloth[1], pants[0], skin[0], 2, 1.0, 2)
+	_io_moto(Vector3(-24.0, 0.98, rz + 0.8), -90.0, cloth[1], dark, white)
+	_io_person(Vector3(-24.0, 1.0, rz + 0.8), -90.0, cloth[4], pants[1], skin[1], 1, 1.0, 2)
+	_io_person(Vector3(-5.6, _io_y(-5.6, 26.6), 26.6), -20.0, cloth[4], pants[0], skin[0], 2)
+	_io_person(Vector3(-6.4, _io_y(-6.4, 26.4), 26.4), -10.0, cloth[2], pants[2], skin[1], 2)
+	_io_person(Vector3(-17.0, _io_y(-17.0, 22.0), 22.0), 90.0, cloth[5], pants[0], skin[0], 1)
+	# bushes and grass tufts
+	var bush := [_io_mat(Color(0.26, 0.44, 0.22)), _io_mat(Color(0.33, 0.5, 0.24))]
+	var grassm := _io_mat(Color(0.36, 0.5, 0.24))
+	for p in [Vector2(-13.5, 16.0), Vector2(-10.0, 16.5), Vector2(2.5, 17.5), Vector2(5.5, 16.8), Vector2(21.5, 17.5), Vector2(-24.0, 23.5),
+			Vector2(-27.0, 31.0), Vector2(-4.0, 21.0), Vector2(6.0, 21.0), Vector2(-6.0, 20.5)]:
+		for k in 2:
+			var x: float = p.x + io_rng.randf_range(-0.8, 0.8)
+			var z: float = p.y + io_rng.randf_range(-0.8, 0.8)
+			var r := io_rng.randf_range(0.5, 0.9)
+			_io_ball(I, r, Vector3(x, _io_y(x, z) + r * 0.45, z), bush[k % 2], Vector3(1.0, 0.8, 1.0), 6)
+	for k in 14:
+		var x := io_rng.randf_range(-28, 28)
+		var z := io_rng.randf_range(16.0, 32.0)
+		if absf(z - rz) < 2.0:
+			continue
+		_io_tuft(Vector3(x, _io_y(x, z), z), grassm, io_rng.randf_range(0.8, 1.3))
+
+
+## Concrete house with a corrugated tin gable roof, front (door, windows, porch) towards -z.
+func _io_house(pos: Vector3, rot_y: float, wall: Material, tin: Material, wood: Material, dark: Material, white: Material) -> void:
+	var b := _io_xf(Vector3(pos.x, _io_y(pos.x, pos.z) - 0.1, pos.z), Vector3(0, rot_y, 0))
+	_io_box(b, Vector3(6.2, 0.35, 4.8), Vector3(0, 0.17, 0), Vector3.ZERO, white)
+	_io_box(b, Vector3(6.0, 2.8, 4.6), Vector3(0, 1.75, 0), Vector3.ZERO, wall)
+	_io_prism(b, Vector3(6.0, 1.3, 4.6), Vector3(0, 3.8, 0), Vector3(0, 90, 0), wall)
+	var slope := rad_to_deg(atan2(1.3, 2.3))
+	var half := Vector2(2.3, 1.3).length() + 0.35
+	for side in [-1.0, 1.0]:
+		var rb := b * _io_xf(Vector3(0, 3.82, side * 1.2), Vector3(side * slope, 0, 0))
+		_io_box(rb, Vector3(6.6, 0.08, half), Vector3(0, 0.12, side * 0.06), Vector3.ZERO, tin)
+		for k in 11:
+			_io_box(rb, Vector3(0.05, 0.05, half), Vector3(-3.0 + k * 0.6, 0.18, side * 0.06), Vector3.ZERO, tin)
+	_io_box(b, Vector3(6.7, 0.1, 0.25), Vector3(0, 5.17, 0), Vector3.ZERO, tin)
+	_io_box(b, Vector3(1.0, 1.9, 0.06), Vector3(-0.9, 1.3, -2.32), Vector3.ZERO, wood)
+	for wx in [0.9, 2.2]:
+		_io_box(b, Vector3(0.9, 0.95, 0.06), Vector3(wx, 1.9, -2.32), Vector3.ZERO, white)
+		_io_box(b, Vector3(0.7, 0.75, 0.06), Vector3(wx, 1.9, -2.34), Vector3.ZERO, dark)
+		_io_box(b, Vector3(1.0, 0.08, 0.18), Vector3(wx, 1.4, -2.38), Vector3.ZERO, white)
+	_io_box(b, Vector3(0.06, 0.95, 0.9), Vector3(3.02, 1.9, 0.6), Vector3.ZERO, white)
+	_io_box(b, Vector3(0.06, 0.75, 0.7), Vector3(3.04, 1.9, 0.6), Vector3.ZERO, dark)
+	_io_box(b, Vector3(3.2, 0.12, 1.6), Vector3(-0.6, 0.42, -3.1), Vector3.ZERO, white)
+	for px in [-2.0, 0.8]:
+		_io_box(b, Vector3(0.14, 2.6, 0.14), Vector3(px, 1.6, -3.75), Vector3.ZERO, wood)
+	_io_box(b, Vector3(3.4, 0.08, 1.9), Vector3(-0.6, 2.95, -3.05), Vector3(-8, 0, 0), tin)
+
+
+func _io_fence(a: Vector3, c: Vector3, mat: Material) -> void:
+	var n := int(a.distance_to(c) / 0.5)
+	for k in n + 1:
+		var p := a.lerp(c, float(k) / n)
+		_io_box(Transform3D.IDENTITY, Vector3(0.08, 0.8, 0.05), Vector3(p.x, _io_y(p.x, p.z) + 0.38, p.z), Vector3.ZERO, mat)
+	var ya := _io_y(a.x, a.z)
+	var yc := _io_y(c.x, c.z)
+	for h in [0.25, 0.6]:
+		_io_beam(Transform3D.IDENTITY, Vector3(a.x, ya + h, a.z - 0.04), Vector3(c.x, yc + h, c.z - 0.04), 0.06, mat)
+
+
+func _io_tank(pos: Vector3, tank: Material, frame: Material) -> void:
+	var y := _io_y(pos.x, pos.z)
+	for c in [Vector2(-0.6, -0.6), Vector2(0.6, -0.6), Vector2(-0.6, 0.6), Vector2(0.6, 0.6)]:
+		_io_box(Transform3D.IDENTITY, Vector3(0.1, 3.0, 0.1), Vector3(pos.x + c.x, y + 1.5, pos.z + c.y), Vector3.ZERO, frame)
+	_io_box(Transform3D.IDENTITY, Vector3(1.5, 0.1, 1.5), Vector3(pos.x, y + 3.0, pos.z), Vector3.ZERO, frame)
+	_io_beam(Transform3D.IDENTITY, Vector3(pos.x - 0.6, y + 0.3, pos.z - 0.62), Vector3(pos.x + 0.6, y + 2.8, pos.z - 0.62), 0.06, frame)
+	_io_cyl(Transform3D.IDENTITY, 0.68, 0.68, 1.3, Vector3(pos.x, y + 3.7, pos.z), Vector3.ZERO, tank, 14)
+	_io_cyl(Transform3D.IDENTITY, 0.25, 0.68, 0.2, Vector3(pos.x, y + 4.45, pos.z), Vector3.ZERO, tank, 14)
+
+
+## Motorbike along local -z.
+func _io_moto(pos: Vector3, rot_y: float, body: Material, dark: Material, white: Material) -> void:
+	var b := _io_xf(pos, Vector3(0, rot_y, 0))
+	for z in [-0.65, 0.65]:
+		_io_cyl(b, 0.3, 0.3, 0.1, Vector3(0, 0.3, z), Vector3(0, 0, 90), dark, 10)
+	_io_box(b, Vector3(0.24, 0.35, 1.0), Vector3(0, 0.55, 0.05), Vector3.ZERO, body)
+	_io_box(b, Vector3(0.28, 0.12, 0.6), Vector3(0, 0.78, 0.25), Vector3.ZERO, dark)
+	_io_beam(b, Vector3(0, 0.35, -0.65), Vector3(0, 1.0, -0.45), 0.06, white)
+	_io_box(b, Vector3(0.6, 0.05, 0.05), Vector3(0, 1.0, -0.45), Vector3.ZERO, dark)
+	_io_box(b, Vector3(0.3, 0.25, 0.2), Vector3(0, 0.85, -0.55), Vector3.ZERO, body)
+
+
+## Baiturrahman-style mosque: white hall, black domes, minaret. Front towards -z.
+func _io_mosque(pos: Vector3, rot_y: float) -> void:
+	var b := _io_xf(pos, Vector3(0, rot_y, 0), Vector3.ONE * 0.62)
+	var wall := _io_mat(Color(0.95, 0.94, 0.9))
+	var trim := _io_mat(Color(0.82, 0.8, 0.76))
+	var dome := _io_mat(Color(0.18, 0.18, 0.2), 0.5)
+	var gold := _io_mat(Color(0.9, 0.72, 0.3), 0.4)
+	var dark := _io_mat(Color(0.22, 0.24, 0.3))
+	_io_box(b, Vector3(13.0, 0.6, 10.5), Vector3(0, 0.3, 0), Vector3.ZERO, trim)
+	_io_box(b, Vector3(10.0, 4.2, 7.5), Vector3(0, 2.7, 0.5), Vector3.ZERO, wall)
+	_io_box(b, Vector3(10.4, 0.35, 7.9), Vector3(0, 4.9, 0.5), Vector3.ZERO, trim)
+	_io_box(b, Vector3(10.0, 0.6, 7.5), Vector3(0, 5.35, 0.5), Vector3.ZERO, wall)
+	for k in 5:
+		var x := -4.0 + k * 2.0
+		_io_box(b, Vector3(0.9, 2.0, 0.08), Vector3(x, 2.4, -3.27), Vector3.ZERO, dark)
+		_io_cyl(b, 0.45, 0.45, 0.08, Vector3(x, 3.4, -3.27), Vector3(90, 0, 0), dark, 10)
+	for k in 3:
+		var z := -1.5 + k * 2.4
+		for sx in [-1.0, 1.0]:
+			_io_box(b, Vector3(0.08, 2.0, 0.9), Vector3(sx * 5.02, 2.4, z), Vector3.ZERO, dark)
+			_io_cyl(b, 0.45, 0.45, 0.08, Vector3(sx * 5.02, 3.4, z), Vector3(0, 0, 90), dark, 10)
+	# portico with columns
+	_io_box(b, Vector3(5.0, 0.4, 2.2), Vector3(0, 4.0, -4.4), Vector3.ZERO, wall)
+	for k in 4:
+		_io_cyl(b, 0.18, 0.2, 3.3, Vector3(-2.1 + k * 1.4, 2.25, -5.2), Vector3.ZERO, wall, 10)
+	_io_cyl(b, 0.9, 1.3, 1.0, Vector3(0, 4.7, -4.4), Vector3.ZERO, dome, 12)
+	_io_ball(b, 0.9, Vector3(0, 5.2, -4.4), dome, Vector3(1, 1.25, 1), 12, true)
+	# central drum, onion dome, finial
+	_io_cyl(b, 2.6, 2.6, 1.0, Vector3(0, 6.15, 0.5), Vector3.ZERO, wall, 16)
+	_io_cyl(b, 2.75, 2.75, 0.2, Vector3(0, 6.7, 0.5), Vector3.ZERO, trim, 16)
+	_io_ball(b, 2.6, Vector3(0, 6.75, 0.5), dome, Vector3(1, 1.25, 1), 16, true)
+	_io_cyl(b, 0.04, 0.4, 0.9, Vector3(0, 10.3, 0.5), Vector3.ZERO, dome, 10)
+	_io_cyl(b, 0.04, 0.04, 1.0, Vector3(0, 11.1, 0.5), Vector3.ZERO, gold, 6)
+	_io_ball(b, 0.16, Vector3(0, 11.5, 0.5), gold, Vector3.ONE, 8)
+	# corner domes
+	for c in [Vector2(-4.0, -2.0), Vector2(4.0, -2.0), Vector2(-4.0, 3.0), Vector2(4.0, 3.0)]:
+		_io_cyl(b, 0.9, 0.9, 0.7, Vector3(c.x, 6.0, c.y), Vector3.ZERO, wall, 10)
+		_io_ball(b, 0.95, Vector3(c.x, 6.35, c.y), dome, Vector3(1, 1.3, 1), 10, true)
+		_io_cyl(b, 0.03, 0.03, 0.6, Vector3(c.x, 7.8, c.y), Vector3.ZERO, gold, 6)
+	# minaret
+	var m := Vector3(8.2, 0, -3.0)
+	_io_box(b, Vector3(2.0, 1.2, 2.0), m + Vector3(0, 0.6, 0), Vector3.ZERO, trim)
+	_io_cyl(b, 0.65, 0.8, 8.0, m + Vector3(0, 5.0, 0), Vector3.ZERO, wall, 12)
+	for y in [4.0, 7.0]:
+		_io_cyl(b, 0.85, 0.85, 0.18, m + Vector3(0, y, 0), Vector3.ZERO, trim, 12)
+	_io_cyl(b, 1.05, 0.7, 0.4, m + Vector3(0, 9.2, 0), Vector3.ZERO, trim, 12)
+	_io_cyl(b, 0.55, 0.55, 1.2, m + Vector3(0, 10.0, 0), Vector3.ZERO, wall, 12)
+	_io_ball(b, 0.62, m + Vector3(0, 10.6, 0), dome, Vector3(1, 1.4, 1), 12, true)
+	_io_cyl(b, 0.03, 0.03, 0.7, m + Vector3(0, 11.8, 0), Vector3.ZERO, gold, 6)
+	# courtyard path towards the road
+	_io_box(b, Vector3(2.4, 0.08, 4.0), Vector3(0, 0.02, -7.2), Vector3.ZERO, trim)
+
+
+## Hidden under the sea until the drawback: seaweed beds, coral heads, stranded fish.
+func _io_seabed() -> void:
+	var I := Transform3D.IDENTITY
+	var weed := _io_mat(Color(0.25, 0.3, 0.16))
+	var coral := [_io_mat(Color(0.82, 0.5, 0.44)), _io_mat(Color(0.75, 0.66, 0.5))]
+	var fish := _io_mat(Color(0.78, 0.8, 0.84), 0.4)
+	for k in 10:
+		var x := io_rng.randf_range(-22, 22)
+		var z := io_rng.randf_range(-12, -3)
+		_io_cyl(I, io_rng.randf_range(0.6, 1.4), io_rng.randf_range(0.6, 1.4), 0.06, Vector3(x, z * 0.08 + 0.02, z), Vector3.ZERO, weed, 8)
+	for k in 6:
+		var x := io_rng.randf_range(-20, 20)
+		var z := io_rng.randf_range(-12, -4)
+		_io_ball(I, io_rng.randf_range(0.25, 0.5), Vector3(x, z * 0.08, z), coral[k % 2], Vector3(1, 0.6, 1), 6)
+	for k in 16:
+		var x := io_rng.randf_range(-16, 18)
+		var z := io_rng.randf_range(-11, -2.5)
+		_io_box(I, Vector3(0.1, 0.08, 0.32), Vector3(x, z * 0.08 + 0.04, z), Vector3(0, io_rng.randf_range(0, 180), 80), fish)
 
 
 # ---------- Solar flare (year 3026) ----------
