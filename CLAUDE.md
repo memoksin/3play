@@ -35,3 +35,7 @@ Game jam. Theme: disaster awareness. Engine: Godot (latest stable).
 
 - Only CC0 or jam-safe licenses.
 - Every asset needs a line in `assets/CREDITS.md`: source + license.
+- Jam rule: every ready-made source and every AI use must be declared, or we are disqualified. Log it in `docs/references.md` the moment you use it, not at submission.
+  - Ready-made: category, what, author, link, license, where used. Includes references (data, palettes, photos used as reference).
+  - AI: category, tool, purpose, where used.
+  - Categories: visual, audio, code, text, other.
