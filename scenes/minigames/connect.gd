@@ -44,6 +44,11 @@ const HOLD := 1.0
 const DRAIN := 1.5
 const BANNER_DUR := 2.2
 const WATER_FPS := 8.0
+const POP := 0.12
+const SHAKE_DUR := 0.6
+const SHAKE_PX := 10.0
+const SPLASH_DUR := 0.5
+const GUSH_DUR := 0.3
 
 ## Debug/test hooks.
 var time_scale := 1.0
@@ -108,8 +113,18 @@ func advance(dt: float) -> void:
 		if _turning[i] <= 0.0:
 			_turning.erase(i)
 	_banner.visible = _hit and _hit_t() < BANNER_DUR
+	_apply_shake()
 	_update_hud()
 	queue_redraw()
+
+
+func _apply_shake() -> void:
+	var t := _hit_t()
+	if _hit and t < SHAKE_DUR:
+		var k := 1.0 - t / SHAKE_DUR
+		position = Vector2(sin(t * 83.0), cos(t * 71.0)) * SHAKE_PX * k * k
+	else:
+		position = Vector2.ZERO
 
 
 ## Debug: jump to game time `time` (no going back).
@@ -160,6 +175,7 @@ func _start_hit() -> void:
 	_hit = true
 	locked = true
 	_hover = Vector2i(-1, -1)
+	mouse_default_cursor_shape = Control.CURSOR_ARROW
 	_turning.clear()
 	_lines = ConnectLogic.traces(skin, rots)
 	_saved = ConnectLogic.saved_basins(skin, rots)
@@ -232,6 +248,7 @@ func _gui_input(event: InputEvent) -> void:
 			c = Vector2i(-1, -1)
 		if c != _hover:
 			_hover = c
+			mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if c.x >= 0 else Control.CURSOR_ARROW
 			queue_redraw()
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var c := _cell_at(event.position)
@@ -253,10 +270,19 @@ func _sea_level() -> float:
 	return SEA_Y - rise
 
 
+## Slight bob in logical px; faster and bigger in the last seconds.
+func _bob() -> float:
+	var urgent := not _hit and skin.timer_seconds - elapsed <= WAVE_LEAD
+	return sin(elapsed * (7.0 if urgent else 2.5)) * (0.8 if urgent else 0.5)
+
+
 func _draw() -> void:
 	draw_texture_rect(BG, Rect2(0, 0, 1280, 720), false)
-	var level := roundi(_sea_level())
+	var level := roundi(_sea_level() + _bob())
 	_draw_flood(level)
+	var line_col := Palette.DANGER if _red and not _hit else Palette.WHITE
+	line_col.a = 0.55
+	draw_rect(Rect2(0, _px(level - 5), _px(FLOOD_WIDTH), 2.0), line_col)
 	_draw_wave(level)
 	_draw_grid()
 	_draw_villages()
@@ -291,6 +317,7 @@ func _draw_wave(level: int) -> void:
 	var t := _hit_t()
 	var k := -1
 	var wx := 0.0
+	var big := 1.0
 	if not _hit and skin.timer_seconds - elapsed <= WAVE_LEAD:
 		var p := clampf(1.0 - (skin.timer_seconds - elapsed) / WAVE_LEAD, 0.0, 1.0)
 		k = mini(4, int(p * 5.0))
@@ -298,16 +325,19 @@ func _draw_wave(level: int) -> void:
 		wx = lerpf(-90.0, -4.0, e)
 	elif _hit and t < WAVE_BREAK_DUR:
 		k = 5
-		wx = -4.0
+		var q := t / WAVE_BREAK_DUR
+		wx = lerpf(-4.0, 60.0, q * q)
+		big = 1.0 + 0.5 * q
 	if k < 0:
 		return
-	draw_texture_rect_region(WAVE, Rect2(_px(wx), _px(level - WAVE_SEA_ROW), _px(WAVE_SIZE), _px(WAVE_SIZE)),
+	var sz := WAVE_SIZE * big
+	draw_texture_rect_region(WAVE, Rect2(_px(wx), _px(level - WAVE_SEA_ROW - (sz - WAVE_SIZE)), _px(sz), _px(sz)),
 		Rect2(k * _px(WAVE_SIZE), 0, _px(WAVE_SIZE), _px(WAVE_SIZE)))
 
 
-func _draw_region(tex: Texture2D, col: int, row: int, cell: Vector2i, quarter_turns := 0.0) -> void:
+func _draw_region(tex: Texture2D, col: int, row: int, cell: Vector2i, quarter_turns := 0.0, zoom := 1.0) -> void:
 	var center := Vector2(_px(GRID_X + cell.x * CELL + CELL / 2.0), _px(GRID_Y + cell.y * CELL + CELL / 2.0))
-	draw_set_transform(center, deg_to_rad(90.0 * quarter_turns), Vector2.ONE)
+	draw_set_transform(center, deg_to_rad(90.0 * quarter_turns), Vector2.ONE * zoom)
 	draw_texture_rect_region(tex, Rect2(-TILE / 2.0, -TILE / 2.0, TILE, TILE), Rect2(col * TILE, row * TILE, TILE, TILE))
 	draw_set_transform(Vector2.ZERO)
 
@@ -331,15 +361,20 @@ func _draw_grid() -> void:
 				_:
 					var wet: bool = _wet_at.has(i) and flow >= _wet_at[i]
 					var row := 1 + f % 3 if wet else 0
-					var turns: float = float(rots[i]) - _turning.get(i, 0.0) / TURN_DUR
-					_draw_region(PIPES, 0 if skin.tiles[i] == ConnectSkin.Tile.STRAIGHT else 1, row, cell, turns)
+					var left: float = _turning.get(i, 0.0) / TURN_DUR
+					var turns := float(rots[i]) - left * left * left  # ease out
+					var zoom := 1.0 + POP * sin(PI * (1.0 - left)) if left > 0.0 else 1.0
+					if left <= 0.0 and cell == _hover and not _hit:
+						zoom = 1.08  # lifted under the cursor
+					_draw_region(PIPES, 0 if skin.tiles[i] == ConnectSkin.Tile.STRAIGHT else 1, row, cell, turns, zoom)
 	if _hit:
 		for t in _lines:
 			if flow >= t.end_t and not t.complete:
-				_draw_region(SPILL, f % 4, 0, t.break_cell, float((t.break_side + 1) % 4))
+				var g := clampf((flow - t.end_t) / GUSH_DUR, 0.0, 1.0)
+				_draw_region(SPILL, f % 4, 0, t.break_cell, float((t.break_side + 1) % 4), 0.7 + 0.3 * g)
 	elif _hover.x >= 0:
 		var rect := Rect2(_px(GRID_X + _hover.x * CELL), _px(GRID_Y + _hover.y * CELL), TILE, TILE)
-		draw_rect(rect.grow(-2), Palette.GOLD, false, 4.0)
+		_draw_hover(rect)
 
 
 func _basin_frame(b: int, flow: float) -> int:
@@ -364,6 +399,14 @@ func _draw_villages() -> void:
 			var w := _px(VILLAGE_W)
 			draw_texture_rect_region(VILLAGE, Rect2(_px(VILLAGE_X[v] - VILLAGE_W / 2), _px(VILLAGE_TOP), w, _px(32)),
 				Rect2(v * w, _px(32), w, _px(32)))
+			var sp := (flow - _flood_at[v]) / SPLASH_DUR
+			if sp >= 0.0 and sp < 1.0:
+				var h := minf(16.0 + 14.0 * sp, 16.0)
+				var a := Palette.WHITE
+				a.a = 1.0 - sp
+				var up := 8.0 * sp
+				draw_texture_rect_region(FLOOD, Rect2(_px(VILLAGE_X[v] - VILLAGE_W / 2), _px(VILLAGE_TOP + 32 - h - up), w, _px(h)),
+					Rect2((_water_frame() % 4) * TILE, 0, w, _px(h)), a)
 
 
 ## Community names over the pipe that leads to their basin.
@@ -376,3 +419,22 @@ func _draw_names() -> void:
 		var col := Palette.TEXT if _flood_at.size() <= b or _flood_at[b] < 0.0 or _flow_t() < _flood_at[b] else Palette.DANGER
 		draw_string(font, Vector2(_px(GRID_X + skin.cols * CELL) + 8.0 + 1.0, y + 2.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Palette.BG)
 		draw_string(font, Vector2(_px(GRID_X + skin.cols * CELL) + 8.0, y), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, col)
+
+
+
+## Hover: a breathing teal reticle (corner brackets, like the globe lock) with a soft water glow.
+func _draw_hover(rect: Rect2) -> void:
+	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * TAU * 1.2)
+	var glow := Palette.STATE
+	glow.a = 0.10 + 0.10 * pulse
+	draw_rect(rect.grow(-4), glow)
+	var px := 4.0  # one logical pixel
+	var r := rect.grow(px * (1.0 + pulse))
+	var arm := px * 4.0
+	var col := Palette.STATE.lerp(Palette.WHITE, 0.35 * pulse)
+	for corner in [Vector2(0, 0), Vector2(1, 0), Vector2(0, 1), Vector2(1, 1)]:
+		var p: Vector2 = r.position + r.size * corner
+		var sx := 1.0 if corner.x == 0.0 else -1.0
+		var sy := 1.0 if corner.y == 0.0 else -1.0
+		draw_rect(Rect2(p, Vector2(arm * sx, px)).abs(), col)
+		draw_rect(Rect2(p, Vector2(px, arm * sy)).abs(), col)
