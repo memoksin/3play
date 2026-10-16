@@ -64,6 +64,15 @@ const FONT_SIZE := {
 	date = 20,
 }
 
+## Lock HUD coordinates are typed letter by letter, lt = seconds since the lock started.
+## Audio (#18, docs/audio.md row G3) hooks an AudioStreamPlayer to these two signals.
+## Each fires once per lock, driven by game time (also when a seek / skip jumps past the window).
+signal coords_typing_started
+signal coords_typing_finished
+
+const TYPE_START := 0.55
+const TYPE_LEN := 0.5
+
 ## Debug: freeze the timeline (screenshots). Use seek() to move it.
 var paused := false
 var t := 0.0
@@ -93,6 +102,8 @@ var _year_pos := Vector2.ZERO
 var glitching := false
 var future := 0.0
 var _done := false
+var _typing_started := false
+var _typing_finished := false
 var _target_local := Vector3.ZERO
 ## False when the disaster has no detail patch (assets/globe/patch_<id>.jpg): patch_on stays 0.
 var _has_patch := false
@@ -204,6 +215,8 @@ func _start() -> void:
 		_sun_world = (lock * surface_point(s.x, s.y)).normalized()
 	t = 0.0
 	launched = false
+	_typing_started = false
+	_typing_finished = false
 	_spin_vel = IDLE_DRIFT
 	_skip.text = "SPACE · SKIP"
 	_cam.position.z = CAM_FAR
@@ -314,6 +327,7 @@ func _release(speed: float) -> void:
 
 
 func _pose() -> void:
+	_update_typing()
 	var e := _spin_ease(_clamp01(t / SPIN))
 	if launched:
 		_earth.rotation.y = _spin_y(t)
@@ -361,6 +375,17 @@ func _arm_reverse() -> void:
 	_rev_to = ty + TAU * roundf((_rev_from - dir * maxf(v, 6.0) * (SPIN - ts) / 3.0 - ty) / TAU)
 	while (_rev_from - _rev_to) * dir < PI:
 		_rev_to -= dir * TAU
+
+
+## Emits the coordinate typing signals once each when game time crosses the typing window.
+func _update_typing() -> void:
+	var lt := t - SPIN
+	if not _typing_started and lt >= TYPE_START:
+		_typing_started = true
+		coords_typing_started.emit()
+	if _typing_started and not _typing_finished and lt >= TYPE_START + TYPE_LEN:
+		_typing_finished = true
+		coords_typing_finished.emit()
 
 
 ## Glitch run, a pure function of t (seek-safe): tear envelope, timeline mix, camera and spin jolts, counter.
@@ -706,7 +731,7 @@ func _draw_hud() -> void:
 		o.draw_arc(c, ring_r * 0.55, 0, TAU, 64, RED * Color(1, 1, 1, 0.5), 1.0, true)
 		o.draw_circle(c, 2.5, RED, true, -1.0, true)
 
-	# 3. coordinates scramble, then settle (dark plate keeps them legible over snow and desert)
+	# 3. coordinates typed letter by letter (dark plate keeps them legible over snow and desert)
 	if lt > 0.45:
 		# plate grows open from the coordinate row to the full label
 		var ph := lerpf(30.0, 92.0, _out_cubic(_clamp01((lt - 1.0) / 0.25)))
@@ -714,9 +739,9 @@ func _draw_hud() -> void:
 		o.draw_rect(plate, PLATE)
 		o.draw_rect(plate.grow(-0.5), Color(BLUE, 0.18), false, 1.0)
 		o.draw_rect(Rect2(tx - 12, y - 25, 3, ph), RED)
-		var k := _clamp01((lt - 0.55) / 0.5)
+		var k := _clamp01((lt - TYPE_START) / TYPE_LEN)
 		var coord := _fmt_coord(_disaster.lat, "N", "S", 2) + "  " + _fmt_coord(_disaster.lon, "E", "W", 3)
-		_text(_font_mono, coord if k >= 1 else _scramble(coord, k), tx, y - 10, FONT_SIZE.coord, BLUE)
+		_text(_font_mono, coord.substr(0, int(floor(k * coord.length()))), tx, y - 10, FONT_SIZE.coord, BLUE)
 
 	# 4. LOCKED blinks, then the place + date label
 	if lt > 1.0:
@@ -744,16 +769,6 @@ func _text_width(font: Font, s: String, px: int) -> float:
 
 static func _fmt_coord(v: float, pos: String, neg: String, w: int) -> String:
 	return ("%.2f" % absf(v)).lpad(w + 3, "0") + "°" + (pos if v >= 0 else neg)
-
-
-static func _scramble(s: String, k: float) -> String:
-	var out := ""
-	for ch in s:
-		if ch >= "0" and ch <= "9" and randf() >= k:
-			out += str(randi() % 10)
-		else:
-			out += ch
-	return out
 
 
 static func _clamp01(x: float) -> float:

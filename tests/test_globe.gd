@@ -149,6 +149,7 @@ func _run() -> void:
 	while current_scene == g:
 		await process_frame
 	_check("globe continues to diorama", current_scene.scene_file_path == root.get_node("Game").scene_path(&"diorama"))
+	await _typing_run()
 	await _glitch_run()
 	quit(0 if ok else 1)
 
@@ -215,3 +216,43 @@ func _glitch_run() -> void:
 	_space()
 	await process_frame
 	_check("glitch: second skip locks on 3026", g.t >= g.SPIN + g.LOCK and g._year.text == "3026")
+
+
+var _typed: Array[String] = []
+
+
+func _typed_on(name: String) -> void:
+	_typed.append(name)
+
+
+## Typing signals: once each, in order, at the window edges; a skip fires both in the same frame.
+func _typing_run() -> void:
+	var g = await _globe()
+	g.paused = true
+	_typed.clear()
+	g.coords_typing_started.connect(_typed_on.bind("started"))
+	g.coords_typing_finished.connect(_typed_on.bind("finished"))
+	g.flick(8.0)
+	g.seek(g.SPIN + g.TYPE_START - 0.05)
+	_check("typing: not started before the window", _typed.is_empty())
+	g.seek(g.SPIN + g.TYPE_START + 0.001)
+	_check("typing: started at the window start", _typed == ["started"])
+	g.seek(g.SPIN + g.TYPE_START + g.TYPE_LEN * 0.5)
+	var full: String = g._fmt_coord(g._disaster.lat, "N", "S", 2) + "  " + g._fmt_coord(g._disaster.lon, "E", "W", 3)
+	var n := int(floor(0.5 * full.length()))
+	_check("typing: partial text mid-window (%d of %d chars)" % [n, full.length()], n > 0 and n < full.length())
+	_check("typing: finished not yet mid-window", _typed == ["started"])
+	g.seek(g.SPIN + g.TYPE_START + g.TYPE_LEN + 0.001)
+	_check("typing: finished at the window end", _typed == ["started", "finished"])
+	g.seek(g.SPIN + g.LOCK)
+	g.seek(g.SPIN + g.TYPE_START + 0.1)
+	_check("typing: fires once per lock", _typed == ["started", "finished"])
+
+	g = await _globe()
+	g.paused = true
+	_typed.clear()
+	g.coords_typing_started.connect(_typed_on.bind("started"))
+	g.coords_typing_finished.connect(_typed_on.bind("finished"))
+	g.flick(8.0)
+	g.seek(g.SPIN + g.LOCK)
+	_check("typing: a skip fires started then finished once", _typed == ["started", "finished"])
