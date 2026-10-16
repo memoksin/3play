@@ -32,12 +32,17 @@ Columns required per asset: name, author, link, license, where used.
 | globe/clouds_4k.jpg | NASA Blue Marble clouds (`cloud_combined_8192.tif`, https://visibleearth.nasa.gov/images/57747), resized to 4096x2048. Globe cloud layer | Public domain |
 | globe/lights_4k.jpg | NASA Black Marble 2016 (`BlackMarble_2016_3km.jpg`, https://earthobservatory.nasa.gov/features/NightLights), resized to 4096x2048. Globe city lights | Public domain |
 | globe/topo_4k.jpg | NASA Blue Marble topography, GEBCO 2008 (`gebco_08_rev_elev_21600x10800.png`, https://visibleearth.nasa.gov/images/73934), resized to 4096x2048. Globe relief | Public domain |
+| 3d/kenney/city-kit-commercial/ (building-a/c/g/k, low-detail-building-a/b/e/wide-a) | Kenney, City Kit (Commercial) 2.1, https://kenney.nl/assets/city-kit-commercial. Diorama sets (`scenes/diorama/`) | CC0 1.0 |
+| 3d/kenney/city-kit-suburban/ (building-type-a/c/e/h/k, fence, fence-1x3, tree-small, planter, path-long) | Kenney, City Kit (Suburban) 2.0, https://kenney.nl/assets/city-kit-suburban. Diorama sets (`scenes/diorama/`) | CC0 1.0 |
+| 3d/kenney/car-kit/ (sedan, hatchback-sports, van, suv, debris-door, debris-tire) | Kenney, Car Kit 3.1, https://kenney.nl/assets/car-kit. Diorama sets (`scenes/diorama/`) | CC0 1.0 |
+| 3d/kenney/survival-kit/ (tent, tent-canvas, campfire-pit, box, barrel, bedroll-packed) | Kenney, Survival Kit, https://kenney.nl/assets/survival-kit. Diorama sets (`scenes/diorama/`) | CC0 1.0 |
+| 3d/kenney/pirate-kit/ (palms, rowing boats, structure, structure-roof, dock, sand patch, rocks) | Kenney, Pirate Kit, https://kenney.nl/assets/pirate-kit. Diorama sets (`scenes/diorama/`) | CC0 1.0 |
+| 3d/kenney/nature-kit/ (tree_palmTall/Bend, pines, rocks, stone, platform_beach, grass_large) | Kenney, Nature Kit, https://kenney.nl/assets/nature-kit. Diorama sets (`scenes/diorama/`) | CC0 1.0 |
 
 ## Planned third-party assets (NOT in the repo yet: move a row up and fill every column once added)
 
 | Asset | Author | Link | License | Where used |
 |---|---|---|---|---|
-| Low-poly 3D kits (nature, city) | Kenney | https://kenney.nl/assets | CC0 1.0 | Diorama scenes. TODO list the exact packs used |
 | Music loop | TODO | TODO | TODO (CC0 only) | TODO |
 | Sound effects | TODO (Freesound) | TODO | TODO (CC0 only; check each file, some Freesound files are CC-BY) | TODO |
 
