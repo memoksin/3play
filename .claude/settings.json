@@ -2,9 +2,13 @@
   "extraKnownMarketplaces": {
     "godot-gamedev": {
       "source": { "source": "github", "repo": "Zate/cc-godot" }
+    },
+    "cw-crew": {
+      "source": { "source": "github", "repo": "memoksin/cw-crew" }
     }
   },
   "enabledPlugins": {
-    "gd@godot-gamedev": true
+    "gd@godot-gamedev": true,
+    "cw-crew@cw-crew": true
   }
 }

@@ -15,6 +15,8 @@ Game jam. Theme: disaster awareness. Engine: Godot (latest stable).
 
 - Jam workflow: `game-jam-mode` skill (`.claude/skills/game-jam-mode/`). Use by default for planning and scope calls.
 - Godot work: `gd` plugin (`gd@godot-gamedev`, from `Zate/cc-godot`). Use by default. Approve the marketplace prompt on first open.
+- Crew: `cw-crew` plugin (`cw-crew@cw-crew`, from `memoksin/cw-crew`). Enabled for everyone. Same prompt on first open.
+- Sprites: `sprite` skill (`.claude/skills/sprite/`).
 
 ## Git
 
