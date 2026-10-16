@@ -28,6 +28,7 @@ Columns required per asset: name, author, link, license, where used.
 | Palette Resurrect 64 | Kerrie Lake, https://lospec.com/palette-list/resurrect-64. All pixel art, UI colors (`ui/palette.gd`) | No formal license; author approved commercial use in a Lospec comment (22 Aug 2023). Colors only, no artwork |
 | globe/earth_4k.jpg | NASA Blue Marble Next Generation, Dec 2004 (`world.200412.3x5400x2700.jpg`, resized to 4096x2048) | Public domain |
 | globe/patch_indian_ocean.jpg, globe/patch_kahramanmaras.jpg | NASA Blue Marble Next Generation, Dec 2004, 21600² tiles, cut by `tools/globe/patches.py` | Public domain |
+| globe/patch_indian_ocean_lights.jpg, globe/patch_kahramanmaras_lights.jpg | NASA Black Marble 2016, 21600² tiles (https://eoimages.gsfc.nasa.gov/images/imagerecords/144000/144898/BlackMarble_2016_C1.jpg, C2, D1, D2), cut by `tools/globe/patches.py`. Globe city lights up close (same rect as the day patches) | Public domain |
 | globe/clouds_4k.jpg | NASA Blue Marble clouds (`cloud_combined_8192.tif`, https://visibleearth.nasa.gov/images/57747), resized to 4096x2048. Globe cloud layer | Public domain |
 | globe/lights_4k.jpg | NASA Black Marble 2016 (`BlackMarble_2016_3km.jpg`, https://earthobservatory.nasa.gov/features/NightLights), resized to 4096x2048. Globe city lights | Public domain |
 | globe/topo_4k.jpg | NASA Blue Marble topography, GEBCO 2008 (`gebco_08_rev_elev_21600x10800.png`, https://visibleearth.nasa.gov/images/73934), resized to 4096x2048. Globe relief | Public domain |

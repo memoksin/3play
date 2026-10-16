@@ -324,6 +324,9 @@ func _load_patch(mat: ShaderMaterial) -> void:
 	if not ResourceLoader.exists(path):
 		return
 	mat.set_shader_parameter(&"patch_tex", load(path))
+	var lights_path := path.replace(".jpg", "_lights.jpg")
+	if ResourceLoader.exists(lights_path):
+		mat.set_shader_parameter(&"patch_lights", load(lights_path))
 	var lat := _disaster.lat
 	var lon := _disaster.lon
 	var lon_span := PATCH_SPAN / cos(deg_to_rad(lat))
