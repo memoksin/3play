@@ -11,5 +11,6 @@ key_prefix = "KAHR"
 lat = 37.58
 lon = 36.93
 year = 2023
+utc = "2023-02-06T01:17:00"
 minigame = &"fit"
 skin = ExtResource("2")

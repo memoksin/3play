@@ -63,7 +63,9 @@ void fragment() {
 		// Soft planet shadow: closest approach of the sun ray to the planet centre
 		float k = dot(q, L);
 		float dmin = k < 0.0 ? length(q - L * k) : 10.0;
-		float shadow = smoothstep(rp - 0.004, rp + 0.012, dmin);
+		float shadow = smoothstep(rp - 0.004, rp + 0.012, dmin)
+				// Twilight fade by local sun elevation: no lit haze floating past the terminator
+				* smoothstep(-0.12, 0.08, dot(normalize(q), L));
 		float dl = rsi(q, L, ra).y / float(NL);
 		float l_r = 0.0;
 		float l_m = 0.0;

@@ -67,6 +67,11 @@ var _zones := {}  # StringName -> ZoneView
 var _chips: Array[PanelContainer] = []
 var _chip_normal: StyleBoxFlat
 var _chip_selected: StyleBoxFlat
+var _snow: Control
+var _art_key := Vector2(-1, -1)  # (crack_stage, collapse) last drawn
+var _lost_shown := false
+var _shaking := false
+var _clock_min := -1
 
 @onready var _world: Control = $World
 @onready var _zone_root: Control = $World/Zones
@@ -108,6 +113,12 @@ func _ready() -> void:
 	rng.seed = 7
 	for i in SNOW_FLAKES:
 		_flakes.append(Vector3(rng.randf() * 1280.0, rng.randf() * 720.0, 24.0 + rng.randf() * 40.0))
+	_snow = Control.new()
+	_snow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_snow.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_snow.draw.connect(_draw_snow)
+	add_child(_snow)
+	move_child(_snow, 0)
 	_build_zones()
 	for i in skin.items.size():
 		var chip := _make_chip(i)
@@ -138,6 +149,7 @@ func advance(dt: float) -> void:
 		_phase_quake = true
 		locked = true
 		_selected = -1
+		_update_chip_look()
 		_quake_t = elapsed - skin.timer_seconds
 		_start_shake(SHAKE_QUAKE_DUR, SHAKE_QUAKE_AMP, _quake_t)
 		_banner.get_node("Label").text = tr(skin.quake_key)
@@ -149,22 +161,34 @@ func advance(dt: float) -> void:
 		if _quake_t >= FINISH_DELAY:
 			_finish()
 	_shake_left = maxf(_shake_left - dt, 0.0)
-	_world.position = Vector2.ZERO
 	if _shake_left > 0.0:
 		_world.position = Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * _shake_amp * (_shake_left / _shake_dur)
+		_shaking = true
+	elif _shaking:
+		_world.position = Vector2.ZERO
+		_shaking = false
 	_toast_left = maxf(_toast_left - dt, 0.0)
-	_toast.visible = _toast_left > 0.0
+	var toast_on := _toast_left > 0.0
+	if _toast.visible != toast_on:
+		_toast.visible = toast_on
 	_msg_left = maxf(_msg_left - dt, 0.0)
-	if _msg_left <= 0.0:
+	if _msg_left <= 0.0 and _message.text != "":
 		_message.text = ""
+	var art_key := Vector2(crack_stage, _collapse)
+	var art_dirty := art_key != _art_key
+	_art_key = art_key
 	for v: ZoneView in _zones.values():
-		v.flash = maxf(v.flash - dt, 0.0)
-		v.root.queue_redraw()
-		if v.art:
+		if v.flash > 0.0:
+			v.flash = maxf(v.flash - dt, 0.0)
+			v.root.queue_redraw()
+		if v.art and art_dirty:
 			v.art.queue_redraw()
 	_update_clock()
-	_update_chip_look()
-	queue_redraw()
+	if (_collapse > 0.0) != _lost_shown:
+		_lost_shown = _collapse > 0.0
+		_update_chip_look()
+	if dt > 0.0:
+		_snow.queue_redraw()
 
 
 ## Debug: jump to game time `time` (no going back).
@@ -188,11 +212,13 @@ func move(item_index: int, zone_id: StringName) -> bool:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(0, 0, 1280, 720), Palette.BG)
 	draw_rect(Rect2(0, 0, 1280, 160), SKY)
+
+
+func _draw_snow() -> void:
 	for f in _flakes:
 		var y := fposmod(f.y + elapsed * f.z, 720.0)
-		draw_rect(Rect2(f.x, y, 4, 4), SNOW)
+		_snow.draw_rect(Rect2(f.x, y, 4, 4), SNOW)
 
 
 func _build_zones() -> void:
@@ -323,7 +349,7 @@ func _make_chip(i: int) -> PanelContainer:
 	name_label.clip_text = true
 	top.add_child(name_label)
 	if type.slots > 1:
-		top.add_child(_label("x%d" % type.slots, 24, Palette.GOLD))
+		top.add_child(_label(tr("FIT_SLOTS") % type.slots, 20, Palette.GOLD))
 	if item.role_key != "":
 		var role := _label(tr(item.role_key), 18, Palette.MUTED)
 		role.clip_text = true
@@ -358,7 +384,9 @@ func _update_chip_look() -> void:
 func _update_clock() -> void:
 	var f := clampf(elapsed / skin.timer_seconds, 0.0, 1.0)
 	var minutes := int(lerpf(skin.clock_start_min, skin.clock_end_min, f))
-	_clock.text = "%02d:%02d" % [minutes / 60, minutes % 60]
+	if minutes != _clock_min:
+		_clock_min = minutes
+		_clock.text = "%02d:%02d" % [minutes / 60, minutes % 60]
 
 
 func _start_shake(dur: float, amp: float, already := 0.0) -> void:
