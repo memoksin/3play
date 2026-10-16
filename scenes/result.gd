@@ -24,6 +24,11 @@ func _ready() -> void:
 	%Menu.pressed.connect(Game.next)
 	get_viewport().size_changed.connect(fit)
 	fit.call_deferred()
+	# Entry: card fades in, the score lands, the closing line types on last.
+	TextFx.fade_in(%Card)
+	TextFx.fade_in(%Score, 0.3)
+	TextFx.fade_in(%Buttons, 0.6)
+	TextFx.type_on($Center/Card/Box/Closing, 1.0, 24.0)
 
 
 ## Sizes the scroll area to the body, capped so the whole card fits the screen.
