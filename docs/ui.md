@@ -13,23 +13,23 @@ Spec for role select, HUD timer, result card. Scenes are built in #14. Mockups b
 ## Grid and type
 
 - 1 logical px = 4 screen px. Borders 4 px, margins/gaps in multiples of 4 (prefer 8, 16, 24, 32, 48).
-- Font: Pixelify Sans (OFL), imported with antialiasing, hinting and subpixel off. Bold = `wght` 700 variation.
+- Font: VT323 (OFL), imported with antialiasing, hinting and subpixel off. One weight only: hierarchy comes from size and color, never fake bold. VT323 runs small, so sizes are about 1.3x a normal pixel font.
 - No rounded corners, no gradients, no soft shadows.
 
-| Type variation | Base | Font | Size | Color |
-|---|---|---|---|---|
-| (default) | Label | regular | 24 | TEXT |
-| `TitleLabel` | Label | bold | 64 | WHITE |
-| `HeaderLabel` | Label | bold | 40 | TEXT |
-| `MutedLabel` | Label | regular | 20 | MUTED |
-| `NumberLabel` | Label | bold | 48 | GOLD |
-| `SafeLabel` | Label | bold | 48 | SAFE |
-| `TimerLabel` | Label | bold | 48 | SAFE (code sets WARN/DANGER) |
-| `ClosingLabel` | Label | regular | 24 | MUTED |
-| (default) | Button | bold | 32 | panel + BORDER, hover TEXT border, focus GOLD |
-| `StateButton` / `CitizenButton` | Button | bold | 40 | role accent border and text |
-| `HudPanel` | PanelContainer | | | BG 85% + BORDER |
-| `TimerBar` | ProgressBar | | | fill SAFE (code swaps to WARN/DANGER) |
+| Type variation | Base | Size | Color |
+|---|---|---|---|
+| (default) | Label | 32 | TEXT |
+| `TitleLabel` | Label | 80 | WHITE |
+| `HeaderLabel` | Label | 48 | TEXT |
+| `MutedLabel` | Label | 28 | MUTED |
+| `NumberLabel` | Label | 56 | GOLD |
+| `SafeLabel` | Label | 56 | SAFE |
+| `TimerLabel` | Label | 56 | SAFE (code sets WARN/DANGER) |
+| `ClosingLabel` | Label | 32 | MUTED |
+| (default) | Button | 40 | panel + BORDER, hover TEXT border, focus GOLD |
+| `StateButton` / `CitizenButton` | Button | 48 | role accent border and text |
+| `HudPanel` | PanelContainer | | BG 85% + BORDER |
+| `TimerBar` | ProgressBar | | fill SAFE (code swaps to WARN/DANGER) |
 
 ## Palette roles (Resurrect 64)
 
@@ -59,7 +59,7 @@ Spec for role select, HUD timer, result card. Scenes are built in #14. Mockups b
 ![role select](ui/role_select.png)
 
 - Center column, 32 px gap: logo, `MENU_PROMPT`, two role cards.
-- Role card: button 320x112 (`StateButton` / `CitizenButton`) + description as default Label (TEXT, 24), wrap at 320. Not MutedLabel: too faint at this size.
+- Role card: button 320x112 (`StateButton` / `CitizenButton`) + description as default Label (TEXT, 32), wrap at 320. Not MutedLabel: too faint at this size.
 - Keyboard: buttons focusable, focus border GOLD.
 
 ## HUD timer (`scenes/ui/hud_timer.tscn`)
@@ -82,7 +82,6 @@ Spec for role select, HUD timer, result card. Scenes are built in #14. Mockups b
   6. buttons `RESULT_REPLAY`, `RESULT_MENU`
   7. `CLOSING_LINE` (ClosingLabel)
 - No section headers: the HELP text already starts with "What would have helped:".
-- Font has no `~`. Write "about" or "+" instead.
 
 ## Strings
 

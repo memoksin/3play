@@ -11,7 +11,7 @@ Columns required per asset: name, author, link, license, where used.
 | sprites/indian_ocean/sensor_buoy.png | original (generated in-repo by `tools/sprites/indian_ocean/sensor_buoy.py`, code written with Claude) | CC0 |
 | sprites/indian_ocean/siren.png | original (generated in-repo by `tools/sprites/indian_ocean/siren.py`, code written with Claude) | CC0 |
 | sprites/indian_ocean/coast_bg.png | original (generated in-repo by `tools/sprites/indian_ocean/coast_bg.py`, code written with Claude) | CC0 |
-| fonts/PixelifySans.ttf (Pixelify Sans, variable) | Stefie Justprince, https://github.com/google/fonts/tree/main/ofl/pixelifysans (upstream https://github.com/eifetx/Pixelify-Sans). All UI text (`ui/theme.tres`) | SIL OFL 1.1, license text in `assets/fonts/OFL.txt` |
+| fonts/VT323-Regular.ttf (VT323) | Peter Hull, https://github.com/google/fonts/tree/main/ofl/vt323. All UI text (`ui/theme.tres`) | SIL OFL 1.1, license text in `assets/fonts/OFL.txt` |
 | Palette Resurrect 64 | Kerrie Lake, https://lospec.com/palette-list/resurrect-64. All pixel art, UI colors (`ui/palette.gd`) | No formal license; author approved commercial use in a Lospec comment (22 Aug 2023). Colors only, no artwork |
 
 ## Planned third-party assets (NOT in the repo yet: move a row up and fill every column once added)

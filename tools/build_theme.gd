@@ -3,19 +3,18 @@ extends SceneTree
 ## godot --headless --path . -s tools/build_theme.gd
 
 const PX := 4  # 1 logical px = 4 screen px
-const FONT := "res://assets/fonts/PixelifySans.ttf"
+const FONT := "res://assets/fonts/VT323-Regular.ttf"
 const OUT := "res://ui/theme.tres"
 
 
 func _init() -> void:
 	var t := Theme.new()
+	# VT323 has one weight. Hierarchy comes from size and color, never fake bold.
 	var regular: FontFile = load(FONT)
-	var bold := FontVariation.new()
-	bold.base_font = regular
-	bold.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): 700}
+	var bold := regular
 
 	t.default_font = regular
-	t.default_font_size = 24
+	t.default_font_size = 32
 
 	# Label
 	t.set_color("font_color", "Label", Palette.TEXT)
@@ -32,7 +31,7 @@ func _init() -> void:
 	t.set_color("font_focus_color", "Button", Palette.WHITE)
 	t.set_color("font_disabled_color", "Button", Palette.MUTED)
 	t.set_font("font", "Button", bold)
-	t.set_font_size("font_size", "Button", 32)
+	t.set_font_size("font_size", "Button", 40)
 
 	# Panel / PanelContainer: result card and HUD backing.
 	var card := _box(Palette.PANEL, Palette.BORDER)
@@ -41,13 +40,13 @@ func _init() -> void:
 	t.set_stylebox("panel", "Panel", card)
 
 	# Type variations (set Control.theme_type_variation).
-	_label_var(t, "TitleLabel", bold, 64, Palette.WHITE)
-	_label_var(t, "HeaderLabel", bold, 40, Palette.TEXT)
-	_label_var(t, "MutedLabel", regular, 20, Palette.MUTED)
-	_label_var(t, "NumberLabel", bold, 48, Palette.GOLD)
-	_label_var(t, "SafeLabel", bold, 48, Palette.SAFE)
-	_label_var(t, "TimerLabel", bold, 48, Palette.SAFE)
-	_label_var(t, "ClosingLabel", regular, 24, Palette.MUTED)
+	_label_var(t, "TitleLabel", bold, 80, Palette.WHITE)
+	_label_var(t, "HeaderLabel", bold, 48, Palette.TEXT)
+	_label_var(t, "MutedLabel", regular, 28, Palette.MUTED)
+	_label_var(t, "NumberLabel", bold, 56, Palette.GOLD)
+	_label_var(t, "SafeLabel", bold, 56, Palette.SAFE)
+	_label_var(t, "TimerLabel", bold, 56, Palette.SAFE)
+	_label_var(t, "ClosingLabel", regular, 32, Palette.MUTED)
 
 	_role_button(t, "StateButton", Palette.STATE)
 	_role_button(t, "CitizenButton", Palette.CITIZEN)
@@ -100,4 +99,4 @@ func _role_button(t: Theme, name: StringName, accent: Color) -> void:
 	t.set_stylebox("pressed", name, _box(Palette.PANEL_DARK, accent, PX))
 	t.set_color("font_color", name, accent)
 	t.set_color("font_hover_color", name, Palette.WHITE)
-	t.set_font_size("font_size", name, 40)
+	t.set_font_size("font_size", name, 48)
