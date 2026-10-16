@@ -64,7 +64,10 @@ func _init() -> void:
 
 	t.set_type_variation("TimerBar", "ProgressBar")
 	t.set_stylebox("background", "TimerBar", _box(Palette.BG, Palette.BORDER))
-	t.set_stylebox("fill", "TimerBar", _box(Palette.SAFE, Color(0, 0, 0, 0), 0, 0))
+	# Fill has no margins: ProgressBar adds the fill's minimum width, which would overstate low values.
+	var fill := _box(Palette.SAFE, Color(0, 0, 0, 0), 0, 0)
+	fill.set_content_margin_all(0)
+	t.set_stylebox("fill", "TimerBar", fill)
 
 	var err := ResourceSaver.save(t, OUT)
 	print("theme saved: ", OUT, " err=", err)
