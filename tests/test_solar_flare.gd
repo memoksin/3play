@@ -99,9 +99,9 @@ func _run() -> void:
 
 	await _backdrop()
 
-	# Kahramanmaras keeps the old look
+	# Kahramanmaras keeps a static backdrop
 	var k: FitSkin = load("res://data/skins/kahramanmaras_fit.tres")
-	_check("kahr: static look, no animated backdrop", k.background_scene == null and k.background == null)
+	_check("kahr: static backdrop, not animated", k.background_scene == null and k.background != null)
 	_check("kahr defaults: building art, collapse, snow, old colours",
 			k.start_art == FitSkin.StartArt.BUILDING and k.ending == FitSkin.Ending.COLLAPSE and k.snow
 			and k.sky_color == Color("323353") and k.snow_color == Color("c7dcd0") and k.show_warmth)
