@@ -11,7 +11,7 @@ The player does not know a second big quake (Mw 7.5, Elbistan) hits at **13:24**
 ## What the player sees
 
 - Fixed side view of the hallway, 320x180 logical px (see `docs/design.md` pixel rules).
-- Left: pile of fallen items on the floor. Right: the **cupboard**, a grid of **6x4 tiles** (16 px each). This is the limited space.
+- Left: pile of fallen items on the floor. Right: the **cupboard**, a grid of **4x4 tiles** (16 px each). This is the limited space.
 - Top: timer bar. Family of 5 standing in the doorway (parent, grandmother, teen, child, baby).
 - Prompt text (one line, `tr()` key): "Clear the hallway before they come back."
 - Nothing says "emergency kit" or "earthquake prep".
@@ -20,7 +20,7 @@ The player does not know a second big quake (Mw 7.5, Elbistan) hits at **13:24**
 
 Drag an item onto the cupboard grid. It snaps to tiles, no rotation, no overlap. Drag back out to remove. Mouse only.
 
-## Items (pile has 14, cupboard fits about 8)
+## Items (pile has 14, cupboard fits 16 tiles, about 6 items)
 
 Size is tiles (w x h). Prep value is hidden from the player.
 
@@ -41,7 +41,7 @@ Size is tiles (w x h). Prep value is hidden from the player.
 | Board games | 2x1 | Decoy |
 | Slippers pile | 2x1 | Decoy (looks like shoes) |
 
-Sum of useful items is larger than 24 tiles, so the player must choose. Decoys are emotionally tempting on purpose.
+Useful items add up to 19 tiles and the cupboard has 16, so the player must choose. Decoys are emotionally tempting on purpose.
 
 ## Hidden scoring at 13:24
 
