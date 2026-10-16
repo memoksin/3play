@@ -23,9 +23,11 @@ const LEFT_ZONE_W := 616.0
 const CHIP_SIZE := Vector2(184, 56)
 const ICON_SIZE := 32.0
 const HEADER_H := 48.0
+const SLIDE_DUR := 0.18
+const DRAG_TILT := 0.06
+const DRAG_RAISE := 10.0
+const DRAG_SHADOW := Vector2(6, 8)
 
-const SKY := Color("323353")
-const SNOW := Color("c7dcd0")
 const WARM_BADGE := Color("cd683d")
 const COLD_BADGE := Color("4d65b4")
 const FACADE := Color("7f708a")
@@ -40,6 +42,11 @@ const CRACKS := [
 	[Vector2(0.50, 0.0), Vector2(0.54, 0.16), Vector2(0.47, 0.32), Vector2(0.55, 0.5), Vector2(0.49, 0.66), Vector2(0.56, 0.86)],
 ]
 const SNOW_FLAKES := 48
+## Seconds after the final hit: the flare flash rises, holds, then settles to FLASH_REST.
+const FLARE_RISE := 0.3
+const FLARE_HOLD := 0.8
+const FLARE_FADE := 1.2
+const FLARE_REST := 0.45
 
 ## Debug/test hooks.
 var time_scale := 1.0
@@ -68,10 +75,16 @@ var _chips: Array[PanelContainer] = []
 var _chip_normal: StyleBoxFlat
 var _chip_selected: StyleBoxFlat
 var _snow: Control
+var _flare: Control
+var _flare_alpha := 0.0
 var _art_key := Vector2(-1, -1)  # (crack_stage, collapse) last drawn
 var _lost_shown := false
 var _shaking := false
 var _clock_min := -1
+var _drag_item := -1
+var _hover: StringName = &""
+var _hidden_chip := -1
+var _fx: Control
 
 @onready var _world: Control = $World
 @onready var _zone_root: Control = $World/Zones
@@ -113,12 +126,26 @@ func _ready() -> void:
 	rng.seed = 7
 	for i in SNOW_FLAKES:
 		_flakes.append(Vector3(rng.randf() * 1280.0, rng.randf() * 720.0, 24.0 + rng.randf() * 40.0))
-	_snow = Control.new()
-	_snow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_snow.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_snow.draw.connect(_draw_snow)
-	add_child(_snow)
-	move_child(_snow, 0)
+	if skin.snow:
+		_snow = Control.new()
+		_snow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_snow.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_snow.draw.connect(_draw_snow)
+		add_child(_snow)
+		move_child(_snow, 0)
+	if skin.ending == FitSkin.Ending.FLARE:
+		_flare = Control.new()
+		_flare.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_flare.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_flare.draw.connect(func() -> void: _flare.draw_rect(Rect2(0, 0, 1280, 720), Color(1, 1, 1, _flare_alpha)))
+		_flare.visible = false
+		add_child(_flare)
+		move_child(_flare, _banner.get_index())  # under the banner
+	_fx = Control.new()
+	_fx.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fx.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_fx)
+	move_child(_fx, _banner.get_index())  # slide ghosts above the zones, under the banner
 	_build_zones()
 	for i in skin.items.size():
 		var chip := _make_chip(i)
@@ -142,8 +169,10 @@ func advance(dt: float) -> void:
 		if not _fired[i] and elapsed >= at:
 			_fired[i] = true
 			crack_stage += 1
-			_start_shake(SHAKE_AFTER_DUR, SHAKE_AFTER_AMP, elapsed - at)
-			_toast.get_node("Label").text = tr(skin.creak_key)
+			if skin.ending == FitSkin.Ending.COLLAPSE:
+				_start_shake(SHAKE_AFTER_DUR, SHAKE_AFTER_AMP, elapsed - at)
+			var key := skin.warning_keys[i] if i < skin.warning_keys.size() else skin.creak_key
+			_toast.get_node("Label").text = tr(key)
 			_toast_left = TOAST_DUR - (elapsed - at)
 	if not _phase_quake and elapsed >= skin.timer_seconds:
 		_phase_quake = true
@@ -151,13 +180,18 @@ func advance(dt: float) -> void:
 		_selected = -1
 		_update_chip_look()
 		_quake_t = elapsed - skin.timer_seconds
-		_start_shake(SHAKE_QUAKE_DUR, SHAKE_QUAKE_AMP, _quake_t)
+		if skin.ending == FitSkin.Ending.COLLAPSE:
+			_start_shake(SHAKE_QUAKE_DUR, SHAKE_QUAKE_AMP, _quake_t)
 		_banner.get_node("Label").text = tr(skin.quake_key)
 	elif _phase_quake:
 		_quake_t += dt
 	if _phase_quake:
 		_collapse = clampf((_quake_t - COLLAPSE_START) / COLLAPSE_DUR, 0.0, 1.0)
 		_banner.visible = _quake_t >= BANNER_DELAY
+		if _flare:
+			_flare_alpha = _flare_level(_quake_t)
+			_flare.visible = _flare_alpha > 0.0
+			_flare.queue_redraw()
 		if _quake_t >= FINISH_DELAY:
 			_finish()
 	_shake_left = maxf(_shake_left - dt, 0.0)
@@ -187,7 +221,7 @@ func advance(dt: float) -> void:
 	if (_collapse > 0.0) != _lost_shown:
 		_lost_shown = _collapse > 0.0
 		_update_chip_look()
-	if dt > 0.0:
+	if dt > 0.0 and _snow:
 		_snow.queue_redraw()
 
 
@@ -212,13 +246,24 @@ func move(item_index: int, zone_id: StringName) -> bool:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(0, 0, 1280, 160), SKY)
+	if skin.background:
+		draw_texture_rect(skin.background, Rect2(0, 0, 1280, 720), false)
+	else:
+		draw_rect(Rect2(0, 0, 1280, 160), skin.sky_color)
+
+
+## Flare flash alpha `t` seconds after the final hit.
+func _flare_level(t: float) -> float:
+	if t < FLARE_RISE:
+		return t / FLARE_RISE
+	var settle := clampf((t - FLARE_RISE - FLARE_HOLD) / FLARE_FADE, 0.0, 1.0)
+	return lerpf(1.0, FLARE_REST, settle)
 
 
 func _draw_snow() -> void:
 	for f in _flakes:
 		var y := fposmod(f.y + elapsed * f.z, 720.0)
-		_snow.draw_rect(Rect2(f.x, y, 4, 4), SNOW)
+		_snow.draw_rect(Rect2(f.x, y, 4, 4), skin.snow_color)
 
 
 func _build_zones() -> void:
@@ -233,7 +278,7 @@ func _build_zones() -> void:
 			rect = Rect2(MARGIN, ZONE_TOP, LEFT_ZONE_W, ZONE_BOTTOM - ZONE_TOP)
 		else:
 			rect = Rect2(right_x, ZONE_TOP + (i - 1) * (right_h + GAP), right_w, right_h)
-		_zones[skin.zones[i].id] = _make_zone(skin.zones[i], rect, i == 0)
+		_zones[skin.zones[i].id] = _make_zone(skin.zones[i], rect, skin.zones[i].id == skin.start_zone and skin.start_art == FitSkin.StartArt.BUILDING)
 
 
 func _make_zone(def: FitZone, rect: Rect2, with_art: bool) -> ZoneView:
@@ -245,6 +290,8 @@ func _make_zone(def: FitZone, rect: Rect2, with_art: bool) -> ZoneView:
 	_zone_root.add_child(v.root)
 	v.root.draw.connect(_draw_zone.bind(v))
 	v.root.gui_input.connect(_zone_input.bind(def.id))
+	v.root.mouse_entered.connect(_zone_entered.bind(def.id))
+	v.root.mouse_exited.connect(_zone_exited.bind(def.id))
 	v.root.set_drag_forwarding(Callable(), _zone_can_drop.bind(def.id), _zone_drop.bind(def.id))
 	if with_art:
 		v.art = Control.new()
@@ -270,6 +317,7 @@ func _make_zone(def: FitZone, rect: Rect2, with_art: bool) -> ZoneView:
 	v.badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.badge_label = _label("", 28, Palette.WHITE)
 	v.badge.add_child(v.badge_label)
+	v.badge.visible = skin.show_warmth
 	header.add_child(v.badge)
 	v.flow = HFlowContainer.new()
 	v.flow.position = Vector2(12, HEADER_H + 8)
@@ -364,7 +412,7 @@ func _refresh() -> void:
 		var used := FitLogic.slots_used(skin, placement, id)
 		v.count.text = "%d/%s" % [used, "∞" if cap < 0 else str(cap)]
 		var warm := FitLogic.is_warm(skin, placement, id)
-		v.badge_label.text = tr("FIT_WARM" if warm else "FIT_COLD")
+		v.badge_label.text = tr(_badge_key(warm))
 		var s := StyleBoxFlat.new()
 		s.bg_color = WARM_BADGE if warm else COLD_BADGE
 		s.set_content_margin_all(2)
@@ -374,11 +422,18 @@ func _refresh() -> void:
 	_update_chip_look()
 
 
+func _badge_key(warm: bool) -> String:
+	var key := skin.warm_key if warm else skin.cold_key
+	return key if key != "" else ("FIT_WARM" if warm else "FIT_COLD")
+
+
 func _update_chip_look() -> void:
+	if _zones.has(_hover):
+		_zones[_hover].root.queue_redraw()
 	for i in _chips.size():
 		_chips[i].add_theme_stylebox_override("panel", _chip_selected if i == _selected else _chip_normal)
 		var lost := _collapse > 0.0 and not skin.zone(placement[i]).safe
-		_chips[i].modulate.a = 0.4 if lost else 1.0
+		_chips[i].modulate.a = 0.0 if i == _hidden_chip else (0.4 if lost or i == _drag_item else 1.0)
 
 
 func _update_clock() -> void:
@@ -425,6 +480,8 @@ func _finish() -> void:
 
 func _select(i: int) -> void:
 	_selected = i
+	if _zones.has(_hover):
+		_zones[_hover].root.queue_redraw()
 	_update_chip_look()
 
 
@@ -441,20 +498,68 @@ func _zone_input(event: InputEvent, zone_id: StringName) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var i := _selected
 		_select(-1)
+		_set_hover(&"")
 		move(i, zone_id)
+
+
+func _zone_entered(zone_id: StringName) -> void:
+	if _selected >= 0 and _drag_item < 0 and not locked:
+		_set_hover(zone_id)
+
+
+func _zone_exited(zone_id: StringName) -> void:
+	if _hover == zone_id:
+		_set_hover(&"")
+
+
+## Zone under the cursor gets a fit/full border. Redraws only when it changes.
+func _set_hover(zone_id: StringName) -> void:
+	if zone_id == _hover:
+		return
+	var old := _hover
+	_hover = zone_id
+	for id: StringName in [old, zone_id]:
+		if _zones.has(id):
+			_zones[id].root.queue_redraw()
+
+
+func _hover_fits(zone_id: StringName) -> bool:
+	var i := _drag_item if _drag_item >= 0 else _selected
+	return i >= 0 and (placement[i] == zone_id or FitLogic.can_place(skin, placement, i, zone_id))
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_DRAG_END and _drag_item >= 0:
+		_drag_item = -1
+		_set_hover(&"")
+		_update_chip_look()
 
 
 func _chip_drag(_at: Vector2, i: int) -> Variant:
 	if locked:
 		return null
 	_select(i)
+	_drag_item = i
+	_update_chip_look()
 	var preview := Control.new()
-	var p := PanelContainer.new()
-	p.add_theme_stylebox_override("panel", _chip_selected)
-	var item := skin.items[i]
-	p.add_child(_label(tr(item.name_key if item.name_key != "" else skin.type_of(i).label_key), 24, Palette.WHITE))
-	p.position = Vector2(-48, -20)
-	preview.add_child(p)
+	var shadow := Panel.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(Palette.BG, 0.55)
+	sb.anti_aliasing = false
+	shadow.add_theme_stylebox_override("panel", sb)
+	shadow.size = CHIP_SIZE
+	shadow.position = -CHIP_SIZE / 2.0 + DRAG_SHADOW + Vector2(0, -DRAG_RAISE)
+	shadow.pivot_offset = CHIP_SIZE / 2.0
+	shadow.rotation = DRAG_TILT
+	preview.add_child(shadow)
+	var copy := _make_chip(i)
+	copy.add_theme_stylebox_override("panel", _chip_selected)
+	copy.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	copy.size = CHIP_SIZE
+	copy.position = -CHIP_SIZE / 2.0 + Vector2(0, -DRAG_RAISE)
+	copy.pivot_offset = CHIP_SIZE / 2.0
+	copy.rotation = DRAG_TILT
+	preview.add_child(copy)
 	_chips[i].set_drag_preview(preview)
 	return {"fit_item": i}
 
@@ -469,13 +574,52 @@ func _chip_drop(at: Vector2, data: Variant, i: int) -> void:
 
 
 ## Accepts any valid item so a full zone can reject on drop (flash + message).
-func _zone_can_drop(_at: Vector2, data: Variant, _zone_id: StringName) -> bool:
-	return not locked and data is Dictionary and data.has("fit_item")
+func _zone_can_drop(_at: Vector2, data: Variant, zone_id: StringName) -> bool:
+	var ok: bool = not locked and data is Dictionary and data.has("fit_item")
+	if ok:
+		_set_hover(zone_id)
+	return ok
 
 
-func _zone_drop(_at: Vector2, data: Variant, zone_id: StringName) -> void:
+func _zone_drop(at: Vector2, data: Variant, zone_id: StringName) -> void:
+	var i: int = data["fit_item"]
+	var start: Vector2 = _zones[zone_id].root.get_global_transform_with_canvas().origin + at - CHIP_SIZE / 2.0 + Vector2(0, -DRAG_RAISE)
 	_select(-1)
-	move(data["fit_item"], zone_id)
+	_set_hover(&"")
+	var from := placement[i]
+	var ok := move(i, zone_id)
+	if from != zone_id or not ok:
+		_slide(i, start, ok)
+
+
+## Ghost copy of chip `i` flies from the drop point into its slot (ok) or shakes back to where it was.
+func _slide(i: int, start: Vector2, ok: bool) -> void:
+	if not is_inside_tree():
+		return
+	var chip := _chips[i]
+	var ghost := _make_chip(i)
+	ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ghost.size = CHIP_SIZE
+	ghost.global_position = start
+	_fx.add_child(ghost)
+	_hidden_chip = i
+	_update_chip_look()
+	await get_tree().process_frame  # let the flow container place the chip
+	if not is_instance_valid(ghost):
+		return
+	var target := chip.global_position
+	var tw := ghost.create_tween()
+	if ok:
+		tw.tween_property(ghost, "global_position", target, SLIDE_DUR).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	else:
+		tw.tween_property(ghost, "global_position", target, SLIDE_DUR).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		for dx in [8.0, -8.0, 5.0, -5.0, 0.0]:
+			tw.tween_property(ghost, "global_position:x", target.x + dx, 0.04)
+	await tw.finished
+	if _hidden_chip == i:
+		_hidden_chip = -1
+		_update_chip_look()
+	ghost.queue_free()
 
 
 # --- drawing -----------------------------------------------------------------
@@ -489,7 +633,12 @@ func _draw_zone(v: ZoneView) -> void:
 	var border := Palette.BORDER
 	if v.flash > 0.0:
 		border = Palette.BORDER.lerp(Palette.DANGER, v.flash / FLASH_DUR)
-	c.draw_rect(r, border, false, 4.0)
+	if _hover == v.def.id:
+		border = Palette.SAFE if _hover_fits(v.def.id) else Palette.DANGER
+		c.draw_rect(r.grow(-4), Color(border, 0.15))
+		c.draw_rect(r, border, false, 6.0)
+	else:
+		c.draw_rect(r, border, false, 4.0)
 	if v.flash > 0.0:
 		c.draw_rect(r.grow(-4), Color(Palette.DANGER, 0.25 * v.flash / FLASH_DUR))
 

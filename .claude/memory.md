@@ -5,7 +5,7 @@ Shared by every agent. Loaded via CLAUDE.md. Hard cap 40 lines; one line per fac
 ## Contracts
 - Flow: scenes end with `Game.next()`; minigames end with `Game.finish_minigame(saved, total, extra)`; a scene run alone (F6) calls `Game.ensure_disaster(&"citizen"|&"state")` first.
 - Data: disaster facts in `data/disasters/*.tres`; minigame rules + textures in its skin `.tres` (`Disaster.skin`). New art = set a skin field, no code change.
-- Tier 1: citizen → Kahramanmaras (Fit), state → Indian Ocean (Connect: underground pipelines, final spec in `docs/minigames/`).
+- Pick: `Game.POOL` per role; `start()` takes the disaster least played on this machine (`user://played.cfg`, ties random). F6 `ensure_disaster` uses fixed `Game.PICK`. Tests set `Game.store_path = ""`. State: Indian Ocean (Connect, spec in `docs/minigames/`) or solar flare 3026 (Fit skin); citizen: Kahramanmaras (Fit).
 - Owners: globe, Fit, Connect, `Game` = memoksin; theme, result card, intro text = iremaltunsgt; sprites, diorama = sudeimete; specs, card text = burcubaran22. Ask on the issue before editing another owner's scene.
 
 ## Gotchas

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="Disaster" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/disaster.gd" id="1"]
+[ext_resource type="Resource" path="res://data/skins/solar_flare_fit.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"solar_flare"
+role = &"state"
+key_prefix = "SF"
+lat = 0.0
+lon = -150.0
+year = 3026
+utc = "3026-03-14T01:00:00"
+minigame = &"fit"
+glitch = true
+skin = ExtResource("2")

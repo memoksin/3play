@@ -3,6 +3,9 @@ extends Resource
 ## Mechanic data for the Fit minigame. Kahramanmaras: items into Building/Car/Tent.
 ## Solar flare reuses it with seats as zones.
 
+enum StartArt { BUILDING, NONE }
+enum Ending { COLLAPSE, FLARE }
+
 @export var zones: Array[FitZone] = []
 @export var item_types: Array[FitItemType] = []
 ## Every item on the board, in display order.
@@ -20,6 +23,22 @@ extends Resource
 ## tr() keys.
 @export var creak_key := ""
 @export var quake_key := ""
+## Optional: warning i shows warning_keys[i] instead of creak_key.
+@export var warning_keys: Array[String] = []
+## Art drawn in the start zone: the cracked building, or nothing.
+@export var start_art := StartArt.BUILDING
+## Final hit: COLLAPSE = shake + building collapse (warnings shake too); FLARE = white flash, no shake.
+@export var ending := Ending.COLLAPSE
+## Falling snow and the sky/snow colours.
+@export var snow := true
+@export var sky_color := Color("323353")
+## Optional full-screen backdrop drawn behind the zones. Null = flat sky_color fill.
+@export var background: Texture2D
+@export var snow_color := Color("c7dcd0")
+## Warm/cold badge on every zone. warm_key/cold_key override its text (empty = FIT_WARM/FIT_COLD).
+@export var show_warmth := true
+@export var warm_key := ""
+@export var cold_key := ""
 
 
 func zone(id: StringName) -> FitZone:

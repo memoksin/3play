@@ -50,7 +50,14 @@ func _run() -> void:
 		if i % 2 == 0:
 			s.rots[i] = solved[i]
 	s.seek(55.0)
+	s.locked = true  # keep the synthetic hover: the virtual screen sends its own mouse motion
+	s._hover = Vector2i(2, 2)
 	await _shot("connect_mid")
+	s._hover = Vector2i(-1, -1)
+	s.locked = false
+
+	s.seek(60.2)
+	await _shot("connect_hit")
 
 	# flow: line 4 left broken, water running
 	s.solve()
