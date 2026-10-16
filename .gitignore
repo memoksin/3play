@@ -1,0 +1,7 @@
+.serena/
+.claude/settings.local.json
+.godot/
+.import/
+export/
+*.translation
+.DS_Store

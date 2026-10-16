@@ -1,0 +1,10 @@
+{
+  "extraKnownMarketplaces": {
+    "godot-gamedev": {
+      "source": { "source": "github", "repo": "Zate/cc-godot" }
+    }
+  },
+  "enabledPlugins": {
+    "gd@godot-gamedev": true
+  }
+}
