@@ -47,3 +47,19 @@ For whoever has the game on their computer (memoksin or sudeimete).
 
 - Download the files and add them to the repo, then to `assets/CREDITS.md`, then set Status to `in repo`.
 - Re-check the license line on each page when downloading.
+
+## Diorama
+
+The diorama is the 3D intro (about 10 s): the camera orbits a small low-poly set while a text card types out the place, year and two lines. The scene ends when the player continues (button, Space, Enter) or after about 4 s, then the minigame starts.
+
+| # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
+|---|---|---|---|---|---|---|---|---|
+| D1 | Kahramanmaras ambience | Diorama of Kahramanmaras (snow, wind) | DMP013016 HEAVY SNOW STORM MS.wav | martypinso | https://freesound.org/people/martypinso/sounds/35480/ | CC0 | chosen | Use the part from about 1:47 to 2:43 (about 56 s). Needs a soft fade at the ends if it loops. |
+| D2 | Indian Ocean ambience | Diorama of the Indian Ocean (waves on the shore) | Waves crashing on shore | jamgypsy | https://freesound.org/people/jamgypsy/sounds/795445/ | CC0 | chosen | Only waves (no birds, boats or people per the description). About 2 min. |
+| D3 | Solar flare 3026 ambience | Diorama of the solar flare scenario | Solar Storm.wav | Puniho | https://freesound.org/s/151098/ | CC0 | chosen | Space ambience. |
+| D4 | Intro text typing | The intro lines type on, one after another | | | | | proposed: reuse G3 | Same typing sound as the globe coordinates, so all typed text in the game sounds the same. Confirm. |
+| D5 | Diorama to minigame transition | The diorama ends and the minigame starts | | | | | undecided | Maybe reuse G5 (whoosh) or M3 (click). Decide. |
+
+### Still to do for the diorama
+
+- Same steps as the globe: download, trim D1, add to the repo, credit in `assets/CREDITS.md`, set Status to `in repo`.
