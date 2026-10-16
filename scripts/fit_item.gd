@@ -8,3 +8,5 @@ extends Resource
 @export var name_key := ""
 ## tr() key of the small second line. May be empty.
 @export var role_key := ""
+## Optional per-person sprite, overrides the item type's texture in the chip icon slot.
+@export var texture: Texture2D

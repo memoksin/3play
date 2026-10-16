@@ -41,6 +41,9 @@ enum Ending { COLLAPSE, FLARE }
 @export var show_warmth := true
 @export var warm_key := ""
 @export var cold_key := ""
+## Optional 32x32 icons drawn in the Warm/Cold badge next to the text. Null = text only.
+@export var warm_icon: Texture2D
+@export var cold_icon: Texture2D
 
 
 func zone(id: StringName) -> FitZone:

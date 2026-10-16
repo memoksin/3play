@@ -1,44 +1,33 @@
-[gd_resource type="Resource" script_class="FitSkin" load_steps=28 format=3]
+[gd_resource type="Resource" script_class="FitSkin" format=3]
 
 [ext_resource type="Script" path="res://scripts/fit_skin.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/sprites/kahramanmaras/kahr_bg.png" id="1_tvafa"]
 [ext_resource type="Script" path="res://scripts/fit_zone.gd" id="2"]
+[ext_resource type="Texture2D" path="res://assets/sprites/kahramanmaras/cold_icon.png" id="2_xyfr4"]
 [ext_resource type="Script" path="res://scripts/fit_item_type.gd" id="3"]
 [ext_resource type="Script" path="res://scripts/fit_item.gd" id="4"]
-
-[sub_resource type="Resource" id="zone_building"]
-script = ExtResource("2")
-id = &"building"
-label_key = "KAHR_FIT_ZONE_BUILDING"
-slots = -1
-warm = 0
-safe = false
-color = Color(0.384314, 0.333333, 0.396078, 1)
-
-[sub_resource type="Resource" id="zone_car"]
-script = ExtResource("2")
-id = &"car"
-label_key = "KAHR_FIT_ZONE_CAR"
-slots = 4
-warm = 0
-safe = true
-color = Color(0.282353, 0.290196, 0.466667, 1)
-
-[sub_resource type="Resource" id="zone_tent"]
-script = ExtResource("2")
-id = &"tent"
-label_key = "KAHR_FIT_ZONE_TENT"
-slots = 6
-warm = 2
-safe = true
-color = Color(0.215686, 0.305882, 0.290196, 1)
+[ext_resource type="Texture2D" path="res://assets/sprites/kahramanmaras/item_stove.png" id="4_0p77q"]
+[ext_resource type="Texture2D" path="res://assets/sprites/kahramanmaras/item_blanket.png" id="5_gxdfl"]
+[ext_resource type="Texture2D" path="res://assets/sprites/kahramanmaras/item_water.png" id="6_emjy5"]
+[ext_resource type="Texture2D" path="res://assets/sprites/kahramanmaras/item_medicine.png" id="7_3lj2k"]
+[ext_resource type="Texture2D" path="res://assets/sprites/kahramanmaras/person_ayse.png" id="9_trvp7"]
+[ext_resource type="Texture2D" path="res://assets/sprites/kahramanmaras/person_elif.png" id="10_1c8dd"]
+[ext_resource type="Texture2D" path="res://assets/sprites/kahramanmaras/person_mehmet.png" id="11_q72lp"]
+[ext_resource type="Texture2D" path="res://assets/sprites/kahramanmaras/person_zeynep.png" id="12_pgix3"]
+[ext_resource type="Texture2D" path="res://assets/sprites/kahramanmaras/person_can.png" id="13_mqsjt"]
+[ext_resource type="Texture2D" path="res://assets/sprites/kahramanmaras/person_selin.png" id="14_8toab"]
+[ext_resource type="Texture2D" path="res://assets/sprites/kahramanmaras/person_hasan.png" id="15_gwtnv"]
+[ext_resource type="Texture2D" path="res://assets/sprites/kahramanmaras/person_fatma.png" id="16_mpap0"]
+[ext_resource type="Texture2D" path="res://assets/sprites/kahramanmaras/warm_icon.png" id="18_cd3r5"]
+[ext_resource type="Texture2D" path="res://assets/sprites/kahramanmaras/kahr_building.png" id="20_wyp8l"]
+[ext_resource type="Texture2D" path="res://assets/sprites/kahramanmaras/kahr_car.png" id="21_tov56"]
+[ext_resource type="Texture2D" path="res://assets/sprites/kahramanmaras/kahr_tent.png" id="22_n7x8h"]
 
 [sub_resource type="Resource" id="type_person"]
 script = ExtResource("3")
 id = &"person"
 label_key = "KAHR_FIT_ITEM_PERSON"
-slots = 1
 scored = true
-heat = 0
 color = Color(0.301961, 0.607843, 0.901961, 1)
 
 [sub_resource type="Resource" id="type_stove"]
@@ -46,120 +35,144 @@ script = ExtResource("3")
 id = &"stove"
 label_key = "KAHR_FIT_ITEM_STOVE"
 slots = 2
-scored = false
 heat = 1
 color = Color(0.984314, 0.419608, 0.113725, 1)
+texture = ExtResource("4_0p77q")
 
 [sub_resource type="Resource" id="type_blanket"]
 script = ExtResource("3")
 id = &"blanket"
 label_key = "KAHR_FIT_ITEM_BLANKET"
-slots = 1
-scored = false
 heat = 2
 color = Color(0.658824, 0.517647, 0.952941, 1)
+texture = ExtResource("5_gxdfl")
 
 [sub_resource type="Resource" id="type_water"]
 script = ExtResource("3")
 id = &"water"
 label_key = "KAHR_FIT_ITEM_WATER"
-slots = 1
-scored = false
-heat = 0
-color = Color(0.560784, 0.827451, 1.0, 1)
+color = Color(0.560784, 0.827451, 1, 1)
+texture = ExtResource("6_emjy5")
 
 [sub_resource type="Resource" id="type_medicine"]
 script = ExtResource("3")
 id = &"medicine"
 label_key = "KAHR_FIT_ITEM_MEDICINE"
-slots = 1
-scored = false
-heat = 0
 color = Color(0.941176, 0.309804, 0.470588, 1)
+texture = ExtResource("7_3lj2k")
 
 [sub_resource type="Resource" id="item_0"]
 script = ExtResource("4")
 type = &"person"
 name_key = "KAHR_FIT_P_AYSE"
 role_key = "KAHR_FIT_R_AYSE"
+texture = ExtResource("9_trvp7")
 
 [sub_resource type="Resource" id="item_1"]
 script = ExtResource("4")
 type = &"person"
 name_key = "KAHR_FIT_P_ELIF"
 role_key = "KAHR_FIT_R_ELIF"
+texture = ExtResource("10_1c8dd")
 
 [sub_resource type="Resource" id="item_2"]
 script = ExtResource("4")
 type = &"person"
 name_key = "KAHR_FIT_P_MEHMET"
 role_key = "KAHR_FIT_R_MEHMET"
+texture = ExtResource("11_q72lp")
 
 [sub_resource type="Resource" id="item_3"]
 script = ExtResource("4")
 type = &"person"
 name_key = "KAHR_FIT_P_ZEYNEP"
 role_key = "KAHR_FIT_R_ZEYNEP"
+texture = ExtResource("12_pgix3")
 
 [sub_resource type="Resource" id="item_4"]
 script = ExtResource("4")
 type = &"person"
 name_key = "KAHR_FIT_P_CAN"
 role_key = "KAHR_FIT_R_CAN"
+texture = ExtResource("13_mqsjt")
 
 [sub_resource type="Resource" id="item_5"]
 script = ExtResource("4")
 type = &"person"
 name_key = "KAHR_FIT_P_SELIN"
 role_key = "KAHR_FIT_R_SELIN"
+texture = ExtResource("14_8toab")
 
 [sub_resource type="Resource" id="item_6"]
 script = ExtResource("4")
 type = &"person"
 name_key = "KAHR_FIT_P_HASAN"
 role_key = "KAHR_FIT_R_HASAN"
+texture = ExtResource("15_gwtnv")
 
 [sub_resource type="Resource" id="item_7"]
 script = ExtResource("4")
 type = &"person"
 name_key = "KAHR_FIT_P_FATMA"
 role_key = "KAHR_FIT_R_FATMA"
+texture = ExtResource("16_mpap0")
 
 [sub_resource type="Resource" id="item_8"]
 script = ExtResource("4")
 type = &"stove"
-name_key = ""
 role_key = "KAHR_FIT_R_STOVE"
+texture = ExtResource("4_0p77q")
 
 [sub_resource type="Resource" id="item_9"]
 script = ExtResource("4")
 type = &"blanket"
-name_key = ""
 role_key = "KAHR_FIT_R_BLANKET"
 
 [sub_resource type="Resource" id="item_10"]
 script = ExtResource("4")
 type = &"blanket"
-name_key = ""
 role_key = "KAHR_FIT_R_BLANKET"
 
 [sub_resource type="Resource" id="item_11"]
 script = ExtResource("4")
 type = &"blanket"
-name_key = ""
 role_key = "KAHR_FIT_R_BLANKET"
 
 [sub_resource type="Resource" id="item_12"]
 script = ExtResource("4")
 type = &"water"
-name_key = ""
 role_key = "KAHR_FIT_R_WATER"
 
 [sub_resource type="Resource" id="item_13"]
 script = ExtResource("4")
 type = &"medicine"
-name_key = ""
 role_key = "KAHR_FIT_R_MEDICINE"
+
+[sub_resource type="Resource" id="zone_building"]
+script = ExtResource("2")
+id = &"building"
+label_key = "KAHR_FIT_ZONE_BUILDING"
+safe = false
+color = Color(0.384314, 0.333333, 0.396078, 1)
+frames = ExtResource("20_wyp8l")
+frame_count = 5
+
+[sub_resource type="Resource" id="zone_car"]
+script = ExtResource("2")
+id = &"car"
+label_key = "KAHR_FIT_ZONE_CAR"
+slots = 4
+color = Color(0.282353, 0.290196, 0.466667, 1)
+texture = ExtResource("21_tov56")
+
+[sub_resource type="Resource" id="zone_tent"]
+script = ExtResource("2")
+id = &"tent"
+label_key = "KAHR_FIT_ZONE_TENT"
+slots = 6
+warm = 2
+color = Color(0.215686, 0.305882, 0.290196, 1)
+texture = ExtResource("22_n7x8h")
 
 [resource]
 script = ExtResource("1")
@@ -167,10 +180,8 @@ zones = Array[ExtResource("2")]([SubResource("zone_building"), SubResource("zone
 item_types = Array[ExtResource("3")]([SubResource("type_person"), SubResource("type_stove"), SubResource("type_blanket"), SubResource("type_water"), SubResource("type_medicine")])
 items = Array[ExtResource("4")]([SubResource("item_0"), SubResource("item_1"), SubResource("item_2"), SubResource("item_3"), SubResource("item_4"), SubResource("item_5"), SubResource("item_6"), SubResource("item_7"), SubResource("item_8"), SubResource("item_9"), SubResource("item_10"), SubResource("item_11"), SubResource("item_12"), SubResource("item_13")])
 start_zone = &"building"
-timer_seconds = 75.0
-clock_start_min = 300
-clock_end_min = 804
-aftershock_times = Array[float]([25.0, 50.0])
-blankets_to_warm = 2
 creak_key = "KAHR_FIT_CREAK"
 quake_key = "KAHR_FIT_QUAKE"
+background = ExtResource("1_tvafa")
+warm_icon = ExtResource("18_cd3r5")
+cold_icon = ExtResource("2_xyfr4")
