@@ -22,3 +22,12 @@ IO_CARD_FACT,"Many coasts were hit hours after the quake, with no siren and no w
 IO_CARD_HELP,"What would have helped: a warning system. InaTEWS, Indonesia's tsunami warning system, was built after 2004.","Ne yardımcı olurdu: bir uyarı sistemi. Endonezya'nın tsunami uyarı sistemi InaTEWS, 2004'ten sonra kuruldu."
 IO_SOURCE,"Sources: USGS (magnitude); NOAA (deaths); GFZ/GITEWS papers (InaTEWS). TODO check '14 countries'.","Kaynaklar: USGS (büyüklük); NOAA (ölü sayısı); GFZ/GITEWS makaleleri (InaTEWS). TODO '14 ülke' bilgisini kontrol et."
 CLOSING_LINE,"life has dimensions we cannot see","görmediğimiz boyutları var hayatın"
+GAME_TITLE,"3play",
+MENU_PROMPT,"Who are you when disaster strikes?",
+ROLE_STATE,"State",
+ROLE_STATE_DESC,"Lead a country. Prepare before it hits.",
+ROLE_CITIZEN,"Citizen",
+ROLE_CITIZEN_DESC,"Live through it. Every second counts.",
+HUD_TIME,"TIME",
+RESULT_REPLAY,"Play again",
+RESULT_MENU,"Main menu",
