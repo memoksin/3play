@@ -11,6 +11,10 @@ Columns required per asset: name, author, link, license, where used.
 | sprites/indian_ocean/sensor_buoy.png | original (generated in-repo by `tools/sprites/indian_ocean/sensor_buoy.py`, code written with Claude) | CC0 |
 | sprites/indian_ocean/siren.png | original (generated in-repo by `tools/sprites/indian_ocean/siren.py`, code written with Claude) | CC0 |
 | sprites/indian_ocean/coast_bg.png | original (generated in-repo by `tools/sprites/indian_ocean/coast_bg.py`, code written with Claude) | CC0 |
+| sprites/indian_ocean/rock_tile.png | original (generated in-repo by `tools/sprites/indian_ocean/rock_tile.py`, code written with Claude) | CC0 |
+| sprites/indian_ocean/sensor_tile.png | original (generated in-repo by `tools/sprites/indian_ocean/sensor_tile.py`, code written with Claude) | CC0 |
+| sprites/indian_ocean/siren_tile.png | original (generated in-repo by `tools/sprites/indian_ocean/siren_tile.py`, code written with Claude) | CC0 |
+| sprites/indian_ocean/wave_strip.png | original (generated in-repo by `tools/sprites/indian_ocean/wave_strip.py`, code written with Claude) | CC0 |
 
 ## Planned third-party assets (NOT in the repo yet: move a row up and fill every column once added)
 
