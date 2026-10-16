@@ -5,6 +5,18 @@ Only CC0 or jam-safe licenses. When a file enters the repo, add it to `assets/CR
 
 Status: `todo` (not chosen), `chosen` (found, not in repo), `in repo` (added and credited).
 
+## How to add a chosen sound to the repo
+
+For whoever has the game on their computer (memoksin or sudeimete).
+
+1. Open the link in the table. Freesound needs a free account to download.
+2. Check the license line on the page says Creative Commons 0 (or Public Domain). If not, stop and tell burcubaran22.
+3. Download the file. For the Dark Sci-Fi Audio Pack (OpenGameArt) take only `Title.mp3`.
+4. Trim it if the Notes column says so (G1 about seconds 4 to 6, G4 first 1 s). Keep the original name plus a suffix, for example `guitar_swell_trim.ogg`.
+5. Put it in `assets/audio/<part>/` (proposed: `globe`, `menu`). No audio folder exists yet, so the first person to add one decides the layout.
+6. Run `godot --headless --path . --import` so Godot picks the file up.
+7. Add a row to `assets/CREDITS.md` (name, author, link, license, where used), then set Status to `in repo` in this table.
+
 ## Globe
 
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
