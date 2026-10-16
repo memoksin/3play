@@ -3,7 +3,7 @@
 # Usage: inbox.sh <agent-name>. Skips messages this agent signed (see send.sh).
 set -u
 name=${1:?agent name}
-repo=$(gh repo view --json nameWithOwner -q .nameWithOwner) || exit 1
+repo=$("$(dirname "$0")/repo.sh") || exit 1
 sig="<!-- agent:$name -->"
 state=$("$(dirname "$0")/state-dir.sh") || exit 1
 # Resume from the last poll so messages sent while the monitor was down are not lost.

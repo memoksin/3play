@@ -13,5 +13,5 @@ if [ "$n" -gt 40 ]; then echo "Project memory is $n lines (cap 40): trim .claude
 Agent messaging (GitHub issues). Your agent name: $name
 1. Now: arm the Monitor tool with command "$h/inbox.sh $name", description "agent inbox", timeout_ms 1800000. It expires after 30 min: re-arm it every time. A hook warns you if it is down.
 2. Send: "$h/send.sh $name <issue> '<message>'". Always use send.sh, never raw gh issue comment, so your own inbox skips it. Address others with @<agent-name> or the issue number.
-3. On an event: read it with gh issue view <N> --comments. If it is for you or your current issue, answer with send.sh. Do not stop or derail the user's current task; tell the user in one line what came in and what you answered.
+3. On an event: read it with gh api repos/$("$h/repo.sh")/issues/<N>/comments (REST; gh issue/pr commands use GraphQL and fail in cloud sessions). If it is for you or your current issue, answer with send.sh. Do not stop or derail the user's current task; tell the user in one line what came in and what you answered.
 MSG
