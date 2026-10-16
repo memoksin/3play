@@ -11,6 +11,7 @@ func _initialize() -> void:
 	seed(42)
 	_kahr()
 	_io()
+	_sf()
 	quit()
 
 
@@ -69,11 +70,31 @@ func _cyl(parent: Node, name: String, r: float, h: float, pos: Vector3, rot_deg 
 
 func _model(parent: Node, pack_model: String, pos: Vector3, rot_y := 0.0, s := 1.0, name := "") -> Node3D:
 	var n: Node3D = load(K + pack_model + ".glb").instantiate()
+	var inner: Node3D = null
+	if pack_model.begins_with("space-kit/"):
+		# Space Kit parts sit off-centre in the glb: wrap and recentre on x/z, base at y 0.
+		inner = n
+		n = Node3D.new()
+		var lo := Vector3(INF, INF, INF)
+		var hi := Vector3(-INF, -INF, -INF)
+		for m in inner.find_children("*", "MeshInstance3D", true, false):
+			var xf := Transform3D.IDENTITY
+			var c: Node = m
+			while c != inner.get_parent() and c != null:
+				xf = (c as Node3D).transform * xf
+				c = c.get_parent()
+			var bb: AABB = xf * (m as MeshInstance3D).get_aabb()
+			lo = lo.min(bb.position)
+			hi = hi.max(bb.end)
+		inner.position = -Vector3((lo.x + hi.x) * 0.5, lo.y, (lo.z + hi.z) * 0.5)
 	n.name = name if name != "" else pack_model.get_file().to_pascal_case()
 	n.position = pos
 	n.rotation_degrees.y = rot_y
 	n.scale = Vector3.ONE * s
-	return _own(n, parent)
+	_own(n, parent)
+	if inner:
+		_own(inner, n)
+	return n
 
 
 func _shader(code: String, params := {}) -> ShaderMaterial:
@@ -661,3 +682,233 @@ func _io() -> void:
 	focus.position = Vector3(3.0, 1.0, 0.0)
 	_own(focus, root_node)
 	_save("res://scenes/diorama/set_indian_ocean.tscn")
+
+
+# ---------- Solar flare (year 3026) ----------
+
+const SUN_SHADER := """shader_type spatial;
+render_mode unshaded, fog_disabled, cull_disabled, depth_draw_never;
+// Violent Sun disc: churning granulation, dark spots, bright rim.
+uniform float flare = 0.0;
+float h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vn(vec2 p) {
+	vec2 i = floor(p), f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(h(i), h(i + vec2(1, 0)), f.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), f.x), f.y);
+}
+float fbm(vec2 p) {
+	float a = 0.5, r = 0.0;
+	for (int i = 0; i < 5; i++) { r += a * vn(p); p = p * 2.03 + 11.0; a *= 0.5; }
+	return r;
+}
+void fragment() {
+	vec2 p = UV * 2.0 - 1.0;
+	float d = length(p);
+	float ang = atan(p.y, p.x);
+	float t = TIME * 0.35;
+	vec2 q = p * 4.0;
+	float g = fbm(q + vec2(fbm(q * 1.5 + t), fbm(q * 1.5 - t)) * 2.0);
+	float spots = smoothstep(0.62, 0.75, fbm(p * 2.5 + 5.0 + t * 0.2));
+	vec3 hot = vec3(1.0, 0.93, 0.7);
+	vec3 mid = vec3(1.0, 0.45, 0.08);
+	vec3 col = mix(mid, hot, smoothstep(0.25, 0.75, g)) * (1.0 + flare * 0.5);
+	col = mix(col, vec3(0.5, 0.1, 0.0), spots * 0.7);
+	// prominences: flickering plumes beyond the rim
+	float plume = fbm(vec2(ang * 3.0 + t * 2.0, d * 2.0 - t * 3.0)) ;
+	float body = 1.0 - smoothstep(0.82, 0.86, d);
+	float halo = (1.0 - smoothstep(0.84, 1.0, d)) * smoothstep(0.55, 0.85, plume + (1.0 - d) * 0.6 + flare * 0.15);
+	float rim = smoothstep(0.4, 0.85, d) * 0.6;
+	ALBEDO = (col + rim * vec3(1.0, 0.6, 0.2)) * 1.4;
+	ALPHA = clamp(max(body, halo * 0.85), 0.0, 1.0);
+}
+"""
+
+const GLOW_SHADER := """shader_type spatial;
+render_mode unshaded, fog_disabled, blend_add, depth_draw_never, cull_disabled;
+// Soft corona billboard.
+uniform vec3 tint : source_color = vec3(1.0, 0.5, 0.15);
+uniform float power = 1.0;
+void vertex() {
+	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
+	MODELVIEW_MATRIX[0].xyz *= length(MODEL_MATRIX[0].xyz);
+	MODELVIEW_MATRIX[1].xyz *= length(MODEL_MATRIX[1].xyz);
+}
+void fragment() {
+	float d = length(UV - 0.5) * 2.0;
+	float a = pow(clamp(1.0 - d, 0.0, 1.0), 2.2) * power;
+	ALBEDO = tint * a;
+}
+"""
+
+const PAD_SHADER := """shader_type spatial;
+// Panelled concrete with hazard stripes along the edge (world XZ).
+uniform vec3 base : source_color = vec3(0.55, 0.5, 0.47);
+void fragment() {
+	vec3 w = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	vec2 g = abs(fract(w.xz / 4.0) - 0.5);
+	float seam = smoothstep(0.47, 0.5, max(g.x, g.y));
+	ALBEDO = base * (1.0 - seam * 0.35);
+	ROUGHNESS = 0.9;
+}
+"""
+
+
+func _sf() -> void:
+	root_node = Node3D.new()
+	root_node.name = "SetSolarFlare"
+	root_node.set_meta("flare", true)
+	var haze := Color(0.95, 0.42, 0.16)
+	var sun_dir := Vector3(-0.55, 0.3, -0.78).normalized()
+
+	var env := WorldEnvironment.new()
+	env.name = "Env"
+	var e := Environment.new()
+	var sky := Sky.new()
+	var psm := ProceduralSkyMaterial.new()
+	psm.sky_top_color = Color(0.32, 0.05, 0.05)
+	psm.sky_horizon_color = Color(1.0, 0.55, 0.22)
+	psm.sky_curve = 0.18
+	psm.ground_horizon_color = Color(1.0, 0.5, 0.2)
+	psm.ground_bottom_color = Color(0.9, 0.38, 0.16)
+	psm.sun_angle_max = 0.0
+	sky.sky_material = psm
+	e.background_mode = Environment.BG_SKY
+	e.sky = sky
+	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	e.ambient_light_color = Color(0.85, 0.6, 0.55)
+	e.ambient_light_energy = 0.45
+	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	e.fog_enabled = true
+	e.fog_mode = Environment.FOG_MODE_DEPTH
+	e.fog_light_color = haze
+	e.fog_depth_begin = 80.0
+	e.fog_depth_end = 300.0
+	e.fog_depth_curve = 1.4
+	e.fog_density = 1.0
+	e.fog_sky_affect = 0.0
+	env.environment = e
+	_own(env, root_node)
+
+	var light := DirectionalLight3D.new()
+	light.name = "FlareSun"
+	light.light_color = Color(1.0, 0.8, 0.6)
+	light.light_energy = 1.6
+	light.shadow_enabled = true
+	light.directional_shadow_max_distance = 110.0
+	light.transform = Transform3D(Basis.looking_at(-sun_dir), Vector3.ZERO)
+	_own(light, root_node)
+
+	# the Sun: huge, low, violent. Marker "Sun" lets the scene script place the glow.
+	var sun_pos := sun_dir * 230.0
+	var sun := MeshInstance3D.new()
+	sun.name = "Sun"
+	var qm := QuadMesh.new()
+	qm.size = Vector2(150, 150)
+	sun.mesh = qm
+	sun.position = sun_pos
+	sun.material_override = _shader(SUN_SHADER)
+	sun.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	sun.set_script(null)
+	_own(sun, root_node)
+	var bb := _shader(GLOW_SHADER, {"tint": Color(1.0, 0.5, 0.15), "power": 1.1})
+	for i in 2:
+		var gl := MeshInstance3D.new()
+		gl.name = "Corona%d" % i
+		var gq := QuadMesh.new()
+		gq.size = Vector2(1, 1) * (420.0 if i == 0 else 780.0)
+		gl.mesh = gq
+		gl.position = sun_pos * (0.98 - i * 0.01)
+		gl.material_override = bb if i == 0 else _shader(GLOW_SHADER, {"tint": Color(0.9, 0.25, 0.08), "power": 0.8})
+		gl.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_own(gl, root_node)
+
+	# ground: scorched dust fading into haze
+	var ground := MeshInstance3D.new()
+	ground.name = "Ground"
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(104, 104)
+	pm.subdivide_width = 60
+	pm.subdivide_depth = 60
+	ground.mesh = pm
+	ground.material_override = _shader(GROUND, {
+		"base_color": Color(0.45, 0.3, 0.24), "alt_color": Color(0.38, 0.25, 0.2),
+		"wet_color": Color(0.3, 0.2, 0.15), "void_color": Color(1.0, 0.55, 0.22) * 0.8, "radius": 46.0, "fade": 20.0, "bump": 0.08})
+	_own(ground, root_node)
+
+	var pad_mat := _shader(PAD_SHADER)
+	var steel := _mat(Color(0.62, 0.64, 0.68), 0.5)
+	var dark := _mat(Color(0.2, 0.2, 0.24), 0.6)
+	var white := _mat(Color(0.88, 0.86, 0.84), 0.6)
+
+	# launch pad
+	var pad := _group("Pad")
+	_box(pad, "Slab", Vector3(26, 0.6, 26), Vector3(0, 0.2, 0), Vector3.ZERO, pad_mat)
+	_box(pad, "Trench", Vector3(5, 0.1, 5), Vector3(0, 0.52, 0), Vector3.ZERO, dark)
+	_box(pad, "Apron", Vector3(10, 0.4, 30), Vector3(10, 0.1, 22), Vector3.ZERO, pad_mat)
+
+	# shuttle: stacked Space Kit rocket parts on the pad
+	var sh := _group("Shuttle", pad)
+	sh.position = Vector3(0, 0.5, 0)
+	var s := 4.2
+	_model(sh, "space-kit/rocket_baseA", Vector3.ZERO, 0, s)
+	_model(sh, "space-kit/rocket_finsA", Vector3.ZERO, 45, s * 1.35, "Fins")
+	_model(sh, "space-kit/rocket_sidesA", Vector3(0, 1.6 * s, 0), 0, s * 1.6, "Body1")
+	_model(sh, "space-kit/rocket_sidesA", Vector3(0, 1.6 * s + 1.6 * s, 0), 0, s * 1.6, "Body2")
+	_model(sh, "space-kit/rocket_topA", Vector3(0, 1.6 * s + 3.2 * s, 0), 0, s * 1.6, "Nose")
+
+	# gantry tower beside the shuttle, with swing arms
+	var gantry := _group("Gantry", pad)
+	gantry.position = Vector3(8.5, 0.5, 0)
+	for i in 6:
+		_model(gantry, "space-kit/structure_detailed" if i % 2 == 0 else "space-kit/structure", Vector3(0, i * 4.0, 0), 0, 4.0, "Tower%d" % i)
+	for a in 2:
+		_box(gantry, "Arm%d" % a, Vector3(5.4, 0.5, 1.2), Vector3(-4.3, 11.0 + a * 6.5, 0), Vector3.ZERO, steel)
+		_box(gantry, "Clamp%d" % a, Vector3(0.8, 1.6, 1.8), Vector3(-6.7, 11.0 + a * 6.5, 0), Vector3.ZERO, dark)
+	_model(gantry, "space-kit/satelliteDish_detailed", Vector3(0, 24.0, 0), 40, 3.0)
+	for i in 2:
+		_cyl(pad, "FuelTank%d" % i, 1.8, 6.0, Vector3(14.5, 3.5, -4 + i * 5), Vector3.ZERO, white)
+
+	# bunker: earth mound, concrete portal, two blast doors
+	var bunker := _group("Bunker")
+	bunker.position = Vector3(-22, 0, 14)
+	bunker.rotation_degrees.y = 35
+	var mound := MeshInstance3D.new()
+	mound.name = "Mound"
+	var sm := SphereMesh.new()
+	sm.radius = 9.0
+	sm.height = 9.0
+	sm.radial_segments = 16
+	sm.rings = 6
+	mound.mesh = sm
+	mound.position = Vector3(0, 0, -6)
+	mound.material_override = _mat(Color(0.42, 0.28, 0.2))
+	_own(mound, bunker)
+	_box(bunker, "Portal", Vector3(11, 5.5, 3.5), Vector3(0, 2.75, 0), Vector3.ZERO, _mat(Color(0.5, 0.48, 0.47), 0.85))
+	_box(bunker, "Lintel", Vector3(12.5, 1.0, 4.2), Vector3(0, 5.8, 0.2), Vector3.ZERO, dark)
+	for i in 2:
+		var d := _model(bunker, "space-kit/gate_complex", Vector3(-2.2 + i * 4.4, 0, 1.85), 0, 4.2, "BlastDoor%d" % i)
+	_box(bunker, "Hazard", Vector3(10, 0.5, 0.2), Vector3(0, 5.0, 1.9), Vector3.ZERO, _mat(Color(1.0, 0.7, 0.05), 0.6, true))
+	_box(bunker, "Ramp", Vector3(9, 0.3, 7), Vector3(0, 0.1, 5.5), Vector3.ZERO, pad_mat)
+
+	# low futuristic buildings
+	var town := _group("Buildings")
+	var spots := [
+		["hangar_roundA", Vector3(-8, 0, -24), 10, 6.0], ["hangar_largeA", Vector3(12, 0, -26), -8, 6.0],
+		["hangar_roundGlass", Vector3(-26, 0, -12), 60, 5.0], ["hangar_smallA", Vector3(26, 0, -10), -70, 5.5],
+		["hangar_roundA", Vector3(30, 0, 14), -100, 4.5], ["hangar_smallA", Vector3(-4, 0, 26), 190, 4.5],
+	]
+	for sp in spots:
+		_model(town, "space-kit/" + sp[0], sp[1], sp[2], sp[3])
+	_model(town, "space-kit/satelliteDish_detailed", Vector3(20, 0, -18), 20, 4.0)
+	_model(town, "space-kit/craft_cargoA", Vector3(18, 0.1, 20), 80, 2.6)
+	_model(town, "space-kit/rover", Vector3(6, 0.5, 14), -30, 5.0)
+	_model(town, "space-kit/machine_wireless", Vector3(-12, 0, 8), 20, 4.0)
+	_model(town, "space-kit/rock_largeA", Vector3(-34, 0, 2), 0, 8.0)
+	_model(town, "space-kit/rocks_smallA", Vector3(34, 0, -2), 0, 8.0)
+	_model(town, "space-kit/barrel", Vector3(-5, 0, 15), 0, 8.0)
+
+	var focus := Marker3D.new()
+	focus.name = "Focus"
+	focus.position = Vector3(0, 9.0, 0)
+	_own(focus, root_node)
+	_save("res://scenes/diorama/set_solar_flare.tscn")
