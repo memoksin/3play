@@ -1,0 +1,20 @@
+name: automerge
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+    branches: [dev]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable:
+    if: github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh pr merge --auto --merge "$PR"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.html_url }}
