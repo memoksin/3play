@@ -16,6 +16,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 
 [node name="Card" type="PanelContainer" parent="Center"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(880, 0)
 layout_mode = 2
 
@@ -46,19 +47,30 @@ autowrap_mode = 3
 [node name="Sep" type="HSeparator" parent="Center/Card/Box"]
 layout_mode = 2
 
-[node name="Fact" type="Label" parent="Center/Card/Box"]
+[node name="Scroll" type="ScrollContainer" parent="Center/Card/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Body" type="VBoxContainer" parent="Center/Card/Box/Scroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="Fact" type="Label" parent="Center/Card/Box/Scroll/Body"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(800, 0)
 layout_mode = 2
 autowrap_mode = 3
 
-[node name="Help" type="Label" parent="Center/Card/Box"]
+[node name="Help" type="Label" parent="Center/Card/Box/Scroll/Body"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(800, 0)
 layout_mode = 2
 autowrap_mode = 3
 
-[node name="Cold" type="Label" parent="Center/Card/Box"]
+[node name="Cold" type="Label" parent="Center/Card/Box/Scroll/Body"]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(800, 0)
@@ -66,7 +78,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.9176471, 0.30980393, 0.21176471, 1)
 autowrap_mode = 3
 
-[node name="Co" type="Label" parent="Center/Card/Box"]
+[node name="Co" type="Label" parent="Center/Card/Box/Scroll/Body"]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(800, 0)
@@ -75,6 +87,7 @@ theme_type_variation = &"MutedLabel"
 autowrap_mode = 3
 
 [node name="Buttons" type="HBoxContainer" parent="Center/Card/Box"]
+unique_name_in_owner = true
 layout_mode = 2
 alignment = 1
 theme_override_constants/separation = 24

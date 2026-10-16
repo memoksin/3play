@@ -69,6 +69,16 @@ func _init() -> void:
 	fill.set_content_margin_all(0)
 	t.set_stylebox("fill", "TimerBar", fill)
 
+	# VScrollBar: 2 logical px wide, flat track, palette grabber (result card body).
+	var track := _box(Palette.BG, Color(0, 0, 0, 0), 0, 0)
+	track.set_content_margin_all(PX)
+	t.set_stylebox("scroll", "VScrollBar", track)
+	t.set_stylebox("scroll_focus", "VScrollBar", track)
+	for state in [["grabber", Palette.BORDER], ["grabber_highlight", Palette.MUTED], ["grabber_pressed", Palette.TEXT]]:
+		var g := _box(state[1], Color(0, 0, 0, 0), 0, 0)
+		g.set_content_margin_all(PX)
+		t.set_stylebox(state[0], "VScrollBar", g)
+
 	var err := ResourceSaver.save(t, OUT)
 	print("theme saved: ", OUT, " err=", err)
 	quit(err)
