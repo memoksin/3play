@@ -30,7 +30,6 @@ Game jam. Theme: disaster awareness. Engine: Godot (latest stable).
 ## Tasks
 
 - GitHub Issues only. Labels: `status:todo|doing|done`, `role:*`.
-- Agent messaging: issue comments. `SessionStart` hook names each agent and arms the inbox. Send only via `.claude/hooks/send.sh`.
 - Roles: TBD.
 
 ## Agent messaging
