@@ -1,6 +1,10 @@
 extends Control
 ## Result card. Reads Game.saved/total/extra and the disaster's <PREFIX>_* keys.
 ## Optional lines (e.g. KAHR_CARD_COLD, KAHR_CARD_CO) show only when the key exists.
+## The body (fact, help, cold, CO) scrolls when the card would not fit on screen;
+## place, score, buttons and closing line always stay visible.
+
+const MARGIN := 32  # free space above and below the card
 
 
 func _ready() -> void:
@@ -18,6 +22,19 @@ func _ready() -> void:
 	_optional(%Co, d, "CARD_CO")
 	%Replay.pressed.connect(Game.start.bind(Game.role))
 	%Menu.pressed.connect(Game.next)
+	get_viewport().size_changed.connect(fit)
+	fit.call_deferred()
+
+
+## Sizes the scroll area to the body, capped so the whole card fits the screen.
+## Call again after changing body text.
+func fit() -> void:
+	%Scroll.custom_minimum_size.y = 0
+	await get_tree().process_frame  # let autowrap labels settle at their width
+	var body: float = %Body.get_combined_minimum_size().y
+	var rest: float = %Card.get_combined_minimum_size().y  # card without the body
+	var room := get_viewport_rect().size.y - 2 * MARGIN - rest
+	%Scroll.custom_minimum_size.y = clampf(body, 0.0, maxf(room, 0.0))
 
 
 ## Shows `label` with the key's text (formatted with `value` if given); hides it
