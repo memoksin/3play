@@ -10,4 +10,5 @@ key_prefix = "IO"
 lat = 5.55
 lon = 95.32
 year = 2004
+utc = "2004-12-26T00:58:53"
 minigame = &"connect"

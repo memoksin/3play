@@ -9,6 +9,8 @@ extends Resource
 @export var lon := 0.0
 ## Event year: the globe counter rewinds to it.
 @export var year := 0
+## Event time, ISO UTC ("2023-02-06T01:17:00"): the globe lights the Earth from the real sun. Empty = the prototype sun at the lock pose.
+@export var utc := ""
 ## Key in Game.SCENES: fit, connect.
 @export var minigame: StringName
 ## Mechanic data (FitSkin, ConnectSkin). Owned by the minigame.

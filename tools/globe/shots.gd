@@ -4,7 +4,9 @@ extends SceneTree
 ## Exits 1 on any failure and always quits after MAX_FRAMES, even if a coroutine dies.
 
 const DISASTERS := ["res://data/disasters/indian_ocean.tres", "res://data/disasters/kahramanmaras.tres"]
-const TIMES := [1.0, 5.5, 7.4]
+## -1 = idle, waiting for the flick (hint shown); others are timeline seconds after a flick.
+const TIMES := [-1.0, 1.0, 5.5, 7.4]
+const FLICK := 12.0
 const OUT := "res://export/shots"
 const SETTLE_FRAMES := 6
 const MAX_FRAMES := 600
@@ -57,15 +59,20 @@ func _run() -> void:
 			if not globe.is_node_ready():
 				_fail("globe not ready after add_child")
 				return
-			globe.seek(time)
-			if not is_equal_approx(globe.t, time):
-				_fail("seek(%s) failed" % time)
-				return
+			if time >= 0:
+				globe.flick(FLICK)
+				if not globe.launched:
+					_fail("flick(%s) did not launch" % FLICK)
+					return
+				globe.seek(time)
+				if not is_equal_approx(globe.t, time):
+					_fail("seek(%s) failed" % time)
+					return
 			for i in SETTLE_FRAMES:
 				await process_frame
 			await RenderingServer.frame_post_draw
 			var img := root.get_texture().get_image()
-			var file := "%s/globe_%s_%s.png" % [OUT, d.id, str(time)]
+			var file := "%s/globe_%s_%s.png" % [OUT, d.id, "idle" if time < 0 else str(time)]
 			if img == null or img.is_empty() or img.save_png(file) != OK:
 				_fail("cannot save " + file)
 				return
