@@ -25,6 +25,27 @@ Columns required per asset: name, author, link, license, where used.
 | sprites/indian_ocean/side/side_tsunami.png | original (generated in-repo by `tools/sprites/indian_ocean/side/side_tsunami.py`, code written with Claude) | CC0 |
 | sprites/indian_ocean/side/side_flood.png | original (generated in-repo by `tools/sprites/indian_ocean/side/side_flood.py`, code written with Claude) | CC0 |
 | sprites/solar_flare/sf_bg.png | original (generated in-repo by `tools/sprites/solar_flare/sf_bg.py`, code written with Claude) | CC0 |
+| sprites/kahramanmaras/cold_icon.png | original (generated in-repo by `tools/sprites/kahramanmaras/badges.py`, code written with Claude) | CC0 |
+| sprites/kahramanmaras/item_blanket.png | original (generated in-repo by `tools/sprites/kahramanmaras/items.py`, code written with Claude) | CC0 |
+| sprites/kahramanmaras/item_medicine.png | original (generated in-repo by `tools/sprites/kahramanmaras/items.py`, code written with Claude) | CC0 |
+| sprites/kahramanmaras/item_stove.png | original (generated in-repo by `tools/sprites/kahramanmaras/items.py`, code written with Claude) | CC0 |
+| sprites/kahramanmaras/item_water.png | original (generated in-repo by `tools/sprites/kahramanmaras/items.py`, code written with Claude) | CC0 |
+| sprites/kahramanmaras/kahr_bg.png | original (generated in-repo by `tools/sprites/kahramanmaras/background.py`, code written with Claude) | CC0 |
+| sprites/kahramanmaras/kahr_bg_far.png | original (generated in-repo by `tools/sprites/kahramanmaras/background.py`, code written with Claude) | CC0 |
+| sprites/kahramanmaras/kahr_bg_near.png | original (generated in-repo by `tools/sprites/kahramanmaras/background.py`, code written with Claude) | CC0 |
+| sprites/kahramanmaras/kahr_bg_sky.png | original (generated in-repo by `tools/sprites/kahramanmaras/background.py`, code written with Claude) | CC0 |
+| sprites/kahramanmaras/kahr_building.png | original (generated in-repo by `tools/sprites/kahramanmaras/building.py`, code written with Claude) | CC0 |
+| sprites/kahramanmaras/kahr_car.png | original (generated in-repo by `tools/sprites/kahramanmaras/zones.py`, code written with Claude) | CC0 |
+| sprites/kahramanmaras/kahr_tent.png | original (generated in-repo by `tools/sprites/kahramanmaras/zones.py`, code written with Claude) | CC0 |
+| sprites/kahramanmaras/person_ayse.png | original (generated in-repo by `tools/sprites/kahramanmaras/people.py`, code written with Claude) | CC0 |
+| sprites/kahramanmaras/person_can.png | original (generated in-repo by `tools/sprites/kahramanmaras/people.py`, code written with Claude) | CC0 |
+| sprites/kahramanmaras/person_elif.png | original (generated in-repo by `tools/sprites/kahramanmaras/people.py`, code written with Claude) | CC0 |
+| sprites/kahramanmaras/person_fatma.png | original (generated in-repo by `tools/sprites/kahramanmaras/people.py`, code written with Claude) | CC0 |
+| sprites/kahramanmaras/person_hasan.png | original (generated in-repo by `tools/sprites/kahramanmaras/people.py`, code written with Claude) | CC0 |
+| sprites/kahramanmaras/person_mehmet.png | original (generated in-repo by `tools/sprites/kahramanmaras/people.py`, code written with Claude) | CC0 |
+| sprites/kahramanmaras/person_selin.png | original (generated in-repo by `tools/sprites/kahramanmaras/people.py`, code written with Claude) | CC0 |
+| sprites/kahramanmaras/person_zeynep.png | original (generated in-repo by `tools/sprites/kahramanmaras/people.py`, code written with Claude) | CC0 |
+| sprites/kahramanmaras/warm_icon.png | original (generated in-repo by `tools/sprites/kahramanmaras/badges.py`, code written with Claude) | CC0 |
 | fonts/VT323-Regular.ttf (VT323) | Peter Hull, https://github.com/google/fonts/tree/main/ofl/vt323. All UI text (`ui/theme.tres`) | SIL OFL 1.1, license text in `assets/fonts/OFL.txt` |
 | Palette Resurrect 64 | Kerrie Lake, https://lospec.com/palette-list/resurrect-64. All pixel art, UI colors (`ui/palette.gd`) | No formal license; author approved commercial use in a Lospec comment (22 Aug 2023). Colors only, no artwork |
 | globe/earth_4k.jpg | NASA Blue Marble Next Generation, Dec 2004 (`world.200412.3x5400x2700.jpg`, resized to 4096x2048) | Public domain |
