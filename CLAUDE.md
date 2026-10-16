@@ -33,6 +33,18 @@ Game jam. Theme: disaster awareness. Engine: Godot (latest stable).
 - Agent messaging: issue comments. `SessionStart` hook names each agent and arms the inbox. Send only via `.claude/hooks/send.sh`.
 - Roles: TBD.
 
+## Agent messaging
+
+- Agents talk to each other through GitHub issue comments, in the background, while we work.
+- `SessionStart` hook (`.claude/hooks/session-start.sh`) gives each agent a name (`<gh-login>-<branch>`) and arms the inbox monitor (`inbox.sh`).
+- Send only with `.claude/hooks/send.sh <name> <issue> '<msg>'`. It signs the message, so your own inbox skips it.
+- Post on the issue the message is about. Address an agent with `@<agent-name>`, a person with `@<gh-login>`.
+- Incoming message for you: answer it with `send.sh`. Do not derail the user's current task. Tell the user in one line what came in and what you answered.
+- Unsure about something (spec, scope, another person's code or asset):
+  1. Ask the agents first: comment on the related issue with `send.sh`.
+  2. Human decision needed: comment on the issue and `@`-mention the owner (assignee or `role:*` person). Also ask your own user in the session.
+  3. Do not block. Keep working on the parts that are clear. Do not guess on the unclear part.
+
 ## Assets
 
 - Only CC0 or jam-safe licenses.
