@@ -1,111 +1,136 @@
-"""Fit items: stove 64x32 logical (128x64), blanket / water / medicine 32x32 logical (64x64). Exported 2x."""
-import os
-from common import Canvas, rbox, export, ART, LINE
+"""Fit items, same grid as the people (1 logical px = 4 px in the file, 2 px on screen):
+stove 32x16 logical (128x64, a 2-slot item), blanket / water / medicine 16x16 logical (64x64).
+Fill only, then `autoline` adds the 1 px dark outline. Light from the upper left; the stove fire is the only
+warm light and it warms the log ends next to it."""
+from pix import new, paint, autoline, export
+
+# ---- stove: Turkish iron "soba" with a double teapot (caydanlik) on top and a stack of logs -------------------
+# Q pipe / q pipe shade | M teapot steel / m shade / W shine / n lid knob | T top plate chrome / t shade
+# L iron light / I iron / i iron shade / c iron dark | O window frame | 1..4 fire dark->core | g handle | B feet
+# b bark / R ring lit by the fire / r ring / e ring core
+STOVE = [
+    ".......n......Qq................",
+    "......MWm.....Qq................",
+    ".....MMMMm....Qq................",
+    "....zzzzzzz...Qq................",
+    "...MWMMMMMMm..Qq................",
+    ".mMMWMMMMMMm.QQqq...............",
+    "..mMMMMMMMmm.QQqq...............",
+    ".TTTTTTTTTTTTTTTTTt......RRkkkk.",
+    "..LIIIIIIIIIIIIIIic......Rebbkb.",
+    "..LIOOOOOOOOOIIiIic......RRdddd.",
+    "..LIO1111111OIgIiic....RRkkkkkk.",
+    "..LIO1122111OIgiIic....Rebkbbbb.",
+    "..LIO1233221OIgIiic....RRdddddd.",
+    "..LIO2344332OIIIiic..RRkkkkkkkk.",
+    "..ciccccccccccccccc..Rebbbbkbbb.",
+    "...BBB.........BBB...RRdddddddd.",
+]
 
 
-class Stove:
-    iron, iron_hi, iron_sh = "#625565", "#7f708a", "#3e3546"
-    plate, pipe, pipe_hi = "#7f708a", "#625565", "#9babb2"
-    fire_dark, f_out, f_mid, f_core = "#2e222f", "#fb6b1d", "#f9c22b", "#fbff86"
-    handle, log, log_bark, log_ring, log_ring2 = "#9babb2", "#9e4539", "#4c3e24", "#e6904e", "#cd683d"
-    glow = "#7a3045"
+def stove():
+    im = new(32, 16)                     # the pipe keeps going up off the top edge
+    paint(im, STOVE, dict(
+        Q="#9babb2", q="#625565", M="#c7dcd0", m="#9babb2", W="#ffffff", n="#2e222f", z="#7f708a",
+        T="#c7dcd0", t="#9babb2", L="#7f708a", I="#625565", i="#3e3546", c="#45293f",
+        O="#2e222f", g="#f9c22b", B="#2e222f",
+        **{"1": "#7a3045", "2": "#fb6b1d", "3": "#f9c22b", "4": "#fbff86"},
+        k="#966c6c", b="#694f62", d="#45293f", R="#fbb954", e="#e6904e"))
+    autoline(im)
+    return im
 
 
-class Blanket:
-    layers = [("#b33831", "#ea4f36", "#831c5d", "#f9c22b"),   # base, hi, shade, stripe
-              ("#0b8a8f", "#0eaf9b", "#0b5e65", "#fdcbb0"),
-              ("#fbb954", "#fbff86", "#e6904e", "#7a3045")]
+# ---- blanket: two folded wool blankets, purple tartan on top of red ----------------------------------
+BLANKET = [
+    "................",
+    "................",
+    "................",
+    "...LLLLLLLLLLl..",
+    "..LCCXCCCCXCCCf.",
+    "..LXXXXXXXXXXXc.",
+    "..LCCXCCCCXCCCf.",
+    "..LCCXCCCCXCCcc.",
+    "..lcccccccccccc.",
+    ".HHHHHHHHHHHHHh.",
+    ".HRRYRRRRRYRRRrF",
+    ".HYYYYYYYYYYYYrF",
+    ".HRRYRRRRRYRRrrF",
+    ".HRRYRRRRRYRRrr.",
+    "..rrrrrrrrrrrr..",
+    "................",
+]
 
 
-class Water:
-    can, can_hi, can_sh, cap, label = "#4d9be6", "#8fd3ff", "#4d65b4", "#9babb2", "#c7dcd0"
-    bottle, bottle_hi, water, water_hi, bcap = "#8fd3ff", "#ffffff", "#4d9be6", "#8fd3ff", "#ffffff"
+def blanket():
+    im = new(16, 16)
+    paint(im, BLANKET, dict(L="#a884f3", l="#905ea9", C="#905ea9", c="#6b3e75", X="#eaaded", f="#eaaded",
+                            H="#ea4f36", h="#b33831", R="#b33831", r="#6e2727", Y="#fbb954", F="#fbb954"))
+    autoline(im)
+    return im
 
 
-class Medicine:
-    box, box_hi, box_sh, cross, cross_sh = "#ffffff", "#ffffff", "#c7dcd0", "#e83b3b", "#b33831"
-    clasp, handle, handle_in = "#9babb2", "#7f708a", "#625565"
+# ---- water: a 5 l bottle with a carry handle -----------------------------
+WATER = [
+    "................",
+    "......NNNN......",
+    "......nnnn......",
+    "......HPPhkkk...",
+    ".....HPPPPh.k...",
+    "....HWPPPPPhk...",
+    "...HWPPPPPPPh...",
+    "...HWPPPPPPPh...",
+    "...HAAAAAAAah...",
+    "...HAaVVVVaah...",
+    "...HAAAAAAAah...",
+    "...HWBBBBBBBh...",
+    "...HWBBBBBBbh...",
+    "...HBBBBBBbbh...",
+    "....hhhhhhhh....",
+    "................",
+]
 
 
-def stove(c, p=Stove):
-    o = LINE
-    for lx in (11, 41):
-        rbox(c, lx, 28, 5, 4, p.iron_sh, o)
-    rbox(c, 40, 1, 6, 9, p.pipe, o)                       # chimney
-    c.rect(41, 1, 1, 8, p.pipe_hi)
-    rbox(c, 38, 0, 10, 3, p.plate, o)
-    rbox(c, 7, 8, 42, 4, p.plate, o)                      # top plate
-    c.rect(8, 9, 40, 1, p.pipe_hi)
-    rbox(c, 8, 12, 40, 17, p.iron, o)                     # body
-    c.rect(9, 13, 2, 15, p.iron_hi)
-    c.rect(44, 13, 3, 15, p.iron_sh)
-    c.rect(9, 27, 38, 1, p.iron_sh)
-    rbox(c, 13, 14, 20, 13, p.iron_sh, o)                 # door
-    rbox(c, 15, 16, 16, 9, p.fire_dark, o)                # firebox window
-    c.rect(16, 24, 14, 1, p.glow)
-    for (x, y, w, h, col) in ((19, 21, 8, 4, p.f_out), (20, 18, 6, 6, p.f_out), (21, 20, 4, 4, p.f_mid),
-                              (22, 17, 2, 3, p.f_out), (22, 22, 2, 2, p.f_core), (17, 23, 3, 1, p.f_out), (26, 23, 3, 1, p.f_mid)):
-        c.rect(x, y, w, h, col)
-    c.rect(34, 18, 2, 5, p.handle)
-    for y in (16, 19, 22):
-        c.rect(38, y, 7, 1, p.fire_dark)
-    for (x, y, w) in ((50, 27, 11), (51, 23, 10), (50, 19, 10)):   # log pile
-        rbox(c, x, y, w, 4, p.log_bark, o)
-        c.rect(x + 1, y + 1, 2, 2, p.log_ring); c.put(x + 2, y + 2, p.log_ring2)
-        c.rect(x + 4, y + 1, w - 6, 1, p.log)
+def water():
+    im = new(16, 16)
+    paint(im, WATER, dict(N="#4d65b4", n="#484a77", H="#8fd3ff", h="#4d9be6", P="#8fd3ff", W="#ffffff",
+                          B="#4d9be6", b="#4d65b4", A="#ffffff", a="#c7dcd0", V="#4d9be6", k="#c7dcd0"))
+    autoline(im)
+    return im
 
 
-def blanket(c, p=Blanket):
-    o = LINE
-    geo = [(2, 20, 28, 9), (4, 12, 24, 9), (6, 4, 20, 9)]
-    for (x, y, w, h), (base, hi, sh, st) in zip(geo, p.layers):
-        rbox(c, x, y, w, h, base, o)
-        c.rect(x + 1, y + 1, w - 2, 1, hi)
-        c.rect(x + 1, y + h - 2, w - 2, 1, sh)
-        c.rect(x + w - 3, y + 2, 2, h - 3, sh)
-        for sx in range(x + 4, x + w - 3, 6):
-            c.rect(sx, y + 2, 1, h - 4, st)
-        c.rect(x + 1, y + 4, w - 2, 1, st)
-        for fy in range(y + 2, y + h - 1, 2):
-            c.put(x + w, fy, st)                          # fringe
+# ---- medicine: red first-aid bag, white cross, zip and handle ----------------------------------------
+MEDICINE = [
+    "................",
+    "................",
+    "................",
+    ".....GGGGGG.....",
+    ".....G....G.....",
+    "..LLLLLLLLLLLl..",
+    "..ZZZZZZZZZZZZ..",
+    "..LCCCCWWCCCCc..",
+    "..LCCCCWWCCCCc..",
+    "..LCCWWWWWWwCc..",
+    "..LCCWWWWWWwCc..",
+    "..LCCCCWWwCCCc..",
+    "..LCCCCWwwCCCc..",
+    "..LCCCCCCCCCcc..",
+    "..cccccccccccc..",
+    "................",
+]
 
 
-def water(c, p=Water):
-    o = LINE
-    rbox(c, 14, 8, 15, 21, p.can, o)                      # jerrycan
-    c.rect(15, 9, 2, 19, p.can_hi)
-    c.rect(26, 9, 2, 19, p.can_sh)
-    c.rect(15, 16, 13, 6, p.label)
-    c.rect(17, 18, 9, 1, p.can_sh); c.rect(17, 20, 6, 1, p.can_sh)
-    rbox(c, 15, 3, 7, 5, p.can, o)                        # handle
-    c.rect(17, 5, 3, 2, "#2e222f")
-    rbox(c, 23, 4, 4, 4, p.cap, o)
-    for bx in (1, 8):                                     # bottles
-        rbox(c, bx, 11, 6, 18, p.bottle, o)
-        c.rect(bx + 1, 18, 4, 10, p.water)
-        c.rect(bx + 1, 12, 1, 15, p.bottle_hi)
-        c.rect(bx + 1, 18, 4, 1, p.water_hi)
-        rbox(c, bx + 1, 7, 4, 4, p.bottle, o)
-        rbox(c, bx + 1, 5, 4, 3, p.bcap, o)
-
-
-def medicine(c, p=Medicine):
-    o = LINE
-    rbox(c, 11, 3, 10, 7, p.handle, o)                    # handle
-    c.rect(13, 5, 6, 3, p.handle_in)
-    rbox(c, 3, 8, 26, 20, p.box, o)
-    c.rect(4, 26, 24, 1, p.box_sh); c.rect(27, 10, 1, 16, p.box_sh)
-    c.rect(4, 14, 24, 1, p.box_sh)
-    c.rect(14, 12, 4, 13, p.cross); c.rect(10, 16, 12, 5, p.cross)
-    c.rect(14, 24, 4, 1, p.cross_sh)
-    for x in (3, 27):
-        c.rect(x, 14, 2, 4, p.clasp)
+def medicine():
+    im = new(16, 16)
+    paint(im, MEDICINE, dict(G="#625565", L="#f68181", l="#e83b3b", Z="#ae2334", C="#e83b3b", c="#ae2334",
+                             W="#ffffff", w="#c7dcd0"))
+    autoline(im)
+    return im
 
 
 def build():
-    c = Canvas(64, 32, 1); stove(c); export([c], os.path.join(ART, "item_stove.png"), 2)
+    export(stove(), "item_stove.png")
     for name, fn in (("blanket", blanket), ("water", water), ("medicine", medicine)):
-        c = Canvas(32, 32, 1); fn(c); export([c], os.path.join(ART, "item_%s.png" % name), 2)
+        export(fn(), "item_%s.png" % name)
 
 
 if __name__ == "__main__":
