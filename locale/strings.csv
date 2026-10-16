@@ -5,8 +5,6 @@ KAHR_INTRO_1,"04:17. A magnitude 7.8 earthquake has just hit southeast Turkey.",
 KAHR_INTRO_2,"It is snowing and below freezing. Help is hours away.","Kar yağıyor, hava sıfırın altında. Yardımın gelmesi saatler sürecek."
 KAHR_TASK,"Keep everyone warm and comfortable until help arrives.","Yardım gelene kadar herkesi sıcak ve rahat tut."
 KAHR_CARD_SCORE,"%d/8 safe","%d/8 güvende"
-KAHR_CARD_WIN,"You won: at least 6 of 8 people got out safely.","Kazandın: 8 kişiden en az 6'sı güvenle dışarı çıktı."
-KAHR_CARD_LOSE,"You lost: fewer than 6 of 8 people got out safely.","Kaybettin: 8 kişiden 6'sından azı güvenle dışarı çıkabildi."
 KAHR_CARD_COLD,"%d people left in the cold","%d kişi soğukta kaldı"
 KAHR_CARD_NUMBERS,"More than 50,000 people died in Turkey in the 2023 earthquakes.","2023 depremlerinde Türkiye'de 50.000'den fazla kişi hayatını kaybetti."
 KAHR_CARD_FACT,"At 13:24, about 9 hours later, a second major quake (magnitude 7.5) hit near Elbistan. Many people had gone back into damaged buildings.","Yaklaşık 9 saat sonra, 13:24'te Elbistan yakınlarında ikinci büyük deprem (7,5) oldu. Birçok kişi hasarlı binalara geri dönmüştü."

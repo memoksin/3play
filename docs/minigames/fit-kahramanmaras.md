@@ -53,7 +53,6 @@ Approved prototype (HTML, reference for feel + numbers): https://claude.ai/artif
 - Person in Building = not saved.
 - Person outside = saved (counts in X). Y = 8.
 - Person outside in a cold zone = still saved, but counted as "N people left in the cold".
-- Win/lose: **X >= 6 = win, X < 6 = lose.** The card shows a win or lose line right after "X/8 safe".
 - Result card: "X/8 safe", "N people left in the cold" (if N > 0), real-event fact (second quake 9 h later), one line: never go back into a damaged building.
 - Tier 1: result card also gets one line warning that a stove in a closed car/tent can cause CO poisoning.
 
