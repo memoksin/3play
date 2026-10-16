@@ -168,7 +168,7 @@ func _art_fields() -> void:
 	var game := root.get_node("Game")
 	game.ensure_disaster(&"citizen")
 	var base: FitSkin = game.disaster.skin
-	var sk: FitSkin = base.duplicate(true)
+	var sk := _strip(base)
 	var person := sk.items.filter(func(i: FitItem) -> bool: return i.type == &"person")[0] as FitItem
 	person.texture = _tex(64, 64)
 	var stove: FitItem = sk.items[_item(&"stove")]
@@ -206,8 +206,8 @@ func _art_fields() -> void:
 	var bv = fit._zones[&"building"]
 	_check("art: badge icon set", bv.badge_icon != null and bv.badge_icon.visible and bv.badge_icon.texture in [sk.warm_icon, sk.cold_icon])
 	fit.queue_free()
-	game.disaster.skin = base
-	# null fields = as before
+	# null fields = as before (the shipped skin has art, so strip a copy)
+	game.disaster.skin = _strip(base)
 	var plain: Control = load("res://scenes/minigames/fit.tscn").instantiate()
 	root.add_child(plain)
 	await process_frame
@@ -215,3 +215,21 @@ func _art_fields() -> void:
 	_check("art: null fields keep code building", plain._zones[&"building"].art != null)
 	_check("art: null badge icon", plain._zones[&"building"].badge_icon == null)
 	plain.queue_free()
+	game.disaster.skin = base
+
+
+## A deep copy of the skin with every art field cleared.
+func _strip(base: FitSkin) -> FitSkin:
+	var sk: FitSkin = base.duplicate(true)
+	for i in sk.items:
+		i.texture = null
+	for t in sk.item_types:
+		t.texture = null
+	for z in sk.zones:
+		z.texture = null
+		z.frames = null
+		z.frame_count = 1
+	sk.background = null
+	sk.warm_icon = null
+	sk.cold_icon = null
+	return sk

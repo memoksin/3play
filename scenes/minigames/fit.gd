@@ -112,6 +112,12 @@ func _ready() -> void:
 	skin = Game.disaster.skin as FitSkin
 	assert(skin != null, "Disaster has no FitSkin")
 	placement = FitLogic.start_placement(skin)
+	# Dark backing so the message stays readable over busy background art
+	var msg_bg := StyleBoxFlat.new()
+	msg_bg.bg_color = Color(Palette.BG, 0.85)
+	msg_bg.set_content_margin_all(6)
+	_message.add_theme_stylebox_override("normal", msg_bg)
+	_message.visible = false
 	_fired.resize(skin.aftershock_times.size())
 	_fired.fill(false)
 	_task.text = Game.disaster.text("TASK")
@@ -209,6 +215,7 @@ func advance(dt: float) -> void:
 	_msg_left = maxf(_msg_left - dt, 0.0)
 	if _msg_left <= 0.0 and _message.text != "":
 		_message.text = ""
+		_message.visible = false
 	var art_key := Vector2(crack_stage, _collapse)
 	var art_dirty := art_key != _art_key
 	_art_key = art_key
@@ -369,7 +376,8 @@ func _make_chip(i: int) -> PanelContainer:
 	var item := skin.items[i]
 	var type := skin.type_of(i)
 	var chip := PanelContainer.new()
-	chip.custom_minimum_size = CHIP_SIZE
+	# A multi-slot item is as wide as the chips it displaces (flow h_separation 8)
+	chip.custom_minimum_size = Vector2(CHIP_SIZE.x * type.slots + 8.0 * (type.slots - 1), CHIP_SIZE.y)
 	chip.add_theme_stylebox_override("panel", _chip_normal)
 	chip.set_drag_forwarding(_chip_drag.bind(i), _chip_can_drop.bind(i), _chip_drop.bind(i))
 	chip.gui_input.connect(_chip_input.bind(i))
@@ -496,6 +504,7 @@ func _start_shake(dur: float, amp: float, already := 0.0) -> void:
 
 func _say(text: String, color: Color) -> void:
 	_message.text = text
+	_message.visible = true
 	_message.add_theme_color_override("font_color", color)
 	_msg_left = MESSAGE_DUR
 

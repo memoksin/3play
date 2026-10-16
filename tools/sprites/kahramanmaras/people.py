@@ -1,131 +1,236 @@
-"""8 winter people, 32x32 logical, exported 2x (64x64). One geometry (person) + one palette/params entry per person."""
-import os
-from common import Canvas, rbox, export, ART, LINE
+"""8 winter people, 16x16 logical, exported 4x (64x64). Fit shows them at 32 px, so 1 logical px = 2 screen px.
+One body per age class (ADULT / ELDER / TEEN / CHILD, plus the baby bundle); a person = head rows + class body + props,
+coloured by a palette of named slots. Fill only, then `autoline` adds the 1 px dark silhouette outline.
+Light from the upper left: light column on the left edge, shade + cool violet-blue dark on the right and below."""
+from pix import new, paint, over, autoline, export, LINE
 
-BASE = dict(line=LINE, skin="#fdcbb0", skin_sh="#fca790", eye="#2e222f", mouth="#9e4539",
-            hair="#4c3e24", hat="#c7dcd0", hat_hi="#ffffff", band="#9babb2", pom="#ffffff",
-            scarf="#9babb2", scarf_sh="#7f708a", coat="#625565", coat_hi="#7f708a", coat_sh="#3e3546",
-            pants="#3e3546", boots="#2e222f", glove="#625565", stache=None, blanket_sh="#ed8099")
-# geometry keys: top (head top y), hw/hh (head size), bw (body width), hat style, hairstyle, tail (scarf tail side)
-PEOPLE = {
-    "ayse": dict(p=dict(scarf="#a884f3", scarf_sh="#905ea9", hair="#c7dcd0", coat="#7f708a", coat_hi="#9babb2", coat_sh="#625565",
-                        pants="#484a77", glove="#905ea9"),
-                 g=dict(top=7, hw=10, hh=9, bw=15, hat="headscarf", neck="#905ea9", tail=0)),
-    "mehmet": dict(p=dict(hair="#2e222f", coat="#4d65b4", coat_hi="#4d9be6", coat_sh="#484a77", pants="#323353",
-                          scarf="#b33831", scarf_sh="#6e2727", stache="#2e222f", glove="#3e3546"),
-                   g=dict(top=4, hw=10, hh=9, bw=18, hat="none", hair="short", tail=-1)),
-    "zeynep": dict(p=dict(hair="#9e4539", hat="#c7dcd0", band="#9babb2", coat="#b33831", coat_hi="#ea4f36", coat_sh="#831c5d",
-                          scarf="#c7dcd0", scarf_sh="#9babb2", pants="#3e3546", glove="#c7dcd0"),
-                   g=dict(top=5, hw=10, hh=9, bw=16, hat="beanie", hair="long", tail=1)),
-    "can": dict(p=dict(hat="#1ebc73", hat_hi="#91db69", band="#239063", pom="#fbff86", coat="#f9c22b", coat_hi="#fbff86",
-                       coat_sh="#f79617", scarf="#4d9be6", scarf_sh="#4d65b4", pants="#484a77", glove="#4d9be6"),
-                g=dict(top=10, hw=9, hh=8, bw=12, hat="beanie", hair="short", tail=1, pompom=1)),
-    "selin": dict(p=dict(hair="#7a3045", hat="#4d9be6", hat_hi="#8fd3ff", band="#4d65b4", coat="#cf657f", coat_hi="#ed8099",
-                         coat_sh="#a24b6f", scarf="#f9c22b", scarf_sh="#f79617", pants="#323353", glove="#f9c22b"),
-                  g=dict(top=7, hw=9, hh=9, bw=14, hat="beanie", hair="long", tail=-1)),
-    "hasan": dict(p=dict(hair="#c7dcd0", hat="#625565", hat_hi="#7f708a", band="#3e3546", coat="#966c6c", coat_hi="#ab947a",
-                         coat_sh="#694f62", scarf="#547e64", scarf_sh="#374e4a", pants="#3e3546", stache="#c7dcd0", glove="#694f62"),
-                  g=dict(top=6, hw=10, hh=9, bw=16, hat="cap", hair="short", tail=1)),
-    "fatma": dict(p=dict(scarf="#239063", scarf_sh="#165a4c", hair="#4c3e24", coat="#374e4a", coat_hi="#547e64", coat_sh="#313638",
-                         pants="#313638", glove="#165a4c"),
-                  g=dict(top=5, hw=10, hh=9, bw=17, hat="headscarf", neck="#165a4c", tail=0)),
-}
-ELIF = dict(skin="#fdcbb0", skin_sh="#fca790", hat="#8fd3ff", hat_hi="#ffffff", band="#4d9be6", pom="#ffffff",
-            blanket="#f68181", blanket_hi="#fca790", blanket_sh="#cf657f", stripe="#fdcbb0", eye="#2e222f", mouth="#9e4539")
+# Slot letters: S skin s skin shade r blush | H hair h hair shade | A hat a hat shade W hat light / pompom
+# T fur trim | F scarf f scarf shade | L coat light C coat c coat shade D coat dark (folds, arm gaps)
+# G mittens | Y sweater y sweater shade | P trousers p trousers shade | B boots | K stick k stick shade | O line
+BASE = dict(O=LINE, S="#fdcbb0", s="#fca790", r="#f68181", B="#3e3546", P="#484a77", p="#323353",
+            W="#ffffff", T="#c7dcd0", K="#cd683d", k="#9e4539", Y="#c7dcd0", y="#9babb2")
+
+# ---- class bodies (rows below the head) -----------------------------------------------------------
+ADULT = [                     # rows 7..15: puffy winter coat, sleeves split by a dark fold
+    "..LCCFfCCCCCcc..",
+    "..LDCFfCCCCcDc..",
+    "..LDCCCCCCCcDc..",
+    "..GDLCCCCCCcDG..",
+    "...LCCCCCCccc...",
+    "....PPp..PPp....",
+    "....BBB..BBB....",
+    "................",
+]
+ELDER = [                     # rows 8..15: long coat to the ankles, slight stoop
+    "..LCCCCCCCcc....",
+    "..LDCCCCCcDc....",
+    ".GLDCCCCCcDc....",
+    "..LCCCCCCCcc....",
+    "..LCCCCCCCccc...",
+    "...LCCCCCCcc....",
+    "....BB..BBB.....",
+    "................",
+]
+TEEN = [                      # rows 8..15: slimmer coat, longer legs
+    "...LCFfCCCcc....",
+    "...LDFfCCcDc....",
+    "...GDCCCCcDG....",
+    "....LCCCCcc.....",
+    "....PPp.PPp.....",
+    "....PPp.PPp.....",
+    "....BBB.BBB.....",
+    "................",
+]
+CHILD = [                     # rows 10..15: short puffy coat
+    "...LCCCCCCcc....",
+    "...LDCCCCcDc....",
+    "...GDCCCCcDG....",
+    "....LCCCCcc.....",
+    "....BBB.BBB.....",
+    "................",
+]
+
+# ---- heads (rows from the top) --------------------------------------------------------------------
+HEAD_MAN = [                  # short hair, moustache
+    "................",
+    ".....HHHHHH.....",
+    "....HHHHHHHh....",
+    "....HhSSSSSh....",
+    "....SSOSSOSs....",
+    "....SSHHHHSs....",
+    ".....SSSSss.....",
+    "...FFFFFFFFff...",
+]
+HEAD_HOOD = [                 # parka hood with fur trim
+    ".....LCCCCc.....",
+    "....LCTTTTCc....",
+    "...LCTHHHHTCc...",
+    "...CTHSSSShTc...",
+    "...CTSOSSOsTc...",
+    "...CTrSSSSrTc...",
+    "...cCTSSSsTCc...",
+    "...FFTTTTTTff...",
+]
+HEAD_CAP = [                  # flat cap, grey moustache
+    "................",
+    ".....AAAAAa.....",
+    "....AWAAAAAa....",
+    "...aaaaaaaaaa...",
+    "....HSOSSOSH....",
+    "....SSHHHHSs....",
+    ".....SSSSss.....",
+    "...FFFFFFFFff...",
+]
+HEAD_SCARF_OLD = [            # headscarf, grey fringe, tied under the chin (head one row lower: stoop)
+    "................",
+    ".....AAAAAa.....",
+    "....AWAAAAAa....",
+    "...AAHHHHHHaa...",
+    "...AaSOSSOSaa...",
+    "...AaSSSSSsaa...",
+    "...AarSssSraa...",
+    "....AaaSSsaa....",
+]
+HEAD_SCARF = [                # headscarf, young face
+    "................",
+    ".....AAAAAa.....",
+    "....AWAAAAAa....",
+    "...AAHHHHHHaa...",
+    "...AaSOSSOSaa...",
+    "...AarSSSSraa...",
+    "...AaSSSSSsaa...",
+    "....AaaSSsaa....",
+]
+HEAD_TEEN = [                 # beanie, long hair falling to the shoulders
+    "................",
+    ".....AAAAAa.....",
+    "....AWAAAAAa....",
+    "...aaaaaaaaaa...",
+    "...HHSOSSOSHh...",
+    "...HHrSSSSrHh...",
+    "...HHSSSSSsHh...",
+    "...HHFFFFffHh...",
+]
+HEAD_KID = [                  # beanie with pompom
+    ".......WW.......",
+    "......WWWW......",
+    ".....AAAAAa.....",
+    "....AWAAAAAa....",
+    "....aaaaaaaa....",
+    "....SSOSSOSs....",
+    "....SrSSSSrs....",
+    ".....SSSSss.....",
+    "....FFFFFFff....",
+    "....Ff..........",
+]
 
 
-def person(c, p, g):
-    o, cx = p["line"], 16
-    ht, hw, hh, bw = g["top"], g["hw"], g["hh"], g["bw"]
-    hx, bx = cx - hw // 2, cx - bw // 2
-    bt = ht + hh - 1
-    bh = 28 - bt + 1
-    for lx in (cx - 4, cx):                                   # legs + boots
-        rbox(c, lx, 28, 4, 3, p["pants"], o)
-        c.rect(lx, 30, 4, 1, p["boots"])
-    if g.get("hair") == "long":                               # hair behind head and shoulders
-        rbox(c, hx - 1, ht, hw + 2, hh + 5, p["hair"], o)
-    for sx in (bx - 2, bx + bw - 1):                          # sleeves + gloves
-        rbox(c, sx, bt + 1, 3, 11, p["coat_sh"] if sx > bx else p["coat"], o)
-        rbox(c, sx, bt + 10, 3, 3, p["glove"], o)
-    rbox(c, bx, bt, bw, bh, p["coat"], o)                     # coat
-    c.rect(bx + 1, bt + 2, 1, bh - 5, p["coat_hi"])
-    c.rect(bx + bw - 3, bt + 2, 2, bh - 4, p["coat_sh"])
-    c.rect(bx, 27, bw, 1, p["coat_sh"])
-    c.rect(cx, bt + 4, 1, bh - 7, p["coat_sh"])
-    sw = hw + 2                                               # neck scarf
-    rbox(c, cx - sw // 2, ht + hh - 1, sw, 3, p["scarf"], o)
-    c.rect(cx - sw // 2 + 1, ht + hh + 1, sw - 2, 1, p["scarf_sh"])
-    t = g.get("tail", 0)
-    if t:
-        tx = cx + t * 3 - 1
-        rbox(c, tx, ht + hh + 1, 3, 8, p["scarf"], o)
-        c.rect(tx + 2, ht + hh + 2, 1, 6, p["scarf_sh"])
-        c.rect(tx, ht + hh + 8, 3, 1, p["scarf_sh"])
-    hat = g["hat"]
-    if hat == "headscarf":
-        rbox(c, hx - 1, ht - 1, hw + 2, hh + 3, p["scarf"], o)
-        rbox(c, hx + 1, ht + 2, hw - 2, hh - 3, p["skin"], p["scarf_sh"])
-        c.rect(hx + 2, ht + 2, hw - 4, 1, p["hair"])
-        c.rect(hx, ht + 1, 1, hh, p["scarf_sh"])
-        c.rect(hx + hw - 1, ht + 1, 1, hh, p["scarf_sh"])
-        c.rect(hx + 1, ht, hw - 2, 1, g["neck"])
-        c.rect(cx - 2, ht + hh + 1, 4, 2, g["neck"])
-    else:
-        rbox(c, hx, ht, hw, hh, p["skin"], o)
-        c.rect(hx + hw - 2, ht + 3, 1, hh - 5, p["skin_sh"])
-        if g["hair"] == "short" or hat == "none":
-            c.rect(hx, ht, hw, 2, p["hair"])
-            c.rect(hx, ht + 2, 1, 2, p["hair"])
-            c.rect(hx + hw - 1, ht + 2, 1, 2, p["hair"])
-        if hat == "beanie":
-            rbox(c, hx - 1, ht - 2, hw + 2, 5, p["hat"], o)
-            c.rect(hx - 1, ht + 1, hw + 2, 2, p["band"])
-            c.rect(hx + 1, ht - 1, 2, 1, p["hat_hi"])
-            if g.get("pompom"):
-                rbox(c, cx - 2, ht - 5, 4, 3, p["pom"], o)
-        elif hat == "cap":
-            rbox(c, hx - 1, ht - 2, hw + 2, 4, p["hat"], o)
-            c.rect(hx + 1, ht - 1, 3, 1, p["hat_hi"])
-            rbox(c, hx - 2, ht + 1, hw + 4, 2, p["band"], o)
-            c.put(hx, ht + 3, p["hair"]); c.put(hx + hw - 1, ht + 3, p["hair"])
-    ey = ht + 4
-    c.put(cx - 3, ey, p["eye"]); c.put(cx + 2, ey, p["eye"])
-    c.put(cx - 4, ey + 2, p["skin_sh"]); c.put(cx + 3, ey + 2, p["skin_sh"])
-    if p["stache"]:
-        c.rect(cx - 3, ey + 2, 6, 1, p["stache"])
-    else:
-        c.rect(cx - 1, ey + 3, 2, 1, p["mouth"])
+def rows(head, body, top=0):
+    out = ["." * 16] * top + head + body
+    return (out + ["." * 16] * 16)[:16]
 
 
-def bundle(c, p):
-    o, cx = LINE, 16
-    rbox(c, 6, 15, 20, 16, p["blanket"], o)                   # blanket bundle
-    c.rect(7, 16, 2, 13, p["blanket_hi"])
-    c.rect(22, 18, 3, 12, p["blanket_sh"])
-    for y in (21, 25, 29):
-        c.rect(7, y, 18, 1, p["stripe"])
-    rbox(c, 10, 6, 12, 10, p["skin"], o)                      # head
-    c.rect(20, 9, 1, 5, p["skin_sh"])
-    rbox(c, 9, 3, 14, 6, p["hat"], o)                         # little hat
-    c.rect(9, 6, 14, 2, p["band"])
-    c.rect(11, 4, 2, 1, p["hat_hi"])
-    c.put(13, 10, p["eye"]); c.put(18, 10, p["eye"])
-    c.put(12, 12, p["skin_sh"]); c.put(19, 12, p["skin_sh"])
-    c.rect(15, 13, 2, 1, p["mouth"])
-    rbox(c, 8, 14, 16, 4, p["blanket_hi"], o)                 # blanket fold over chin
-    c.rect(9, 15, 14, 1, p["blanket"])
-    rbox(c, 11, 19, 3, 2, p["skin"], o)                       # tiny hand
+# ---- the eight -------------------------------------------------------------------------------------
+def mehmet():
+    art = over(rows(HEAD_MAN, ADULT), ["cccccc"], 5, 11)                 # puffer quilting seam
+    return art, dict(
+        H="#4c3e24", h="#2e222f", L="#4d9be6", C="#4d65b4", c="#484a77", D="#323353",
+        F="#e83b3b", f="#b33831", G="#3e3546", P="#3e3546", p="#2e222f", B="#2e222f")
+
+
+def zeynep():
+    art = rows(HEAD_HOOD, ADULT)
+    art = over(art, ["..LCCTTCCCCcc..", "..LDCCCCCCcDc.."], 1, 7)   # zipped parka, fur collar instead of a scarf
+    return art, dict(
+        H="#7a3045", h="#45293f", L="#ea4f36", C="#b33831", c="#831c5d", D="#45293f",
+        F="#c7dcd0", f="#9babb2", T="#c7dcd0", G="#c7dcd0", P="#323353", p="#2e222f", B="#45293f")
+
+
+def hasan():
+    art = rows(HEAD_CAP, ADULT)
+    art = over(art, ["..........K", "..........K", ".........kK", "..........K", "..........K",
+                     "..........K", "..........K", "..........K"], 4, 7)   # crutch under the right arm
+    art = over(art, ["YYy"], 9, 13)                                       # knee brace on the bad knee
+    return art, dict(
+        A="#7f708a", a="#625565", W="#9babb2", H="#c7dcd0", L="#ab947a", C="#966c6c", c="#694f62", D="#45293f",
+        F="#547e64", f="#374e4a", G="#694f62", P="#3e3546", p="#2e222f", B="#2e222f",
+        K="#c7dcd0", k="#9babb2", Y="#c7dcd0", y="#9babb2")
+
+
+def ayse():
+    art = rows(HEAD_SCARF_OLD, ELDER, 1)
+    art = over(art, ["K", "K", "K", "K", "K", "K", "K"], 1, 9)             # wooden cane in her right hand
+    art = over(art, ["kK", ".G"], 0, 9)
+    art = over(art, ["Kk"], 0, 8)
+    art = over(art, ["D", ".", "D"], 7, 10)                               # coat buttons
+    return art, dict(
+        A="#a884f3", a="#905ea9", W="#eaaded", H="#c7dcd0", L="#9babb2", C="#7f708a", c="#625565", D="#3e3546",
+        G="#905ea9", B="#45293f", K="#cd683d", k="#9e4539")
+
+
+def fatma():
+    art = rows(HEAD_SCARF, ADULT)
+    art = over(art, ["..LCaAAAAaCcc...",                                   # scarf ends over the shoulders
+                     "..LDCYWYYyCcDc..",                                   # open coat, round belly
+                     "..LDYWYYYYyCDc..",
+                     "..GDYYYYYyycDG..",
+                     "...LCSyyySScc..."], 0, 8)                            # hands cradling it
+    return art, dict(
+        A="#1ebc73", a="#239063", W="#91db69", H="#4c3e24", L="#0eaf9b", C="#0b8a8f", c="#0b5e65", D="#323353",
+        Y="#fbb954", y="#e6904e", G="#fca790", P="#323353", p="#2e222f", B="#3e3546")
+
+
+def selin():
+    return rows(HEAD_TEEN, TEEN), dict(
+        A="#0eaf9b", a="#0b8a8f", W="#8ff8e2", H="#3e3546", h="#2e222f", L="#ed8099", C="#cf657f", c="#a24b6f",
+        D="#753c54", F="#f9c22b", f="#f79617", G="#f9c22b", P="#323353", p="#2e222f", B="#3e3546")
+
+
+def can():
+    return rows(HEAD_KID, CHILD), dict(
+        A="#1ebc73", a="#239063", W="#ffffff", L="#fbff86", C="#f9c22b", c="#f79617", D="#cd683d",
+        F="#4d9be6", f="#4d65b4", G="#4d9be6", B="#484a77")
+
+
+ELIF = [                      # swaddled baby ("kundak"): knit hat with pompom, lace frame, ribbon round the bundle
+    "................",
+    ".......WW.......",
+    "......AAAa......",
+    ".....AWAAAa.....",
+    "....LTaaaaTc....",
+    "...LCTSSSsTCc...",
+    "...LCSOSSOsCc...",
+    "...LCrSSSSrCc...",
+    "...LCTSSSsTCc...",
+    "...LCCTTTTCCc...",
+    "...LCCCCCCCCc...",
+    "...RRRRQRRRRQ...",
+    "....LCCCCCCcc...",
+    "....LCCCCCccD...",
+    ".....cCCCcDD....",
+    "................",
+]
+
+
+def elif_():
+    return ELIF, dict(A="#8fd3ff", a="#4d9be6", W="#ffffff", T="#ffffff", L="#f68181", C="#cf657f", c="#a24b6f",
+                      D="#753c54", R="#f9c22b", Q="#f79617")
+
+
+PEOPLE = dict(ayse=ayse, can=can, elif_=elif_, fatma=fatma, hasan=hasan, mehmet=mehmet, selin=selin, zeynep=zeynep)
+
+
+def draw(fn):
+    art, pal = fn()
+    im = new(16, 16)
+    paint(im, art, {**BASE, **pal})
+    autoline(im)
+    return im
 
 
 def build():
-    for name, d in PEOPLE.items():
-        c = Canvas(32, 32, 1)
-        person(c, {**BASE, **d["p"]}, d["g"])
-        export([c], os.path.join(ART, "person_%s.png" % name), 2)
-    c = Canvas(32, 32, 1)
-    bundle(c, ELIF)
-    export([c], os.path.join(ART, "person_elif.png"), 2)
+    for name, fn in PEOPLE.items():
+        export(draw(fn), "person_%s.png" % name.rstrip("_"))
 
 
 if __name__ == "__main__":
