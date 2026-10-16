@@ -1,5 +1,5 @@
 extends SceneTree
-## Headless smoke: the diorama loads for both Tier 1 disasters (and an unknown id),
+## Headless smoke: the diorama loads for both Tier 1 disasters, solar_flare (and an unknown id),
 ## and calls Game.next() exactly once even if the card's done and the safety timer both fire.
 ## godot --headless --path . -s res://tests/test_diorama.gd
 
@@ -29,9 +29,14 @@ func _check(name: String, cond: bool) -> void:
 func _run() -> void:
 	var game := root.get_node("Game")
 	var packed: PackedScene = load("res://scenes/diorama.tscn")
-	for path in ["res://data/disasters/kahramanmaras.tres", "res://data/disasters/indian_ocean.tres", "unknown"]:
+	for path in ["res://data/disasters/kahramanmaras.tres", "res://data/disasters/indian_ocean.tres", "solar_flare", "unknown"]:
 		var d: Disaster
-		if path == "unknown":
+		if path == "solar_flare":
+			d = Disaster.new()
+			d.id = &"solar_flare"
+			d.key_prefix = "SF"
+			d.role = &"state"
+		elif path == "unknown":
 			d = (load("res://data/disasters/kahramanmaras.tres") as Disaster).duplicate()
 			d.id = &"nowhere"
 		else:

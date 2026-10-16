@@ -39,6 +39,7 @@ Columns required per asset: name, author, link, license, where used.
 | 3d/kenney/survival-kit/ (tent, tent-canvas, campfire-pit, box, barrel, bedroll-packed) | Kenney, Survival Kit, https://kenney.nl/assets/survival-kit. Diorama sets (`scenes/diorama/`) | CC0 1.0 |
 | 3d/kenney/pirate-kit/ (palms, rowing boats, structure, structure-roof, dock, sand patch, rocks) | Kenney, Pirate Kit, https://kenney.nl/assets/pirate-kit. Diorama sets (`scenes/diorama/`) | CC0 1.0 |
 | 3d/kenney/nature-kit/ (tree_palmTall/Bend, pines, rocks, stone, platform_beach, grass_large) | Kenney, Nature Kit, https://kenney.nl/assets/nature-kit. Diorama sets (`scenes/diorama/`) | CC0 1.0 |
+| 3d/kenney/space-kit/ (rocket parts, structure, structure_detailed, hangars, gate_complex, satelliteDish_detailed, rocks, craft_cargoA, rover, barrel, machine_wireless) | Kenney, Space Kit, https://kenney.nl/assets/space-kit. Diorama set `solar_flare` (`scenes/diorama/`) | CC0 1.0 |
 
 ## Planned third-party assets (NOT in the repo yet: move a row up and fill every column once added)
 

@@ -24,10 +24,36 @@ const SETS := {
 		"scene": "res://scenes/diorama/set_indian_ocean.tscn",
 		"from": 170.0, "to": 50.0, "radius": 46.0, "elevation": [30.0, 12.0], "lift": 8.0,
 	},
+	&"solar_flare": {
+		"scene": "res://scenes/diorama/set_solar_flare.tscn",
+		"from": -20.0, "to": 40.0, "radius": 62.0, "elevation": [20.0, 14.0], "lift": 9.0,
+	},
 }
 ## Indian Ocean: in the last seconds the sea draws back (metres) and a swell line rises.
 const DRAWBACK := 1.1
 const DRAWBACK_START := 7.0
+## Solar flare: in the last seconds the Sun brightens (white-orange glow, heat shimmer).
+const FLARE_START := 6.5
+const FLARE_GLOW := """shader_type canvas_item;
+uniform sampler2D screen : hint_screen_texture, filter_linear, repeat_disable;
+uniform vec2 center = vec2(0.2, 0.3);
+uniform float k = 0.0;
+uniform float aspect = 1.78;
+void fragment() {
+	vec2 uv = SCREEN_UV;
+	// heat haze: low shimmer that grows with the flare
+	float band = smoothstep(0.75, 0.4, uv.y) * 0.5 + 0.5;
+	float w = (0.0006 + 0.0016 * k) * band;
+	uv += vec2(sin(uv.y * 90.0 + TIME * 3.0), cos(uv.x * 70.0 - TIME * 2.2)) * w;
+	vec3 c = texture(screen, uv).rgb;
+	vec2 d = (SCREEN_UV - center) * vec2(aspect, 1.0);
+	float r = length(d);
+	float g = exp(-r * r * 5.0) * 0.9 + exp(-r * 1.6) * 0.45;
+	c += vec3(1.0, 0.72, 0.4) * g * k * 1.3;
+	c = mix(c, vec3(1.0, 0.85, 0.65), clamp(exp(-r * r * 14.0) * k * k, 0.0, 1.0) * 0.8);
+	COLOR = vec4(c, 1.0);
+}
+"""
 const SNOW_COVER := """shader_type spatial;
 render_mode blend_mix, depth_draw_never;
 void fragment() {
@@ -47,6 +73,8 @@ var _sea: ShaderMaterial
 var _floats: Array[Node3D] = []
 var _float_y: Array[float] = []
 var _intro: IntroText
+var _flare: ColorRect
+var _sun: Node3D
 
 @onready var _camera: Camera3D = $Camera
 @onready var _ui: CanvasLayer = $Ui
@@ -71,6 +99,17 @@ func _ready() -> void:
 		for b in n.get_children():
 			_floats.append(b)
 			_float_y.append(b.position.y)
+	_sun = _set.get_node_or_null("Sun") as Node3D
+	if _set.get_meta("flare", false):
+		_flare = ColorRect.new()
+		_flare.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_flare.set_anchors_preset(Control.PRESET_FULL_RECT)
+		var fm := ShaderMaterial.new()
+		fm.shader = Shader.new()
+		fm.shader.code = FLARE_GLOW
+		_flare.material = fm
+		_ui.add_child(_flare)
+		_ui.move_child(_flare, 0)
 	_pose(0.0)
 
 	_intro = INTRO.instantiate()
@@ -111,6 +150,16 @@ func _pose(time: float) -> void:
 	_camera.position = _focus + Vector3(sin(a) * cos(e), sin(e), cos(a) * cos(e)) * float(_cfg.radius)
 	_camera.look_at(_focus)
 	_camera.rotate_object_local(Vector3.RIGHT, -deg_to_rad(_cfg.lift))
+	if _flare and _sun:
+		var fk := smoothstep(FLARE_START, LENGTH, time)
+		var fm := _flare.material as ShaderMaterial
+		var behind := _camera.is_position_behind(_sun.global_position)
+		var size := get_viewport().get_visible_rect().size
+		var sp := _camera.unproject_position(_sun.global_position) / size
+		fm.set_shader_parameter(&"center", sp)
+		fm.set_shader_parameter(&"aspect", size.x / size.y)
+		fm.set_shader_parameter(&"k", 0.0 if behind else fk)
+		_sun.scale = Vector3.ONE * (1.0 + 0.18 * fk)
 	if _sea:
 		var back := smoothstep(DRAWBACK_START, LENGTH, time)
 		_sea.set_shader_parameter(&"level", -DRAWBACK * back)

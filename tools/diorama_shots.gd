@@ -35,6 +35,15 @@ func _shot(name: String) -> void:
 	print("saved ", OUT, name, ".png ", img.get_size())
 
 
+## The solar_flare data file lives on another branch: build the Disaster in code.
+func _solar_flare() -> Disaster:
+	var d := Disaster.new()
+	d.id = &"solar_flare"
+	d.key_prefix = "SF"
+	d.role = &"state"
+	return d
+
+
 func _run() -> void:
 	if DisplayServer.get_name() == "headless":
 		push_error("diorama_shots: needs a renderer; run without --headless")
@@ -42,8 +51,10 @@ func _run() -> void:
 		return
 	var game := root.get_node("Game")
 	var packed: PackedScene = load("res://scenes/diorama.tscn")
-	for path in DISASTERS:
-		game.disaster = load(path)
+	var list: Array = DISASTERS.duplicate()
+	list.append("solar_flare")
+	for path in list:
+		game.disaster = _solar_flare() if path == "solar_flare" else load(path)
 		var d: Node3D = packed.instantiate()
 		root.add_child(d)
 		if not "t" in d:

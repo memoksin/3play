@@ -1,0 +1,597 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/space-kit/rocket_baseA.glb" id="1_odjq8"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/space-kit/rocket_finsA.glb" id="2_mcxvi"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/space-kit/rocket_sidesA.glb" id="3_q4brb"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/space-kit/rocket_topA.glb" id="4_tkhxf"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/space-kit/structure_detailed.glb" id="5_dtike"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/space-kit/structure.glb" id="6_m1nuy"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/space-kit/satelliteDish_detailed.glb" id="7_g6dx8"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/space-kit/gate_complex.glb" id="8_s83f0"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/space-kit/hangar_roundA.glb" id="9_m1pgc"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/space-kit/hangar_largeA.glb" id="10_8o3v8"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/space-kit/hangar_roundGlass.glb" id="11_8d7ys"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/space-kit/hangar_smallA.glb" id="12_7bxc1"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/space-kit/craft_cargoA.glb" id="13_xk67d"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/space-kit/rover.glb" id="14_qthwr"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/space-kit/machine_wireless.glb" id="15_13vb8"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/space-kit/rock_largeA.glb" id="16_lxivn"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/space-kit/rocks_smallA.glb" id="17_seaic"]
+[ext_resource type="PackedScene" path="res://assets/3d/kenney/space-kit/barrel.glb" id="18_vsb3g"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_c3bm1"]
+sky_top_color = Color(0.32, 0.05, 0.05, 1)
+sky_horizon_color = Color(1, 0.55, 0.22, 1)
+sky_curve = 0.18
+ground_bottom_color = Color(0.9, 0.38, 0.16, 1)
+ground_horizon_color = Color(1, 0.5, 0.2, 1)
+sun_angle_max = 0.0
+
+[sub_resource type="Sky" id="Sky_70j2v"]
+sky_material = SubResource("ProceduralSkyMaterial_c3bm1")
+
+[sub_resource type="Environment" id="Environment_xk2ng"]
+background_mode = 2
+sky = SubResource("Sky_70j2v")
+ambient_light_source = 2
+ambient_light_color = Color(0.85, 0.6, 0.55, 1)
+ambient_light_energy = 0.45
+tonemap_mode = 2
+fog_enabled = true
+fog_mode = 1
+fog_light_color = Color(0.95, 0.42, 0.16, 1)
+fog_density = 1.0
+fog_sky_affect = 0.0
+fog_depth_curve = 1.4
+fog_depth_begin = 80.0
+fog_depth_end = 300.0
+
+[sub_resource type="Shader" id="Shader_rnrkn"]
+code = "shader_type spatial;
+render_mode unshaded, fog_disabled, cull_disabled, depth_draw_never;
+// Violent Sun disc: churning granulation, dark spots, bright rim.
+uniform float flare = 0.0;
+float h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vn(vec2 p) {
+	vec2 i = floor(p), f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(h(i), h(i + vec2(1, 0)), f.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), f.x), f.y);
+}
+float fbm(vec2 p) {
+	float a = 0.5, r = 0.0;
+	for (int i = 0; i < 5; i++) { r += a * vn(p); p = p * 2.03 + 11.0; a *= 0.5; }
+	return r;
+}
+void fragment() {
+	vec2 p = UV * 2.0 - 1.0;
+	float d = length(p);
+	float ang = atan(p.y, p.x);
+	float t = TIME * 0.35;
+	vec2 q = p * 4.0;
+	float g = fbm(q + vec2(fbm(q * 1.5 + t), fbm(q * 1.5 - t)) * 2.0);
+	float spots = smoothstep(0.62, 0.75, fbm(p * 2.5 + 5.0 + t * 0.2));
+	vec3 hot = vec3(1.0, 0.93, 0.7);
+	vec3 mid = vec3(1.0, 0.45, 0.08);
+	vec3 col = mix(mid, hot, smoothstep(0.25, 0.75, g)) * (1.0 + flare * 0.5);
+	col = mix(col, vec3(0.5, 0.1, 0.0), spots * 0.7);
+	// prominences: flickering plumes beyond the rim
+	float plume = fbm(vec2(ang * 3.0 + t * 2.0, d * 2.0 - t * 3.0)) ;
+	float body = 1.0 - smoothstep(0.82, 0.86, d);
+	float halo = (1.0 - smoothstep(0.84, 1.0, d)) * smoothstep(0.55, 0.85, plume + (1.0 - d) * 0.6 + flare * 0.15);
+	float rim = smoothstep(0.4, 0.85, d) * 0.6;
+	ALBEDO = (col + rim * vec3(1.0, 0.6, 0.2)) * 1.4;
+	ALPHA = clamp(max(body, halo * 0.85), 0.0, 1.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_8v6td"]
+render_priority = 0
+shader = SubResource("Shader_rnrkn")
+shader_parameter/flare = null
+
+[sub_resource type="QuadMesh" id="QuadMesh_k8ofu"]
+size = Vector2(150, 150)
+
+[sub_resource type="Shader" id="Shader_gu4lk"]
+code = "shader_type spatial;
+render_mode unshaded, fog_disabled, blend_add, depth_draw_never, cull_disabled;
+// Soft corona billboard.
+uniform vec3 tint : source_color = vec3(1.0, 0.5, 0.15);
+uniform float power = 1.0;
+void vertex() {
+	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
+	MODELVIEW_MATRIX[0].xyz *= length(MODEL_MATRIX[0].xyz);
+	MODELVIEW_MATRIX[1].xyz *= length(MODEL_MATRIX[1].xyz);
+}
+void fragment() {
+	float d = length(UV - 0.5) * 2.0;
+	float a = pow(clamp(1.0 - d, 0.0, 1.0), 2.2) * power;
+	ALBEDO = tint * a;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_0h8dt"]
+render_priority = 0
+shader = SubResource("Shader_gu4lk")
+shader_parameter/tint = Color(1, 0.5, 0.15, 1)
+shader_parameter/power = 1.1
+
+[sub_resource type="QuadMesh" id="QuadMesh_nw7ro"]
+size = Vector2(420, 420)
+
+[sub_resource type="Shader" id="Shader_s65a2"]
+code = "shader_type spatial;
+render_mode unshaded, fog_disabled, blend_add, depth_draw_never, cull_disabled;
+// Soft corona billboard.
+uniform vec3 tint : source_color = vec3(1.0, 0.5, 0.15);
+uniform float power = 1.0;
+void vertex() {
+	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
+	MODELVIEW_MATRIX[0].xyz *= length(MODEL_MATRIX[0].xyz);
+	MODELVIEW_MATRIX[1].xyz *= length(MODEL_MATRIX[1].xyz);
+}
+void fragment() {
+	float d = length(UV - 0.5) * 2.0;
+	float a = pow(clamp(1.0 - d, 0.0, 1.0), 2.2) * power;
+	ALBEDO = tint * a;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_wmpcu"]
+render_priority = 0
+shader = SubResource("Shader_s65a2")
+shader_parameter/tint = Color(0.9, 0.25, 0.08, 1)
+shader_parameter/power = 0.8
+
+[sub_resource type="QuadMesh" id="QuadMesh_41gef"]
+size = Vector2(780, 780)
+
+[sub_resource type="Shader" id="Shader_1csg8"]
+code = "shader_type spatial;
+// Diorama ground: gentle bumps, optional beach slope, wet band, fades into the void colour at the rim.
+uniform vec3 base_color : source_color = vec3(0.9);
+uniform vec3 alt_color : source_color = vec3(0.8);
+uniform vec3 wet_color : source_color = vec3(0.5);
+uniform vec3 void_color : source_color = vec3(0.3);
+uniform float radius = 18.0;
+uniform float fade = 6.0;
+uniform float bump = 0.15;
+uniform float slope = 0.0;
+uniform float top = 100.0;
+uniform float wet_level = -100.0;
+uniform float flat_half_width = 0.0;
+uniform float flat_z = 0.0;
+varying vec3 wpos;
+
+float n2(vec2 p) {
+	return sin(p.x * 0.9 + sin(p.y * 0.7)) * 0.5 + sin(p.y * 1.3 + p.x * 0.4) * 0.5;
+}
+
+float height(vec2 p) {
+	float flat_k = flat_half_width > 0.0 ? smoothstep(flat_half_width, flat_half_width + 1.5, abs(p.y - flat_z)) : 1.0;
+	float b = bump * (n2(p * 0.35) + 0.5 * n2(p * 1.1 + 3.0)) * flat_k;
+	float base = slope > 0.0 ? min(p.y * slope, top) : 0.0;
+	return base + b * (slope > 0.0 ? smoothstep(-1.0, 4.0, p.y) : 1.0);
+}
+
+void vertex() {
+	vec3 w = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	float h = height(w.xz);
+	float e = 0.2;
+	vec3 n = normalize(vec3(height(w.xz - vec2(e, 0.0)) - height(w.xz + vec2(e, 0.0)), 2.0 * e,
+			height(w.xz - vec2(0.0, e)) - height(w.xz + vec2(0.0, e))));
+	VERTEX.y += h;
+	NORMAL = normalize((inverse(MODEL_MATRIX) * vec4(n, 0.0)).xyz);
+	wpos = w + vec3(0.0, h, 0.0);
+}
+
+void fragment() {
+	float patch = smoothstep(-0.3, 0.6, n2(wpos.xz * 0.6 + 7.0));
+	vec3 c = mix(base_color, alt_color, patch * 0.6);
+	c = mix(c, wet_color, 1.0 - smoothstep(wet_level - 0.05, wet_level + 0.25, wpos.y));
+	float rim = smoothstep(radius - fade, radius, length(wpos.xz));
+	ALBEDO = c * (1.0 - rim);
+	EMISSION = void_color * rim;
+	ROUGHNESS = 0.95;
+	SPECULAR = 0.2;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_t2kti"]
+render_priority = 0
+shader = SubResource("Shader_1csg8")
+shader_parameter/base_color = Color(0.45, 0.3, 0.24, 1)
+shader_parameter/alt_color = Color(0.38, 0.25, 0.2, 1)
+shader_parameter/wet_color = Color(0.3, 0.2, 0.15, 1)
+shader_parameter/void_color = Color(0.8, 0.44000003, 0.176, 0.8)
+shader_parameter/radius = 46.0
+shader_parameter/fade = 20.0
+shader_parameter/bump = 0.08
+shader_parameter/slope = null
+shader_parameter/top = null
+shader_parameter/wet_level = null
+shader_parameter/flat_half_width = null
+shader_parameter/flat_z = null
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_p7dl2"]
+size = Vector2(104, 104)
+subdivide_width = 60
+subdivide_depth = 60
+
+[sub_resource type="Shader" id="Shader_sbd5w"]
+code = "shader_type spatial;
+// Panelled concrete with hazard stripes along the edge (world XZ).
+uniform vec3 base : source_color = vec3(0.55, 0.5, 0.47);
+void fragment() {
+	vec3 w = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	vec2 g = abs(fract(w.xz / 4.0) - 0.5);
+	float seam = smoothstep(0.47, 0.5, max(g.x, g.y));
+	ALBEDO = base * (1.0 - seam * 0.35);
+	ROUGHNESS = 0.9;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_i0sap"]
+render_priority = 0
+shader = SubResource("Shader_sbd5w")
+shader_parameter/base = null
+
+[sub_resource type="BoxMesh" id="BoxMesh_p4lxu"]
+size = Vector3(26, 0.6, 26)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_agc8b"]
+albedo_color = Color(0.2, 0.2, 0.24, 1)
+roughness = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_u05hy"]
+size = Vector3(5, 0.1, 5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_n4smf"]
+size = Vector3(10, 0.4, 30)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_vdpqw"]
+albedo_color = Color(0.62, 0.64, 0.68, 1)
+roughness = 0.5
+
+[sub_resource type="BoxMesh" id="BoxMesh_gubuw"]
+size = Vector3(5.4, 0.5, 1.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_bsgcm"]
+size = Vector3(0.8, 1.6, 1.8)
+
+[sub_resource type="BoxMesh" id="BoxMesh_w0jp2"]
+size = Vector3(5.4, 0.5, 1.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_y376d"]
+size = Vector3(0.8, 1.6, 1.8)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0ghy0"]
+albedo_color = Color(0.88, 0.86, 0.84, 1)
+roughness = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_r3jtw"]
+top_radius = 1.8
+bottom_radius = 1.8
+height = 6.0
+radial_segments = 6
+rings = 1
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_o20jh"]
+top_radius = 1.8
+bottom_radius = 1.8
+height = 6.0
+radial_segments = 6
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_su4y0"]
+albedo_color = Color(0.42, 0.28, 0.2, 1)
+roughness = 0.9
+
+[sub_resource type="SphereMesh" id="SphereMesh_komll"]
+radius = 9.0
+height = 9.0
+radial_segments = 16
+rings = 6
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pnc0u"]
+albedo_color = Color(0.5, 0.48, 0.47, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="BoxMesh_bvl22"]
+size = Vector3(11, 5.5, 3.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_aj7xl"]
+size = Vector3(12.5, 1, 4.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bfdm7"]
+shading_mode = 0
+albedo_color = Color(1, 0.7, 0.05, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_qj0e0"]
+size = Vector3(10, 0.5, 0.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_0phl3"]
+size = Vector3(9, 0.3, 7)
+
+[node name="SetSolarFlare" type="Node3D" unique_id=462639981]
+metadata/flare = true
+
+[node name="Env" type="WorldEnvironment" parent="." unique_id=1654737136]
+environment = SubResource("Environment_xk2ng")
+
+[node name="FlareSun" type="DirectionalLight3D" parent="." unique_id=1348303256]
+transform = Transform3D(-0.8172581, 0.1728038, -0.5497527, 0, 0.95398164, 0.29986513, 0.5762718, 0.24506721, -0.77964926, 0, 0, 0)
+light_color = Color(1, 0.8, 0.6, 1)
+light_energy = 1.6
+shadow_enabled = true
+directional_shadow_max_distance = 110.0
+
+[node name="Sun" type="MeshInstance3D" parent="." unique_id=1622576320]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -126.44311, 68.96897, -179.31932)
+material_override = SubResource("ShaderMaterial_8v6td")
+cast_shadow = 0
+mesh = SubResource("QuadMesh_k8ofu")
+
+[node name="Corona0" type="MeshInstance3D" parent="." unique_id=1985666968]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -123.914246, 67.58959, -175.73294)
+material_override = SubResource("ShaderMaterial_0h8dt")
+cast_shadow = 0
+mesh = SubResource("QuadMesh_nw7ro")
+
+[node name="Corona1" type="MeshInstance3D" parent="." unique_id=44040979]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -122.64982, 66.8999, -173.93974)
+material_override = SubResource("ShaderMaterial_wmpcu")
+cast_shadow = 0
+mesh = SubResource("QuadMesh_41gef")
+
+[node name="Ground" type="MeshInstance3D" parent="." unique_id=453643785]
+material_override = SubResource("ShaderMaterial_t2kti")
+mesh = SubResource("PlaneMesh_p7dl2")
+
+[node name="Pad" type="Node3D" parent="." unique_id=1332684068]
+
+[node name="Slab" type="MeshInstance3D" parent="Pad" unique_id=1492964534]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0)
+material_override = SubResource("ShaderMaterial_i0sap")
+mesh = SubResource("BoxMesh_p4lxu")
+
+[node name="Trench" type="MeshInstance3D" parent="Pad" unique_id=187866760]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.52, 0)
+material_override = SubResource("StandardMaterial3D_agc8b")
+mesh = SubResource("BoxMesh_u05hy")
+
+[node name="Apron" type="MeshInstance3D" parent="Pad" unique_id=952122473]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0.1, 22)
+material_override = SubResource("ShaderMaterial_i0sap")
+mesh = SubResource("BoxMesh_n4smf")
+
+[node name="Shuttle" type="Node3D" parent="Pad" unique_id=601462131]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+
+[node name="RocketBaseA" type="Node3D" parent="Pad/Shuttle" unique_id=1266556589]
+transform = Transform3D(4.2, 0, 0, 0, 4.2, 0, 0, 0, 4.2, 0, 0, 0)
+
+[node name="rocket_baseA2" type="Node3D" parent="Pad/Shuttle/RocketBaseA" unique_id=1062884615 instance=ExtResource("1_odjq8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -1.5)
+
+[node name="Fins" type="Node3D" parent="Pad/Shuttle" unique_id=1123380460]
+transform = Transform3D(4.0092955, 0, 4.0092955, 0, 5.67, 0, -4.0092955, 0, 4.0092955, 0, 0, 0)
+
+[node name="rocket_finsA2" type="Node3D" parent="Pad/Shuttle/Fins" unique_id=2052219867 instance=ExtResource("2_mcxvi")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -1.5)
+
+[node name="Body1" type="Node3D" parent="Pad/Shuttle" unique_id=1564713648]
+transform = Transform3D(6.72, 0, 0, 0, 6.72, 0, 0, 0, 6.72, 0, 6.72, 0)
+
+[node name="rocket_sidesA2" type="Node3D" parent="Pad/Shuttle/Body1" unique_id=1027815321 instance=ExtResource("3_q4brb")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -1.5)
+
+[node name="Body2" type="Node3D" parent="Pad/Shuttle" unique_id=34115788]
+transform = Transform3D(6.72, 0, 0, 0, 6.72, 0, 0, 0, 6.72, 0, 13.44, 0)
+
+[node name="rocket_sidesA2" type="Node3D" parent="Pad/Shuttle/Body2" unique_id=1126073538 instance=ExtResource("3_q4brb")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -1.5)
+
+[node name="Nose" type="Node3D" parent="Pad/Shuttle" unique_id=1231688941]
+transform = Transform3D(6.72, 0, 0, 0, 6.72, 0, 0, 0, 6.72, 0, 20.16, 0)
+
+[node name="rocket_topA2" type="Node3D" parent="Pad/Shuttle/Nose" unique_id=2114544645 instance=ExtResource("4_tkhxf")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -1.5)
+
+[node name="Gantry" type="Node3D" parent="Pad" unique_id=899807638]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0.5, 0)
+
+[node name="Tower0" type="Node3D" parent="Pad/Gantry" unique_id=934228690]
+transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, 0, 0, 0)
+
+[node name="structure_detailed2" type="Node3D" parent="Pad/Gantry/Tower0" unique_id=1573285783 instance=ExtResource("5_dtike")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 4.5119463e-17, -1.5)
+
+[node name="Tower1" type="Node3D" parent="Pad/Gantry" unique_id=1508526510]
+transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, 0, 4, 0)
+
+[node name="structure2" type="Node3D" parent="Pad/Gantry/Tower1" unique_id=980126611 instance=ExtResource("6_m1nuy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 4.5119463e-17, -1.5)
+
+[node name="Tower2" type="Node3D" parent="Pad/Gantry" unique_id=1800980430]
+transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, 0, 8, 0)
+
+[node name="structure_detailed2" type="Node3D" parent="Pad/Gantry/Tower2" unique_id=1437393746 instance=ExtResource("5_dtike")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 4.5119463e-17, -1.5)
+
+[node name="Tower3" type="Node3D" parent="Pad/Gantry" unique_id=847280785]
+transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, 0, 12, 0)
+
+[node name="structure2" type="Node3D" parent="Pad/Gantry/Tower3" unique_id=1208159328 instance=ExtResource("6_m1nuy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 4.5119463e-17, -1.5)
+
+[node name="Tower4" type="Node3D" parent="Pad/Gantry" unique_id=1772200902]
+transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, 0, 16, 0)
+
+[node name="structure_detailed2" type="Node3D" parent="Pad/Gantry/Tower4" unique_id=677641629 instance=ExtResource("5_dtike")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 4.5119463e-17, -1.5)
+
+[node name="Tower5" type="Node3D" parent="Pad/Gantry" unique_id=1958122586]
+transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, 0, 20, 0)
+
+[node name="structure2" type="Node3D" parent="Pad/Gantry/Tower5" unique_id=275751360 instance=ExtResource("6_m1nuy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 4.5119463e-17, -1.5)
+
+[node name="Arm0" type="MeshInstance3D" parent="Pad/Gantry" unique_id=826601626]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.3, 11, 0)
+material_override = SubResource("StandardMaterial3D_vdpqw")
+mesh = SubResource("BoxMesh_gubuw")
+
+[node name="Clamp0" type="MeshInstance3D" parent="Pad/Gantry" unique_id=632286858]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.7, 11, 0)
+material_override = SubResource("StandardMaterial3D_agc8b")
+mesh = SubResource("BoxMesh_bsgcm")
+
+[node name="Arm1" type="MeshInstance3D" parent="Pad/Gantry" unique_id=399336713]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.3, 17.5, 0)
+material_override = SubResource("StandardMaterial3D_vdpqw")
+mesh = SubResource("BoxMesh_w0jp2")
+
+[node name="Clamp1" type="MeshInstance3D" parent="Pad/Gantry" unique_id=104823907]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.7, 17.5, 0)
+material_override = SubResource("StandardMaterial3D_agc8b")
+mesh = SubResource("BoxMesh_y376d")
+
+[node name="SatelliteDishDetailed" type="Node3D" parent="Pad/Gantry" unique_id=1488179102]
+transform = Transform3D(2.2981334, 0, 1.9283627, 0, 3, 0, -1.9283627, 0, 2.2981334, 0, 24, 0)
+
+[node name="satelliteDish_detailed2" type="Node3D" parent="Pad/Gantry/SatelliteDishDetailed" unique_id=974832500 instance=ExtResource("7_g6dx8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 8.0148267e-32, -1.5)
+
+[node name="FuelTank0" type="MeshInstance3D" parent="Pad" unique_id=1211714056]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.5, 3.5, -4)
+material_override = SubResource("StandardMaterial3D_0ghy0")
+mesh = SubResource("CylinderMesh_r3jtw")
+
+[node name="FuelTank1" type="MeshInstance3D" parent="Pad" unique_id=494443740]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.5, 3.5, 1)
+material_override = SubResource("StandardMaterial3D_0ghy0")
+mesh = SubResource("CylinderMesh_o20jh")
+
+[node name="Bunker" type="Node3D" parent="." unique_id=1800730012]
+transform = Transform3D(0.81915206, 0, 0.57357645, 0, 1, 0, -0.57357645, 0, 0.81915206, -22, 0, 14)
+
+[node name="Mound" type="MeshInstance3D" parent="Bunker" unique_id=1605095031]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -6)
+material_override = SubResource("StandardMaterial3D_su4y0")
+mesh = SubResource("SphereMesh_komll")
+
+[node name="Portal" type="MeshInstance3D" parent="Bunker" unique_id=601915776]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.75, 0)
+material_override = SubResource("StandardMaterial3D_pnc0u")
+mesh = SubResource("BoxMesh_bvl22")
+
+[node name="Lintel" type="MeshInstance3D" parent="Bunker" unique_id=434178463]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.8, 0.2)
+material_override = SubResource("StandardMaterial3D_agc8b")
+mesh = SubResource("BoxMesh_aj7xl")
+
+[node name="BlastDoor0" type="Node3D" parent="Bunker" unique_id=481982250]
+transform = Transform3D(4.2, 0, 0, 0, 4.2, 0, 0, 0, 4.2, -2.2, 0, 1.85)
+
+[node name="gate_complex2" type="Node3D" parent="Bunker/BlastDoor0" unique_id=497629611 instance=ExtResource("8_s83f0")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, -1.6029653e-31, -1.5)
+
+[node name="BlastDoor1" type="Node3D" parent="Bunker" unique_id=1869647464]
+transform = Transform3D(4.2, 0, 0, 0, 4.2, 0, 0, 0, 4.2, 2.2, 0, 1.85)
+
+[node name="gate_complex2" type="Node3D" parent="Bunker/BlastDoor1" unique_id=930228166 instance=ExtResource("8_s83f0")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, -1.6029653e-31, -1.5)
+
+[node name="Hazard" type="MeshInstance3D" parent="Bunker" unique_id=2049144510]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 1.9)
+material_override = SubResource("StandardMaterial3D_bfdm7")
+mesh = SubResource("BoxMesh_qj0e0")
+
+[node name="Ramp" type="MeshInstance3D" parent="Bunker" unique_id=1033135480]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 5.5)
+material_override = SubResource("ShaderMaterial_i0sap")
+mesh = SubResource("BoxMesh_0phl3")
+
+[node name="Buildings" type="Node3D" parent="." unique_id=1788871898]
+
+[node name="HangarRoundA" type="Node3D" parent="Buildings" unique_id=1855699739]
+transform = Transform3D(5.9088464, 0, 1.0418891, 0, 6, 0, -1.0418891, 0, 5.9088464, -8, 0, -24)
+
+[node name="hangar_roundA2" type="Node3D" parent="Buildings/HangarRoundA" unique_id=1994007078 instance=ExtResource("9_m1pgc")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -1.5)
+
+[node name="HangarLargeA" type="Node3D" parent="Buildings" unique_id=731909129]
+transform = Transform3D(5.9416084, 0, -0.83503866, 0, 6, 0, 0.83503866, 0, 5.9416084, 12, 0, -26)
+
+[node name="hangar_largeA2" type="Node3D" parent="Buildings/HangarLargeA" unique_id=2126029900 instance=ExtResource("10_8o3v8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -1.5)
+
+[node name="HangarRoundGlass" type="Node3D" parent="Buildings" unique_id=1892373854]
+transform = Transform3D(2.4999998, 0, 4.3301272, 0, 5, 0, -4.3301272, 0, 2.4999998, -26, 0, -12)
+
+[node name="hangar_roundGlass2" type="Node3D" parent="Buildings/HangarRoundGlass" unique_id=1770522347 instance=ExtResource("11_8d7ys")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -1.5)
+
+[node name="HangarSmallA" type="Node3D" parent="Buildings" unique_id=1651940008]
+transform = Transform3D(1.8811109, 0, -5.168309, 0, 5.5, 0, 5.168309, 0, 1.8811109, 26, 0, -10)
+
+[node name="hangar_smallA2" type="Node3D" parent="Buildings/HangarSmallA" unique_id=565754774 instance=ExtResource("12_7bxc1")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -1.5)
+
+[node name="@Node3D@2" type="Node3D" parent="Buildings" unique_id=1779643209]
+transform = Transform3D(-0.7814169, 0, -4.431635, 0, 4.5, 0, 4.431635, 0, -0.7814169, 30, 0, 14)
+
+[node name="hangar_roundA2" type="Node3D" parent="Buildings/@Node3D@2" unique_id=1225153696 instance=ExtResource("9_m1pgc")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -1.5)
+
+[node name="@Node3D@3" type="Node3D" parent="Buildings" unique_id=1740993830]
+transform = Transform3D(-4.431635, 0, -0.781417, 0, 4.5, 0, 0.781417, 0, -4.431635, -4, 0, 26)
+
+[node name="hangar_smallA2" type="Node3D" parent="Buildings/@Node3D@3" unique_id=547579709 instance=ExtResource("12_7bxc1")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -1.5)
+
+[node name="SatelliteDishDetailed" type="Node3D" parent="Buildings" unique_id=1981249656]
+transform = Transform3D(3.7587705, 0, 1.3680805, 0, 4, 0, -1.3680805, 0, 3.7587705, 20, 0, -18)
+
+[node name="satelliteDish_detailed2" type="Node3D" parent="Buildings/SatelliteDishDetailed" unique_id=337541702 instance=ExtResource("7_g6dx8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 8.0148267e-32, -1.5)
+
+[node name="CraftCargoA" type="Node3D" parent="Buildings" unique_id=216540739]
+transform = Transform3D(0.45148537, 0, 2.5605, 0, 2.6, 0, -2.5605, 0, 0.45148537, 18, 0.1, 20)
+
+[node name="craft_cargoA2" type="Node3D" parent="Buildings/CraftCargoA" unique_id=378913778 instance=ExtResource("13_xk67d")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -1.500005)
+
+[node name="Rover" type="Node3D" parent="Buildings" unique_id=1238685135]
+transform = Transform3D(4.330127, 0, -2.5, 0, 5, 0, 2.5, 0, 4.330127, 6, 0.5, 14)
+
+[node name="rover2" type="Node3D" parent="Buildings/Rover" unique_id=830067992 instance=ExtResource("14_qthwr")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, -0.0066987295, -1.5)
+
+[node name="MachineWireless" type="Node3D" parent="Buildings" unique_id=182027653]
+transform = Transform3D(3.7587705, 0, 1.3680805, 0, 4, 0, -1.3680805, 0, 3.7587705, -12, 0, 8)
+
+[node name="machine_wireless2" type="Node3D" parent="Buildings/MachineWireless" unique_id=322864143 instance=ExtResource("15_13vb8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, -8.0148267e-32, -1.5)
+
+[node name="RockLargeA" type="Node3D" parent="Buildings" unique_id=632945201]
+transform = Transform3D(8, 0, 0, 0, 8, 0, 0, 0, 8, -34, 0, 2)
+
+[node name="rock_largeA2" type="Node3D" parent="Buildings/RockLargeA" unique_id=213900594 instance=ExtResource("16_lxivn")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.0068872, 0, -1.4851084)
+
+[node name="RocksSmallA" type="Node3D" parent="Buildings" unique_id=1555091305]
+transform = Transform3D(8, 0, 0, 0, 8, 0, 0, 0, 8, 34, 0, -2)
+
+[node name="rocks_smallA2" type="Node3D" parent="Buildings/RocksSmallA" unique_id=1500396946 instance=ExtResource("17_seaic")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.9977747, -1.3297145e-16, -1.4905624)
+
+[node name="Barrel" type="Node3D" parent="Buildings" unique_id=269705985]
+transform = Transform3D(8, 0, 0, 0, 8, 0, 0, 0, 8, -5, 0, 15)
+
+[node name="barrel2" type="Node3D" parent="Buildings/Barrel" unique_id=1372122719 instance=ExtResource("18_vsb3g")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, -4.687555e-19, -1.5)
+
+[node name="Focus" type="Marker3D" parent="." unique_id=208209365]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 9, 0)
