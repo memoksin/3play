@@ -45,6 +45,13 @@ Game jam. Theme: disaster awareness. Engine: Godot (latest stable).
   2. Human decision needed: comment on the issue and `@`-mention the owner (assignee or `role:*` person). Also ask your own user in the session.
   3. Do not block. Keep working on the parts that are clear. Do not guess on the unclear part.
 
+## Project memory
+
+- `.claude/memory.md`: facts every agent must know. Read it at session start: @.claude/memory.md
+- Add a line only if not knowing it would cost another agent real time (a contract, a gotcha, a team decision). Not task status (issues), not code facts (code), not personal notes.
+- One line, terse, newest facts replace stale ones. Hard cap 40 lines: delete or merge before adding.
+- Edit it in the same PR that makes the fact true. Running agents get CLAUDE.md / memory changes merged to `dev` injected on their next prompt (`context-check.sh`). Urgent for others now: also post it on the related issue with `send.sh`.
+
 ## Assets
 
 - Only CC0 or jam-safe licenses.
