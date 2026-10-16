@@ -7,7 +7,7 @@ Approved prototype (HTML, reference for feel + numbers): https://claude.ai/artif
 ## Real event
 
 - 6 Feb 2023, 04:17: Mw 7.8 Pazarcik quake.
-- 13:24 same day: Mw 7.7 Elbistan quake, ~9 h later.
+- 13:24 same day: Mw 7.5 Elbistan quake (USGS), ~9 h later.
 - Snow, below zero. Many people went back into damaged buildings for warmth or belongings, and died in the second quake.
 - Lesson: after a big quake, stay out of damaged buildings. A second big quake can come.
 
