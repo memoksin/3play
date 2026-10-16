@@ -28,13 +28,13 @@ const PLATE := Color(7 / 255.0, 8 / 255.0, 13 / 255.0, 0.62)
 const SHADOW := Color(0, 0, 0, 0.35)
 ## All HUD font sizes (px at 1280x720). Swap the font later, not these call sites.
 const FONT_SIZE := {
-	year = 72,
-	year_small = 12,
-	skip = 12,
-	coord = 13,
-	locked = 15,
-	place = 18,
-	date = 12,
+	year = 112,
+	year_small = 20,
+	skip = 20,
+	coord = 22,
+	locked = 24,
+	place = 30,
+	date = 20,
 }
 
 ## Debug: freeze the timeline (screenshots). Use seek() to move it.
@@ -207,21 +207,24 @@ func _make_stars() -> ArrayMesh:
 
 
 func _setup_labels() -> void:
-	_font_mono = ThemeDB.fallback_font
+	_font_mono = _hud_font()
 	_font_bold = FontVariation.new()
-	_font_bold.base_font = ThemeDB.fallback_font
-	_font_bold.variation_embolden = 0.6
+	_font_bold.base_font = _font_mono
 	_year_small.label_settings = _label_settings(FONT_SIZE.year_small, BLUE * Color(1, 1, 1, 0.8), 0.2, false)
 	_year.label_settings = _label_settings(FONT_SIZE.year, WHITE, 0.04, true)
 	_skip.label_settings = _label_settings(FONT_SIZE.skip, DIM, 0.14, false)
 
 
+# The UI font from the project theme (Irem, #13); one weight, no fake bold.
+func _hud_font() -> Font:
+	var theme := ThemeDB.get_project_theme()
+	return theme.default_font if theme and theme.default_font else ThemeDB.fallback_font
+
+
 func _label_settings(px: int, color: Color, spacing_em: float, bold: bool) -> LabelSettings:
 	var font := FontVariation.new()
-	font.base_font = ThemeDB.fallback_font
+	font.base_font = _hud_font()
 	font.spacing_glyph = roundi(px * spacing_em)
-	if bold:
-		font.variation_embolden = 0.6
 	var ls := LabelSettings.new()
 	ls.font = font
 	ls.font_size = px
