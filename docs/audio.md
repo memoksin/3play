@@ -22,3 +22,16 @@ Status: `todo` (not chosen), `chosen` (found, not in repo), `in repo` (added and
 - Download the chosen files from Freesound (needs a free account). Someone with the game on their computer adds them to the repo.
 - Trim G1 (about seconds 4 to 6) and G4 (first 1 s).
 - Add every file to `assets/CREDITS.md` the moment it enters the repo, then set Status to `in repo`.
+
+## Main menu
+
+| # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
+|---|---|---|---|---|---|---|---|---|
+| M1 | Menu music | Loop while the role select screen is open | Title.mp3 (from Dark Sci-Fi Audio Pack) | SRG774 | https://opengameart.org/content/dark-sci-fi-audio-pack | CC0 | chosen | Cold and mysterious tone. The author suggests a slight crossfade when looping. The pack has 4 more tracks and 3 UI sounds, not used. |
+| M2 | Button hover | The mouse is over the "State" or "Citizen" button | UI_Hover | unfa | https://freesound.org/people/unfa/sounds/565131/ | CC0 | chosen (optional) | Not sure it is needed. Test the menu without it first. About 0.12 s. |
+| M3 | Button click | The player picks State or Citizen | Soft UI Button Click | Jummit | https://freesound.org/people/Jummit/sounds/528561/ | CC0 | chosen | Soft sci-fi click. |
+
+### Still to do for the main menu
+
+- Download the files and add them to the repo, then to `assets/CREDITS.md`, then set Status to `in repo`.
+- Re-check the license line on each page when downloading.
