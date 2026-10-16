@@ -50,7 +50,7 @@ Dimensions: globe = 4D, diorama = 3D, minigame = 2D.
 
 | Part | Time |
 |---|---|
-| Globe spin + zoom to country | 15-20 s |
+| Globe spin + lock + zoom (skippable) | 8 s |
 | Diorama intro | 10 s |
 | Minigame | 60-90 s |
 | Result card (score, one real fact, what would have helped) | 20-30 s |
@@ -74,11 +74,29 @@ Dimensions: globe = 4D, diorama = 3D, minigame = 2D.
 
 One scene per mechanic. A new disaster = new data + art, not new code.
 
+## Globe (issue #6)
+
+Prototype: claude.ai artifact "3play Globe Akışı" v2. Port it as is.
+
+- Look: realistic. NASA Blue Marble NG, December 2004, 4096x2048, mipmaps on.
+- Zoom detail: one 2048² patch per target, cut from the 500 m/px BMNG tiles (30° lat span). Shader blends it in with a soft edge, only after the lock. Camera stops where the patch stays sharp.
+- Ocean: soft, wide sun glint on water only. Water mask from texture color in the shader.
+- Atmosphere: Rayleigh + Mie ray-march shader on a shell sphere (R 1.04, 24x6 samples). Blue day limb, dark night side.
+- Background: star field + faint Milky Way band. Earth tilted 23.44°, spins on its own axis.
+- Motion: camera only dollies. Globe turns to the target: axial tilt (z) > latitude pitch (x) > spin (y). End angle is precomputed, so it always lands exactly on the target.
+- Timeline (8 s): 0-4 fast spin, ease out; 4-5.5 lock; 5.5-7.5 zoom; 7.5-8 fade to diorama. Click/Space jumps to locked.
+- Year counter: big, top left. Rewinds 2026 -> event year on the same curve as the spin.
+- Lock reticle (2D overlay, projected each frame): crosshair lines slide in from the edges -> circular crosshair shrinks onto the target -> lat/lon digits scramble then settle -> "LOCKED" blinks, place + date on a dark plate.
+- Colors: lock red-orange, HUD light blue. Font: from Irem (#13).
+- Data: `Disaster.lat`, `lon`, new `year`; place and date via `tr()` (`<PREFIX>_PLACE`, `<PREFIX>_DATE`).
+- Glitch (Tier 2): `glitch_to(year)` stub now, it only jumps the counter. Effect later.
+- Tier 2 polish: clouds, day/night terminator, city lights, bump (#32).
+
 ## Decisions
 
 - Historical events included. One disaster per country.
-- Style: low-poly 3D (globe, diorama, Kenney CC0) + pixel art 2D (minigames, `sprite` skill).
-- Globe: real 3D `SphereMesh` + equirectangular earth texture (NASA, public domain). Camera tweens to target country.
+- Style: realistic globe (see Globe), low-poly 3D diorama (Kenney CC0), pixel art 2D minigames (`sprite` skill).
+- Globe: see the Globe section.
 - Score: people saved, "X/Y safe". Result card compares it with the real event's numbers.
 - Language: English first. Turkish is Tier 2. All player-facing text goes through `tr()` with keys in `locale/strings.csv` from day one, so TR = one CSV column.
 - Scenes: `main` (role select), `globe`, `diorama`, `minigames/fit`, `minigames/connect`, `result`. One owner per scene (`.tscn` merges conflict).
