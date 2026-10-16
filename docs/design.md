@@ -88,7 +88,7 @@ Prototype: claude.ai artifact "3play Globe Akışı" v2. Port it as is.
 - Year counter: big, top left. Rewinds 2026 -> event year on the same curve as the spin.
 - Lock reticle (2D overlay, projected each frame): crosshair lines slide in from the edges -> circular crosshair shrinks onto the target -> lat/lon digits scramble then settle -> "LOCKED" blinks, place + date on a dark plate.
 - Colors: lock red-orange, HUD light blue. Font: from Irem (#13).
-- Data: `Disaster.lat`, `lon`, new `year`; place and date via `tr()` (`<PREFIX>_PLACE`, `<PREFIX>_DATE`).
+- Data: `Disaster.lat`, `lon`, new `year`; place and date via `tr()` (`<PREFIX>_PLACE`, `<PREFIX>_YEAR`).
 - Glitch (Tier 2): `glitch_to(year)` stub now, it only jumps the counter. Effect later.
 - Tier 2 polish: clouds, day/night terminator, city lights, bump (#32).
 

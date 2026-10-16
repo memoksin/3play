@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scenes/main.gd" id="1"]
+[ext_resource type="PackedScene" path="res://ui/logo.tscn" id="2"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -17,16 +18,54 @@ anchor_bottom = 1.0
 
 [node name="Box" type="VBoxContainer" parent="Center"]
 layout_mode = 2
+theme_override_constants/separation = 32
 
-[node name="Title" type="Label" parent="Center/Box"]
+[node name="Logo" parent="Center/Box" instance=ExtResource("2")]
 layout_mode = 2
-text = "3play"
+size_flags_horizontal = 4
+
+[node name="Prompt" type="Label" parent="Center/Box"]
+layout_mode = 2
+text = "MENU_PROMPT"
 horizontal_alignment = 1
 
-[node name="State" type="Button" parent="Center/Box"]
+[node name="Roles" type="HBoxContainer" parent="Center/Box"]
 layout_mode = 2
-text = "State"
+alignment = 1
+theme_override_constants/separation = 48
 
-[node name="Citizen" type="Button" parent="Center/Box"]
+[node name="StateCol" type="VBoxContainer" parent="Center/Box/Roles"]
 layout_mode = 2
-text = "Citizen"
+theme_override_constants/separation = 12
+
+[node name="State" type="Button" parent="Center/Box/Roles/StateCol"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 112)
+layout_mode = 2
+theme_type_variation = &"StateButton"
+text = "ROLE_STATE"
+
+[node name="StateDesc" type="Label" parent="Center/Box/Roles/StateCol"]
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+text = "ROLE_STATE_DESC"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="CitizenCol" type="VBoxContainer" parent="Center/Box/Roles"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Citizen" type="Button" parent="Center/Box/Roles/CitizenCol"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 112)
+layout_mode = 2
+theme_type_variation = &"CitizenButton"
+text = "ROLE_CITIZEN"
+
+[node name="CitizenDesc" type="Label" parent="Center/Box/Roles/CitizenCol"]
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+text = "ROLE_CITIZEN_DESC"
+horizontal_alignment = 1
+autowrap_mode = 3
