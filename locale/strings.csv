@@ -17,6 +17,8 @@ IO_INTRO_1,"A magnitude 9.1 earthquake has struck off Sumatra.","Sumatra açıkl
 IO_INTRO_2,"There is no tsunami warning system in the Indian Ocean. A giant wave is coming.","Hint Okyanusu'nda tsunami uyarı sistemi yok. Dev bir dalga geliyor."
 IO_TASK,"Connect the sensor to every siren before the wave arrives.","Dalga gelmeden sensörü tüm sirenlere bağla."
 IO_CARD_SCORE,"%d/4 communities warned","%d/4 topluluk uyarıldı"
+IO_CARD_WIN,"You won: all 4 communities were warned in time.","Kazandın: 4 topluluğun hepsi zamanında uyarıldı."
+IO_CARD_LOSE,"You lost: the wave arrived before every community was warned.","Kaybettin: dalga, tüm topluluklar uyarılmadan geldi."
 IO_CARD_NUMBERS,"The 2004 tsunami killed about 230,000 people in 14 countries.","2004 tsunamisi 14 ülkede yaklaşık 230.000 kişinin ölümüne yol açtı."
 IO_CARD_FACT,"Many coasts were hit hours after the quake, with no siren and no warning.","Birçok kıyıya, depremden saatler sonra, siren ve uyarı olmadan dalga ulaştı."
 IO_CARD_HELP,"What would have helped: a warning system. InaTEWS, Indonesia's tsunami warning system, was built after 2004.","Ne yardımcı olurdu: bir uyarı sistemi. Endonezya'nın tsunami uyarı sistemi InaTEWS, 2004'ten sonra kuruldu."

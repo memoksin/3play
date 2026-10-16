@@ -76,6 +76,7 @@ Put the real names in the `.tres` so they can change without code.
 ## Result card text (draft)
 
 - Line 1: "X/4 communities warned".
+- Line 1b, right after the score: 4/4 shows "You won: all 4 communities were warned in time." Any X below 4 shows "You lost: the wave arrived before every community was warned."
 - Line 2: real fact. The 2004 tsunami (Mw 9.1) killed roughly 230,000 people in 14 countries; there was no warning system in the Indian Ocean. `VERIFY` figures and source.
 - Line 3: what would have helped: a warning system. Indonesia built InaTEWS after 2004, and an Indian Ocean wide warning system followed. `VERIFY` dates and names.
 - Line 4 (counterfactual): "In 2004 nobody had this. The player did it in 60 seconds. The real cost was in lives."
