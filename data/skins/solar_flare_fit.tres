@@ -1,0 +1,168 @@
+; PLACEHOLDER CONTENT for burcubaran22 (#17): names, roles, labels and texts (SF_* keys in locale/strings.csv) are drafts to rewrite.
+[gd_resource type="Resource" script_class="FitSkin" load_steps=27 format=3]
+
+[ext_resource type="Script" path="res://scripts/fit_skin.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/fit_zone.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/fit_item_type.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/fit_item.gd" id="4"]
+[ext_resource type="Texture2D" path="res://assets/sprites/solar_flare/sf_bg.png" id="bg"]
+
+[sub_resource type="Resource" id="zone_surface"]
+script = ExtResource("2")
+id = &"surface"
+label_key = "SF_FIT_ZONE_SURFACE"
+slots = -1
+warm = 1
+safe = false
+color = Color(0.45, 0.2, 0.15, 0.72)
+
+[sub_resource type="Resource" id="zone_shuttle"]
+script = ExtResource("2")
+id = &"shuttle"
+label_key = "SF_FIT_ZONE_SHUTTLE"
+slots = 6
+warm = 0
+safe = true
+color = Color(0.25, 0.32, 0.47, 0.72)
+
+[sub_resource type="Resource" id="zone_bunker"]
+script = ExtResource("2")
+id = &"bunker"
+label_key = "SF_FIT_ZONE_BUNKER"
+slots = 4
+warm = 2
+safe = true
+color = Color(0.22, 0.3, 0.27, 0.72)
+
+[sub_resource type="Resource" id="type_person"]
+script = ExtResource("3")
+id = &"person"
+label_key = "SF_FIT_ITEM_PERSON"
+slots = 1
+scored = true
+heat = 0
+color = Color(0.301961, 0.607843, 0.901961, 1)
+
+[sub_resource type="Resource" id="type_vault"]
+script = ExtResource("3")
+id = &"vault"
+label_key = "SF_FIT_ITEM_VAULT"
+slots = 2
+scored = false
+heat = 0
+color = Color(0.62, 0.8, 0.35, 1)
+
+[sub_resource type="Resource" id="type_recycler"]
+script = ExtResource("3")
+id = &"recycler"
+label_key = "SF_FIT_ITEM_RECYCLER"
+slots = 2
+scored = false
+heat = 1
+color = Color(0.560784, 0.827451, 1, 1)
+
+[sub_resource type="Resource" id="item_0"]
+script = ExtResource("4")
+type = &"person"
+name_key = "SF_FIT_P_AMARA"
+role_key = "SF_FIT_R_AMARA"
+
+[sub_resource type="Resource" id="item_1"]
+script = ExtResource("4")
+type = &"person"
+name_key = "SF_FIT_P_KENJI"
+role_key = "SF_FIT_R_KENJI"
+
+[sub_resource type="Resource" id="item_2"]
+script = ExtResource("4")
+type = &"person"
+name_key = "SF_FIT_P_LIA"
+role_key = "SF_FIT_R_LIA"
+
+[sub_resource type="Resource" id="item_3"]
+script = ExtResource("4")
+type = &"person"
+name_key = "SF_FIT_P_TOMAS"
+role_key = "SF_FIT_R_TOMAS"
+
+[sub_resource type="Resource" id="item_4"]
+script = ExtResource("4")
+type = &"person"
+name_key = "SF_FIT_P_NOOR"
+role_key = "SF_FIT_R_NOOR"
+
+[sub_resource type="Resource" id="item_5"]
+script = ExtResource("4")
+type = &"person"
+name_key = "SF_FIT_P_RAVI"
+role_key = "SF_FIT_R_RAVI"
+
+[sub_resource type="Resource" id="item_6"]
+script = ExtResource("4")
+type = &"person"
+name_key = "SF_FIT_P_OKAFOR"
+role_key = "SF_FIT_R_OKAFOR"
+
+[sub_resource type="Resource" id="item_7"]
+script = ExtResource("4")
+type = &"person"
+name_key = "SF_FIT_P_SOL"
+role_key = "SF_FIT_R_SOL"
+
+[sub_resource type="Resource" id="item_8"]
+script = ExtResource("4")
+type = &"person"
+name_key = "SF_FIT_P_YUKI"
+role_key = "SF_FIT_R_YUKI"
+
+[sub_resource type="Resource" id="item_9"]
+script = ExtResource("4")
+type = &"person"
+name_key = "SF_FIT_P_DMITRI"
+role_key = "SF_FIT_R_DMITRI"
+
+[sub_resource type="Resource" id="item_10"]
+script = ExtResource("4")
+type = &"person"
+name_key = "SF_FIT_P_INES"
+role_key = "SF_FIT_R_INES"
+
+[sub_resource type="Resource" id="item_11"]
+script = ExtResource("4")
+type = &"person"
+name_key = "SF_FIT_P_BEN"
+role_key = "SF_FIT_R_BEN"
+
+[sub_resource type="Resource" id="item_12"]
+script = ExtResource("4")
+type = &"vault"
+name_key = ""
+role_key = "SF_FIT_R_VAULT"
+
+[sub_resource type="Resource" id="item_13"]
+script = ExtResource("4")
+type = &"recycler"
+name_key = ""
+role_key = "SF_FIT_R_RECYCLER"
+
+[resource]
+script = ExtResource("1")
+zones = Array[ExtResource("2")]([SubResource("zone_surface"), SubResource("zone_shuttle"), SubResource("zone_bunker")])
+item_types = Array[ExtResource("3")]([SubResource("type_person"), SubResource("type_vault"), SubResource("type_recycler")])
+items = Array[ExtResource("4")]([SubResource("item_0"), SubResource("item_1"), SubResource("item_2"), SubResource("item_3"), SubResource("item_4"), SubResource("item_5"), SubResource("item_6"), SubResource("item_7"), SubResource("item_8"), SubResource("item_9"), SubResource("item_10"), SubResource("item_11"), SubResource("item_12"), SubResource("item_13")])
+start_zone = &"surface"
+timer_seconds = 75.0
+clock_start_min = 832
+clock_end_min = 840
+aftershock_times = Array[float]([20.0, 42.0, 60.0])
+blankets_to_warm = 2
+creak_key = "SF_FIT_RADIO_1"
+quake_key = "SF_FIT_IMPACT"
+warning_keys = Array[String](["SF_FIT_RADIO_1", "SF_FIT_RADIO_2", "SF_FIT_RADIO_3"])
+start_art = 1
+ending = 1
+snow = false
+sky_color = Color(0.36, 0.17, 0.12, 1)
+background = ExtResource("bg")
+warm_key = "SF_FIT_LIFE_OK"
+cold_key = "SF_FIT_LIFE_NO"

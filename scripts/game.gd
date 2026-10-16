@@ -9,12 +9,21 @@ const SCENES := {
 	&"result": "res://scenes/result.tscn",
 }
 const FLOW: Array[StringName] = [&"globe", &"diorama", &"minigame", &"result", &"main"]
-# ponytail: Tier 1 fixed pick per role; Tier 2 alternates via user://
+## Disasters a role can get; the file name (without .tres) is the id in the play counts.
+const POOL := {
+	&"citizen": ["res://data/disasters/kahramanmaras.tres"],  # Black Saturday later
+	&"state": ["res://data/disasters/indian_ocean.tres", "res://data/disasters/solar_flare.tres"],
+}
+## Deterministic default per role, for scenes run alone (F6).
 const PICK := {
 	&"citizen": "res://data/disasters/kahramanmaras.tres",
 	&"state": "res://data/disasters/indian_ocean.tres",
 }
+const STORE_SECTION := "played"
 
+## Play counts per disaster id, kept on this machine so every scenario shows up before any repeats.
+## Tests set it to "" (nothing read or written, picks are random) or a temp path: never the real user file.
+var store_path := "user://played.cfg"
 var role: StringName
 var disaster: Disaster
 var saved := 0
@@ -26,12 +35,60 @@ var _step := -1
 
 func start(new_role: StringName) -> void:
 	role = new_role
-	disaster = load(PICK[role])
+	disaster = load(pick_for(role))
 	saved = 0
 	total = 0
 	extra = {}
 	_step = -1
 	next()
+
+
+## The least played disaster of the role on this machine (ties: random); counts it as played.
+func pick_for(for_role: StringName) -> String:
+	var counts := load_counts()
+	var path: String = choose(POOL[for_role], counts, RandomNumberGenerator.new())
+	var id := _id_of(path)
+	counts[id] = int(counts.get(id, 0)) + 1
+	save_counts(counts)
+	return path
+
+
+## Pure: the candidate paths with the lowest count (id -> plays; missing = 0), random among ties.
+static func choose(paths: Array, counts: Dictionary, rng: RandomNumberGenerator) -> String:
+	var best := []
+	var low := -1
+	for path: String in paths:
+		var n := int(counts.get(_id_of(path), 0))
+		if low < 0 or n < low:
+			low = n
+			best = []
+		if n == low:
+			best.append(path)
+	return best[rng.randi_range(0, best.size() - 1)]
+
+
+func load_counts() -> Dictionary:
+	var counts := {}
+	var cfg := ConfigFile.new()
+	if store_path != "" and cfg.load(store_path) == OK:
+		for id in cfg.get_section_keys(STORE_SECTION):
+			counts[id] = int(cfg.get_value(STORE_SECTION, id))
+	return counts
+
+
+func save_counts(counts: Dictionary) -> void:
+	if store_path == "":
+		return
+	var cfg := ConfigFile.new()
+	for id: String in counts:
+		cfg.set_value(STORE_SECTION, id, counts[id])
+	var err := cfg.save(store_path)
+	if err != OK:
+		push_warning("Game: cannot save play counts to %s (error %d)" % [store_path, err])
+
+
+static func _id_of(path: String) -> String:
+	return path.get_file().get_basename()
 
 
 func next() -> void:
