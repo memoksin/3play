@@ -55,4 +55,3 @@ One scene per mechanic. Skins are data + art swaps, not new code.
 - Confirm disaster/country table.
 - Team size and roles.
 - Does the jam allow AI-generated art/audio? Until known: Kenney CC0 + hand drawing + Freesound, all logged in `assets/CREDITS.md`.
-- Move repo out of OneDrive (git + Godot `.godot` cache conflict with sync).
