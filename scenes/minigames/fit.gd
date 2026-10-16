@@ -85,6 +85,7 @@ var _drag_item := -1
 var _hover: StringName = &""
 var _hidden_chip := -1
 var _fx: Control
+var _bg: Control  # skin.background_scene instance, driven by elapsed
 
 @onready var _world: Control = $World
 @onready var _zone_root: Control = $World/Zones
@@ -126,6 +127,11 @@ func _ready() -> void:
 	rng.seed = 7
 	for i in SNOW_FLAKES:
 		_flakes.append(Vector3(rng.randf() * 1280.0, rng.randf() * 720.0, 24.0 + rng.randf() * 40.0))
+	if skin.background_scene:
+		_bg = skin.background_scene.instantiate()
+		add_child(_bg)
+		move_child(_bg, 0)
+		_bg.call(&"set_time", 0.0)
 	if skin.snow:
 		_snow = Control.new()
 		_snow.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -223,6 +229,8 @@ func advance(dt: float) -> void:
 		_update_chip_look()
 	if dt > 0.0 and _snow:
 		_snow.queue_redraw()
+	if _bg:
+		_bg.call(&"set_time", elapsed)
 
 
 ## Debug: jump to game time `time` (no going back).
@@ -246,7 +254,7 @@ func move(item_index: int, zone_id: StringName) -> bool:
 
 
 func _draw() -> void:
-	if skin.background:
+	if skin.background and not _bg:
 		draw_texture_rect(skin.background, Rect2(0, 0, 1280, 720), false)
 	else:
 		draw_rect(Rect2(0, 0, 1280, 160), skin.sky_color)

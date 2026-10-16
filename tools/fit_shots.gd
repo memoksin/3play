@@ -89,7 +89,7 @@ func _run() -> void:
 	quit(1 if failed else 0)
 
 
-## Solar flare skin: start, mid (radio warning, seats filling), flash, banner.
+## Solar flare skin: start, beams sweeping, mid (radio warning, seats filling), damage growing, flash, banner.
 func _solar_flare() -> void:
 	var game := root.get_node("Game")
 	game.disaster = load("res://data/disasters/solar_flare.tres")
@@ -98,6 +98,8 @@ func _solar_flare() -> void:
 	await process_frame
 	fit.time_scale = 0.0
 	await _shot("sf_start")
+	fit.seek(14.0)
+	await _shot("sf_beams_14s")
 	for i in 5:
 		fit.move(_item(fit, &"person", i), &"shuttle")
 	fit.move(_item(fit, &"person", 5), &"shuttle")
@@ -108,6 +110,10 @@ func _solar_flare() -> void:
 	fit.seek(41.9)
 	fit.advance(0.3)
 	await _shot("sf_mid")
+	fit.seek(58.0)
+	await _shot("sf_damage_58s")
+	fit.seek(74.5)
+	await _shot("sf_late_74s")
 	fit.seek(75.1)
 	fit.advance(0.25)
 	await _shot("sf_flash")
