@@ -103,6 +103,7 @@ class ZoneView:
 	var badge: PanelContainer
 	var badge_label: Label
 	var art: Control
+	var badge_icon: TextureRect
 	var flash := 0.0
 
 
@@ -217,6 +218,8 @@ func advance(dt: float) -> void:
 			v.root.queue_redraw()
 		if v.art and art_dirty:
 			v.art.queue_redraw()
+		if v.def.frames and art_dirty:
+			v.root.queue_redraw()
 	_update_clock()
 	if (_collapse > 0.0) != _lost_shown:
 		_lost_shown = _collapse > 0.0
@@ -293,7 +296,7 @@ func _make_zone(def: FitZone, rect: Rect2, with_art: bool) -> ZoneView:
 	v.root.mouse_entered.connect(_zone_entered.bind(def.id))
 	v.root.mouse_exited.connect(_zone_exited.bind(def.id))
 	v.root.set_drag_forwarding(Callable(), _zone_can_drop.bind(def.id), _zone_drop.bind(def.id))
-	if with_art:
+	if with_art and not def.frames:
 		v.art = Control.new()
 		v.art.position = Vector2(4, 4)
 		v.art.size = rect.size - Vector2(8, 8)
@@ -316,7 +319,21 @@ func _make_zone(def: FitZone, rect: Rect2, with_art: bool) -> ZoneView:
 	v.badge = PanelContainer.new()
 	v.badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.badge_label = _label("", 28, Palette.WHITE)
-	v.badge.add_child(v.badge_label)
+	if skin.warm_icon or skin.cold_icon:
+		var box := HBoxContainer.new()
+		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		box.add_theme_constant_override("separation", 6)
+		v.badge_icon = TextureRect.new()
+		v.badge_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		v.badge_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		v.badge_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		v.badge_icon.custom_minimum_size = Vector2(ICON_SIZE, ICON_SIZE)
+		v.badge_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		box.add_child(v.badge_icon)
+		box.add_child(v.badge_label)
+		v.badge.add_child(box)
+	else:
+		v.badge.add_child(v.badge_label)
 	v.badge.visible = skin.show_warmth
 	header.add_child(v.badge)
 	v.flow = HFlowContainer.new()
@@ -361,7 +378,17 @@ func _make_chip(i: int) -> PanelContainer:
 	row.add_theme_constant_override("separation", 6)
 	chip.add_child(row)
 	var name_text := tr(item.name_key if item.name_key != "" else type.label_key)
-	if type.texture:
+	if item.texture:
+		var icon := TextureRect.new()
+		icon.texture = item.texture
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.custom_minimum_size = item.texture.get_size() * _icon_scale(item.texture.get_size().y)
+		icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(icon)
+	elif type.texture:
 		var icon := TextureRect.new()
 		icon.texture = type.texture
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -405,6 +432,20 @@ func _make_chip(i: int) -> PanelContainer:
 	return chip
 
 
+## Debug/test: which sheet frame a zone shows now.
+func zone_frame(def: FitZone) -> int:
+	var n := maxi(def.frame_count, 1)
+	if n == 1:
+		return 0
+	return n - 1 if _collapse > 0.0 else clampi(crack_stage - 1, 0, n - 2)
+
+
+## Integer scale (or 1/n) that fits a sprite of height `h` into the icon slot.
+func _icon_scale(h: float) -> float:
+	var k := ICON_SIZE / maxf(h, 1.0)
+	return float(maxi(floori(k), 1)) if k >= 1.0 else 1.0 / ceilf(1.0 / k)
+
+
 func _refresh() -> void:
 	for id: StringName in _zones:
 		var v: ZoneView = _zones[id]
@@ -413,6 +454,9 @@ func _refresh() -> void:
 		v.count.text = "%d/%s" % [used, "∞" if cap < 0 else str(cap)]
 		var warm := FitLogic.is_warm(skin, placement, id)
 		v.badge_label.text = tr(_badge_key(warm))
+		if v.badge_icon:
+			v.badge_icon.texture = skin.warm_icon if warm else skin.cold_icon
+			v.badge_icon.visible = v.badge_icon.texture != null
 		var s := StyleBoxFlat.new()
 		s.bg_color = WARM_BADGE if warm else COLD_BADGE
 		s.set_content_margin_all(2)
@@ -630,6 +674,12 @@ func _draw_zone(v: ZoneView) -> void:
 	c.draw_rect(r, v.def.color)
 	if v.def.texture:
 		c.draw_texture_rect(v.def.texture, r, false)
+	if v.def.frames:
+		var n := maxi(v.def.frame_count, 1)
+		var f := zone_frame(v.def)
+		var fw := v.def.frames.get_width() / float(n)
+		c.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		c.draw_texture_rect_region(v.def.frames, r, Rect2(f * fw, 0, fw, v.def.frames.get_height()))
 	var border := Palette.BORDER
 	if v.flash > 0.0:
 		border = Palette.BORDER.lerp(Palette.DANGER, v.flash / FLASH_DUR)

@@ -48,6 +48,7 @@ func _run() -> void:
 		return
 	_logic()
 	await _scene()
+	await _art_fields()
 	print("test_fit ok" if ok else "test_fit FAIL")
 	quit(0 if ok else 1)
 
@@ -155,3 +156,62 @@ func _scene() -> void:
 	fit.queue_free()
 
 
+
+
+func _tex(w: int, h: int) -> ImageTexture:
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	img.fill(Color.MAGENTA)
+	return ImageTexture.create_from_image(img)
+
+
+func _art_fields() -> void:
+	var game := root.get_node("Game")
+	game.ensure_disaster(&"citizen")
+	var base: FitSkin = game.disaster.skin
+	var sk: FitSkin = base.duplicate(true)
+	var person := sk.items.filter(func(i: FitItem) -> bool: return i.type == &"person")[0] as FitItem
+	person.texture = _tex(64, 64)
+	var stove: FitItem = sk.items[_item(&"stove")]
+	stove.texture = _tex(128, 64)
+	sk.zone(&"building").frames = _tex(600 * 5, 464)
+	sk.zone(&"building").frame_count = 5
+	sk.zone(&"car").frames = _tex(300, 200)
+	sk.warm_icon = _tex(32, 32)
+	sk.cold_icon = _tex(32, 32)
+	game.disaster.skin = sk
+	var fit: Control = load("res://scenes/minigames/fit.tscn").instantiate()
+	root.add_child(fit)
+	await process_frame
+	fit.time_scale = 0.0
+	var bz: FitZone = sk.zone(&"building")
+	_check("art: building code art skipped with frames", fit._zones[&"building"].art == null)
+	_check("art: tent keeps code-free zone", fit._zones[&"tent"].art == null)
+	_check("art: frame 0 at start", fit.zone_frame(bz) == 0)
+	fit.seek(26.0)
+	_check("art: frame 1 after aftershock 1", fit.zone_frame(bz) == 1)
+	fit.seek(51.0)
+	_check("art: frame 2 after aftershock 2", fit.zone_frame(bz) == 2)
+	_check("art: single-frame zone stays 0", fit.zone_frame(sk.zone(&"car")) == 0)
+	fit.seek(75.5)
+	await process_frame
+	_check("art: collapsed frame at the end", fit.zone_frame(bz) == 4)
+	var icons: Array = []
+	for chip in fit._chips:
+		for n in chip.get_child(0).get_children():
+			if n is TextureRect:
+				icons.append(n)
+	_check("art: two item textures in chips", icons.size() == 2)
+	var sizes := icons.map(func(t: TextureRect) -> Vector2: return t.custom_minimum_size)
+	_check("art: person 64px -> 32x32, stove 128x64 -> 64x32", sizes.has(Vector2(32, 32)) and sizes.has(Vector2(64, 32)))
+	var bv = fit._zones[&"building"]
+	_check("art: badge icon set", bv.badge_icon != null and bv.badge_icon.visible and bv.badge_icon.texture in [sk.warm_icon, sk.cold_icon])
+	fit.queue_free()
+	game.disaster.skin = base
+	# null fields = as before
+	var plain: Control = load("res://scenes/minigames/fit.tscn").instantiate()
+	root.add_child(plain)
+	await process_frame
+	plain.time_scale = 0.0
+	_check("art: null fields keep code building", plain._zones[&"building"].art != null)
+	_check("art: null badge icon", plain._zones[&"building"].badge_icon == null)
+	plain.queue_free()
