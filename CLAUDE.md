@@ -23,6 +23,7 @@ Game jam. Theme: disaster awareness. Engine: Godot (latest stable).
 - `main`: always playable, polished. Protected. Merge from `dev` only, owner approval.
 - `dev`: integration. PRs from `feat/*`.
 - Never push to `main` or `dev` directly.
+- Never add Claude as co-author or collaborator: no `Co-Authored-By` trailer, no "Generated with Claude" line in commits or PRs.
 - Sync: `git pull --rebase` at session start. Push + update issue when a task is done.
 
 ## Tasks
