@@ -389,9 +389,11 @@ func _label_settings(px: int, color: Color, spacing_em: float, bold: bool) -> La
 	ls.font = font
 	ls.font_size = px
 	ls.font_color = color
-	ls.shadow_color = Color(0, 0, 0, 0.5)
-	ls.shadow_size = 6
-	ls.shadow_offset = Vector2(0, 1)
+	# Hard pixel drop shadow: a blurred one turns into a grey halo when the
+	# 1280x720 canvas is stretched to 4K.
+	ls.shadow_color = Color(0, 0, 0, 0.55)
+	ls.shadow_size = 0
+	ls.shadow_offset = Vector2(2, 2) if px < 60 else Vector2(4, 4)
 	return ls
 
 
@@ -413,8 +415,15 @@ func _draw_hud() -> void:
 	var ring_r := m * (0.42 - 0.35 * _out_cubic(_clamp01((lt - 0.25) / 0.55)))
 	var gap := maxf(ring_r, m * 0.07) + 8
 	var line := RED * Color(1, 1, 1, 0.85)
+	var tx := x + maxf(ring_r, m * 0.07) + 18
+	var place := _disaster.text("PLACE").to_upper()
+	var pw := maxf(_text_width(_font_bold, place, FONT_SIZE.place), 190) + 24
 	o.draw_line(Vector2(0, ly), Vector2(maxf(0, x - gap), ly), line, 1.5, true)
-	o.draw_line(Vector2(x + gap, ly), Vector2(view.x, ly), line, 1.5, true)
+	if lt > 0.45:  # the plate is up: stop the line at it so it never crosses the text
+		o.draw_line(Vector2(x + gap, ly), Vector2(maxf(x + gap, tx - 12), ly), line, 1.5, true)
+		o.draw_line(Vector2(tx - 12 + pw, ly), Vector2(view.x, ly), line, 1.5, true)
+	else:
+		o.draw_line(Vector2(x + gap, ly), Vector2(view.x, ly), line, 1.5, true)
 	o.draw_line(Vector2(lx, 0), Vector2(lx, maxf(0, y - gap)), line, 1.5, true)
 	o.draw_line(Vector2(lx, y + gap), Vector2(lx, view.y), line, 1.5, true)
 
@@ -431,13 +440,13 @@ func _draw_hud() -> void:
 		o.draw_circle(c, 2.5, RED, true, -1.0, true)
 
 	# 3. coordinates scramble, then settle (dark plate keeps them legible over snow and desert)
-	var tx := x + maxf(ring_r, m * 0.07) + 18
-	var place := _disaster.text("PLACE").to_upper()
 	if lt > 0.45:
-		var pw := maxf(_text_width(_font_bold, place, FONT_SIZE.place), 190) + 24
-		var ph := 92.0 if lt > 1.0 else 30.0
-		o.draw_rect(Rect2(tx - 12, y - 25, pw, ph), PLATE)
-		o.draw_rect(Rect2(tx - 12, y - 25, 2, ph), RED)
+		# plate grows open from the coordinate row to the full label
+		var ph := lerpf(30.0, 92.0, _out_cubic(_clamp01((lt - 1.0) / 0.25)))
+		var plate := Rect2(tx - 12, y - 25, pw, ph)
+		o.draw_rect(plate, PLATE)
+		o.draw_rect(plate.grow(-0.5), Color(BLUE, 0.18), false, 1.0)
+		o.draw_rect(Rect2(tx - 12, y - 25, 3, ph), RED)
 		var k := _clamp01((lt - 0.55) / 0.5)
 		var coord := _fmt_coord(_disaster.lat, "N", "S", 2) + "  " + _fmt_coord(_disaster.lon, "E", "W", 3)
 		_text(_font_mono, coord if k >= 1 else _scramble(coord, k), tx, y - 10, FONT_SIZE.coord, BLUE)
@@ -457,7 +466,8 @@ func _draw_hud() -> void:
 ## Canvas "textBaseline = middle": centre the em box on y.
 func _text(font: Font, s: String, x: float, y: float, px: int, color: Color) -> void:
 	var base := Vector2(x, y + (font.get_ascent(px) - font.get_descent(px)) / 2)
-	_overlay.draw_string_outline(font, base, s, HORIZONTAL_ALIGNMENT_LEFT, -1, px, 6, SHADOW * Color(1, 1, 1, color.a))
+	# Hard 2 px drop shadow, not a soft outline: stays crisp when stretched to 4K.
+	_overlay.draw_string(font, base + Vector2(2, 2), s, HORIZONTAL_ALIGNMENT_LEFT, -1, px, SHADOW * Color(1, 1, 1, color.a))
 	_overlay.draw_string(font, base, s, HORIZONTAL_ALIGNMENT_LEFT, -1, px, color)
 
 

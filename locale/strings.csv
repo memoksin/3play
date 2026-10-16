@@ -10,17 +10,17 @@ KAHR_CARD_NUMBERS,"More than 50,000 people died in Turkey in the 2023 earthquake
 KAHR_CARD_FACT,"At 13:24, about 9 hours later, a second major quake (magnitude 7.5) hit near Elbistan. Many people had gone back into damaged buildings.","Yaklaşık 9 saat sonra, 13:24'te Elbistan yakınlarında ikinci büyük deprem (7,5) oldu. Birçok kişi hasarlı binalara geri dönmüştü."
 KAHR_CARD_HELP,"What would have helped: never go back into a damaged building after a big quake.","Ne yardımcı olurdu: büyük bir depremden sonra hasarlı binaya asla geri girmemek."
 KAHR_CARD_CO,"A stove in a closed car or tent can cause carbon monoxide poisoning.","Kapalı bir arabada ya da çadırda yakılan soba karbonmonoksit zehirlenmesine yol açabilir."
-KAHR_SOURCE,"Sources: USGS (magnitudes); Turkish authorities (AFAD) for deaths. TODO check final figure.","Kaynaklar: USGS (büyüklükler); ölü sayısı için AFAD. TODO son rakamı kontrol et."
+"KAHR_SOURCE","Sources: USGS Pazarcik M 7.8 https://earthquake.usgs.gov/earthquakes/eventpage/us6000jllz ; USGS Elbistan M 7.5 https://earthquake.usgs.gov/earthquakes/eventpage/us6000jlqa . Deaths: Turkey's official toll is about 53,500 (reported by news, AFAD primary release not checked), so the card says 'more than 50,000'.","Kaynaklar: USGS Pazarcık M 7,8 https://earthquake.usgs.gov/earthquakes/eventpage/us6000jllz ; USGS Elbistan M 7,5 https://earthquake.usgs.gov/earthquakes/eventpage/us6000jlqa . Ölü sayısı: Türkiye'nin resmî sayısı yaklaşık 53.500 (haberlerden, AFAD'ın birincil açıklaması kontrol edilmedi), kartta '50.000'den fazla' yazıyor."
 IO_PLACE,"Indian Ocean, Indonesia","Hint Okyanusu, Endonezya"
 IO_YEAR,"26 December 2004","26 Aralık 2004"
 IO_INTRO_1,"A magnitude 9.1 earthquake has struck off Sumatra.","Sumatra açıklarında 9,1 büyüklüğünde bir deprem oldu."
 IO_INTRO_2,"There is no tsunami warning system in the Indian Ocean. A giant wave is coming.","Hint Okyanusu'nda tsunami uyarı sistemi yok. Dev bir dalga geliyor."
-IO_TASK,"Channel the water into every safe basin before the wave arrives.","Dalga gelmeden suyu tüm güvenli havuzlara yönlendir."
-IO_CARD_SCORE,"%d/4 communities protected","%d/4 topluluk korundu"
-IO_CARD_NUMBERS,"The 2004 tsunami killed about 230,000 people in 14 countries.","2004 tsunamisi 14 ülkede yaklaşık 230.000 kişinin ölümüne yol açtı."
+IO_TASK,"Send the water into the basins before the wave hits.","Dalga vurmadan suyu havuzlara yönlendir."
+IO_CARD_SCORE,"%d/4 communities saved","%d/4 topluluk kurtuldu"
+"IO_CARD_NUMBERS","The 2004 tsunami killed or left missing about 228,000 people in more than a dozen countries.","2004 tsunamisi, bir düzineden fazla ülkede yaklaşık 228.000 kişinin ölümüne ya da kaybolmasına yol açtı."
 IO_CARD_FACT,"Many coasts were hit hours after the quake, with no siren and no warning.","Birçok kıyıya, depremden saatler sonra, siren ve uyarı olmadan dalga ulaştı."
 IO_CARD_HELP,"What would have helped: a warning system. InaTEWS, Indonesia's tsunami warning system, was built after 2004.","Ne yardımcı olurdu: bir uyarı sistemi. Endonezya'nın tsunami uyarı sistemi InaTEWS, 2004'ten sonra kuruldu."
-IO_SOURCE,"Sources: USGS (magnitude); NOAA (deaths); GFZ/GITEWS papers (InaTEWS). TODO check '14 countries'.","Kaynaklar: USGS (büyüklük); NOAA (ölü sayısı); GFZ/GITEWS makaleleri (InaTEWS). TODO '14 ülke' bilgisini kontrol et."
+"IO_SOURCE","Sources: USGS (magnitude 9.1) https://www.usgs.gov/news/featured-story/indian-ocean-tsunami-remembered-scientists-reflect-2004-indian-ocean-killed ; NOAA (227,899 dead or missing, 15 countries listed, Indonesia worst hit) https://sos.noaa.gov/Datasets/dataset.php?id=598; GFZ/GITEWS papers (InaTEWS, built after 2004). Estimates vary by source (some count more); the card says about 228,000.","Kaynaklar: USGS (büyüklük 9,1) https://www.usgs.gov/news/featured-story/indian-ocean-tsunami-remembered-scientists-reflect-2004-indian-ocean-killed ; NOAA (227.899 ölü veya kayıp, 15 ülke listeli, en çok Endonezya) https://sos.noaa.gov/Datasets/dataset.php?id=598; GFZ/GITEWS makaleleri (InaTEWS, 2004'ten sonra kuruldu). Tahminler kaynağa göre değişir (bazıları daha yüksek); kartta yaklaşık 228.000 yazıyor."
 CLOSING_LINE,"life has dimensions we cannot see","görmediğimiz boyutları var hayatın"
 GAME_TITLE,"3play",
 MENU_PROMPT,"Who are you when disaster strikes?",
@@ -67,3 +67,9 @@ KAHR_FIT_R_BLANKET,"keeps warm",
 KAHR_FIT_R_WATER,"drinking water",
 KAHR_FIT_R_MEDICINE,"first aid",
 GLOBE_HINT,"Drag to spin the world",
+IO_COMMUNITY_1,"Banda Aceh",
+IO_COMMUNITY_2,"Sabang",
+IO_COMMUNITY_3,"Meulaboh",
+IO_COMMUNITY_4,"Lhoknga",
+IO_CONNECT_WAVE,"The wave is here!",
+INTRO_NEXT,"Continue","Devam"

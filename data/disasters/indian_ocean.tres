@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="Disaster" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="Disaster" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/disaster.gd" id="1"]
+[ext_resource type="Resource" path="res://data/skins/indian_ocean_connect.tres" id="2"]
 
 [resource]
 script = ExtResource("1")
@@ -12,3 +13,4 @@ lon = 95.32
 year = 2004
 utc = "2004-12-26T00:58:53"
 minigame = &"connect"
+skin = ExtResource("2")
