@@ -9,4 +9,5 @@ role = &"state"
 key_prefix = "IO"
 lat = 5.55
 lon = 95.32
+year = 2004
 minigame = &"connect"

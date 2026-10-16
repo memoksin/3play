@@ -9,4 +9,5 @@ role = &"citizen"
 key_prefix = "KAHR"
 lat = 37.58
 lon = 36.93
+year = 2023
 minigame = &"fit"
