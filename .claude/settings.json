@@ -23,7 +23,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo \"Team inbox: arm the Monitor tool now with command \\\"$CLAUDE_PROJECT_DIR/.claude/hooks/inbox.sh\\\", description \\\"GitHub issue inbox\\\", timeout_ms 1800000. Re-arm it every time it expires. Each event is a teammate message on a GitHub issue: read it with gh issue view <N> --comments and reply on that issue if it is for you.\""
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-start.sh"
           }
         ]
       }
