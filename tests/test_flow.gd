@@ -4,7 +4,7 @@ var ok := true
 
 
 func _initialize() -> void:
-	_run()
+	_run.call_deferred()
 
 
 func _check(name: String, cond: bool) -> void:

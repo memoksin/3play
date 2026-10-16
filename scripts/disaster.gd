@@ -7,6 +7,8 @@ extends Resource
 @export var key_prefix: String
 @export var lat := 0.0
 @export var lon := 0.0
+## Event year: the globe counter rewinds to it.
+@export var year := 0
 ## Key in Game.SCENES: fit, connect.
 @export var minigame: StringName
 ## Mechanic data (FitSkin, ConnectSkin). Owned by the minigame.
