@@ -1,0 +1,72 @@
+[gd_resource type="Resource" script_class="FenerSkin" load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://scripts/fener_skin.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/fener_person.gd" id="2"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/citizen_mom.glb" id="3"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/citizen_child.glb" id="4"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/citizen_grandpa.glb" id="5"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/citizen_player.glb" id="6"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/citizen_rescuer.glb" id="7"]
+
+[sub_resource type="Resource" id="mom"]
+script = ExtResource("2")
+id = &"mom"
+name_key = "MOM"
+kind = 0
+spot_group = &"lost_a"
+family = true
+color = Color(1, 0.56, 0.64, 1)
+figure = ExtResource("3")
+
+[sub_resource type="Resource" id="sister"]
+script = ExtResource("2")
+id = &"sister"
+name_key = "SISTER"
+kind = 0
+spot_group = &"lost_b"
+family = true
+color = Color(0.48, 0.85, 0.56, 1)
+figure = ExtResource("4")
+
+[sub_resource type="Resource" id="grandpa"]
+script = ExtResource("2")
+id = &"grandpa"
+name_key = "GRANDPA"
+kind = 1
+spot_group = &"slow"
+family = true
+color = Color(0.56, 0.72, 1, 1)
+figure = ExtResource("5")
+
+[sub_resource type="Resource" id="ayse"]
+script = ExtResource("2")
+id = &"ayse"
+name_key = "AYSE"
+kind = 2
+spot_group = &"trapped"
+color = Color(1, 0.7, 0.28, 1)
+figure = ExtResource("3")
+
+[sub_resource type="Resource" id="hasan"]
+script = ExtResource("2")
+id = &"hasan"
+name_key = "HASAN"
+kind = 3
+spot_group = &"injured"
+color = Color(1, 0.42, 0.42, 1)
+figure = ExtResource("5")
+
+[sub_resource type="Resource" id="can"]
+script = ExtResource("2")
+id = &"can"
+name_key = "CAN"
+kind = 4
+spot_group = &"cold"
+color = Color(0.77, 0.55, 1, 1)
+figure = ExtResource("4")
+
+[resource]
+script = ExtResource("1")
+people = Array[ExtResource("2")]([SubResource("mom"), SubResource("sister"), SubResource("grandpa"), SubResource("ayse"), SubResource("hasan"), SubResource("can")])
+player_scene = ExtResource("6")
+rescuer_scene = ExtResource("7")

@@ -8,6 +8,7 @@ const SCENES := {
 	&"fit": "res://scenes/minigames/fit.tscn",
 	&"connect": "res://scenes/minigames/connect.tscn",
 	&"beam": "res://scenes/minigames/beam.tscn",
+	&"fener": "res://scenes/minigames/fener.tscn",
 	&"result": "res://scenes/result.tscn",
 }
 const DEFAULT_LOCALE := "tr"  # until the player picks another with the menu's TR / EN switch

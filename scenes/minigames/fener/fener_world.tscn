@@ -1,0 +1,155 @@
+[gd_scene load_steps=14 format=3]
+
+[ext_resource type="Script" path="res://scenes/minigames/fener/fener_world.gd" id="1_script"]
+[ext_resource type="Shader" path="res://scenes/style/void_sky.gdshader" id="2_sky"]
+[ext_resource type="Shader" path="res://scenes/style/post_25d.gdshader" id="3_post"]
+[ext_resource type="Shader" path="res://scenes/style/light_beam.gdshader" id="4_beam"]
+[ext_resource type="Shader" path="res://scenes/style/soft_particle.gdshader" id="5_soft"]
+
+[sub_resource type="ShaderMaterial" id="sky_mat"]
+shader = ExtResource("2_sky")
+shader_parameter/top_color = Color(0.015, 0.02, 0.05, 1)
+shader_parameter/mid_color = Color(0.04, 0.05, 0.11, 1)
+shader_parameter/glow_color = Color(0.1, 0.12, 0.24, 1)
+
+[sub_resource type="Sky" id="sky"]
+sky_material = SubResource("sky_mat")
+
+[sub_resource type="Environment" id="env"]
+background_mode = 2
+sky = SubResource("sky")
+ambient_light_source = 2
+ambient_light_color = Color(0.3, 0.4, 0.72, 1)
+ambient_light_energy = 0.045
+reflected_light_source = 1
+tonemap_mode = 4
+tonemap_exposure = 1.0
+glow_enabled = true
+glow_intensity = 0.9
+glow_strength = 1.0
+glow_bloom = 0.04
+glow_blend_mode = 1
+glow_hdr_threshold = 0.9
+fog_enabled = true
+fog_mode = 1
+fog_light_color = Color(0.03, 0.04, 0.09, 1)
+fog_density = 1.0
+fog_depth_begin = 160.0
+fog_depth_end = 330.0
+fog_depth_curve = 1.6
+adjustment_enabled = true
+adjustment_contrast = 1.08
+adjustment_saturation = 1.1
+
+[sub_resource type="ShaderMaterial" id="post_mat"]
+shader = ExtResource("3_post")
+shader_parameter/focus_y = 0.55
+shader_parameter/focus_band = 0.3
+shader_parameter/blur_px = 2.5
+shader_parameter/vignette = 0.75
+
+[sub_resource type="ShaderMaterial" id="beam_mat"]
+render_priority = 1
+shader = ExtResource("4_beam")
+shader_parameter/color = Color(1, 0.82, 0.55, 1)
+shader_parameter/strength = 0.32
+shader_parameter/height = 13.0
+
+[sub_resource type="CylinderMesh" id="beam_mesh"]
+material = SubResource("beam_mat")
+top_radius = 5.5
+bottom_radius = 0.05
+height = 13.0
+radial_segments = 24
+rings = 1
+cap_top = false
+cap_bottom = false
+
+[sub_resource type="ShaderMaterial" id="flake_mat"]
+render_priority = 2
+shader = ExtResource("5_soft")
+shader_parameter/tint = Color(0.9, 0.94, 1, 0.9)
+shader_parameter/glow = 0.25
+shader_parameter/hardness = 0.55
+
+[sub_resource type="QuadMesh" id="flake"]
+material = SubResource("flake_mat")
+size = Vector2(0.1, 0.1)
+
+[node name="FenerWorld" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="Env" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
+
+[node name="Moon" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-48, -38, 0)
+light_color = Color(0.6, 0.72, 1, 1)
+light_energy = 0.06
+shadow_enabled = true
+shadow_blur = 1.5
+directional_shadow_mode = 0
+directional_shadow_max_distance = 90.0
+
+[node name="Camera" type="Camera3D" parent="."]
+rotation_degrees = Vector3(-40, -22, 0)
+current = true
+fov = 26.0
+near = 1.0
+far = 400.0
+
+[node name="Player" type="Node3D" parent="."]
+
+[node name="Torch" type="SpotLight3D" parent="Player"]
+position = Vector3(0.22, 1.22, 0.6)
+rotation_degrees = Vector3(-10, 180, 0)
+light_color = Color(1, 0.94, 0.82, 1)
+light_energy = 15.0
+spot_range = 15.5
+spot_angle = 24.0
+spot_angle_attenuation = 0.55
+shadow_enabled = true
+shadow_bias = 0.12
+shadow_normal_bias = 2.0
+
+[node name="Beam" type="MeshInstance3D" parent="Player/Torch"]
+position = Vector3(0, 0, -6.5)
+rotation_degrees = Vector3(-90, 0, 0)
+cast_shadow = 0
+mesh = SubResource("beam_mesh")
+
+[node name="Near" type="OmniLight3D" parent="Player"]
+position = Vector3(0, 1.7, 0.3)
+light_color = Color(1, 0.9, 0.75, 1)
+light_energy = 0.55
+omni_range = 4.0
+omni_attenuation = 1.6
+
+[node name="Snow" type="CPUParticles3D" parent="."]
+position = Vector3(0, 16, 0)
+amount = 1600
+lifetime = 9.0
+preprocess = 9.0
+local_coords = false
+mesh = SubResource("flake")
+emission_shape = 3
+emission_box_extents = Vector3(26, 1, 22)
+direction = Vector3(0.2, -1, 0)
+spread = 12.0
+gravity = Vector3(0.25, -0.9, 0)
+initial_velocity_min = 0.8
+initial_velocity_max = 1.4
+scale_amount_min = 0.6
+scale_amount_max = 1.5
+
+[node name="Post" type="CanvasLayer" parent="."]
+layer = -1
+
+[node name="Grade" type="ColorRect" parent="Post"]
+material = SubResource("post_mat")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2

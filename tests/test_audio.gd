@@ -141,10 +141,10 @@ func _run() -> void:
 	audio.stop_all()
 	audio.clear_injected()
 
-	# 5. Fit hooks, Kahramanmaras (#89).
+	# 5. Fit hooks, Kahramanmaras (#89; it plays Fener now, the old Fit skin on a copy).
 	var game := root.get_node("Game")
 	game.store_path = ""
-	game.disaster = load("res://data/disasters/kahramanmaras.tres")
+	game.disaster = _kahr_fit()
 	var fit: Control = load("res://scenes/minigames/fit.tscn").instantiate()
 	root.add_child(fit)
 	await process_frame
@@ -388,3 +388,11 @@ func _run() -> void:
 	await create_timer(0.5).timeout  # the audio thread releases the stopped streams; quitting at once leaks them (flaky)
 	print("OK" if ok else "FAILED")
 	quit(0 if ok else 1)
+
+
+## Kahramanmaras plays Fener now (#123): the Fit regression runs on a copy with its old Fit skin.
+static func _kahr_fit() -> Disaster:
+	var d: Disaster = (load("res://data/disasters/kahramanmaras.tres") as Disaster).duplicate()
+	d.minigame = &"fit"
+	d.skin = load("res://data/skins/kahramanmaras_fit.tres")
+	return d

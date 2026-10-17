@@ -1,6 +1,6 @@
 extends SceneTree
 ## Frame-cost audit of every scene state. Needs a window (not --headless), vsync is forced off:
-## godot --path . -s res://tools/perf.gd [-- --secs=5 --repeat=3 --only=fit --skip-warm]
+## godot --path . -s res://tools/perf.gd [-- --secs=5 --repeat=3 --only=fener --skip-warm]
 ## Per state: avg / p95 wall frame time (ms), script process time, draw calls, primitives, static memory.
 ## With --repeat=N the table shows the median over N runs and flags states whose runs differ > 15 %.
 ## Exits 0 after printing the table; always quits (frame cap + wall-clock watchdog).
@@ -69,8 +69,8 @@ func _run() -> void:
 			await _globe(game, name)
 		for name in ["diorama kahr", "diorama io", "diorama sf"]:
 			await _diorama(game, name)
-		await _fit(game, "fit kahr idle", "res://data/disasters/kahramanmaras.tres", false)
-		await _fit(game, "fit kahr drag", "res://data/disasters/kahramanmaras.tres", true)
+		await _fener(game, "fener idle", false)
+		await _fener(game, "fener walk+shock", true)
 		await _fit(game, "fit sf idle", "res://data/disasters/solar_flare.tres", false)
 		await _fit(game, "fit sf drag", "res://data/disasters/solar_flare.tres", true)
 		await _connect(game, "connect idle", false)
@@ -183,6 +183,39 @@ func _fit(game: Node, name: String, disaster: String, drag: bool) -> void:
 		print("    drag active: ", root.gui_is_dragging())
 		_mouse(last, false, true, last)
 	fit.queue_free()
+	await process_frame
+
+
+## Fener (#123): standing at the start with the torch on, or walking the avenue to the camp (its fires,
+## tents, beacons) through an aftershock (debris, dust, risk bands).
+func _fener(game: Node, name: String, walk: bool) -> void:
+	if not _wanted(name):
+		return
+	game.disaster = load("res://data/disasters/kahramanmaras.tres")
+	var s: Control = load("res://scenes/minigames/fener.tscn").instantiate()
+	s.submit = false
+	root.add_child(s)
+	await process_frame
+	s.intro_left = 0.0
+	s.manual = true
+	s.ov_on = true
+	if not walk:
+		s.next_shock = 999.0
+		await _measure(name, func(_n: int) -> void: s.step(1.0 / 60.0))
+	else:
+		s.ppos = Vector2(-40.0, -2.5)
+		var route: Array[Vector2] = [Vector2(-13, -2.5), Vector2(-13, 3.1), Vector2(24, 3.1), Vector2(24, 12), Vector2(31, 22), Vector2(31, 22)]
+		var wp := [0]
+		s.next_shock = 1.0
+		var each := func(n: int) -> void:
+			if wp[0] < route.size() - 1 and s.ppos.distance_to(route[wp[0]]) < 0.6:
+				wp[0] += 1
+			s.ov_move = (route[wp[0]] - s.ppos).normalized() if s.ppos.distance_to(route[wp[0]]) > 0.6 else Vector2.ZERO
+			s.step(1.0 / 20.0)  # game time 3x: the 5 s window covers the avenue and the camp
+			if s.shock.is_empty() and s.t > 4.0:
+				s.next_shock = s.t + 3.0
+		await _measure(name, each)
+	s.queue_free()
 	await process_frame
 
 

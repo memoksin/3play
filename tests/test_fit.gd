@@ -107,7 +107,7 @@ func _logic() -> void:
 
 func _scene() -> void:
 	var game := root.get_node("Game")
-	game.ensure_disaster(&"citizen")
+	game.disaster = _kahr_fit()
 	_check("scene: disaster has skin", game.disaster.skin is FitSkin)
 	var fit: Control = load("res://scenes/minigames/fit.tscn").instantiate()
 	root.add_child(fit)
@@ -166,7 +166,7 @@ func _tex(w: int, h: int) -> ImageTexture:
 
 func _art_fields() -> void:
 	var game := root.get_node("Game")
-	game.ensure_disaster(&"citizen")
+	game.disaster = _kahr_fit()
 	var base: FitSkin = game.disaster.skin
 	var sk := _strip(base)
 	var person := sk.items.filter(func(i: FitItem) -> bool: return i.type == &"person")[0] as FitItem
@@ -233,3 +233,11 @@ func _strip(base: FitSkin) -> FitSkin:
 	sk.warm_icon = null
 	sk.cold_icon = null
 	return sk
+
+
+## Kahramanmaras plays Fener now (#123): the Fit regression runs on a copy with its old Fit skin.
+static func _kahr_fit() -> Disaster:
+	var d: Disaster = (load("res://data/disasters/kahramanmaras.tres") as Disaster).duplicate()
+	d.minigame = &"fit"
+	d.skin = load("res://data/skins/kahramanmaras_fit.tres")
+	return d

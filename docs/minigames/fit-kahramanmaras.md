@@ -1,5 +1,7 @@
 # Fit minigame: Kahramanmaras (Citizen)
 
+> Obsolete for Kahramanmaras: the citizen role plays Fener now (#123, `docs/minigames/fener-kahramanmaras.md`). Kept for the Fit mechanic and its tests.
+
 Mechanic: Fit (`minigames/fit`). Design: `docs/design.md`. Issue #15.
 
 Approved prototype (HTML, reference for feel + numbers): https://claude.ai/artifact/TjbftKKFP1PgAMNf92BFWf
