@@ -59,6 +59,8 @@ Burcu's rule: every button in every scene uses the same two sounds, no exception
 |---|---|---|---|---|---|---|---|---|
 | UI1 | Button hover | The mouse is over any button: menus, minigame choice and card buttons, the pause menu (4 buttons), settings, result card | UI_Hover | unfa | https://freesound.org/people/unfa/sounds/565131/ | CC0 | in repo (M2) | Same as M2. Also on the pause menu opened inside a minigame. |
 | UI2 | Button click | Any button is pressed, including the pause menu buttons | Soft UI Button Click | Jummit | https://freesound.org/people/Jummit/sounds/528561/ | CC0 | in repo (M3) | Same as M3. |
+| UI3 | Settings panel and pause menu | Settings (language, invert Y, fullscreen, replay prologue, back) and the pause menu (Resume, Settings, Main menu, Quit) | UI1 hover and UI2 click | | | | chosen | All of these are buttons or toggles, so the global hook covers them. The language flags keep LS1 and LS2. |
+| UI4 | Sliders | Master, Music, Effects volume and mouse sensitivity sliders | | | | | no sound | Burcu: no sound on sliders. |
 
 ## Language screen (flag select)
 
