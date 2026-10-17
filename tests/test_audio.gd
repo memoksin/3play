@@ -387,11 +387,11 @@ func _run() -> void:
 
 	# 10. Second sound batch (#126): files exist, C10 on a locked pipe, Beam hook.
 	var fresh: Array[StringName] = [&"G9", &"D1", &"C10", &"FN1", &"FN2", &"FN3a", &"FN3b", &"FN4", &"FN5", &"FN6", &"FN7", &"FN8", &"FN9",
-			&"FR1", &"FR2", &"FR3", &"FR4", &"FR5", &"FR6", &"FR7.1", &"FR7.2", &"FR8", &"FR9", &"FR11a", &"FR11b",
+			&"FR1", &"FR2", &"FR3", &"FR4", &"FR6", &"FR7.1", &"FR7.2", &"FR8", &"FR9", &"FR11a", &"FR11b",
 			&"BM1", &"BM2", &"BM3", &"BM4", &"BM5", &"BM8"]
 	for id in fresh:
 		_check("cue %s file exists" % id, audio.CUES.has(id) and ResourceLoader.exists(audio.ROOT + audio.CUES[id].path))
-	_check("loop cues: FN2 FR5 FR8 FR9 BM3 loop", [&"FN2", &"FR5", &"FR8", &"FR9", &"BM3"].all(func(id: StringName) -> bool: return audio.CUES[id].get("loop", false)))
+	_check("loop cues: FN2 FR8 FR9 BM3 loop", [&"FN2", &"FR8", &"FR9", &"BM3"].all(func(id: StringName) -> bool: return audio.CUES[id].get("loop", false)))
 	audio.stop_all()
 	audio.clear_injected()
 	for id in [&"D2", &"C1", &"C2", &"C10"]:
@@ -445,6 +445,58 @@ func _run() -> void:
 	bm.queue_free()
 	await process_frame
 	_check("beam: leaving stops BM1", "stop:BM1" in _log())
+	audio.stop_all()
+	audio.clear_injected()
+
+	# 11. Fire hook, C3/C4 files (#126).
+	for id in [&"C3", &"C4"]:
+		_check("cue %s file exists" % id, ResourceLoader.exists(audio.ROOT + audio.CUES[id].path))
+	_check("FR5 sanding file is gone", not ResourceLoader.exists(audio.ROOT + "fire/sanding_loop.ogg"))
+	for id in [&"FR5", &"FR5.1", &"FR13", &"FR13b"]:
+		_check("stub cue %s exists, silent without a file" % id, audio.CUES.has(id) and audio.play(id) == null)
+	audio.stop_all()
+	audio.clear_injected()
+	for id in [&"FR1", &"FR2", &"FR3", &"FR4", &"FR5", &"FR5.1", &"FR6", &"FR7.1", &"FR7.2", &"FR8", &"FR9", &"FR11a", &"FR11b", &"FR13", &"FR13b"]:
+		audio.inject_stream(id, _wav(1.0))
+	game.disaster = load("res://data/disasters/black_saturday.tres")
+	var fire: Node3D = load("res://scenes/minigames/fire.tscn").instantiate()
+	fire.submit = false
+	fire.time_scale = 0.0
+	root.add_child(fire)
+	await process_frame
+	_check("fire: ambience FR1 and flame FR9 loop", "loop:FR1" in _log() and "loop:FR9" in _log())
+	var map := {&"land": "play:FR3", &"cutters": "play:FR4", &"snip": "play:FR5", &"panel_land": "play:FR5.1", &"success": "play:FR6",
+			&"attach": "play:FR7.1", &"valve": "play:FR7.2", &"water_on": "loop:FR8", &"exit": "play:FR13", &"lose": "play:FR13b"}
+	for kind: StringName in map:
+		audio.reset_history()
+		fire.sound_event.emit(kind, 0)
+		_check("fire: %s -> %s" % [kind, map[kind]], _log() == [map[kind]])
+	audio.reset_history()
+	fire.sound_event.emit(&"water_off", 0)
+	_check("fire: water_off stops FR8", _log() == ["stop:FR8"])
+	audio.reset_history()
+	for kind in [&"jump", &"cut", &"hose", &"heartbeat", &"gust"]:
+		fire.sound_event.emit(kind, 0)
+	_check("fire: jump, cut, hose, heartbeat, gust are silent", _log().is_empty())
+	fire.sound_event.emit(&"footstep", 0)
+	_check("fire: footstep loops FR2", _log() == ["loop:FR2"])
+	audio.tick(0.2)
+	_check("fire: FR2 keeps going while steps continue", audio.is_playing(&"FR2") and not "stop:FR2" in _log())
+	audio.tick(0.6)
+	_check("fire: FR2 stops after the steps stop", "stop:FR2" in _log())
+	audio.reset_history()
+	fire.sound_event.emit(&"flame_out", 0)
+	var fo: Array = audio.history.filter(func(e: Dictionary) -> bool: return e.op == &"stop" and e.id == &"FR9")
+	_check("fire: flame out fades FR9 about 1 s", fo.size() == 1 and absf(fo[0].fade - 1.0) < 0.01)
+	audio.reset_history()
+	fire.sound_event.emit(&"kangaroo", 0)
+	fire.sound_event.emit(&"kangaroo", 2)
+	audio.tick(1.0)
+	_check("fire: kangaroos play FR11b once and FR11a 3 times offset", _times(&"play", &"FR11b").size() == 1
+			and _times(&"play", &"FR11a").size() == 3 and _times(&"play", &"FR11a")[1] > _times(&"play", &"FR11a")[0])
+	fire.queue_free()
+	await process_frame
+	_check("fire: leaving stops the loops", "stop:FR1" in _log() and "stop:FR9" in _log())
 	audio.stop_all()
 	audio.clear_injected()
 

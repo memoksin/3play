@@ -79,8 +79,8 @@ const CUES := {
 	# Connect
 	&"C1": {"path": "connect/morning_birds.ogg", "bus": &"SFX", "volume_db": -12.0, "loop": true, "fade_in": 1.0, "notes": "calm bay birds, on top of D2 (#95)"},
 	&"C2": {"path": "connect/clank1.ogg", "bus": &"SFX", "volume_db": -8.0, "notes": "rotate a pipe"},
-	&"C3": {"path": "connect/wave_rising.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "wave comes into view; NOT CHOSEN YET (later)"},
-	&"C4": {"path": "connect/wave_hit.ogg", "bus": &"SFX", "volume_db": -4.0, "notes": "wave breaks on the beach; NOT CHOSEN YET (later)"},
+	&"C3": {"path": "connect/wave_rising.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "wave comes into view, 15 s before the hit (Rumble fade in 10s)"},
+	&"C4": {"path": "connect/wave_hit.ogg", "bus": &"SFX", "volume_db": 14.0, "notes": "wave breaks on the beach (Ocean Waves 32 to 37 s); very quiet source, +14 dB"},
 	&"C5": {"path": "connect/pipe_water_stream.ogg", "bus": &"SFX", "volume_db": -10.0, "loop": true, "fade_in": 0.2, "notes": "water flows through the pipes; from about 0:40"},
 	&"C6": {"path": "connect/water_echo.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "basin fills"},
 	&"C7": {"path": "connect/big_water_splash.ogg", "bus": &"SFX", "volume_db": -12.0, "notes": "broken line spills; repeated and overlapping (#95)"},
@@ -109,19 +109,22 @@ const CUES := {
 	&"FN7": {"path": F_GLOCK, "bus": &"SFX", "volume_db": 0.0, "notes": "family at the assembly point, same file as C10 (not wired yet)"},
 	&"FN8": {"path": F_CRACK, "bus": &"SFX", "volume_db": -4.0, "notes": "aftershock, same file as F6 (not wired yet)"},
 	&"FN9": {"path": "fener/hurt.ogg", "bus": &"SFX", "volume_db": -2.0, "notes": "player hurt near a building, about 0.2 s (not wired yet)"},
-	# Fire (Black Saturday). Files only, not wired to a scene yet.
-	&"FR1": {"path": "fire/wildfire_wind_loop.ogg", "bus": &"SFX", "volume_db": -8.0, "loop": true, "fade_in": 0.5, "notes": "fire and wind ambience, 10 s seamless loop (not wired yet)"},
-	&"FR2": {"path": F_FOOT, "bus": &"SFX", "volume_db": 0.0, "loop": true, "notes": "footsteps, same file as FN2 (not wired yet)"},
-	&"FR3": {"path": "fire/landing.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "jump landing on debris (not wired yet)"},
-	&"FR4": {"path": F_PICK, "bus": &"SFX", "volume_db": -6.0, "notes": "pick up the knife, same file as F2 (not wired yet)"},
-	&"FR5": {"path": "fire/sanding_loop.ogg", "bus": &"SFX", "volume_db": -8.0, "loop": true, "notes": "knife rubs the fence, 2.6 s loop (not wired yet)"},
-	&"FR6": {"path": F_GLOCK, "bus": &"SFX", "volume_db": 0.0, "notes": "task done, same file as C10 (not wired yet)"},
-	&"FR7.1": {"path": "fire/door_lock.ogg", "bus": &"SFX", "volume_db": -2.0, "notes": "hose attached (not wired yet)"},
-	&"FR7.2": {"path": "fire/hose_valve_trim.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "valve turn, 5 s of Hose Sounds (not wired yet)"},
-	&"FR8": {"path": "fire/hose_spray_loop.ogg", "bus": &"SFX", "volume_db": -8.0, "loop": true, "notes": "water spray, 10 s loop (not wired yet)"},
-	&"FR9": {"path": "fire/fire_crackling_loop.ogg", "bus": &"SFX", "volume_db": -10.0, "loop": true, "fade_in": 0.3, "notes": "small flame, 15.5 s seamless loop, no wind; fade it out when the flame goes out (not wired yet)"},
-	&"FR11a": {"path": "fire/horse_gallop.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "kangaroos run: gallop layer; play with FR11b, 2 to 3 times overlapping (not wired yet)"},
-	&"FR11b": {"path": "fire/footsteps_dirt_trim.ogg", "bus": &"SFX", "volume_db": -2.0, "notes": "kangaroos run: dirt footsteps layer, quiet source (not wired yet)"},
+	# Fire (Black Saturday, scenes/minigames/fire.gd), see _hook_fire.
+	&"FR1": {"path": "fire/wildfire_wind_loop.ogg", "bus": &"SFX", "volume_db": -8.0, "loop": true, "fade_in": 0.5, "notes": "fire and wind ambience, 10 s seamless loop"},
+	&"FR2": {"path": F_FOOT, "bus": &"SFX", "volume_db": 0.0, "loop": true, "notes": "footsteps, same file as FN2"},
+	&"FR3": {"path": "fire/landing.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "jump landing on debris"},
+	&"FR4": {"path": F_PICK, "bus": &"SFX", "volume_db": -6.0, "notes": "pick up the knife, same file as F2"},
+	&"FR5": {"path": "fire/snip.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "wire cutter snips a fence tie (event snip, 6 per fence); NOT CHOSEN YET (stub)"},
+	&"FR5.1": {"path": "fire/panel_land.ogg", "bus": &"SFX", "volume_db": -4.0, "notes": "cut fence panel slams down (event panel_land); NOT CHOSEN YET (stub)"},
+	&"FR13": {"path": "fire/ending.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "ending shot, escaped (event exit); NOT CHOSEN YET (stub)"},
+	&"FR13b": {"path": "fire/ending_dark.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "ending shot, time ran out (event lose), lower and heavier; NOT CHOSEN YET (stub)"},
+	&"FR6": {"path": F_GLOCK, "bus": &"SFX", "volume_db": 0.0, "notes": "task done, same file as C10"},
+	&"FR7.1": {"path": "fire/door_lock.ogg", "bus": &"SFX", "volume_db": -2.0, "notes": "hose attached"},
+	&"FR7.2": {"path": "fire/hose_valve_trim.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "valve turn, 5 s of Hose Sounds"},
+	&"FR8": {"path": "fire/hose_spray_loop.ogg", "bus": &"SFX", "volume_db": -8.0, "loop": true, "notes": "water spray, 10 s loop"},
+	&"FR9": {"path": "fire/fire_crackling_loop.ogg", "bus": &"SFX", "volume_db": -10.0, "loop": true, "fade_in": 0.3, "notes": "small flame, 15.5 s seamless loop, no wind; fade it out when the flame goes out"},
+	&"FR11a": {"path": "fire/horse_gallop.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "kangaroos run: gallop layer; play with FR11b, 2 to 3 times overlapping"},
+	&"FR11b": {"path": "fire/footsteps_dirt_trim.ogg", "bus": &"SFX", "volume_db": -2.0, "notes": "kangaroos run: dirt footsteps layer, quiet source"},
 	# Beam (#124)
 	&"BM1": {"path": F_SOLAR, "bus": &"SFX", "volume_db": -12.0, "loop": true, "fade_in": 0.5, "notes": "space ambience, same file as D3"},
 	&"BM2": {"path": "beam/servo_trim.ogg", "bus": &"SFX", "volume_db": 0.0, "notes": "rotate a satellite; quiet source"},
@@ -141,6 +144,7 @@ const SCENE_HOOKS := {
 	"res://scenes/minigames/fit.tscn": &"_hook_fit",
 	"res://scenes/minigames/connect.tscn": &"_hook_connect",
 	"res://scenes/minigames/beam.tscn": &"_hook_beam",
+	"res://scenes/minigames/fire.tscn": &"_hook_fire",
 	"res://scenes/result.tscn": &"_hook_result",
 }
 ## Buttons owned by these scenes get the hover (M2) and click (M3) sounds.
@@ -152,6 +156,11 @@ const G2_FULL_SPEED := 6.0
 const G2_STOP_SPEED := 0.3
 const G2_SMOOTH := 8.0
 const G2_FLOOR_DB := -40.0
+## Fire: footsteps (FR2) end this long after the last step event; kangaroo gallop (FR11a) repeats.
+const FIRE_STEP_HOLD := 0.55
+const FIRE_GALLOPS := 3
+const FIRE_GALLOP_GAP := 0.3
+const FIRE_FLAME_FADE := 1.0
 const HISTORY_CAP := 256
 
 ## Test/debug log of every call: {op, id, t (Audio clock), played, fade}. Newest last.
@@ -653,3 +662,56 @@ func _on_beam_event(kind: StringName, index: int) -> void:
 		&"tick":
 			play(&"BM8", {"volume_db": 3.0 if index == 1 else 0.0})
 		# reflect, split, overheat, collect, blackout, ready: no sound yet.
+
+
+func _hook_fire(f) -> void:
+	_when_ready(f, func() -> void:
+		loop(&"FR1")
+		loop(&"FR9")  # the small flame burns until it is put out
+		var st := {"step": -99.0, "roos": false}
+		var fid: int = f.get_instance_id()  # the lambda must not capture the node: it may be freed
+		_polls.append(func() -> bool:
+			var fn: Node = instance_from_id(fid) as Node
+			if fn == null or not fn.is_inside_tree():
+				return true
+			if clock - st.step > FIRE_STEP_HOLD:
+				stop(&"FR2", 0.1)
+			return false)
+		f.sound_event.connect(func(kind: StringName, index: int) -> void:
+			match kind:
+				&"footstep":
+					st.step = clock
+					loop(&"FR2")
+				&"land":
+					play(&"FR3")
+				&"cutters":
+					play(&"FR4")
+				&"snip":
+					play(&"FR5")
+				&"panel_land":
+					play(&"FR5.1")
+				&"success":
+					play(&"FR6")
+				&"attach":
+					play(&"FR7.1")
+				&"valve":
+					play(&"FR7.2")
+				&"water_on":
+					loop(&"FR8")
+				&"water_off":
+					stop(&"FR8", 0.2)
+				&"flame_out":
+					stop(&"FR9", FIRE_FLAME_FADE)  # FR10: the flame sound fades out
+				&"kangaroo":
+					if not st.roos:  # the run starts: gallop a few times, slightly offset, dirt steps once
+						st.roos = true
+						for k in FIRE_GALLOPS:
+							after(k * FIRE_GALLOP_GAP, func() -> void: play(&"FR11a", {"pitch": 1.0 + (k - 1) * 0.04}), f)
+						play(&"FR11b")
+				&"exit":
+					play(&"FR13")
+				&"lose":
+					play(&"FR13b")
+				# jump, cut, hose, heartbeat, gust: no sound.
+		)
+		_bind_exit(f, [&"FR1", &"FR2", &"FR8", &"FR9", &"FR11a", &"FR11b", &"FR13", &"FR13b"], 0.5))
