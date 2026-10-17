@@ -196,7 +196,8 @@ func _scene() -> void:
 	s.seek(60.5)
 	_check("scene: locked at 60 s", s.locked)
 	_check("scene: no turning after the hit", not s.rotate_cell(1, 0))
-	_check("scene: score is the logic's count (%d)" % want, s.saved_count == -1 and s._saved.count(true) == want)
+	want = 4 if want == 4 else 0  # all or nothing
+	_check("scene: score is all or nothing (%d)" % want, s.saved_count == -1 and s._saved.count(true) == want)
 	s.seek(200.0)
 	_check("scene: finished, %d/4" % want, s.saved_count == want)
 	s.queue_free()
@@ -255,14 +256,15 @@ func _scene() -> void:
 			_check("result: unsolved -> the town is still flooded after the drain, the sea settled (%.2f m)" % depth_end.min(),
 				s._finished and s._hit_t() > s._drain_start() + s.DRAIN and land_on and depth_end.min() > 1.0 and sea_still)
 		else:
-			_check("result: partial -> lost communities keep their water at the end, saved ones dry",
-				(wd._floods[3] as Node3D).visible and depth_end[0] < 0.0 and depth_end[1] < 0.0 and depth_end[2] < 0.0)
+			_check("result: partial -> all or nothing: the whole town is still flooded at the end (%.2f m)" % depth_end.min(),
+				land_on and depth_end.min() > 1.0 and sea_still)
 		if case == "solved":
 			_check("result: solved -> no flood over the land, every community dry", s.saved_count == 4 and not shown and not wet.has(true))
 		elif case == "unsolved":
 			_check("result: unsolved -> the flood covers the town", s.saved_count < 4 and not s._saved.has(true) and shown and wet.has(true))
 		else:
-			_check("result: partial -> the saved communities stay dry", s._saved == [true, true, true, false] and wet == [false, false, false, false])
+			_check("result: partial -> every community floods, 0 saved", s.saved_count == 0 and s._saved == [false, false, false, false]
+				and shown and not wet.has(false))
 		s.queue_free()
 		await process_frame
 
@@ -329,7 +331,7 @@ func _scene() -> void:
 	s.queue_free()
 	await process_frame
 
-	# one broken line -> 3/4
+	# one broken line -> all or nothing: 0/4, every community floods
 	s = _new_scene()
 	await process_frame
 	s.time_scale = 0.0
@@ -337,9 +339,18 @@ func _scene() -> void:
 	s.solve()
 	s.rotate_cell(5, 5)
 	_check("scene: one turned corner leaves 3 lines", L.complete_lines(skin, s.rots) == 3)
+	var kinds := []
+	s.sound_event.connect(func(kind: StringName, index: int) -> void: kinds.append([kind, index]))
+	var got := []
+	s.finished.connect(func(a: int, b: int) -> void: got.append([a, b]))
 	s.seek(200.0)
-	_check("scene: one broken line -> 3/4", s.saved_count == 3)
-	_check("scene: community 4 floods", s._flood_at[3] >= 0.0 and s._flood_at[0] < 0.0)
+	_check("scene: completed lines still fill their basins, then all 4 flood, then drain",
+		kinds.filter(func(e: Array) -> bool: return e[0] == &"basin").size() == 3
+		and kinds.filter(func(e: Array) -> bool: return e[0] == &"spill").size() == 1
+		and kinds.filter(func(e: Array) -> bool: return e[0] == &"flood").size() == 4
+		and kinds[kinds.size() - 1][0] == &"drain" and got == [[0, 4]])
+	_check("scene: one broken line -> 0/4", s.saved_count == 0)
+	_check("scene: every community floods", s._flood_at.size() == 4 and s._flood_at.min() >= 0.0)
 	s.queue_free()
 	await process_frame
 
@@ -383,7 +394,7 @@ func _scene() -> void:
 	s.seek(60.5)
 	_check("lock: hit keeps the locked line, no extra lock event", s._lines_locked == [0] and events.filter(func(e: Array) -> bool: return e[0] == &"locked").size() == 1)
 	s.seek(200.0)
-	_check("lock: locked line is saved", s.saved_count >= 1 and s._saved[0])
+	_check("lock: other lines open -> nothing saved (all or nothing)", s.saved_count == 0 and not s._saved.has(true))
 	s.queue_free()
 	await process_frame
 

@@ -23,10 +23,8 @@ const BOAT_STRAND: Array[Vector2] = [Vector2(8.8, 3.1), Vector2(9.6, 10.2), Vect
 ## Community centres on top (coast u, depth d), one per basin, above its shaft (coast_slab.py SHAFTS).
 const VILLAGE_UD: Array[Vector2] = [Vector2(15.6, 1.8), Vector2(18.6, 1.9), Vector2(21.6, 1.8), Vector2(24.8, 2.2)]
 const VILLAGE_R := 1.7
-## Run-up limits (connect_wave.gd reach): every community saved -> the water stops on the beach; some
-## saved -> it stops VILLAGE_KEEP m short of the first saved one (the unsaved ones past it get their own flood).
+## Run-up limit (connect_wave.gd reach) when every community is saved: the water stops on the beach.
 const BEACH_REACH := 4.2
-const VILLAGE_KEEP := 3.0
 const HOVER_LIFT := 0.32
 const LOCK_COLOR := Color(1.0, 0.82, 0.35)  # warm gold: the frame glint of a line that just locked
 const DENY_TILT := 0.14  # rad, peak of the "locked" wiggle
@@ -864,19 +862,11 @@ func _show_wave(s: Node, level: float) -> void:
 	_show_boats(tau)
 
 
-## How far inland the tsunami runs (coast u) for the result: INF = the whole town (nothing saved), the beach
-## (all saved), else VILLAGE_KEEP short of the first saved community. Before the hit the result is open: INF.
+## How far inland the tsunami runs (coast u) for the result: the beach when every community is saved, else
+## (or before the hit, while the result is open) INF: the whole town. All or nothing (connect.gd _start_hit).
 func run_up_reach(s: Node) -> float:
 	var saved: Array = s._saved
-	if not s._hit or not saved.has(true):
-		return INF
-	if not saved.has(false):
-		return BEACH_REACH
-	var r := INF
-	for v in mini(saved.size(), VILLAGE_UD.size()):
-		if saved[v]:
-			r = minf(r, VILLAGE_UD[v].x - VILLAGE_KEEP)
-	return maxf(r, BEACH_REACH)
+	return BEACH_REACH if s._hit and not saved.is_empty() and not saved.has(false) else INF
 
 
 ## Water depth over the ground at coast (u, d) (< 0: dry).
