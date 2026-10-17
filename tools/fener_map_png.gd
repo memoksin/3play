@@ -2,6 +2,7 @@ extends SceneTree
 ## Top-down check of the Fener map (scripts/fener_map.gd): surfaces, solids (darker = taller, red
 ## outline = blocks the light), hazards, people spots, pickups, crews, the assembly area, the start.
 ##   godot --headless --path . -s res://tools/fener_map_png.gd   -> export/shots/fener_map.png
+## What stops the player (FenerMap.WALK bodies) is the red wash over the solids (the mass the light and the rescuers use).
 ## Optional: -- grid=1 also draws the walk grid the tests use (blocked cells in grey).
 
 const OUT := "res://export/shots/fener_map.png"
@@ -29,6 +30,9 @@ func _initialize() -> void:
 		_rect(sol[i], Color(0.15, 0.13, 0.2).lerp(Color(0.55, 0.5, 0.6), clampf(1.0 - h / 25.0, 0.0, 1.0)))
 		if h >= FenerMap.OPAQUE_H:
 			_frame(sol[i], Color(0.8, 0.2, 0.2))
+	var bodies := FenerMap.bodies()
+	for body in bodies:
+		_body(body, Color(0.9, 0.1, 0.1, 0.55))
 	for r in FenerMap.ROUGH:
 		_frame(r, Color(0.55, 0.4, 0.25))
 	for c in FenerMap.CRACKS:
@@ -66,8 +70,8 @@ func _initialize() -> void:
 			for gz in int(b.size.y / cell):
 				var p := b.position + Vector2(gx + 0.5, gz + 0.5) * cell
 				var blocked := false
-				for r in sol:
-					if FenerMap.in_rect(p, r, 0.35):
+				for body in bodies:
+					if body.dist(p) < 0.35:
 						blocked = true
 						break
 				if blocked:
@@ -76,6 +80,20 @@ func _initialize() -> void:
 	img.save_png(OUT)
 	print("saved ", ProjectSettings.globalize_path(OUT), " ", img.get_size())
 	quit(0)
+
+
+func _body(b: FenerMap.Body, c: Color) -> void:
+	if b.half == Vector2.ZERO:
+		_disc(b.c, b.r, c)
+		return
+	# a turned box: fill by testing the pixels of its bounds
+	var a := _px(b.box.position)
+	var e := _px(b.box.end)
+	for y in range(maxi(int(a.y), 0), mini(int(e.y) + 1, img.get_height())):
+		for x in range(maxi(int(a.x), 0), mini(int(e.x) + 1, img.get_width())):
+			var p := FenerMap.BOUNDS.position + Vector2(x + 0.5, y + 0.5) / PX
+			if b.dist(p) <= 0.0:
+				img.set_pixel(x, y, img.get_pixel(x, y).blend(c))
 
 
 func _px(p: Vector2) -> Vector2:

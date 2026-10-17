@@ -28,6 +28,8 @@ const HURT_KINDS := {&"cable": 0, &"hole": 1, &"wall": 2, &"glass": 3, &"debris"
 const ITEM_KINDS: Array[StringName] = [&"battery", &"kit", &"blanket"]
 
 const PLAYER_R := 0.35
+## A step of the walk is at most this long (a thin wall cannot be skipped); the player slides along what he hits.
+const MOVE_STEP := 0.12
 const TRAIL_STEP := 0.45
 const TRAIL_GAP := 3  # trail points between two followers
 const REACH := 2.2  # treat / pick up distance
@@ -126,6 +128,8 @@ var skin: FenerSkin
 
 var solids: Array[Rect2] = []
 var solid_h: Array[float] = []
+## What stops the player (FenerMap.WALK shapes, plus the rubble of aftershock changes).
+var bodies: Array[FenerMap.Body] = []
 var opaque: Array[Rect2] = []
 var risky: Array[Rect2] = []
 var t := 0.0
@@ -210,6 +214,7 @@ func _ready() -> void:
 	assert(skin != null, "Disaster has no FenerSkin")
 	solids.assign(FenerMap.solids())
 	solid_h.assign(FenerMap.heights())
+	bodies.assign(FenerMap.bodies())
 	_index_solids()
 	overlay.draw.connect(_draw_overlay)
 	_build_hud()
@@ -238,6 +243,7 @@ func reset(seed_value := -1) -> void:
 		rng.randomize()
 	solids.assign(FenerMap.solids())
 	solid_h.assign(FenerMap.heights())
+	bodies.assign(FenerMap.bodies())
 	_index_solids()
 	t = 0.0
 	ppos = FenerMap.START
@@ -584,8 +590,8 @@ func person_name(p: Person) -> String:
 # ---------- geometry ----------
 
 func blocked(p: Vector2, pad: float) -> bool:
-	for r in solids:
-		if FenerMap.in_rect(p, r, pad):
+	for b in bodies:
+		if b.near(p, pad) and b.dist(p) < pad:
 			return true
 	return false
 
@@ -651,14 +657,27 @@ func rough_at(p: Vector2) -> bool:
 	return false
 
 
+## Walk by dv: in short steps, each pushed out of whatever it ran into, so a body slides along walls and round
+## corners instead of stopping. A step that cannot be resolved (squeezed between two things) is not taken.
 func _try_move(dv: Vector2) -> void:
 	var b := FenerMap.BOUNDS.grow(-0.6)
-	var nx := clampf(ppos.x + dv.x, b.position.x, b.end.x)
-	if not blocked(Vector2(nx, ppos.y), PLAYER_R):
-		ppos.x = nx
-	var ny := clampf(ppos.y + dv.y, b.position.y, b.end.y)
-	if not blocked(Vector2(ppos.x, ny), PLAYER_R):
-		ppos.y = ny
+	var n := maxi(1, ceili(dv.length() / MOVE_STEP))
+	var step := dv / n
+	for i in n:
+		var q := (ppos + step).clamp(b.position, b.end)
+		for k in 4:
+			var moved := false
+			for body in bodies:
+				var v := body.push(q, PLAYER_R)
+				if v != Vector2.ZERO:
+					q += v
+					moved = true
+			q = q.clamp(b.position, b.end)
+			if not moved:
+				break
+		if blocked(q, PLAYER_R):
+			return
+		ppos = q
 
 
 ## Nearest free point to p (a new solid landed on it).
@@ -1178,6 +1197,7 @@ func apply_event(i: int) -> void:
 		var r: Rect2 = ev[2]
 		solids.append(r)
 		solid_h.append(2.4)
+		bodies.append_array(FenerMap.event_bodies(i))
 		_index_solids()
 		ppos = _free_near(ppos)
 		for p in people:
