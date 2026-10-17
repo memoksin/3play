@@ -10,6 +10,7 @@ Shared by every agent. Loaded via CLAUDE.md. Hard cap 40 lines; one line per fac
 - Owners (#128): minigames, art reform, globe, `Game` = memoksin; UI/UX polish, theme, result card = iremaltunsgt; sound integration, diorama = sudeimete; assets, sounds, card text, submission = burcubaran22; fire minigame design = burcubaran22 + sudeimete. Ask on the issue before editing another owner's scene.
 
 - 2.5D art: models only from `tools/models/` (headless Blender, `python3 tools/models/build.py`); camera, light, palette rules in `docs/art/style-2.5d.md` (#121).
+- Fener people: `assets/3d/kahramanmaras/meshy_<name>.glb` (Meshy mesh, Quaternius UAL clips, in place); clip list and the move speed per clip (else feet slide) in `tools/models/meshy/README.md`.
 ## Gotchas
 - PRs to `dev` auto-merge and `Closes #N` never fires there: close the issue by hand after merge.
 - After adding assets or editing `locale/strings.csv`, run `godot --headless --path . --import`, or new keys show raw.
