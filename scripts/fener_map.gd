@@ -48,9 +48,9 @@ const SURFACES := [
 	["walk", Rect2(3.5, 6, 2.5, 34)],
 ]
 
-## Solid footprint (local x0, z0, x1, z1 at yaw 0) and height of every model that blocks walking.
-## Height >= OPAQUE_H blocks the flashlight too. From the model AABBs (aprons of rubble are left
-## walkable: they are `rough` ground, see ROUGH).
+## Mass of every model that is more than set dressing (local Rect2 at yaw 0, height): what hides the player,
+## stops the flashlight (height >= OPAQUE_H), shakes down on an aftershock and what the rescuers route around.
+## From the model AABBs. It is NOT what stops the player: that is WALK below.
 const OPAQUE_H := 2.2
 const FOOT := {
 	"bld_apt_blue_3": [Rect2(-5.0, -5.6, 10.2, 11.2), 15.8],
@@ -268,11 +268,15 @@ const SPOTS := {
 	&"injured": [Vector2(-6.6, -1.4), Vector2(12.4, -16.2), Vector2(-42.0, 21.8)],
 	&"cold": [Vector2(-30.0, 30.0), Vector2(-14.0, 3.9), Vector2(40.0, -4.8)],
 }
-## Pickups: kind -> candidate spots; ITEM_COUNT picks per kind.
+## Pickups belong to a rescue crew zone (CREWS: the nearest one to the spot) and are taken by walking into
+## that zone, wherever the rescuers stand; the spot only says where the supply is drawn. kind -> spots; the
+## first ITEM_COUNT spots are used. The first battery and the kit belong to the crew near the start, the
+## second battery to the camp crew. The blanket belongs to the crew that is the shorter detour from the
+## player when a person who needs one is found. Nothing is out before it is needed (see Fener.needs()).
 const ITEMS := {
-	&"battery": [Vector2(10.0, -4.4), Vector2(-12.0, 34.6), Vector2(-21.6, 0.6), Vector2(44.5, -24.4)],
-	&"kit": [Vector2(19.0, -4.4), Vector2(-31.6, -7.6)],
-	&"blanket": [Vector2(-44.0, 23.8), Vector2(46.0, -18.0), Vector2(-8.4, 9.0)],
+	&"battery": [Vector2(-28.1, -12.0), Vector2(28.2, 23.6)],
+	&"kit": [Vector2(-28.1, -9.0)],
+	&"blanket": [Vector2(-28.0, -10.6), Vector2(28.4, 26.2)],
 }
 const ITEM_COUNT := {&"battery": 2, &"kit": 1, &"blanket": 1}
 
@@ -285,9 +289,147 @@ const EVENTS := [
 	[&"hole", "REGION_AVENUE", null, ["hole", Vector2(-10.0, 4.6), HOLE_R], "asphalt_hole", Vector2(-10.0, 4.6), 0.0],
 ]
 
+## What stops the player (#123): the part of each model that is a body-height obstacle, measured from the mesh
+## (scripts/fener_footprint.gd: surface between STEP_H 0.4 m and BODY_H 1.8 m above the ground; tools/fener_footprints.gd,
+## checked by tests/test_fener_walk.gd). Lower things (stones, bricks, flat debris, snow banks, cables) are stepped
+## over, eaves / balconies / branches overhead do not count. Local coordinates at yaw 0, exact yaw at the place.
+## Shape: Rect2 (box), Vector3(x, z, radius) (disc), [Vector2 centre, Vector2 half size, yaw deg] (turned box).
+## Not listed = no WALK shape = never blocks.
+const WALK := {
+	"aid_boxes": [Rect2(-1.15, -0.35, 1.8, 0.8)],
+	"aid_water": [Rect2(-0.55, -0.35, 1.1, 0.7)],
+	"ambulance": [Rect2(-1.25, -2.95, 2.5, 5.9)],
+	# a red and a white barrier with tape between them (tape is not a wall)
+	"barrier_set": [Rect2(-2.05, -0.15, 2.9, 0.6), Rect2(2.55, -0.05, 2.3, 0.3)],
+	"bench_snow": [Rect2(-0.95, -0.25, 1.9, 0.5)],
+	# buildings: the walls at body height (their eaves, awnings and balconies hang over the street)
+	"bld_apt_blue_3": [Rect2(-4.65, -4.65, 9.3, 9.2)],
+	"bld_apt_grey_8": [Rect2(-7.65, -4.65, 15.3, 9.3)],
+	"bld_apt_mint_4": [Rect2(-6.15, -4.65, 12.3, 9.3)],
+	"bld_apt_peach_5": [Rect2(-6.15, -4.65, 12.3, 9.3)],
+	"bld_apt_yellow_6": [Rect2(-6.15, -4.65, 12.3, 9.3)],
+	"bld_cut_corner": [Rect2(-6.85, -4.65, 13.0, 9.65)],
+	"bld_cut_facade": [Rect2(-6.75, -4.65, 12.9, 9.65)],
+	"bld_cut_half": [Rect2(-7.55, -5.95, 13.7, 10.95)],
+	"bld_facade_fallen": [Rect2(-4.45, -3.05, 3.2, 6.0), Rect2(-0.05, 1.45, 3.1, 0.4)],
+	"bld_house_collapsed": [Rect2(-6.15, -5.55, 12.1, 10.2)],
+	"bld_house_old": [Rect2(-4.15, -3.65, 8.3, 7.3)],
+	"bld_house_open": [Rect2(-4.15, -3.65, 8.3, 8.15)],
+	# rubble piles: the heap that is higher than a knee (the loose bricks round it are walkable, see ROUGH)
+	"bld_pancake_full": [Rect2(-6.65, -5.35, 13.6, 13.35)],
+	"bld_pancake_mid": [Rect2(-6.75, -4.65, 12.9, 11.15)],
+	"bld_pancake_slide": [Rect2(-7.65, -4.45, 14.7, 12.95)],
+	"bld_pancake_soft": [Rect2(-6.85, -5.15, 14.4, 12.65)],
+	"bld_rubble_l": [Rect2(-7.55, -6.75, 15.0, 13.7)],
+	"bld_rubble_lot": [Rect2(-5.85, -5.45, 11.9, 10.2)],
+	"bld_rubble_s": [Rect2(-2.75, -2.45, 5.9, 4.9)],
+	"bld_shop_bakkal": [Rect2(-2.25, -3.55, 4.5, 7.3)],
+	"bld_shop_berber": [Rect2(-2.25, -3.45, 4.5, 7.3)],
+	"bld_shop_dondurma": [Rect2(-2.25, -3.45, 4.5, 7.45)],
+	"bld_shop_eczane": [Rect2(-2.25, -3.45, 4.5, 7.1)],
+	"bld_shop_firin": [Rect2(-2.25, -3.55, 4.5, 7.1)],
+	"bld_shop_manav": [Rect2(-2.25, -3.55, 4.5, 7.55)],
+	"bld_toppled": [Rect2(-6.5, -12.35, 11.95, 27.0)],
+	"bld_wall_frame": [Rect2(-2.15, -0.15, 4.3, 0.75)],
+	"bld_wall_garden": [Rect2(-1.55, -0.15, 3.1, 0.3)],
+	# the middle of the broken wall is open
+	"bld_wall_garden_broken": [Rect2(0.45, -0.75, 1.8, 0.9), Rect2(-1.55, -0.15, 1.1, 0.3)],
+	"bld_wall_ruin": [Rect2(-3.6, -1.0, 6.75, 2.0)],
+	"bus_stop": [Rect2(-1.65, -0.75, 3.3, 1.3)],
+	"car_cream": [Rect2(-0.95, -2.25, 1.9, 4.5)],
+	# the car and the slab / ladder that fell on its side
+	"car_crushed": [Rect2(-0.95, -2.25, 1.9, 4.5), Rect2(0.9, -1.4, 1.7, 1.8)],
+	"car_hatch_snow": [Rect2(-1.25, -1.95, 2.1, 3.9)],
+	"car_red": [Rect2(-0.95, -2.25, 1.9, 4.5)],
+	"car_shelter": [Rect2(-0.85, -1.95, 1.7, 3.9)],
+	"car_white": [Rect2(-0.95, -2.25, 1.9, 4.5)],
+	# body and tracks, and the bucket on the ground (the boom between them is overhead)
+	"excavator": [Rect2(-1.45, -2.15, 2.9, 4.3), Rect2(-0.65, 4.35, 1.6, 1.6)],
+	"fire_barrel": [Vector3(0.0, -0.05, 0.42)],
+	"fire_barrel_low": [Vector3(0.0, 0.0, 0.42)],
+	"fire_barrel_tea": [Vector3(0.0, -0.05, 0.42)],
+	# the ring of stones is a step; only the burning logs in the middle stop you
+	"fire_pit": [Vector3(0.0, 0.0, 0.3)],
+	"fire_truck": [Rect2(-1.35, -4.45, 2.7, 8.7)],
+	# the pole: legs are thin, the mast is the obstacle
+	"floodlight_tripod": [Vector3(0.0, -0.1, 0.3)],
+	"generator": [Rect2(-1.1, -0.7, 2.3, 1.4)],
+	"light_tower": [Rect2(-1.2, -0.7, 2.4, 1.4)],
+	# lies on the ground at an angle (about 13 degrees away from +X)
+	"pole_fallen": [[Vector2(4.65, -1.3), Vector2(4.3, 0.35), 13.1]],
+	"tent_afad": [Rect2(-2.55, -2.95, 5.1, 5.2)],
+	"tent_kitchen": [Rect2(-1.85, 0.85, 3.9, 1.0), Rect2(-2.55, -1.95, 5.1, 2.0), Rect2(-0.55, -0.65, 0.8, 0.8),
+			Rect2(-1.65, -0.65, 0.7, 0.8)],
+	"tent_kizilay": [Rect2(-2.45, -2.85, 4.9, 5.0)],
+	# trees: the trunk (branches start higher than a person), the cypress is dense down to the ground
+	"tree_bare": [Vector3(0.0, 0.0, 0.22)],
+	"tree_cypress": [Vector3(0.05, 0.05, 0.72)],
+	# root ball, trunk, crown
+	"tree_fallen": [Rect2(-0.6, -1.1, 0.65, 1.9), Rect2(0.2, -0.2, 1.3, 0.45), Rect2(1.4, -1.15, 2.8, 2.6),
+			Rect2(4.2, -0.45, 1.55, 1.6)],
+	"tree_pine": [Vector3(0.0, 0.0, 0.25)],
+	"tree_pine_small": [Vector3(0.0, 0.0, 0.25)],
+	"van_snow": [Rect2(-1.15, -2.25, 2.1, 4.5)],
+}
+## Gap between the player and a shape that counts as touching (so a push-out leaves him just clear).
+const TOUCH := 0.002
+
+
+## One thing that stops the player: a box (any yaw) or a disc, on the ground plane.
+class Body:
+	extends RefCounted
+	var c := Vector2.ZERO  # centre
+	var half := Vector2.ZERO  # box half size along ax / az (ZERO for a disc)
+	var r := 0.0  # disc radius
+	var ax := Vector2.RIGHT  # world direction of the box's local +X
+	var az := Vector2.DOWN  # ... local +Z
+	var box := Rect2()  # world bounds
+	var model := ""
+
+	## Distance from p to the shape (0 inside).
+	func dist(p: Vector2) -> float:
+		var d := p - c
+		if half == Vector2.ZERO:
+			return maxf(d.length() - r, 0.0)
+		var qx := absf(d.dot(ax)) - half.x
+		var qz := absf(d.dot(az)) - half.y
+		return Vector2(maxf(qx, 0.0), maxf(qz, 0.0)).length()
+
+	func near(p: Vector2, pad: float) -> bool:
+		return p.x > box.position.x - pad and p.x < box.end.x + pad and p.y > box.position.y - pad and p.y < box.end.y + pad
+
+	## How far to move a circle of radius pad at p to clear the shape (ZERO when clear).
+	func push(p: Vector2, pad: float) -> Vector2:
+		if not near(p, pad):
+			return Vector2.ZERO
+		var d := p - c
+		if half == Vector2.ZERO:
+			var l := d.length()
+			if l >= r + pad:
+				return Vector2.ZERO
+			return (d / l if l > 0.000001 else Vector2.UP) * (r + pad + FenerMap.TOUCH - l)
+		var lx := d.dot(ax)
+		var lz := d.dot(az)
+		var ox := lx - clampf(lx, -half.x, half.x)
+		var oz := lz - clampf(lz, -half.y, half.y)
+		var l := sqrt(ox * ox + oz * oz)
+		if l >= pad:
+			return Vector2.ZERO
+		if l > 0.000001:
+			var k := (pad + FenerMap.TOUCH - l) / l
+			return ax * (ox * k) + az * (oz * k)
+		# the centre is inside: out through the nearest face
+		var px := half.x - absf(lx)
+		var pz := half.y - absf(lz)
+		if px < pz:
+			return ax * (signf(lx) * (px + pad + FenerMap.TOUCH)) if lx != 0.0 else ax * (px + pad + FenerMap.TOUCH)
+		return az * (signf(lz) * (pz + pad + FenerMap.TOUCH)) if lz != 0.0 else az * (pz + pad + FenerMap.TOUCH)
+
+
 static var _solids: Array[Rect2] = []
 static var _heights: Array[float] = []
 static var _models: Array[String] = []
+static var _bodies: Array[Body] = []
 
 
 ## World rect of a local rect at a 90-degree-snapped yaw (deg) and position.
@@ -318,6 +460,9 @@ static func _build() -> void:
 		_solids.append(turn_rect(f[0], e[3], Vector2(e[1], e[2])))
 		_heights.append(f[1])
 		_models.append(model)
+	for e in PLACES:
+		if e[4] != "deco":
+			_bodies.append_array(make_bodies(e[0], Vector2(e[1], e[2]), e[3]))
 
 
 ## Every fixed solid (buildings, vehicles, trees...) as world rects; heights() matches by index.
@@ -334,6 +479,59 @@ static func heights() -> Array[float]:
 static func models() -> Array[String]:
 	_build()
 	return _models
+
+
+## Everything that stops the player, from WALK at every place (exact yaw). The aftershock rubble is added by
+## the game (event_bodies).
+static func bodies() -> Array[Body]:
+	_build()
+	return _bodies
+
+
+## The WALK shapes of `model` placed at `at`, yaw (deg, as the model node's rotation_degrees.y).
+static func make_bodies(model: String, at: Vector2, yaw_deg: float) -> Array[Body]:
+	var out: Array[Body] = []
+	if not WALK.has(model):
+		return out
+	var a := deg_to_rad(yaw_deg)
+	for s in WALK[model]:
+		var lc := Vector2.ZERO  # local centre
+		var half := Vector2.ZERO
+		var rad := 0.0
+		var turn := 0.0
+		if s is Rect2:
+			lc = s.get_center()
+			half = s.size * 0.5
+		elif s is Vector3:
+			lc = Vector2(s.x, s.y)
+			rad = s.z
+		else:
+			lc = s[0]
+			half = s[1]
+			turn = deg_to_rad(s[2])
+		var b := Body.new()
+		b.model = model
+		var pa := Vector2(cos(a), -sin(a))  # the model's +X / +Z in the world
+		var pz := Vector2(sin(a), cos(a))
+		b.c = at + pa * lc.x + pz * lc.y
+		b.half = half
+		b.r = rad
+		var t := a + turn
+		b.ax = Vector2(cos(t), -sin(t))
+		b.az = Vector2(sin(t), cos(t))
+		var ext := Vector2(rad, rad) if half == Vector2.ZERO else Vector2(absf(b.ax.x) * half.x + absf(b.az.x) * half.y,
+				absf(b.ax.y) * half.x + absf(b.az.y) * half.y)
+		b.box = Rect2(b.c - ext, ext * 2.0)
+		out.append(b)
+	return out
+
+
+## The bodies an aftershock change adds (FenerMap.EVENTS[i]): its rubble model where it lies.
+static func event_bodies(i: int) -> Array[Body]:
+	var ev: Array = EVENTS[i]
+	if ev[2] == null:
+		return []
+	return make_bodies(ev[4], ev[5], ev[6])
 
 
 static func region_of(p: Vector2) -> String:

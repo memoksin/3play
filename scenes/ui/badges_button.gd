@@ -4,8 +4,9 @@ extends Button
 
 const Flags := preload("res://scenes/ui/lang_picker.gd")
 const HOVER_SCALE := 1.12
-const R := 10.0        # medal radius
-const RISE := 4.0      # medal centre above the button centre (the ribbon hangs below)
+const K := 1.35        # drawing scale: the medal with its ribbon is as tall as the gear (38 px)
+const R := 10.0 * K    # medal radius
+const RISE := 4.0 * K  # medal centre above the button centre (the ribbon hangs below)
 const LINE := Palette.HUD_BLUE
 const FILL := Color(Palette.HUD_BLUE, 0.22)
 const DIM := 0.8
@@ -31,9 +32,9 @@ func _draw() -> void:
 	var c := size / 2 - Vector2(0, RISE)
 	# ribbon tails first: the medal covers their tops
 	for side in [-1.0, 1.0]:
-		var top := c + Vector2(side * 4.0, R - 3.0)
-		var tail := PackedVector2Array([top, top + Vector2(side * 4.0, 0), top + Vector2(side * 7.0, 11.0),
-				top + Vector2(side * 4.5, 9.0), top + Vector2(side * 2.5, 12.0)])
+		var top := c + Vector2(side * 4.0 * K, R - 3.0 * K)
+		var tail := PackedVector2Array([top, top + Vector2(side * 4.0 * K, 0), top + Vector2(side * 7.0 * K, 11.0 * K),
+				top + Vector2(side * 4.5 * K, 9.0 * K), top + Vector2(side * 2.5 * K, 12.0 * K)])
 		draw_colored_polygon(tail, FILL)
 		tail.append(tail[0])
 		draw_polyline(tail, LINE, 2.0, true)
@@ -43,7 +44,7 @@ func _draw() -> void:
 	# star in the middle
 	var star := PackedVector2Array()
 	for i in 10:
-		var r := 5.0 if i % 2 == 0 else 2.2
+		var r := (5.0 if i % 2 == 0 else 2.2) * K
 		star.append(c + Vector2.from_angle(-PI / 2 + i * PI / 5) * r)
 	draw_colored_polygon(star, LINE)
 

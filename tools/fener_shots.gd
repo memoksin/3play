@@ -405,3 +405,63 @@ func _s_cues() -> void:
 	await _frames(3)
 	_steps(8)
 	await _frames(4)
+
+
+## Nothing is needed yet: the crew zone is a ring on the ground with its name, nothing is out, no errand.
+func _s_zone() -> void:
+	_fresh()
+	_goto(Vector2(-37.0, -6.0), Vector2(-30.5, -10.5))
+	_steps(2)
+	await _frames(50)
+
+
+## The hurt man was found and waits: the kit is out in the crew zone, the errand names it at the bottom.
+func _hurt_found() -> void:
+	_fresh()
+	var p = _person(FenerPerson.Kind.INJURED)
+	f._found(p)
+	f.slowmo = 0.0
+	_goto(Vector2(-37.0, -6.0), Vector2(-30.5, -10.5))
+	_steps(2)
+
+
+func _s_supplies() -> void:
+	_hurt_found()
+	await _frames(50)
+
+
+## Walked into the zone, away from the rescuer: the kit is in hand and the errand is gone.
+func _s_supplies_in() -> void:
+	_hurt_found()
+	f.ppos = Vector2(-35.0, -10.5)
+	_steps(3)
+	await _frames(50)
+
+
+## A cold person was found: the blanket shows up beside the crew and the HUD says where it is.
+func _blanket_up() -> void:
+	_fresh()
+	var p = _person(FenerPerson.Kind.COLD)
+	_goto(_near_spot(p.pos, 3.0), p.pos)
+	_steps(3)
+	f.slowmo = 0.0
+	var b = null
+	for it in f.items:
+		if it.kind == &"blanket":
+			b = it
+	var c := Vector2(FenerMap.CREWS[f._crew_at(b.pos)].x, FenerMap.CREWS[f._crew_at(b.pos)].y)
+	_goto(c + Vector2(-6.5, 2.0), b.pos)
+	_steps(2)
+
+
+func _s_blanket() -> void:
+	_blanket_up()
+	await _frames(50)
+
+
+func _s_blanket_dark() -> void:
+	_blanket_up()
+	f.l_on = false
+	f.lamp_on = false
+	_steps(2)
+	await _frames(50)

@@ -1,6 +1,6 @@
 extends CanvasLayer
 ## The Settings panel: language (main menu only), volumes, mouse look (first-person scenes only),
-## fullscreen, Quit (everywhere, hidden on web) and, on the main menu, a replay of the prologue. Opened
+## fullscreen, Quit (everywhere, hidden on web) and, on the title screen and the main menu, a replay of the prologue. Opened
 ## from the title / main menu gear and from the pause menu; mounted once by Game
 ## (`Game.open_settings()`). Esc closes only this panel.
 
@@ -113,8 +113,8 @@ func _refresh() -> void:
 	var look := PauseMenu.is_look_scene(scene)
 	_sens_row.visible = look
 	_invert.visible = look
-	# the prologue would end a run: only offered on the main menu
-	_replay.visible = scene != null and scene.scene_file_path == Game.scene_path(&"main")
+	# the prologue would end a run: only offered on the title screen and the main menu
+	_replay.visible = scene != null and scene.scene_file_path in [Story.TITLE, Game.scene_path(&"main")]
 
 
 ## Closes the panel and plays the ash Earth prologue again; it returns to the main menu.

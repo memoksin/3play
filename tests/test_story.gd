@@ -97,6 +97,25 @@ func _run() -> void:
 	_check("skip lands on main", current_scene.scene_file_path == main_path)
 	_check("skip marks seen", story.prologue_seen())
 
+	# the Skip button (mouse) skips the whole prologue, and a mouse click skips the splash
+	DirAccess.remove_absolute(abs_path)
+	await _open_prologue()
+	_check("prologue has a Skip button", current_scene.get_node("%SkipButton").is_visible_in_tree())
+	current_scene.get_node("%SkipButton").pressed.emit()
+	await _wait_scene(main_path)
+	_check("Skip button lands on main", current_scene.scene_file_path == main_path)
+	change_scene_to_file(story.SPLASH)
+	await _wait_scene(story.SPLASH)
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	click.position = Vector2(300, 300)
+	Input.parse_input_event(click)
+	await _wait_scene(story.TITLE)
+	_check("mouse click skips the splash", current_scene.scene_file_path == story.TITLE)
+	current_scene.get_node("%Start").pressed.emit()
+	await _wait_scene(main_path)
+
 	# Settings on the main menu: replay the prologue even though it was seen
 	var panel = game.settings_panel
 	panel.open()
@@ -112,7 +131,7 @@ func _run() -> void:
 	# not offered during a run (any scene other than the main menu)
 	await _open_prologue()
 	panel.open()
-	_check("replay hidden outside the main menu", not replay.visible)
+	_check("replay hidden outside the title and the main menu", not replay.visible)
 	panel.close()
 
 	# Title screen: Start follows the seen flag, Badges comes back to the title
@@ -132,6 +151,11 @@ func _run() -> void:
 	await process_frame
 	_check("title tr: Start", title.get_node("%Start").text == "BAŞLAT")
 	_check("title tr: Credits", title.get_node("%Credits").text == "EMEĞİ GEÇENLER")
+	# Settings on the title screen offers the prologue replay too
+	game.settings_panel.open()
+	await process_frame
+	_check("replay button shown on the title screen", game.settings_panel.find_child("ReplayPrologue", true, false).is_visible_in_tree())
+	game.settings_panel.close()
 	title.get_node("%Badges").pressed.emit()
 	await _wait_scene(story.BADGES)
 	current_scene.back()
