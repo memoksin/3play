@@ -5,7 +5,12 @@ extends SceneTree
 const SKIN_PATH := "res://data/skins/solar_flare_beam.tres"
 const SCENE := "res://scenes/minigames/beam.tscn"
 const FRAME_CAP := 3000
-## Prototype results (its JS core run on these rotations): wave, rotations, hit keys, energy, overheated.
+## The prototype's own waves 3 and 4 (thermal, everything at once): the game's waves 3 and 4 were redesigned
+## easier (see _difficulty), these keep the thermal and splitter rules checked against the prototype.
+const PROTO_W3 := [[".M....M", ".......", ".M.TS..", ".......", "C..T..C", ".......", "..H....", "...MM.."], 4]
+const PROTO_W4 := [["......H", "..M...C", "..SS...", "......C", "..M..M.", "H..M...", "M..T.TM", ".......", ".....C."], 3]
+## Prototype results (its JS core run on these rotations): wave (0, 1 = the game's, 2, 3 = PROTO_W3, PROTO_W4),
+## rotations, hit keys, energy, overheated.
 const GOLDEN := [
 	[0, "55361", ["W"], 0.0, []],
 	[1, "672510", ["E3", "N"], 0.0, []],
@@ -55,9 +60,12 @@ func _run() -> void:
 	_rules()
 	_golden()
 	_solvable()
+	_difficulty()
 	_labels()
 	await _scene_flow()
 	await _scene_blind_and_timeout()
+	await _scene_alerts()
+	await _scene_rush()
 	await _scene_real_path()
 	print("test_beam ok" if ok else "test_beam FAIL")
 	quit(0 if ok else 1)
@@ -179,8 +187,9 @@ func _rules() -> void:
 
 
 func _golden() -> void:
+	var waves: Array[BeamWave] = [skin.waves[0], skin.waves[1], _wave(PROTO_W3[0], "71447660", PROTO_W3[1]), _wave(PROTO_W4[0], "0577766372", PROTO_W4[1])]
 	for g in GOLDEN:
-		var lv := BeamLogic.parse(skin.waves[g[0]])
+		var lv := BeamLogic.parse(waves[g[0]])
 		var r := BeamLogic.simulate(lv, _rots(g[1]))
 		_check("prototype parity: wave %d %s -> %s %.2f %s" % [g[0] + 1, g[1], g[2], g[3], g[4]],
 			Array(r.hit) == g[2] and is_equal_approx(r.energy, g[3]) and r.over == g[4])
@@ -208,6 +217,62 @@ func _solvable() -> void:
 		for c in BeamLogic.solve_clicks(lv.start, w.solution):
 			clicks += mini(c, 4 - c)
 		_check("wave %d: %d clicks from the start" % [i + 1, clicks], clicks >= 3)
+
+
+## The waves are easy to solve (the jury must not struggle: waves 3 and 4 are about as hard as 1 and 2) and each one
+## makes the player use its new piece. Every rotation of every wave is run through BeamLogic (4^n setups, a plate acts
+## as its rotation mod 4), so "solvable" and "needs the new piece" are proofs, not samples.
+func _difficulty() -> void:
+	var sat_count: Array[int] = []
+	var clicks_of: Array[int] = []
+	for i in skin.waves.size():
+		var w := skin.waves[i]
+		var lv := BeamLogic.parse(w)
+		var n := lv.sats.size()
+		sat_count.append(n)
+		var sols: Array[PackedInt32Array] = []
+		var results: Array[BeamLogic.Result] = []
+		for code in 1 << (2 * n):
+			var rots := PackedInt32Array()
+			for k in n:
+				rots.append((code >> (2 * k)) & 3)
+			var r := BeamLogic.simulate(lv, rots)
+			if r.perfect():
+				sols.append(rots)
+				results.append(r)
+		_check("wave %d: %d satellites, %d of %d setups are perfect (solvable, and few)" % [i + 1, n, sols.size(), 1 << (2 * n)],
+			sols.size() >= 1 and sols.size() <= 2 and n <= 7)
+		# the new piece of the wave is in every perfect run
+		var uses := true
+		var note := ""
+		for r in results:
+			var kinds := r.events.map(func(e: BeamLogic.Event) -> StringName: return e.kind)
+			var hot := r.events.any(func(e: BeamLogic.Event) -> bool: return e.hot or e.kind == &"overheat")
+			match i:
+				0: uses = uses and kinds.has(&"reflect")
+				1: uses = uses and kinds.has(&"split")
+				2: uses = uses and hot
+				3: uses = uses and kinds.has(&"split") and kinds.has(&"overheat") and hot and kinds.has(&"reflect")
+		note = ["mirror reflects", "splitter splits", "thermal reflects", "splitter + thermal that overheats + mirror"][i]
+		_check("wave %d: every perfect run uses the new piece (%s)" % [i + 1, note], uses)
+		# no idle satellite: each one matters in the skin's solution
+		var base := BeamLogic.solved(lv.start, w.solution)
+		var matters := true
+		for k in n:
+			var broken := false
+			for m in 4:
+				var alt := base.duplicate()
+				alt[k] = m
+				broken = broken or not BeamLogic.simulate(lv, alt).perfect()
+			matters = matters and broken
+		_check("wave %d: every satellite matters" % (i + 1), matters)
+		var clicks := 0
+		for c in BeamLogic.solve_clicks(lv.start, w.solution):
+			clicks += mini(c, 4 - c)
+		clicks_of.append(clicks)
+		_check("wave %d: %d clicks to solve, %.1f s per satellite" % [i + 1, clicks, w.time / n], clicks <= 9 and w.time / n >= 9.0)
+	_check("waves 3 and 4 are about as hard as 1 and 2 (satellites %s, clicks %s)" % [sat_count, clicks_of],
+		sat_count[2] <= sat_count[1] and sat_count[3] <= sat_count[1] + 1 and clicks_of[2] <= clicks_of[1] + 2 and clicks_of[3] <= clicks_of[1] + 3)
 
 
 # --- scene ---------------------------------------------------------------------
@@ -364,17 +429,18 @@ func _scene_flow() -> void:
 	_check("wave 1: solved with %d clicks, route safe" % n, s.perfect and s.sim.hit.is_empty())
 	_check("wave 1: forecast SAFE, safe toast, ready cue", s.get_node("%Forecast").text == tr("SF_BEAM_SAFE")
 		and s.get_node("%Toast").text == tr("SF_BEAM_TOAST_SAFE") and events.has([&"ready", 0]))
-	s.advance(10.0)
+	_check("wave 1: the solved route cuts the clock to 3 s (rush cue)", s.rushed and s.time_left == s.RUSH_TIME and events.has([&"rush", 0]))
+	s.advance(1.0)
 	await _key(KEY_F)
-	_check("keys: F fires early", s.phase == P.FIRE and s.fired_at == 35.0 and events.has([&"charge", 0]))
+	_check("keys: F fires early", s.phase == P.FIRE and s.fired_at == 2.0 and events.has([&"charge", 0]))
 	_check("fire: no turning during the shot", not s.rotate_sat(0, 1))
 	s.advance(0.3)
 	_check("fire: charging first, beam not out yet", s.fire_t < 0.0 and not events.has([&"fire", 0]))
 	_run_until_not(s, P.FIRE)
 	_check("fire: beam left the Sun, reached the collector", events.has([&"fire", 0]) and events.any(func(e: Array) -> bool: return e[0] == &"collect"))
 	var res: Dictionary = s.last_result
-	_check("wave 1 result: 10/10, 3 stars, 100%% energy, 35 s left", s.phase == P.RESULT and res.saved == 10 and res.total == 10
-		and res.stars == 3 and res.energy == 100 and res.early == 35 and s.dark.is_empty())
+	_check("wave 1 result: 10/10, 3 stars, 100%% energy, 2 s left", s.phase == P.RESULT and res.saved == 10 and res.total == 10
+		and res.stars == 3 and res.energy == 100 and res.early == 2 and s.dark.is_empty())
 	_check("wave 1 result card shows 10/10", (s.get_node("%CardBox").find_child("Score", true, false) as Label).text == "10/10")
 	_check("wave 1: good cue", events.has([&"wave_good", 0]))
 
@@ -447,10 +513,9 @@ func _scene_blind_and_timeout() -> void:
 	_press(s, "Go")
 	_press(s, "Go")
 	_check("blind: no route, no warnings while planning", s.board.beams.mode == s.board.beams.Mode.NONE
-		and s.board.cities().values().all(func(c: Node2D) -> bool: return not c.warning))
-	s.solve()
-	_check("blind: no safe toast", not events.has([&"ready", 0]))
-	# the countdown runs out and fires on its own; ticks in the last 10 s, the last 3 hard
+		and s.board.cities().values().all(func(c: Node2D) -> bool: return not c.warning) and s.board.alerts.marks.is_empty())
+	# nobody solves it: the countdown runs out and fires on its own; ticks in the last 10 s, the last 3 hard
+	var want: Array = Array(s.sim.hit)
 	s.advance(34.95)
 	_check("countdown: no ticks before the last 10 s", not events.any(func(e: Array) -> bool: return e[0] == &"tick"))
 	s.advance(0.1)
@@ -464,7 +529,130 @@ func _scene_blind_and_timeout() -> void:
 		and ticks.slice(0, 7).all(func(e: Array) -> bool: return e[1] == 0))
 	_check("countdown: fires at 0", s.phase == P.FIRE and s.fired_at == 0.0)
 	_run_until_not(s, P.FIRE)
-	_check("timeout shot still scores the route: 10/10, 0 s left", s.last_result.saved == 10 and s.last_result.early == 0)
+	_check("timeout shot scores the route it had: %d/10, 0 s left" % (10 - want.size()), s.last_result.saved == 10 - want.size() and s.last_result.early == 0)
+	# blind, but solved: no safe toast, the flare still comes (rush), and the timeout shot is clean
+	_check("blind: retry -> countdown", _press(s, "Retry") and _press(s, "Go") and s.phase == P.PLAN)
+	events.clear()
+	s.solve()
+	_check("blind: no safe toast, no ready cue", not events.has([&"ready", 0]) and s.get_node("%Toast").text != tr("SF_BEAM_TOAST_SAFE"))
+	_check("blind: a solved route still cuts the clock", s.rushed and s.time_left == s.RUSH_TIME and events.has([&"rush", 0]))
+	for i in 300:
+		s.advance(0.05)
+		if s.phase != P.PLAN:
+			break
+	_check("blind: the shot fires at 0", s.phase == P.FIRE and s.fired_at == 0.0)
+	_run_until_not(s, P.FIRE)
+	_check("blind timeout shot: 10/10, 0 s left", s.last_result.saved == 10 and s.last_result.early == 0)
+	s.queue_free()
+	await process_frame
+
+
+## Every place the previewed flare hits shows a "!" and warns, over every wave and random satellite setups.
+func _scene_alerts() -> void:
+	var s := await _new_scene()
+	var P = s.Phase
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 3026
+	var vp := Rect2(Vector2.ZERO, Vector2(1280, 720))
+	var seen := {}
+	var setups := 0
+	var every := true
+	var count_ok := true
+	var off_hud := true
+	var marked := true
+	var clean := true
+	for wi in skin.waves.size():
+		s.show_brief(wi)
+		s.start_countdown()
+		var hud: Array[Rect2] = [(s.get_node("Hud/Left") as Control).get_global_rect(), (s.get_node("Hud/Right") as Control).get_global_rect()]
+		for k in 400:
+			for i in s.rots.size():
+				s.rots[i] = rng.randi() % 8
+			s._resim()
+			s._refresh_view()
+			s._update_hud()
+			setups += 1
+			var marks: Dictionary = s.board.alerts.marks
+			var hit: Array = Array(s.sim.hit)
+			var keys := marks.keys()
+			keys.sort()
+			var want := hit.duplicate()
+			want.sort()
+			every = every and keys == want
+			count_ok = count_ok and s.get_node("%Forecast").text == (tr("SF_BEAM_RISK") % hit.size() if hit.size() > 0 else tr("SF_BEAM_SAFE"))
+			for key in hit:
+				seen[key[0]] = true
+				var piece: Node2D = s.board.city(key)
+				marked = marked and piece != null and piece.warning
+				var at: Vector2 = marks.get(key, Vector2(-999, -999))
+				off_hud = off_hud and vp.has_point(at) and not hud.any(func(r: Rect2) -> bool: return r.has_point(at))
+			for key in s.board.cities():
+				clean = clean and (hit.has(key) or not s.board.city(key).warning)
+	_check("alerts: %d setups over 4 waves, a '!' on exactly the cities the flare hits" % setups, every and count_ok)
+	_check("alerts: every hit city / habitat / ring / Parker base also warns, nothing else does", marked and clean)
+	_check("alerts: all five kinds of strike came up (Earth, habitat, W, R, Parker)", seen.keys().size() == 5 and seen.has("E") and seen.has("H")
+		and seen.has("W") and seen.has("R") and seen.has("N"))
+	_check("alerts: badges stay on screen and off the HUD panels", off_hud)
+	# the badge goes with the preview: gone in the shot (cities go dark), gone with the preview off
+	s.show_brief(1)
+	s.start_countdown()
+	_check("alerts: wave 2 plan shows them", not s.board.alerts.marks.is_empty())
+	s.fire()
+	_check("alerts: none once the flare is fired", s.board.alerts.marks.is_empty())
+	s.preview = false
+	s.show_brief(1)
+	s.start_countdown()
+	_check("alerts: none with the preview off", s.board.alerts.marks.is_empty())
+	s.queue_free()
+	await process_frame
+
+
+## The route is found (puzzle really solved): the clock drops to 3 s, the screen shakes, the alarm shows, the
+## flare fires on its own and the player goes on to the next wave.
+func _scene_rush() -> void:
+	var s := await _new_scene()
+	var P = s.Phase
+	var rush := s.get_node("Hud/Rush") as Label
+	_press(s, "Go")
+	_press(s, "Go")
+	_check("rush: not before the route is found", not s.rushed and s.time_left == 45.0 and not rush.visible)
+	await _mouse(s.sat_screen(0))
+	_check("rush: a wrong turn does not rush", not s.perfect and not s.rushed and s.time_left == 45.0 and not events.has([&"rush", 0]))
+	await _mouse(s.sat_screen(0), MOUSE_BUTTON_RIGHT)
+	s.advance(5.0)
+	var n := await _solve_by_mouse(s)
+	_check("rush: solved by %d clicks -> clock is 3 s, cue, alarm text in the language" % n, s.perfect and s.rushed and s.time_left == 3.0
+		and events.filter(func(e: Array) -> bool: return e[0] == &"rush").size() == 1 and rush.visible
+		and rush.text == TextFx.upper(tr("SF_BEAM_RUSH")) and tr("SF_BEAM_RUSH") != "SF_BEAM_RUSH")
+	_check("rush: screen shakes (a spike, then a rumble)", s._shake >= s.RUSH_SHAKE - 0.01)
+	s.advance(0.5)
+	var moved := 0
+	for i in 20:
+		s.advance(0.02)
+		moved += 1 if s.board.position != Vector2.ZERO else 0
+	_check("rush: the board keeps shaking while the clock runs", moved >= 18 and s.phase == P.PLAN)
+	# turning it unsolved and solved again does not rush twice nor give time back
+	var left: float = s.time_left
+	s.rotate_sat(0, 1)
+	s.rotate_sat(0, -1)
+	_check("rush: solving again changes nothing", s.perfect and events.filter(func(e: Array) -> bool: return e[0] == &"rush").size() == 1 and s.time_left == left)
+	var tick3 := events.filter(func(e: Array) -> bool: return e[0] == &"tick")
+	events.clear()
+	for i in 200:
+		s.advance(0.05)
+		if s.phase != P.PLAN:
+			break
+	_check("rush: the flare fires by itself when the 3 s are up (last ticks hard)", s.phase == P.FIRE and s.fired_at == 0.0 and not rush.visible
+		and events.filter(func(e: Array) -> bool: return e[0] == &"tick").all(func(e: Array) -> bool: return e[1] == 1) and tick3.size() >= 1)
+	_run_until_not(s, P.FIRE)
+	_check("rush: shot is clean, 10/10", s.last_result.saved == 10 and s.last_result.stars == 3)
+	_check("rush: on to wave 2 without waiting, a fresh 55 s clock", _press(s, "Next") and _press(s, "Go") and s.wave_index == 1 and s.phase == P.PLAN
+		and not s.rushed and s.time_left == 55.0 and not rush.visible)
+	# already under 3 s: nothing to cut, no alarm
+	s.advance(53.0)
+	events.clear()
+	s.solve()
+	_check("rush: solved with 2 s left changes nothing", s.perfect and not s.rushed and not events.has([&"rush", 0]) and is_equal_approx(s.time_left, 2.0))
 	s.queue_free()
 	await process_frame
 

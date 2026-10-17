@@ -209,7 +209,7 @@ func _connect(game: Node, name: String, hit: bool) -> void:
 	await process_frame
 
 
-## Beam, solar flare wave 4 (9 x 7, the biggest board), solved: "plan" = the countdown with the route preview,
+## Beam, solar flare wave 4 (8 x 7, the biggest board), solved: "plan" = the countdown with the route preview,
 ## "fire" = the shot (game time slowed, so it lasts the whole measurement), "plan2d" = the 2D placeholder board.
 func _beam(game: Node, name: String, what: String) -> void:
 	if not _wanted(name):
