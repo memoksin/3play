@@ -218,7 +218,7 @@ func _start() -> void:
 	_typing_started = false
 	_typing_finished = false
 	_spin_vel = IDLE_DRIFT
-	_skip.text = "SPACE · SKIP"
+	_skip.text = tr("GLOBE_SKIP")
 	_cam.position.z = CAM_FAR
 	if _disaster.glitch:
 		glitch_to(_disaster.year)
@@ -246,7 +246,7 @@ func _launch(speed: float) -> void:
 		while (_to_y - _from_y) * dir < absf(speed) * SPIN / 4.0:
 			_to_y += dir * TAU
 		_ease_a = 3.0 - speed * SPIN / (_to_y - _from_y)
-	_skip.text = "CLICK / SPACE · SKIP"
+	_skip.text = tr("GLOBE_SKIP_CLICK")
 	t = 0.0
 	if _glitch_year >= 0:
 		_arm_reverse()
@@ -449,7 +449,7 @@ func _pose_glitch(e: float) -> void:
 	_year.label_settings.font_color = color
 	_year.position = pos
 	var small := ["YEAR", "Y#AR", "ERR?", "YE/R", "????"]
-	_year_small.text = small[int(r * small.size())] if glitching and _tear_amount > 0.3 else "YEAR"
+	_year_small.text = small[int(r * small.size())] if glitching and _tear_amount > 0.3 else tr("GLOBE_YEAR")
 
 
 ## The counter mid-tear: digits flip, symbols leak in, the target year flashes once; in the last stretch
@@ -749,7 +749,7 @@ func _draw_hud() -> void:
 		if blink:
 			var dot_r: float = FONT_SIZE.locked * 0.22
 			o.draw_circle(Vector2(tx + dot_r, y + 12), dot_r, RED, true, -1.0, true)
-			_text(_font_bold, "LOCKED", tx + dot_r * 2 + FONT_SIZE.locked * 0.3, y + 12, FONT_SIZE.locked, RED)
+			_text(_font_bold, tr("GLOBE_LOCKED"), tx + dot_r * 2 + FONT_SIZE.locked * 0.3, y + 12, FONT_SIZE.locked, RED)
 		var fade_in := _clamp01((lt - 1.1) / 0.3)
 		_text(_font_bold, place, tx, y + 38, FONT_SIZE.place, WHITE * Color(1, 1, 1, fade_in))
 		_text(_font_mono, _disaster.text("YEAR").to_upper(), tx, y + 60, FONT_SIZE.date, BLUE * Color(1, 1, 1, fade_in))

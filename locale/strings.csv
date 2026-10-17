@@ -1,8 +1,8 @@
 key,en,tr
 KAHR_PLACE,"Kahramanmaras, Turkey","Kahramanmaraş, Türkiye"
 KAHR_YEAR,"6 February 2023","6 Şubat 2023"
-KAHR_INTRO_1,"04:17. A magnitude 7.8 earthquake has just hit southeast Turkey.","04:17. Güneydoğu Türkiye'yi az önce 7,8 büyüklüğünde bir deprem vurdu."
-KAHR_INTRO_2,"It is snowing and below freezing. Help is hours away.","Kar yağıyor, hava sıfırın altında. Yardımın gelmesi saatler sürecek."
+KAHR_INTRO_1,"04:17. A magnitude 7.8 earthquake has just hit southeast Turkey.","04:17. Türkiye’nin güneydoğusunu az önce 7,8 büyüklüğünde bir deprem vurdu."
+KAHR_INTRO_2,"It is snowing and below freezing. Help is hours away.","Kar yağıyor, hava buz gibi. Yardımın gelmesi saatler sürecek."
 KAHR_TASK,"Keep everyone warm and comfortable until help arrives.","Yardım gelene kadar herkesi sıcak ve rahat tut."
 KAHR_CARD_SCORE,"%d/8 safe","%d/8 güvende"
 KAHR_CARD_COLD,"%d people left in the cold","%d kişi soğukta kaldı"
@@ -10,114 +10,118 @@ KAHR_CARD_NUMBERS,"More than 50,000 people died in Turkey in the 2023 earthquake
 KAHR_CARD_FACT,"At 13:24, about 9 hours later, a second major quake (magnitude 7.5) hit near Elbistan. Many people had gone back into damaged buildings.","Yaklaşık 9 saat sonra, 13:24'te Elbistan yakınlarında ikinci büyük deprem (7,5) oldu. Birçok kişi hasarlı binalara geri dönmüştü."
 KAHR_CARD_HELP,"What would have helped: never go back into a damaged building after a big quake.","Ne yardımcı olurdu: büyük bir depremden sonra hasarlı binaya asla geri girmemek."
 KAHR_CARD_CO,"A stove in a closed car or tent can cause carbon monoxide poisoning.","Kapalı bir arabada ya da çadırda yakılan soba karbonmonoksit zehirlenmesine yol açabilir."
-"KAHR_SOURCE","Sources: USGS Pazarcik M 7.8 https://earthquake.usgs.gov/earthquakes/eventpage/us6000jllz ; USGS Elbistan M 7.5 https://earthquake.usgs.gov/earthquakes/eventpage/us6000jlqa . Deaths: Turkey's official toll is about 53,500 (reported by news, AFAD primary release not checked), so the card says 'more than 50,000'.","Kaynaklar: USGS Pazarcık M 7,8 https://earthquake.usgs.gov/earthquakes/eventpage/us6000jllz ; USGS Elbistan M 7,5 https://earthquake.usgs.gov/earthquakes/eventpage/us6000jlqa . Ölü sayısı: Türkiye'nin resmî sayısı yaklaşık 53.500 (haberlerden, AFAD'ın birincil açıklaması kontrol edilmedi), kartta '50.000'den fazla' yazıyor."
+KAHR_SOURCE,"Sources: USGS Pazarcik M 7.8 https://earthquake.usgs.gov/earthquakes/eventpage/us6000jllz ; USGS Elbistan M 7.5 https://earthquake.usgs.gov/earthquakes/eventpage/us6000jlqa . Deaths: Turkey's official toll is about 53,500 (reported by news, AFAD primary release not checked), so the card says 'more than 50,000'.","Kaynaklar: USGS Pazarcık M 7,8 https://earthquake.usgs.gov/earthquakes/eventpage/us6000jllz ; USGS Elbistan M 7,5 https://earthquake.usgs.gov/earthquakes/eventpage/us6000jlqa . Ölü sayısı: Türkiye'nin resmî sayısı yaklaşık 53.500 (haberlerden, AFAD'ın birincil açıklaması kontrol edilmedi), kartta '50.000'den fazla' yazıyor."
 IO_PLACE,"Indian Ocean, Indonesia","Hint Okyanusu, Endonezya"
 IO_YEAR,"26 December 2004","26 Aralık 2004"
 IO_INTRO_1,"A magnitude 9.1 earthquake has struck off Sumatra.","Sumatra açıklarında 9,1 büyüklüğünde bir deprem oldu."
 IO_INTRO_2,"There is no tsunami warning system in the Indian Ocean. A giant wave is coming.","Hint Okyanusu'nda tsunami uyarı sistemi yok. Dev bir dalga geliyor."
 IO_TASK,"Send the water into the basins before the wave hits.","Dalga vurmadan suyu havuzlara yönlendir."
 IO_CARD_SCORE,"%d/4 communities saved","%d/4 topluluk kurtuldu"
-"IO_CARD_NUMBERS","The 2004 tsunami killed or left missing about 228,000 people in more than a dozen countries.","2004 tsunamisi, bir düzineden fazla ülkede yaklaşık 228.000 kişinin ölümüne ya da kaybolmasına yol açtı."
+IO_CARD_NUMBERS,"The 2004 tsunami killed or left missing about 228,000 people in more than a dozen countries.","2004 tsunamisi, bir düzineden fazla ülkede yaklaşık 228.000 kişinin ölümüne ya da kaybolmasına yol açtı."
 IO_CARD_FACT,"Many coasts were hit hours after the quake, with no siren and no warning.","Birçok kıyıya, depremden saatler sonra, siren ve uyarı olmadan dalga ulaştı."
 IO_CARD_HELP,"What would have helped: a warning system. InaTEWS, Indonesia's tsunami warning system, was built after 2004.","Ne yardımcı olurdu: bir uyarı sistemi. Endonezya'nın tsunami uyarı sistemi InaTEWS, 2004'ten sonra kuruldu."
-"IO_SOURCE","Sources: USGS (magnitude 9.1) https://www.usgs.gov/news/featured-story/indian-ocean-tsunami-remembered-scientists-reflect-2004-indian-ocean-killed ; NOAA (227,899 dead or missing, 15 countries listed, Indonesia worst hit) https://sos.noaa.gov/Datasets/dataset.php?id=598; GFZ/GITEWS papers (InaTEWS, built after 2004). Estimates vary by source (some count more); the card says about 228,000.","Kaynaklar: USGS (büyüklük 9,1) https://www.usgs.gov/news/featured-story/indian-ocean-tsunami-remembered-scientists-reflect-2004-indian-ocean-killed ; NOAA (227.899 ölü veya kayıp, 15 ülke listeli, en çok Endonezya) https://sos.noaa.gov/Datasets/dataset.php?id=598; GFZ/GITEWS makaleleri (InaTEWS, 2004'ten sonra kuruldu). Tahminler kaynağa göre değişir (bazıları daha yüksek); kartta yaklaşık 228.000 yazıyor."
-CLOSING_LINE,"life has dimensions we cannot see","görmediğimiz boyutları var hayatın"
-GAME_TITLE,"3play",
-MENU_PROMPT,"Who are you when disaster strikes?",
-ROLE_STATE,"State",
-ROLE_STATE_DESC,"Lead a country. Prepare before it hits.",
-ROLE_CITIZEN,"Citizen",
-ROLE_CITIZEN_DESC,"Live through it. Every second counts.",
-HUD_TIME,"TIME",
-RESULT_REPLAY,"Play again",
-RESULT_MENU,"Main menu",
-FIT_WARM,"Warm",
-FIT_COLD,"Cold",
-FIT_FULL,"%s is full: %s needs %d slots, %d free.",
-FIT_FULL_1,"%s is full: %s needs 1 slot, %d free.",
-FIT_SLOTS,"%d slots",
-KAHR_FIT_CREAK,"The building creaks...",
-KAHR_FIT_QUAKE,"13:24 - Mw 7.5 Elbistan earthquake",
-KAHR_FIT_ZONE_BUILDING,"Building",
-KAHR_FIT_ZONE_CAR,"Car",
-KAHR_FIT_ZONE_TENT,"Tent",
-KAHR_FIT_ITEM_PERSON,"Person",
-KAHR_FIT_ITEM_STOVE,"Stove",
-KAHR_FIT_ITEM_BLANKET,"Blanket",
-KAHR_FIT_ITEM_WATER,"Water",
-KAHR_FIT_ITEM_MEDICINE,"Medicine",
-KAHR_FIT_P_AYSE,"Grandma Ayse",
-KAHR_FIT_R_AYSE,"elder, uses a cane",
-KAHR_FIT_P_ELIF,"Baby Elif",
-KAHR_FIT_R_ELIF,"infant, 8 months",
-KAHR_FIT_P_MEHMET,"Dad Mehmet",
-KAHR_FIT_R_MEHMET,"your father",
-KAHR_FIT_P_ZEYNEP,"Mom Zeynep",
-KAHR_FIT_R_ZEYNEP,"your mother",
-KAHR_FIT_P_CAN,"Can",
-KAHR_FIT_R_CAN,"boy, age 9",
-KAHR_FIT_P_SELIN,"Selin",
-KAHR_FIT_R_SELIN,"your sister, 15",
-KAHR_FIT_P_HASAN,"Hasan",
-KAHR_FIT_R_HASAN,"neighbor, bad knee",
-KAHR_FIT_P_FATMA,"Fatma",
-KAHR_FIT_R_FATMA,"neighbor, pregnant",
-KAHR_FIT_R_STOVE,"gives heat",
-KAHR_FIT_R_BLANKET,"keeps warm",
-KAHR_FIT_R_WATER,"drinking water",
-KAHR_FIT_R_MEDICINE,"first aid",
-GLOBE_HINT,"Drag to spin the world",
-IO_COMMUNITY_1,"Banda Aceh",
-IO_COMMUNITY_2,"Sabang",
-IO_COMMUNITY_3,"Meulaboh",
-IO_COMMUNITY_4,"Lhoknga",
-IO_CONNECT_WAVE,"The wave is here!",
+IO_SOURCE,"Sources: USGS (magnitude 9.1) https://www.usgs.gov/news/featured-story/indian-ocean-tsunami-remembered-scientists-reflect-2004-indian-ocean-killed ; NOAA (227,899 dead or missing, 15 countries listed, Indonesia worst hit) https://sos.noaa.gov/Datasets/dataset.php?id=598; GFZ/GITEWS papers (InaTEWS, built after 2004). Estimates vary by source (some count more); the card says about 228,000.","Kaynaklar: USGS (büyüklük 9,1) https://www.usgs.gov/news/featured-story/indian-ocean-tsunami-remembered-scientists-reflect-2004-indian-ocean-killed ; NOAA (227.899 ölü veya kayıp, 15 ülke listeli, en çok Endonezya) https://sos.noaa.gov/Datasets/dataset.php?id=598; GFZ/GITEWS makaleleri (InaTEWS, 2004'ten sonra kuruldu). Tahminler kaynağa göre değişir (bazıları daha yüksek); kartta yaklaşık 228.000 yazıyor."
+CLOSING_LINE,"life has dimensions we cannot see","hayatın göremediğimiz boyutları vardır"
+GAME_TITLE,"3play","3play"
+MENU_PROMPT,"Who are you when disaster strikes?","Felaket anında kimsin?"
+ROLE_STATE,"State","Devlet"
+ROLE_STATE_DESC,"Lead a country. Prepare before it hits.","Bir ülkeyi yönet. Felaket gelmeden hazırlan."
+ROLE_CITIZEN,"Citizen","Vatandaş"
+ROLE_CITIZEN_DESC,"Live through it. Every second counts.","Hayatta kal. Her saniye önemli."
+HUD_TIME,"TIME","SÜRE"
+RESULT_REPLAY,"Play again","Tekrar oyna"
+RESULT_MENU,"Main menu","Ana menü"
+FIT_WARM,"Warm","Sıcak"
+FIT_COLD,"Cold","Soğuk"
+FIT_FULL,"%s is full: %s needs %d slots, %d free.","%s dolu: %s için %d yer gerek, %d boş."
+FIT_FULL_1,"%s is full: %s needs 1 slot, %d free.","%s dolu: %s için 1 yer gerek, %d boş."
+FIT_SLOTS,"%d slots","%d yer"
+KAHR_FIT_CREAK,"The building creaks...","Bina çatırdıyor…"
+KAHR_FIT_QUAKE,"13:24 - Mw 7.5 Elbistan earthquake","13:24 - Mw 7,5 Elbistan depremi"
+KAHR_FIT_ZONE_BUILDING,"Building","Bina"
+KAHR_FIT_ZONE_CAR,"Car","Araba"
+KAHR_FIT_ZONE_TENT,"Tent","Çadır"
+KAHR_FIT_ITEM_PERSON,"Person","İnsan"
+KAHR_FIT_ITEM_STOVE,"Stove","Soba"
+KAHR_FIT_ITEM_BLANKET,"Blanket","Battaniye"
+KAHR_FIT_ITEM_WATER,"Water","Su"
+KAHR_FIT_ITEM_MEDICINE,"Medicine","İlaç"
+KAHR_FIT_P_AYSE,"Grandma Ayse","Ayşe Nine"
+KAHR_FIT_R_AYSE,"elder, uses a cane","yaşlı, bastonlu"
+KAHR_FIT_P_ELIF,"Baby Elif","Elif Bebek"
+KAHR_FIT_R_ELIF,"infant, 8 months","bebek, 8 aylık"
+KAHR_FIT_P_MEHMET,"Mehmet","Mehmet"
+KAHR_FIT_R_MEHMET,"your father","baban"
+KAHR_FIT_P_ZEYNEP,"Zeynep","Zeynep"
+KAHR_FIT_R_ZEYNEP,"your mother","annen"
+KAHR_FIT_P_CAN,"Can","Can"
+KAHR_FIT_R_CAN,"boy, age 9","erkek, 9 yaşında"
+KAHR_FIT_P_SELIN,"Selin","Selin"
+KAHR_FIT_R_SELIN,"your sister, 15","kız kardeşin, 15"
+KAHR_FIT_P_HASAN,"Hasan","Hasan"
+KAHR_FIT_R_HASAN,"neighbor, bad knee","komşu, dizi ağrıyor"
+KAHR_FIT_P_FATMA,"Fatma","Fatma"
+KAHR_FIT_R_FATMA,"neighbor, pregnant","komşu, hamile"
+KAHR_FIT_R_STOVE,"gives heat","ısıtır"
+KAHR_FIT_R_BLANKET,"keeps warm","sıcak tutar"
+KAHR_FIT_R_WATER,"drinking water","içme suyu"
+KAHR_FIT_R_MEDICINE,"first aid","ilk yardım"
+GLOBE_HINT,"Drag to spin the world","Dünyayı döndürmek için sürükle"
+IO_COMMUNITY_1,"Banda Aceh","Banda Aceh"
+IO_COMMUNITY_2,"Sabang","Sabang"
+IO_COMMUNITY_3,"Meulaboh","Meulaboh"
+IO_COMMUNITY_4,"Lhoknga","Lhoknga"
+IO_CONNECT_WAVE,"The wave is here!","Dalga geldi!"
 INTRO_NEXT,"Continue","Devam"
-SF_PLACE,"Earth, dayside",
-SF_YEAR,"14 March 3026",
-SF_INTRO_1,"14 March 3026. A solar flare is racing toward Earth. Impact in 8 minutes.",
-SF_INTRO_2,"The shuttle and the bunker have few safe seats. You are head of state: you choose who goes.",
-SF_TASK,"Fill the safe seats before 14:00. Not everyone can go.",
-SF_CARD_SCORE,"%d/12 safe",
-SF_CARD_COLD,"%d survivors without clean water",
-SF_CARD_NUMBERS,"PLACEHOLDER: a real flare data point goes here (burcubaran22, #17).",
-SF_CARD_FACT,"PLACEHOLDER: the 1859 Carrington Event burned telegraph lines worldwide.",
-SF_CARD_HELP,"PLACEHOLDER: what would have helped: early warning from solar monitoring satellites.",
-SF_FIT_RADIO_1,"Radio: flare erupted. 8 min.",
-SF_FIT_RADIO_2,"Radio: power grid failing.",
-SF_FIT_RADIO_3,"Radio: last call! Seal up.",
-SF_FIT_IMPACT,"14:00 - flare impact",
-SF_FIT_ZONE_SURFACE,"Surface",
-SF_FIT_ZONE_SHUTTLE,"Shuttle",
-SF_FIT_ZONE_BUNKER,"Bunker",
-SF_FIT_LIFE_OK,"life support",
-SF_FIT_LIFE_NO,"no water",
-SF_FIT_ITEM_PERSON,"Person",
-SF_FIT_ITEM_VAULT,"Seeds",
-SF_FIT_ITEM_RECYCLER,"Recycler",
-SF_FIT_P_AMARA,"Dr. Amara",
-SF_FIT_R_AMARA,"doctor",
-SF_FIT_P_KENJI,"Kenji",
-SF_FIT_R_KENJI,"engineer",
-SF_FIT_P_LIA,"Lia",
-SF_FIT_R_LIA,"child, 7",
-SF_FIT_P_TOMAS,"Tomas",
-SF_FIT_R_TOMAS,"farmer",
-SF_FIT_P_NOOR,"Grandma Noor",
-SF_FIT_R_NOOR,"elder",
-SF_FIT_P_RAVI,"Ravi",
-SF_FIT_R_RAVI,"pilot",
-SF_FIT_P_OKAFOR,"Ms. Okafor",
-SF_FIT_R_OKAFOR,"teacher",
-SF_FIT_P_SOL,"Sol",
-SF_FIT_R_SOL,"child, 10",
-SF_FIT_P_YUKI,"Yuki",
-SF_FIT_R_YUKI,"botanist",
-SF_FIT_P_DMITRI,"Dmitri",
-SF_FIT_R_DMITRI,"technician",
-SF_FIT_P_INES,"Ines",
-SF_FIT_R_INES,"midwife",
-SF_FIT_P_BEN,"Ben",
-SF_FIT_R_BEN,"cook",
-SF_FIT_R_VAULT,"seed vault",
-SF_FIT_R_RECYCLER,"water recycler",
+SF_PLACE,"Earth, dayside","Dünya, gündüz"
+SF_YEAR,"14 March 3026","14 Mart 3026"
+SF_INTRO_1,"14 March 3026. A solar flare is racing toward Earth. Impact in 8 minutes.","14 Mart 3026. Bir güneş patlaması Dünya'ya doğru geliyor. Çarpmaya 8 dakika var."
+SF_INTRO_2,"The shuttle and the bunker have few safe seats. You are head of state: you choose who goes.","Gemide ve sığınakta az sayıda güvenli yer var. Devlet başkanısın: kimin gideceğine sen karar ver."
+SF_TASK,"Fill the safe seats before 14:00. Not everyone can go.","14:00'ten önce güvenli yerleri doldur. Herkes gidemez."
+SF_CARD_SCORE,"%d/12 safe","%d/12 güvende"
+SF_CARD_COLD,"%d survivors without clean water","%d kişi temiz sudan yoksun kaldı"
+SF_CARD_NUMBERS,"PLACEHOLDER: a real flare data point goes here (burcubaran22, #17).","YER TUTUCU: buraya gerçek bir güneş patlaması verisi gelecek (burcubaran22, #17)."
+SF_CARD_FACT,"PLACEHOLDER: the 1859 Carrington Event burned telegraph lines worldwide.","YER TUTUCU: 1859 Carrington Olayı dünya çapında telgraf hatlarını yaktı."
+SF_CARD_HELP,"PLACEHOLDER: what would have helped: early warning from solar monitoring satellites.","YER TUTUCU: Ne yardımcı olurdu: güneşi izleyen uydulardan erken uyarı."
+SF_FIT_RADIO_1,"Radio: flare erupted. 8 min.","Telsiz: patlama başladı. 8 dk."
+SF_FIT_RADIO_2,"Radio: power grid failing.","Telsiz: elektrik şebekesi çöküyor."
+SF_FIT_RADIO_3,"Radio: last call! Seal up.","Telsiz: son çağrı! Kapıları kapatın."
+SF_FIT_IMPACT,"14:00 - flare impact","14:00 - patlama çarptı"
+SF_FIT_ZONE_SURFACE,"Surface","Yüzey"
+SF_FIT_ZONE_SHUTTLE,"Shuttle","Mekik"
+SF_FIT_ZONE_BUNKER,"Bunker","Sığınak"
+SF_FIT_LIFE_OK,"life support","yaşam desteği"
+SF_FIT_LIFE_NO,"no water","su yok"
+SF_FIT_ITEM_PERSON,"Person","Kişi"
+SF_FIT_ITEM_VAULT,"Seeds","Tohumlar"
+SF_FIT_ITEM_RECYCLER,"Recycler","Arıtıcı"
+SF_FIT_P_AMARA,"Dr. Amara","Dr. Amara"
+SF_FIT_R_AMARA,"doctor","doktor"
+SF_FIT_P_KENJI,"Kenji","Kenji"
+SF_FIT_R_KENJI,"engineer","mühendis"
+SF_FIT_P_LIA,"Lia","Lia"
+SF_FIT_R_LIA,"child, 7","çocuk, 7"
+SF_FIT_P_TOMAS,"Tomas","Tomas"
+SF_FIT_R_TOMAS,"farmer","çiftçi"
+SF_FIT_P_NOOR,"Grandma Noor","Noor Nine"
+SF_FIT_R_NOOR,"elder","yaşlı"
+SF_FIT_P_RAVI,"Ravi","Ravi"
+SF_FIT_R_RAVI,"pilot","pilot"
+SF_FIT_P_OKAFOR,"Ms. Okafor","Okafor Hanım"
+SF_FIT_R_OKAFOR,"teacher","öğretmen"
+SF_FIT_P_SOL,"Sol","Sol"
+SF_FIT_R_SOL,"child, 10","çocuk, 10"
+SF_FIT_P_YUKI,"Yuki","Yuki"
+SF_FIT_R_YUKI,"botanist","botanikçi"
+SF_FIT_P_DMITRI,"Dmitri","Dmitri"
+SF_FIT_R_DMITRI,"technician","teknisyen"
+SF_FIT_P_INES,"Ines","Ines"
+SF_FIT_R_INES,"midwife","ebe"
+SF_FIT_P_BEN,"Ben","Ben"
+SF_FIT_R_BEN,"cook","aşçı"
+SF_FIT_R_VAULT,"seed vault","tohum deposu"
+SF_FIT_R_RECYCLER,"water recycler","su arıtıcı"
+GLOBE_SKIP,"SPACE · SKIP","BOŞLUK · ATLA"
+GLOBE_SKIP_CLICK,"CLICK / SPACE · SKIP","TIKLA / BOŞLUK · ATLA"
+GLOBE_YEAR,"YEAR","SENE"
+GLOBE_LOCKED,"LOCKED","KİLİTLİ"
