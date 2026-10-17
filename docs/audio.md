@@ -54,7 +54,7 @@ The diorama is the 3D intro (about 10 s): the camera orbits a small low-poly set
 
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
-| D1 | Kahramanmaras ambience | Diorama of Kahramanmaras (snow, wind) | DMP013016 HEAVY SNOW STORM MS.wav | martypinso | https://freesound.org/people/martypinso/sounds/35480/ | CC0 | chosen | Use the part from about 1:47 to 2:43 (about 56 s). Needs a soft fade at the ends if it loops. |
+| D1 | Kahramanmaras ambience | Diorama of Kahramanmaras (snow, wind) | DMP013016 HEAVY SNOW STORM MS.wav | martypinso | https://freesound.org/people/martypinso/sounds/35480/ | CC0 | changing | Use the part from about 1:47 to 2:43 (about 56 s). Needs a soft fade at the ends if it loops. CHANGING: a new snowstorm sound is being looked for; Fener (FN1) uses the same new sound. |
 | D2 | Indian Ocean ambience | Diorama of the Indian Ocean (waves on the shore) | Waves crashing on shore | jamgypsy | https://freesound.org/people/jamgypsy/sounds/795445/ | CC0 | chosen | Only waves (no birds, boats or people per the description). About 2 min. Also used as the base layer of C1 (Connect), see issue #95. |
 | D3 | Solar flare 3026 ambience | Diorama of the solar flare scenario | Solar Storm.wav | Puniho | https://freesound.org/s/151098/ | CC0 | chosen | Space ambience. |
 | D4 | Intro text typing | The intro lines type on, one after another | Computer keyboard typing snippet mono [loop] | cabled_mess | https://freesound.org/people/cabled_mess/sounds/361639/ | CC0 | chosen | Same file as G3, so all typed text in the game sounds the same. |
@@ -68,7 +68,9 @@ The diorama is the 3D intro (about 10 s): the camera orbits a small low-poly set
 
 Do transitions between scenes need a sound? Decide after the game runs end to end (globe to diorama, diorama to minigame, minigame to result card, result card to menu). For now no sound on any transition. Test it silent first.
 
-## Fit minigame (Kahramanmaras; the solar flare skin shares the code)
+## Fit minigame (Kahramanmaras) - OBSOLETE, replaced by Fener (#123), see the Fener section
+
+(Kept for reference until the new sections are final.)
 
 Timeline from `scenes/minigames/fit.gd`: aftershock hints at about 25 s and 50 s (0.5 s shake plus a creak message), the big quake at 13:24 (1.6 s shake), the collapse starts 0.3 s after the hit and lasts 1.3 s, so the quake rumble and the collapse overlap.
 
@@ -123,7 +125,9 @@ What happens on the card (`scenes/result.gd`): the card fades in, the score land
 
 All text that types on letter by letter uses the same keyboard typing sound, started with the first letter and stopped with the last one, like the globe coordinates. Each typing effect needs start and finish signals: diorama intro text and the result closing line. Tracked in issue #99 (assigned to iremaltunsgt, who owns intro text and the result card; memoksin did the globe in #66).
 
-## Solar flare (Fit minigame, year 3026)
+## Solar flare (Fit minigame, year 3026) - OBSOLETE, replaced by Isin Agi (#124), see the beam network section
+
+(Kept for reference until the new sections are final.)
 
 Same code as the Kahramanmaras Fit, with a flare ending instead of the quake. From `data/skins/solar_flare_fit.tres`: 75 s timer, radio messages at 20 s, 42 s and 60 s (`SF_FIT_RADIO_1..3`), the flare hits at the end (white flash, `SF_FIT_IMPACT`, "14:00 - flare impact"), the HUD clock runs from 13:52 to 14:00. No shake and no collapse in this skin.
 
@@ -142,3 +146,54 @@ Same code as the Kahramanmaras Fit, with a flare ending instead of the quake. Fr
 ### Radio message sequence (S5)
 
 For each of the three radio messages: the call beep (S5a), then the message with the static (S5b) quietly underneath, then the same beep (S5a) again. The third message also plays the alarm (S5c) on top while the radio is still heard. Assigned to memoksin in issue #107.
+
+## Fener (Kahramanmaras, #123)
+
+Dark snowy street, a flashlight with a battery, a whistle that shows the direction, three family members to find and bring to the assembly point, an aftershock that hurts near buildings.
+
+| # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
+|---|---|---|---|---|---|---|---|---|
+| FN1 | Snowstorm ambience | Whole minigame | | | | | todo | The same new sound as D1 (the D1 sound is being replaced). |
+| FN2 | Footsteps | The player walks | | | | | todo | Another snow footsteps sound; if none is found, normal footsteps. |
+| FN3 | Flashlight on and off | The flashlight is turned on or off | Flashlight Clicking On and Off | deleted_user_7146007 | https://freesound.org/people/deleted_user_7146007/sounds/383659/ | CC0 | chosen | 0 to 1 s = turning on. 2 to 3 s = turning off. |
+| FN4 | Battery low | The flashlight battery is running out | | | | | todo | Needs a search. |
+| FN5 | Whistle | The whistle that shows the direction | | | | | to confirm | First 3 seconds of the chosen whistle. Which whistle file: to confirm. |
+| FN6 | Found a family member | The player reaches a family member | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen (reuse of F2) | First second of the file. |
+| FN7 | Success | The family reaches the assembly point | | | | | todo | A success sound, the same one as FR6 and BM4. |
+| FN8 | Aftershock | The aftershock hits | Cracking Earthquake | uagadugu | https://freesound.org/people/uagadugu/sounds/222521/ | CC0 | chosen (reuse of F6) | Trim to the shaking. |
+| FN9 | Hurt | The player is hurt near a building | | | | | todo | Needs a search. |
+
+## Fire (Black Saturday, kangaroo farm, first person)
+
+Spec: `docs/minigames/fire-farm.md`.
+
+| # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
+|---|---|---|---|---|---|---|---|---|
+| FR1 | Fire and wind ambience | Whole minigame | | | | | todo | The first candidate was bad and could not even be heard. A louder, better one is needed. |
+| FR2 | Footsteps | The player walks | | | | | todo | The first candidate could not be heard. Another one. |
+| FR3 | Jump and landing on debris | The player jumps over the debris | Public Domain Jump Sound | qubodup | https://freesound.org/people/qubodup/sounds/331381/ | CC0 | proposed | Not confirmed yet. |
+| FR4 | Pick up the knife | The player picks up the knife | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen (reuse of F2) | First second of the file. |
+| FR5 | Cut the fence | The knife rubs on the fence | | | | | todo | Not a wire cutter: a scraping or sanding sound, playing while the knife rubs the fence. |
+| FR6 | Success | A task is done (fence cut, flame out) | | | | | todo | The same success sound as FN7 and BM4. |
+| FR7.1 | Hose attached | The hose is put on the valve | | | | | todo | A click, the sound of attaching. |
+| FR7.2 | Valve turn | The valve is turned | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | chosen | Use 0:58 to 1:03 of the file. |
+| FR8 | Water spray | The hose sprays | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | chosen | Use about 1:07 to 1:18 of the file (to confirm the exact times). |
+| FR9 | Small flame | The small flame burns | | | | | todo | A flame sound, not only crackling. |
+| FR10 | Flame goes out | The flame is put out | | | | | decided | No separate sound: the flame sound (FR9) fades out. |
+| FR11 | Kangaroos run out | 2 to 3 kangaroos run through the gap | | | | | todo | A herd running (many footsteps). |
+| FR12 | Smoke (cough, breath) | The smoke thickens | | | | | no sound | Not needed. |
+
+## Beam network (Isin Agi, solar flare 3026, #124)
+
+Rotate satellites to route the solar beam into collectors, waves, a countdown, "X/Y cities saved".
+
+| # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
+|---|---|---|---|---|---|---|---|---|
+| BM1 | Space ambience | Whole minigame | Solar Storm.wav | Puniho | https://freesound.org/s/151098/ | CC0 | chosen (reuse of D3) | |
+| BM2 | Rotate a satellite | The player rotates a satellite | Servo motor | Burningmonkey | https://freesound.org/people/Burningmonkey/sounds/322021/ | CC0 | chosen | Use seconds 3 to 4 of the file. |
+| BM3 | Beam | The beam runs through the satellites | | | | | todo | The first candidates were rejected. A real laser sound is needed. |
+| BM4 | Collector charged, city saved | A collector is charged | | | | | todo | Urgent. The same success sound as FN7 and FR6. |
+| BM5 | City lost | A city is lost | | | | | todo | Not discussed yet. |
+| BM6 | Wave warning | A wave is coming | | | | | later | Empty for now, to search later. |
+| BM7 | Wave hits | The wave hits | | | | | later | Empty for now. |
+| BM8 | Countdown | The countdown runs | | | | | todo | Needs a search. |
