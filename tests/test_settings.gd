@@ -55,7 +55,7 @@ func _run() -> void:
 	# --- Game API ---
 	game.load_settings()
 	_check("volumes default to 1.0", game.master_volume == 1.0 and game.music_volume == 1.0 and game.sfx_volume == 1.0)
-	_check("fullscreen defaults to false", game.fullscreen == false)
+	_check("fullscreen defaults to true (project opens fullscreen)", game.fullscreen == true)
 	game.set_master_volume(-1.0)
 	_check("volume clamps low", game.master_volume == 0.0)
 	game.set_music_volume(5.0)
@@ -172,8 +172,8 @@ func _run() -> void:
 
 	# fullscreen toggle only stores in headless
 	panel.open()
-	panel.get_node("%Fullscreen").button_pressed = true
-	_check("fullscreen toggle stored", game.fullscreen and game.fullscreen_saved)
+	panel.get_node("%Fullscreen").button_pressed = false
+	_check("fullscreen toggle stored", not game.fullscreen and game.fullscreen_saved)
 	panel.get_node("%Fullscreen").button_pressed = false
 	panel.close()
 	game.fullscreen_saved = false
