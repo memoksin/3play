@@ -353,7 +353,6 @@ func _offer_blanket(p: Person) -> void:
 				it.pos = s
 		it.active = true
 		it.seen = true
-		_pop(it.pos, TextFx.upper(_t("ITEM_BLANKET")), C_AMBER)
 		return
 
 
@@ -1284,7 +1283,7 @@ func _draw_overlay() -> void:
 		if i == gcrew:
 			var sp := _sp(cp, 3.2)
 			if vr.grow(-20).has_point(sp):
-				_text(n, font, TextFx.upper(_t(gl[1])), sp, Color(C_AMBER, 0.9), 22)
+				_text(n, font, TextFx.upper(_t("CREW_LABEL")), sp, Color(C_AMBER, 0.9), 22)
 		elif i == 0 and (crew_seen or pending):
 			var sp := _sp(cp, 3.2)
 			if vr.grow(-20).has_point(sp):
@@ -1295,6 +1294,8 @@ func _draw_overlay() -> void:
 	if not gl.is_empty():
 		_edge_arrow(n, gl[0], C_AMBER, ps)
 	_guide_chip(n, font, ps, pending, gl)
+	if not gl.is_empty():
+		_goal_banner(n, font, vr, TextFx.upper(_t(gl[1])), t)
 	# found people: names, needs, treatment ring
 	for p in people:
 		if p.st == St.LOST or p.st == St.SAVED or p.st == St.REPORTED:
@@ -1345,6 +1346,16 @@ func _draw_overlay() -> void:
 		_edges(n, Color(0.0, 0.0, 0.0, 0.55 * absf(b)), 220.0)
 	if flash > 0.0:
 		n.draw_rect(vr, Color(1.0, 0.2, 0.1, flash * 0.22))
+
+
+## The current errand, big at the bottom centre (above the controls line).
+func _goal_banner(n: CanvasItem, font: Font, vr: Rect2, txt: String, t: float) -> void:
+	var fs := 34
+	var w := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var box := Rect2(Vector2(vr.get_center().x - w * 0.5 - 28.0, vr.end.y - 150.0), Vector2(w + 56.0, 60.0))
+	n.draw_rect(box, Color(0.03, 0.03, 0.06, 0.82))
+	n.draw_rect(box, Color(C_AMBER, 0.6 + 0.4 * sin(t * 4.0)), false, 2.0)
+	n.draw_string(font, box.position + Vector2(28.0, 42.0), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, C_AMBER)
 
 
 ## Index of the rescue crew whose post is nearest to `p`.
