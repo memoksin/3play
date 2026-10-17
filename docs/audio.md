@@ -115,7 +115,7 @@ Timeline from `scenes/minigames/connect.gd`: a calm bay until about 6 s before t
 |---|---|---|---|---|---|---|---|---|
 | C1 | Calm bay ambience | From the start until the wave arrives | Morning Birds in a Quiet Urban Garden | WhisperingEarth | https://freesound.org/people/WhisperingEarth/sounds/798842/ | CC0 | in repo | Layer on top of the D2 wave sound (jamgypsy), which starts first and keeps playing. Two players at once. Issue #95. |
 | C2 | Rotate a pipe | The player clicks a pipe (0.1 s turn) | Clank1.wav | BMacZero | https://freesound.org/people/BMacZero/sounds/94127/ | CC0 | in repo | |
-| C3 | Wave rising | The wave comes into view, 15 s before the hit | | | | | later | Postponed. The first candidates were rejected, needs a new search. |
+| C3 | Wave rising | The wave comes into view, 15 s before the hit | Rumble · fade in 10s | unfa | https://freesound.org/people/unfa/sounds/258341/ | CC0 (verify) | chosen | Low rumble that fades in over 10 s: the wave approaching. Starts when the wave comes into view. |
 | C4 | Wave hits | The wave crosses the bay and breaks on the beach, with the shake | Ocean Waves.wav | Noted451 | https://freesound.org/people/Noted451/sounds/531015/ | CC0 (verify) | chosen | Use seconds 32 to 37 of the file (the big wave). |
 | C5 | Water flows through the pipes | Water flows tile by tile after the hit | Hydrophone underwater stream close pipe gurgle.wav | JavierZumer | https://freesound.org/people/JavierZumer/sounds/422660/ | CC0 | in repo | Use the part from about 0:40 onward. |
 | C6 | Basin fills | The water reaches a basin and it fills | Water Echo.wav | eeriedescence | https://freesound.org/people/eeriedescence/sounds/419741/ | CC0 | in repo | Well-like echo. |
