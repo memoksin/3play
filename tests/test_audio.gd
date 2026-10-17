@@ -61,6 +61,19 @@ func _run() -> void:
 		_check("bus " + b, AudioServer.get_bus_index(b) != -1)
 	audio.set_process(false)  # the test drives the clock
 
+	# The settings panel and pause menu are built by the Game autoload, before Audio connects
+	# node_added: their buttons must still get the hover/click hook (UI3/UI4).
+	await process_frame
+	var game_node := root.get_node_or_null("Game")
+	var early: Array[Node] = game_node.find_children("*", "BaseButton", true, false) if game_node else []
+	var unhooked := early.filter(func(b: Node) -> bool: return not b.has_meta(&"audio_button"))
+	_check("buttons: settings panel + pause menu buttons hooked (%d found)" % early.size(),
+		early.size() >= 4 and unhooked.is_empty())
+	var pickers: Array[Node] = game_node.find_children("*", "", true, false).filter(
+		func(n: Node) -> bool: return n.scene_file_path == audio.LANG_PICKER_SCENE) if game_node else []
+	_check("buttons: settings language flags keep LS1/LS2 (%d pickers)" % pickers.size(),
+		pickers.is_empty() or pickers.all(func(n: Node) -> bool: return n.has_meta(&"audio_hooked")))
+
 	# 1. No files: every call is a silent no-op.
 	var silent := true
 	var cues := 0

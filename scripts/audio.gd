@@ -197,6 +197,14 @@ var _polls: Array[Callable] = []
 func _ready() -> void:
 	ensure_buses()
 	get_tree().node_added.connect(_on_node_added)
+	_hook_existing.call_deferred()
+
+
+## Autoloads listed before Audio (Game: the settings panel with its language flags, the pause menu)
+## add their nodes before node_added is connected, so run the hooks once on what is already there.
+func _hook_existing() -> void:
+	for n: Node in get_tree().root.find_children("*", "", true, false):
+		_on_node_added(n)
 
 
 func _process(delta: float) -> void:
