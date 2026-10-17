@@ -185,7 +185,7 @@ Spec: `docs/minigames/fire-farm.md`.
 
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
-| FR1 | Fire and wind ambience | Whole minigame | Big fire mixed with WIND BLOWING.mp3 | craigsmith or vekoN + Podcapocalipsis | A: https://freesound.org/people/craigsmith/sounds/483318/ (R27-25-Large Fire Burning) or B: https://freesound.org/people/vekoN/sounds/537530/ (digital wildfire); wind: https://freesound.org/people/Podcapocalipsis/sounds/521696/ | CC0 (verify all) | chosen (to test) | Sude makes both mixes (A and B), each with seconds 9 to 14 of the wind sound, looped. Burcu listens and picks one. |
+| FR1 | Fire and wind ambience | Whole minigame | digital wildfire mixed with WIND BLOWING.mp3 | vekoN + Podcapocalipsis | https://freesound.org/people/vekoN/sounds/537530/ and https://freesound.org/people/Podcapocalipsis/sounds/521696/ | CC0 (checked by Sude) | chosen | Option B approved by Burcu by ear. Wind seconds 9 to 14, 10 s seamless loop. Option A (craigsmith Large Fire Burning) dropped. |
 | FR2 | Footsteps | The player walks | Footsteps Dirt Gravel | PotatokingXII | https://freesound.org/people/PotatokingXII/sounds/352870/ | CC0 | chosen | Same as FN2. Trim to a clean stride loop. |
 | FR3 | Jump and landing on debris | The player jumps over the debris | Human Impact on Ground | alegemaate | https://freesound.org/people/alegemaate/sounds/364690/ | CC0 | chosen | Short clip of a person landing after a jump. |
 | FR4 | Pick up the knife | The player picks up the knife | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen (reuse of F2) | First second of the file. |
