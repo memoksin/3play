@@ -50,7 +50,7 @@ func _initialize() -> void:
 
 func _process(_delta: float) -> bool:
 	frames += 1
-	var budget_ms := (secs + 3.0) * 1000.0 * 14.0 * repeat + 60000.0
+	var budget_ms := (secs + 3.0) * 1000.0 * 18.0 * repeat + 60000.0
 	if frames > FRAME_CAP or Time.get_ticks_msec() - started > budget_ms:
 		push_error("perf: frame cap / watchdog hit")
 		quit(1)
@@ -75,6 +75,9 @@ func _run() -> void:
 		await _fit(game, "fit sf drag", "res://data/disasters/solar_flare.tres", true)
 		await _connect(game, "connect idle", false)
 		await _connect(game, "connect hit/flood", true)
+		await _beam(game, "beam plan", "plan")
+		await _beam(game, "beam fire", "fire")
+		await _beam(game, "beam plan 2D", "plan2d")
 	_print_table()
 	quit(0)
 
@@ -195,6 +198,34 @@ func _connect(game: Node, name: String, hit: bool) -> void:
 		s.solve()
 		s.rotate_cell(5, 5)  # one line left broken: flood + flow both run
 		s.seek(s.skin.timer_seconds)
+	await _measure(name)
+	s.queue_free()
+	await process_frame
+
+
+## Beam, solar flare wave 4 (9 x 7, the biggest board), solved: "plan" = the countdown with the route preview,
+## "fire" = the shot (game time slowed, so it lasts the whole measurement), "plan2d" = the 2D placeholder board.
+func _beam(game: Node, name: String, what: String) -> void:
+	if not _wanted(name):
+		return
+	var d := (load("res://data/disasters/solar_flare.tres") as Disaster).duplicate() as Disaster
+	if what == "plan2d":
+		var skin := (d.skin as BeamSkin).duplicate() as BeamSkin
+		for f in ["board_scene", "backdrop_scene", "grid_scene", "satellite_scene", "collector_scene", "habitat_scene",
+				"city_scene", "station_scene", "beams_scene"]:
+			skin.set(f, null)
+		d.skin = skin
+	game.disaster = d
+	var s: Control = load("res://scenes/minigames/beam.tscn").instantiate()
+	s.submit = false
+	root.add_child(s)
+	await process_frame
+	s.show_brief(3)
+	s.start_countdown()
+	s.solve()
+	if what == "fire":
+		s.fire()
+		s.time_scale = 0.2
 	await _measure(name)
 	s.queue_free()
 	await process_frame

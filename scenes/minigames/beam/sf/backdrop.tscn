@@ -1,0 +1,176 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/minigames/beam/sf/backdrop.gd" id="1_script"]
+[ext_resource type="Shader" path="res://assets/3d/solar_flare/fx/space_sky.gdshader" id="2_sky"]
+[ext_resource type="PackedScene" path="res://assets/3d/solar_flare/earth_slab.glb" id="4_slab"]
+[ext_resource type="PackedScene" path="res://assets/3d/solar_flare/fx/sun.tscn" id="5_sun"]
+[ext_resource type="PackedScene" path="res://assets/3d/solar_flare/earth_chunk.glb" id="6_chunk"]
+[ext_resource type="Shader" path="res://scenes/style/soft_particle.gdshader" id="7_soft"]
+[ext_resource type="Shader" path="res://assets/3d/solar_flare/fx/aurora.gdshader" id="8_aurora"]
+[ext_resource type="PackedScene" path="res://assets/3d/solar_flare/moon.glb" id="9_moon"]
+
+[sub_resource type="ShaderMaterial" id="sky_mat"]
+shader = ExtResource("2_sky")
+shader_parameter/sun_dir = Vector3(0.333, -0.226, -0.915)
+shader_parameter/nebula = 0.4
+shader_parameter/stars = 1.8
+
+[sub_resource type="Sky" id="sky"]
+sky_material = SubResource("sky_mat")
+
+[sub_resource type="Environment" id="env"]
+background_mode = 2
+sky = SubResource("sky")
+ambient_light_source = 2
+ambient_light_color = Color(0.36, 0.46, 0.8, 1)
+ambient_light_energy = 0.45
+reflected_light_source = 2
+tonemap_mode = 4
+tonemap_exposure = 1.0
+glow_enabled = true
+glow_intensity = 0.9
+glow_strength = 1.0
+glow_bloom = 0.04
+glow_blend_mode = 1
+glow_hdr_threshold = 0.9
+fog_enabled = true
+fog_mode = 1
+fog_light_color = Color(0.05, 0.05, 0.12, 1)
+fog_density = 1.0
+fog_depth_begin = 150.0
+fog_depth_end = 260.0
+fog_depth_curve = 1.6
+adjustment_enabled = true
+adjustment_contrast = 1.08
+adjustment_saturation = 1.1
+
+[sub_resource type="ShaderMaterial" id="wind_mat"]
+render_priority = 2
+shader = ExtResource("7_soft")
+shader_parameter/tint = Color(1, 0.72, 0.42, 0.85)
+shader_parameter/glow = 4.0
+shader_parameter/hardness = 0.5
+
+[sub_resource type="QuadMesh" id="wind"]
+material = SubResource("wind_mat")
+size = Vector2(0.18, 0.18)
+
+[sub_resource type="Gradient" id="wind_ramp"]
+offsets = PackedFloat32Array(0, 0.15, 0.7, 1)
+colors = PackedColorArray(1, 0.8, 0.5, 0, 1, 0.75, 0.45, 1, 0.8, 0.5, 0.9, 0.7, 0.5, 0.6, 1, 0)
+
+[sub_resource type="ShaderMaterial" id="aurora_b"]
+render_priority = 1
+shader = ExtResource("8_aurora")
+shader_parameter/seed = 5.3
+shader_parameter/intensity = 1.0
+
+[sub_resource type="PlaneMesh" id="aurora_mesh"]
+size = Vector2(18, 8)
+subdivide_width = 64
+orientation = 2
+
+[node name="Backdrop" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="Env" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
+
+[node name="SunKey" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-55, 200, 0)
+light_color = Color(1, 0.8, 0.6, 1)
+light_energy = 1.3
+shadow_enabled = true
+shadow_blur = 1.5
+directional_shadow_mode = 0
+directional_shadow_max_distance = 160.0
+
+[node name="EarthShine" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-30, 0, 0)
+light_color = Color(0.55, 0.68, 1, 1)
+light_energy = 0.7
+
+[node name="Sun" parent="." instance=ExtResource("5_sun")]
+position = Vector3(0, 23, -98)
+radius = 40.0
+emit_point = Vector3(0, 2, -63.9568)
+emit_size = 14.0
+
+[node name="Earth" type="Node3D" parent="."]
+position = Vector3(0, -0.9, 26)
+
+[node name="Slab" parent="Earth" instance=ExtResource("4_slab")]
+
+[node name="CityGlowL" type="OmniLight3D" parent="Earth"]
+position = Vector3(-7, 3.5, -3.5)
+light_color = Color(1, 0.72, 0.42, 1)
+light_energy = 1.2
+omni_range = 9.0
+
+[node name="CityGlowR" type="OmniLight3D" parent="Earth"]
+position = Vector3(7, 3.5, -3.5)
+light_color = Color(1, 0.72, 0.42, 1)
+light_energy = 1.2
+omni_range = 9.0
+
+[node name="MantleGlow" type="OmniLight3D" parent="Earth"]
+position = Vector3(-4, -9.5, 9)
+light_color = Color(1, 0.38, 0.12, 1)
+light_energy = 2.5
+omni_range = 16.0
+omni_attenuation = 1.4
+
+[node name="AuroraE" type="MeshInstance3D" parent="Earth"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 17, 4.5, -0.5)
+cast_shadow = 0
+mesh = SubResource("aurora_mesh")
+surface_material_override/0 = SubResource("aurora_b")
+
+[node name="Chunks" type="Node3D" parent="Earth"]
+
+[node name="Chunk1" parent="Earth/Chunks" instance=ExtResource("6_chunk")]
+position = Vector3(-23.5, -3.5, -2)
+rotation_degrees = Vector3(4, 20, -6)
+scale = Vector3(1.3, 1.3, 1.3)
+
+[node name="Chunk2" parent="Earth/Chunks" instance=ExtResource("6_chunk")]
+position = Vector3(-21, -9, 8)
+rotation_degrees = Vector3(-8, 75, 5)
+scale = Vector3(0.7, 0.7, 0.7)
+
+[node name="Chunk3" parent="Earth/Chunks" instance=ExtResource("6_chunk")]
+position = Vector3(11, -12, 10)
+rotation_degrees = Vector3(7, 140, 3)
+scale = Vector3(0.8, 0.8, 0.8)
+
+[node name="Chunk4" parent="Earth/Chunks" instance=ExtResource("6_chunk")]
+position = Vector3(23, -2.5, 4)
+rotation_degrees = Vector3(-5, 200, 8)
+scale = Vector3(0.9, 0.9, 0.9)
+
+[node name="Moon" parent="." instance=ExtResource("9_moon")]
+position = Vector3(-42, -10, -30)
+rotation_degrees = Vector3(0, -30, 0)
+scale = Vector3(1.7, 1.7, 1.7)
+
+[node name="Chunk5" parent="Earth/Chunks" instance=ExtResource("6_chunk")]
+position = Vector3(31, -5, -21)
+rotation_degrees = Vector3(6, 60, -4)
+scale = Vector3(1.4, 1.4, 1.4)
+
+[node name="SolarWind" type="CPUParticles3D" parent="."]
+position = Vector3(0, 4, -26)
+amount = 220
+lifetime = 7.0
+preprocess = 7.0
+mesh = SubResource("wind")
+emission_shape = 3
+emission_box_extents = Vector3(20, 5, 2)
+direction = Vector3(0, -0.08, 1)
+spread = 4.0
+gravity = Vector3(0, 0, 0)
+initial_velocity_min = 6.0
+initial_velocity_max = 10.0
+scale_amount_min = 0.5
+scale_amount_max = 1.4
+color_ramp = SubResource("wind_ramp")

@@ -66,10 +66,36 @@ Fire button once the route is perfect. Off ("blind"): none of it.
 | `scripts/beam_wave.gd`, `scripts/beam_skin.gd` | Data: one wave; the skin (waves, timings, text prefix, art scenes) |
 | `data/skins/solar_flare_beam.tres` | The 4 waves |
 | `scenes/minigames/beam.tscn` / `.gd` | Flow, input, countdown, the shot, score, HUD and cards |
-| `scenes/minigames/beam/*` | Board and placeholder pieces (look only) |
-| `tools/beam_shots.gd` | Screenshots: `godot --path . -s res://tools/beam_shots.gd [-- tr]` |
+| `scenes/minigames/beam/sf/*` | The 3D board and pieces the skin uses (look only, see "3D art") |
+| `scenes/minigames/beam/*` | The 2D board and placeholder pieces (what a skin field left empty falls back to) |
+| `tools/beam_shots.gd` | Screenshots, 1920x1080: per wave brief, plan, plan solved, shot out, result. `godot --path . -s res://tools/beam_shots.gd [-- tr]` |
+| `tools/perf.gd` | Frame cost: `--only=beam` measures "beam plan", "beam fire" and "beam plan 2D" (the placeholder board) |
+| `tests/test_beam.gd`, `tests/test_beam3d.gd` | Rules, flow and input; the 3D board (clicks cell by cell, plate angle, dark windows, beams, HUD clear of the Sun and the cities) |
 
 Texts: `SF_BEAM_*` keys in `locale/strings.csv`.
+
+## 3D art (`data/skins/solar_flare_beam.tres`)
+
+The skin points every `*_scene` field at `scenes/minigames/beam/sf/` and the board at `sf/board.tscn`: the approved
+art pilot (`scenes/art_pilot/solar_flare.tscn`, CameraPlay "Piano Tiles" lane view) is the game's board. Models are
+`assets/3d/solar_flare/*.glb`, effects `assets/3d/solar_flare/fx/` (sun, beam path, orbital grid, dial, aurora, space sky).
+
+- **Camera and layout**: `sf/layout.gd`. Cell (x, y) -> `Vector3((x + 0.5 - cols / 2) * 4, 2, (y + 0.5 - rows / 2) * 4 + z_shift)`;
+  the camera, Earth and cities stay where the pilot has them (a wave with fewer than 9 rows ends nearer the Sun).
+  The projection is plain math on the camera transform, so labels, clicks and beams agree with the picture.
+- **Clicks**: `board.cell_at(pos)` = a ray from the camera against the plane y = 2 (the satellites' plate centres), floored to the
+  cell. `board.cell_center(cell)` is the way back. Cells shrink towards the Sun; clicks are per cell, not per pixel row.
+- **Pieces stay `Node2D`** (the contract below holds): the board sets `position` (screen px; city codes, habitat names and
+  the satellite "!" / lock badges are drawn in 2D there) and `world` (a `Vector3`); the model is a `Node3D` child standing at
+  `world`. Satellite plate: `rotation.y = -turns * PI / 4`. A dark city / habitat / station hides its `<name>_glow` meshes
+  (flickering out first); `warning` pulses a red light and ring; a locked thermal swaps to `sat_thermal_hot`.
+- **Beams**: `sf/beams.gd` builds one `fx/beam_path.gd` ribbon per `BeamLogic.Seg` (plus the Sun's long beam, from the emitter
+  to the Parker gate, that grows during the charge). Preview = dim ribbons and a red glint on a city it reaches; shot = `fill`
+  follows `fire_t`, a glint and a light where a segment ends. The 2D `fx.tscn` (bursts, rising labels) is still the effects
+  layer: it works in screen px, which `board.event_pos` gives.
+- **Screen shake** turns the real camera by the board's px offset; the maths above uses the unshaken camera.
+- **HUD** keeps off the Sun's band and the cities: left panel top-left, Fire + hint top-right, toast just under the Parker
+  truss (`beam.tscn`, `TOAST_Y`). The briefing diagrams stay flat 2D (`diagram_satellite_scene` = the placeholder satellite).
 
 ## Art: replacing the placeholders
 
@@ -80,7 +106,7 @@ every piece if it has one. Pieces may ignore properties they do not show.
 
 | Field | Placeholder | Properties |
 |---|---|---|
-| `satellite_scene` | `satellite.tscn` | `kind` (&"M", &"S", &"T"), `cell` (px), `turns` (45 degree steps, not wrapped: ease to it), `highlight`, `hover`, `heat` (0-2), `locked`, `overheat_predicted`; methods `bump()`, `flash(color)`. Draw the plate above the beams (`z_index` 2) |
+| `satellite_scene` | `satellite.tscn` (3D: `sf/satellite.tscn`, also `world`) | `kind` (&"M", &"S", &"T"), `cell` (px), `turns` (45 degree steps, not wrapped: ease to it), `highlight`, `hover`, `heat` (0-2), `locked`, `overheat_predicted`; methods `bump()`, `flash(color)`. Draw the plate above the beams (`z_index` 2) |
 | `collector_scene` | `collector.tscn` | `cell`, `charge` (0-1), `targeted` |
 | `habitat_scene` | `habitat.tscn` | `cell`, `label`, `font`, `warning`, `dark` |
 | `city_scene` | `city.tscn` | Earth city: `cell`, `code`, `font`, `seed_value`, `warning`, `dark` |
@@ -89,9 +115,10 @@ every piece if it has one. Pieces may ignore properties they do not show.
 | `backdrop_scene` | `backdrop.tscn` | `board` (geometry: `sun_center`, `sun_radius`, `earth_center`, `earth_radius`, `sun_emitter()`...), `urgency`, `charge`, `charging`, `arrow` |
 | `beams_scene` | `beams.tscn` | `board`, `sim` (BeamLogic.Result), `mode` (NONE / PREVIEW / FIRE), `fire_t`; `heads()` for sparks |
 | `fx_scene` | `fx.tscn` | `cell`, `font`; `burst(pos, n, color, power)`, `spark(pos, color)`, `float_text(pos, text, color, sub)` |
-| `board_scene` | `board.tscn` | Whole board (e.g. a 3D slab). Keep `board.gd`'s API: `build`, `cell_at`, `cell_center`, `event_pos`, `seg_points`, `sat`, `collector`, `city`, `cities`, `collectors`, `tick`, `cell`, `origin`, layers `beams`, `fx`, `backdrop` |
+| `diagram_satellite_scene` | (`satellite_scene`) | Flat satellite for the briefing diagrams when `satellite_scene` is 3D |
+| `board_scene` | `board.tscn` (3D: `sf/board.tscn`) | Whole board (e.g. a 3D slab). Keep `board.gd`'s API: `build`, `cell_at`, `cell_center`, `event_pos`, `seg_points`, `sat`, `collector`, `city`, `cities`, `collectors`, `tick`, `cell`, `origin`, layers `beams`, `fx`, `backdrop` |
 
-Layout: the board fills `Beam.AREA` (between the HUD columns), one cell at most 92 px, with room for the Sun and
+Layout (2D board): the board fills `Beam.AREA` (between the HUD columns), one cell at most 92 px, with room for the Sun and
 Parker above (1.45 cells) and the Earth below (1.85 cells).
 
 ## Audio hooks (no sounds yet)

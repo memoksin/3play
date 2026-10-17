@@ -12,6 +12,7 @@ func _initialize() -> void:
 	_kahr()
 	_io()
 	_sf()
+	_bs()
 	quit()
 
 
@@ -2518,3 +2519,283 @@ func _sf_flush(parent: Node, name: String, shadow := true) -> Node3D:
 		i += 1
 	sf_parts.clear()
 	return g
+
+
+# ---------- Black Saturday (Victoria, 7 Feb 2009) ----------
+# Built from the fire minigame's 2.5D models (assets/3d/fire) laid out like scenes/art_pilot/fire_farm.tscn.
+# Flame quads come from scenes/art_pilot/fire_fx (their lights and particles are dropped: the set keeps
+# 3 omni lights and ~240 particles).
+
+const FIRE := "res://assets/3d/fire/"
+const FIRE_FX := "res://scenes/art_pilot/fire_fx/"
+const BS_SLAB := Rect2(-23.7, -17.7, 47.4, 35.4)  ## Godot x, z
+
+var bs_rng := RandomNumberGenerator.new()
+
+
+func _bs_glb(parent: Node, file: String, pos: Vector3, rot_y := 0.0, s := 1.0, nm := "") -> Node3D:
+	var n: Node3D = load(FIRE + file + ".glb").instantiate()
+	n.name = nm if nm != "" else file.to_pascal_case()
+	n.position = pos
+	n.rotation_degrees.y = rot_y
+	if s != 1.0:
+		n.scale = Vector3.ONE * s
+	return _own(n, parent) as Node3D
+
+
+## Model + the flame quads of its fire_fx scene (no light, smoke or sparks).
+func _bs_fire(parent: Node, fx: String, glb: String, pos: Vector3, rot_y := 0.0, nm := "") -> Node3D:
+	var g := _group(nm if nm != "" else fx.to_pascal_case(), parent)
+	g.position = pos
+	g.rotation_degrees.y = rot_y
+	_bs_glb(g, glb, Vector3.ZERO, 0.0, 1.0, "Base")
+	var inst: Node = load(FIRE_FX + fx + ".tscn").instantiate()
+	var fl := inst.get_node("Flames")
+	inst.remove_child(fl)
+	fl.owner = null
+	_own(fl, g)
+	for c in fl.get_children():
+		c.owner = root_node
+	inst.free()
+	return g
+
+
+## A particle emitter taken from a fire_fx scene.
+func _bs_take(fx: String, node: String) -> CPUParticles3D:
+	var inst: Node = load(FIRE_FX + fx + ".tscn").instantiate()
+	var p := inst.get_node(node) as CPUParticles3D
+	inst.remove_child(p)
+	inst.free()
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return _own(p, root_node) as CPUParticles3D
+
+
+func _bs() -> void:
+	bs_rng.seed = 20090207
+	root_node = Node3D.new()
+	root_node.name = "SetBlackSaturday"
+	var haze := Color(0.85, 0.42, 0.16)
+
+	var env := WorldEnvironment.new()
+	env.name = "Env"
+	var e := Environment.new()
+	var sky := Sky.new()
+	var psm := ProceduralSkyMaterial.new()
+	psm.sky_top_color = Color(0.28, 0.08, 0.05)
+	psm.sky_horizon_color = Color(0.95, 0.48, 0.18)
+	psm.sky_curve = 0.2
+	psm.ground_horizon_color = Color(0.9, 0.45, 0.17)
+	psm.ground_bottom_color = Color(0.7, 0.32, 0.12)
+	psm.sun_angle_max = 0.0
+	sky.sky_material = psm
+	e.background_mode = Environment.BG_SKY
+	e.sky = sky
+	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	e.ambient_light_color = Color(0.78, 0.46, 0.3)
+	e.ambient_light_energy = 0.55
+	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	e.fog_enabled = true
+	e.fog_mode = Environment.FOG_MODE_DEPTH
+	e.fog_light_color = haze
+	e.fog_depth_begin = 45.0
+	e.fog_depth_end = 125.0
+	e.fog_depth_curve = 1.3
+	e.fog_density = 1.0
+	e.fog_sky_affect = 0.0
+	env.environment = e
+	_own(env, root_node)
+
+	var sun := DirectionalLight3D.new()
+	sun.name = "SmokedSun"
+	sun.light_color = Color(1.0, 0.6, 0.32)
+	sun.light_energy = 1.5
+	sun.shadow_enabled = true
+	sun.shadow_blur = 1.5
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
+	sun.directional_shadow_max_distance = 110.0
+	sun.rotation_degrees = Vector3(-22, -112, 0)
+	_own(sun, root_node)
+	for l in [["FireGlowL", Vector3(-14, 6, -16)], ["FireGlowR", Vector3(14, 6, -16)]]:
+		var ol := OmniLight3D.new()
+		ol.name = l[0]
+		ol.light_color = Color(1.0, 0.5, 0.18)
+		ol.light_energy = 1.6
+		ol.omni_range = 30.0
+		ol.position = l[1]
+		_own(ol, root_node)
+
+	var world := _group("World")
+	_bs_glb(world, "farm_slab", Vector3.ZERO, 0.0, 1.0, "Slab")
+	_bs_glb(world, "farmhouse", Vector3(-9, 0, -6.5))
+	_bs_glb(world, "rain_tank", Vector3(-1.9, 0, -9.2), 100.0, 1.0, "HouseTank")
+	_bs_glb(world, "shed", Vector3(8, 0, -6))
+	_bs_glb(world, "valve", Vector3(12.35, 0, -2.5))
+	_bs_glb(world, "valve_wheel", Vector3(12.55, 0.92, -2.24))
+	_bs_glb(world, "hose_coil", Vector3(10.6, 0, -1.4), 25.0)
+	_bs_glb(world, "windmill", Vector3(1, 0, -10.6))
+	_bs_glb(world, "windmill_rotor", Vector3(1, 9.3, -10.05)).rotation_degrees.z = 20.0
+	_bs_glb(world, "gate_broken", Vector3(4.5, 0, 12), 0.0, 1.0, "Gate")
+	_bs_glb(world, "debris_pile", Vector3(6, 0, 12))
+	_bs_glb(world, "fire_sign", Vector3(10.5, 0, 15.2), 160.0)
+	var bales := [[Vector3(-20, 0, 9), 30.0], [Vector3(19.5, 0, 11), -20.0], [Vector3(21, 0, -8), 70.0], [Vector3(-6.5, 0, -14.2), 10.0]]
+	for i in bales.size():
+		_bs_glb(world, "hay_round", bales[i][0], bales[i][1], 1.0, "Bale%d" % i)
+	_bs_fences(world)
+	var trees := _group("Trees", world)
+	var gums := [["a", Vector3(3.5, 0, -15.2), 20.0], ["b", Vector3(13, 0, -16), 140.0], ["a", Vector3(21, 0, -12), 250.0],
+			["b", Vector3(-22, 0, 9.5), 80.0], ["c", Vector3(-20.5, 0, -4), 10.0], ["a", Vector3(21, 0, 6), 190.0],
+			["c", Vector3(20.5, 0, -3), 300.0], ["c", Vector3(16, 0, 15.5), 60.0],
+			["a", Vector3(-2.2, 0, -5), 110.0]]
+	for i in gums.size():
+		_bs_glb(trees, "gum_tree_" + gums[i][0], gums[i][1], gums[i][2], 1.0, "Gum%d" % i)
+	var chunks := _group("Chunks", world)
+	var ch := [[Vector3(-31, -3, 8), 1.4], [Vector3(-29, -9, 20), 0.7], [Vector3(12, -12, 22.5), 0.9], [Vector3(29, -2, 10), 0.8],
+			[Vector3(-7, -14, 22.5), 0.5]]
+	for i in ch.size():
+		var c := _bs_glb(chunks, "earth_chunk_bush", ch[i][0], i * 67.0 + 20.0, ch[i][1], "Chunk%d" % i)
+		c.rotation_degrees.x = 4.0 - i * 2.0
+		c.rotation_degrees.z = -6.0 + i * 3.0
+	_bs_grass(world)
+
+	# kangaroo pen: standing, grazing, one hopping in panic
+	var roos := _group("Kangaroos")
+	_bs_glb(roos, "kangaroo_stand", Vector3(-11, 0, 6), 90.0, 1.5, "Stand")
+	_bs_glb(roos, "kangaroo_graze", Vector3(-13.5, 0, 9), 200.0, 1.5, "Graze")
+	_bs_glb(roos, "kangaroo_hop", Vector3(-10, 0.35, 10.3), 60.0, 1.5, "Hop")
+	_bs_glb(roos, "kangaroo_stand", Vector3(-14, 0, 5), 225.0, 1.5, "Watch")
+	_bs_glb(roos, "kangaroo_graze", Vector3(-9.6, 0, 4.6), 330.0, 1.5, "Graze2")
+
+	# fire: front behind the farm, burning gums, spot fires, the small flame on the path to the gate
+	var fire := _group("Fire")
+	for p in [Vector3(-18, 0, -15.6), Vector3(-6, 0, -15.6), Vector3(-22, 0, -12)]:
+		_bs_fire(fire, "fire_front", "fire_front", p, 0.0, "Front%d" % fire.get_child_count())
+	for p in [Vector3(-20, 0, -15), Vector3(-9.5, 0, -15.8), Vector3(-21.5, 0, -9)]:
+		_bs_fire(fire, "burning_tree", "gum_tree_burning", p, 0.0, "Burning%d" % fire.get_child_count())
+	for p in [Vector3(8.5, 0, -15.6), Vector3(-21, 0, 3.5)]:
+		_bs_fire(fire, "spot_fire", "spot_fire", p, 0.0, "SpotFire%d" % fire.get_child_count())
+	_bs_fire(fire, "flame_small", "flame_small", Vector3(1.5, 0, 4.2), 0.0, "PathFlame")
+	var pl := OmniLight3D.new()
+	pl.name = "PathFlameLight"
+	pl.light_color = Color(1.0, 0.5, 0.17)
+	pl.light_energy = 3.0
+	pl.omni_range = 8.0
+	pl.omni_attenuation = 1.3
+	pl.position = Vector3(1.5, 0.9, 4.2)
+	_own(pl, fire)
+
+	# smoke column along the front and embers drifting on the wind (fire_fx emitters, reshaped)
+	var smoke := _bs_take("smoke_column", "Plume")
+	smoke.name = "Smoke"
+	smoke.amount = 100
+	smoke.lifetime = 14.0
+	smoke.preprocess = 14.0
+	smoke.initial_velocity_min = 1.0
+	smoke.initial_velocity_max = 1.9
+	(smoke.mesh.material as ShaderMaterial).set_shader_parameter("tint", Color(0.5, 0.36, 0.28, 0.8))
+	smoke.position = Vector3(-8, 2.0, -19)
+	smoke.emission_box_extents = Vector3(26, 1.0, 4)
+	smoke.gravity = Vector3(0.5, 0.3, 0.3)
+	var emb := _bs_take("embers_wind", "Embers")
+	emb.name = "Embers"
+	emb.amount = 140
+	emb.lifetime = 6.0
+	emb.preprocess = 6.0
+	emb.position = Vector3(-6, 3.0, -14)
+	emb.emission_box_extents = Vector3(22, 3, 4)
+
+	var focus := Marker3D.new()
+	focus.name = "Focus"
+	focus.position = Vector3(0, 3.0, -2.0)
+	_own(focus, root_node)
+	_save("res://scenes/diorama/set_black_saturday.tscn")
+
+
+func _bs_fences(world: Node3D) -> void:
+	var f := _group("Fences", world)
+	var n := 0
+	# yard: solid pieces by the house side, wire elsewhere; a 3 m gap at x 4.5..7.5 for the gate
+	for x in [-16.5, -13.5, -10.5]:
+		_bs_glb(f, "pen_fence", Vector3(x, 0, 12), 0.0, 1.0, "Fence%d" % n)
+		n += 1
+	for x in [-7.5, -4.5, -1.5, 1.5, 7.5, 10.5, 13.5]:
+		_bs_glb(f, "fence_wire", Vector3(x, 0, 12), 0.0, 1.0, "Fence%d" % n)
+		n += 1
+	for i in 11:
+		_bs_glb(f, "fence_wire", Vector3(-16.5 + i * 3.0, 0, -12), 0.0, 1.0, "Fence%d" % n)
+		n += 1
+	for z in [12.0, 9.0, 6.0]:
+		_bs_glb(f, "pen_fence", Vector3(-16.46, 0, z), 90.0, 1.0, "Fence%d" % n)
+		n += 1
+	for z in [3.0, 0.0, -3.0, -6.0, -9.0]:
+		_bs_glb(f, "fence_wire", Vector3(-16.46, 0, z), 90.0, 1.0, "Fence%d" % n)
+		n += 1
+	for z in [12.0, 9.0, 6.0, 3.0, 0.0, -3.0, -6.0, -9.0]:
+		_bs_glb(f, "fence_wire", Vector3(16.5, 0, z), 90.0, 1.0, "Fence%d" % n)
+		n += 1
+	# kangaroo pen inside the yard: east side with the cut piece, south side, post at the corner
+	_bs_glb(f, "pen_fence", Vector3(-7.5, 0, 12), 90.0, 1.0, "PenE0")
+	_bs_glb(f, "pen_fence_cut", Vector3(-7.5, 0, 9), 90.0, 1.0, "PenCut")
+	_bs_glb(f, "pen_fence", Vector3(-7.5, 0, 6), 90.0, 1.0, "PenE1")
+	for x in [-16.5, -13.5, -10.5]:
+		_bs_glb(f, "pen_fence", Vector3(x, 0, 3), 0.0, 1.0, "PenS%d" % n)
+		n += 1
+	_bs_glb(f, "pen_post", Vector3(-7.5, 0, 3))
+	_bs_glb(f, "fence_strainer", Vector3(16.5, 0, 12), 180.0, 1.0, "Strainer0")
+	_bs_glb(f, "fence_strainer", Vector3(16.5, 0, -12), 180.0, 1.0, "Strainer1")
+	_bs_glb(f, "fence_strainer", Vector3(-16.5, 0, -12), 0.0, 1.0, "Strainer2")
+
+
+## Keep probability of a grass tuft at Blender plan coordinates (x, y = -z), like fire_farm.gd.
+func _bs_keep(x: float, y: float) -> float:
+	if (x > -15.2 and x < -2.8 and y > -1.0 and y < 11.0) or (x > 2.8 and x < 13.4 and y > 2.2 and y < 9.9):
+		return 0.0
+	for c in [Vector3(14.45, 3.7, 1.8), Vector3(-1.9, 9.2, 1.8), Vector3(1.0, 10.6, 1.4), Vector3(1.0, 8.4, 1.6),
+			Vector3(6.0, -11.6, 2.6), Vector3(1.5, -4.2, 1.3), Vector3(11.0, 1.8, 1.1), Vector3(12.35, 2.2, 0.9)]:
+		if Vector2(x - c.x, y - c.y).length() < c.z:
+			return 0.0
+	for i in 23:
+		var tt := i / 22.0
+		var px: float
+		var py: float
+		if tt < 0.3:
+			py = -18.0 + 6.0 * (tt / 0.3)
+			px = 6.0 + 0.6 * sin(tt * 6.0)
+		else:
+			var k := (tt - 0.3) / 0.7
+			py = -12.0 + k * 14.0
+			px = 6.0 - 6.5 * pow(sin(k * PI * 0.5), 1.4)
+		if Vector2(x - px, y - py).length() < 1.9:
+			return 0.0
+	if pow((x - 0.5) / 9.5, 2) + pow((y - 1.5) / 4.2, 2) < 1.0:
+		return 0.12
+	if Vector2(x + 12.0, y + 7.5).length() < 3.6:
+		return 0.2
+	return 1.0
+
+
+func _bs_burnt(x: float, y: float) -> bool:
+	return (x < 0.5 and y > 15.3) or (x < -22.0 and y > 5.5) or Vector2(x - 8.5, y - 15.6).length() < 2.0 \
+		or Vector2(x + 21.0, y + 3.5).length() < 2.0
+
+
+## Dry grass: clumps of the fire grass models (MultiMeshes would embed the baked textures into the .tscn, which fails to load).
+func _bs_grass(world: Node3D) -> void:
+	var g := _group("Grass", world)
+	var burnt := 0
+	for pair in [["grass_tussock", 70], ["grass_tuft", 130], ["grass_seed", 16]]:
+		var placed := 0
+		var tries := 0
+		while placed < pair[1] and tries < pair[1] * 40:
+			tries += 1
+			var x := bs_rng.randf_range(BS_SLAB.position.x, BS_SLAB.end.x)
+			var y := -bs_rng.randf_range(BS_SLAB.position.y, BS_SLAB.end.y)
+			if bs_rng.randf() > _bs_keep(x, y):
+				continue
+			var s := bs_rng.randf_range(1.0, 1.7)
+			if _bs_burnt(x, y):
+				if burnt < 16:
+					_bs_glb(g, "grass_burnt", Vector3(x, 0, -y), bs_rng.randf() * 360.0, s, "Burnt%d" % burnt)
+					burnt += 1
+				continue
+			_bs_glb(g, pair[0], Vector3(x, 0, -y), bs_rng.randf() * 360.0, s, "%s%d" % [pair[0].to_pascal_case(), placed])
+			placed += 1

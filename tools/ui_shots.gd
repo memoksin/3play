@@ -67,7 +67,8 @@ func _run() -> void:
 
 
 func _shot(path: String, name: String, size: Vector2i, opt: Dictionary) -> void:
-	Input.warp_mouse(Vector2(3, size.y - 3))  # park the cursor bottom-left: a stray hover would highlight a menu button or the TR/EN flags
+	if OS.get_environment("PF_OFFSCREEN") != "1":  # offscreen runs: warping drags the real cursor to the virtual screen
+		Input.warp_mouse(Vector2(3, size.y - 3))  # park the cursor bottom-left: a stray hover would highlight a menu button or the TR/EN flags
 	await process_frame
 	var node: Node = load(path).instantiate()
 	if opt.has("seek"):

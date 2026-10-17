@@ -1,15 +1,24 @@
 extends SceneTree
-## Saves Beam (solar flare) screenshots to export/shots/. Needs a window (not --headless):
+## Saves Beam (solar flare) screenshots to export/shots/: the title, and per wave the briefing, the plan
+## (route preview, unsolved), the plan solved, the moment the shot is out, and the result card. 1920x1080,
+## like `art_pilot_shots.gd scene=res://scenes/art_pilot/solar_flare.tscn name=sf_ref` (the look to match).
+## Needs a window (not --headless):
 ## godot --path . -s res://tools/beam_shots.gd [-- tr]
 
 const OUT := "res://export/shots/"
-const FRAME_CAP := 2400
+const FRAME_CAP := 3600
+const SIZE := Vector2i(1920, 1080)
+## Game seconds after FIRE at which the shot is "out": charged, the beam well into the board.
+const SHOT_AT := 1.4
 
 var frames := 0
 var failed := false
 
 
 func _initialize() -> void:
+	if DisplayServer.get_name() != "headless":
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		DisplayServer.window_set_size(SIZE)
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
 	_run.call_deferred()
 
@@ -49,6 +58,33 @@ func _play(s: Control, seconds: float) -> void:
 		t += 1.0 / 60.0
 
 
+func _wave(s: Control, n: int, blackout_first := false) -> void:
+	await _shot("beam_brief%d" % n)
+	_press(s, "Go")
+	_play(s, 0.6)
+	s.hover = 1
+	s._refresh_view()
+	_play(s, 0.4)
+	await _shot("beam_plan%d" % n)
+	if blackout_first:  # fire the unsolved plan: the blackouts, then retry
+		s.fire()
+		_play(s, SHOT_AT + 0.4)
+		await _shot("beam_fire%d_blackout" % n)
+		_play(s, 6.0)
+		_press(s, "Retry")
+		_press(s, "Go")
+		_play(s, 0.6)
+	s.solve()
+	s.hover = -1
+	_play(s, 0.6)
+	await _shot("beam_plan%d_safe" % n)
+	s.fire()
+	_play(s, SHOT_AT)
+	await _shot("beam_fire%d" % n)
+	_play(s, 6.0)
+	await _shot("beam_result%d" % n)
+
+
 func _run() -> void:
 	var game := root.get_node("Game")
 	game.store_path = ""
@@ -64,56 +100,21 @@ func _run() -> void:
 	await _shot("beam_title")
 	_press(s, "Go")
 	_play(s, 0.5)
-	await _shot("beam_brief1")
+	for n in 4:
+		await _wave(s, n + 1, n == 1)
+		if n == 3:
+			break
+		_press(s, "Next")
+		_play(s, 0.5)
+	# wave 4 again, solved, with the clock in its last seconds
+	_press(s, "Retry")
 	_press(s, "Go")
-	_play(s, 1.0)
-	s.hover = 1
-	s._refresh_view()
-	_play(s, 0.3)
-	await _shot("beam_plan1")
-	s.solve()
-	s.hover = -1
-	_play(s, 0.5)
-	await _shot("beam_plan1_safe")
-	s.fire()
-	_play(s, 0.75)
-	await _shot("beam_fire1")
-	_play(s, 0.5)
-	await _shot("beam_fire1_end")
-	_play(s, 3.0)
-	await _shot("beam_result1")
-	_press(s, "Next")
-	_play(s, 0.5)
-	await _shot("beam_brief2")
-	_press(s, "Go")
-	_play(s, 0.5)
-	await _shot("beam_plan2")
-	s.fire()
-	_play(s, 1.6)
-	await _shot("beam_fire2_blackout")
-	_play(s, 4.0)
-	await _shot("beam_result2")
-	_press(s, "Next")
-	_play(s, 0.5)
-	await _shot("beam_brief3")
-	_press(s, "Go")
-	_play(s, 0.5)
-	await _shot("beam_plan3")
-	s.solve()
-	s.fire()
-	_play(s, 6.0)
-	_press(s, "Next")
-	_press(s, "Go")
-	_play(s, 0.5)
-	await _shot("beam_plan4")
 	s.solve()
 	s.advance(70.0)
 	_play(s, 1.0)
 	await _shot("beam_plan4_warn")
 	s.fire()
-	_play(s, 1.5)
-	await _shot("beam_fire4")
-	_play(s, 6.0)
+	_play(s, 12.0)
 	_press(s, "Next")
 	_play(s, 0.5)
 	await _shot("beam_final")

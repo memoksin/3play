@@ -44,6 +44,15 @@ func _solar_flare() -> Disaster:
 	return d
 
 
+## The black_saturday data file is not on this branch: build the Disaster in code.
+func _black_saturday() -> Disaster:
+	var d := Disaster.new()
+	d.id = &"black_saturday"
+	d.key_prefix = "FIRE"
+	d.role = &"citizen"
+	return d
+
+
 func _run() -> void:
 	if DisplayServer.get_name() == "headless":
 		push_error("diorama_shots: needs a renderer; run without --headless")
@@ -53,8 +62,12 @@ func _run() -> void:
 	var packed: PackedScene = load("res://scenes/diorama.tscn")
 	var list: Array = DISASTERS.duplicate()
 	list.append("solar_flare")
+	list.append("black_saturday")
+	var only := OS.get_cmdline_user_args()  # optional: -- <id> shoots just that one
+	if only.size() > 0:
+		list = only
 	for path in list:
-		game.disaster = _solar_flare() if path == "solar_flare" else load(path)
+		game.disaster = _solar_flare() if path == "solar_flare" else (_black_saturday() if path == "black_saturday" else load(path))
 		var d: Node3D = packed.instantiate()
 		root.add_child(d)
 		if not "t" in d:
