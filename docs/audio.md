@@ -213,3 +213,43 @@ Rotate satellites to route the solar beam into collectors, waves, a countdown, "
 | BM6 | Wave warning | A wave is coming | | | | | later | Empty for now, to search later. |
 | BM7 | Wave hits | The wave hits | | | | | later | Empty for now. |
 | BM8 | Countdown | The countdown runs | Bomb Countdown Beeps | snakebarney | https://freesound.org/people/snakebarney/sounds/138108/ | CC0 | chosen |  |
+
+## Pitch film (trailer, about 50 s, silent render, sounds added by the team)
+
+Source: `tools/video/film.html` cue sheet and `tools/video/intro_stack_v2.html` (memoksin, tools/video/README.md). The renders have no audio. Times are final-film seconds (intro 8.0 s first, then the film). Language of the on-screen text is Turkish. Game clips are recorded silent, so game sounds (ambience, clicks, water) are layered from the game files.
+
+| # | Time (s) | What happens | Sound needed | Status |
+|---|---|---|---|---|
+| T1 | 0 to 8 | Intro: the Stack logo in a storm | Rain loop and low wind, under the whole intro | todo |
+| T2 | about 2.4 | Distant sheet lightning in the clouds | Far soft thunder | todo |
+| T3 | 2.8 and 3.4 | Two close lightning strikes, the logo flickers | Two thunder cracks | todo |
+| T4 | 3.9 | Final strike hits the logo (2 frames silhouette, 1 inverted) | Big thunder crack and impact, then silence for a beat | todo |
+| T5 | 4.45 to 5.3 | "STACK PRESENTS" types on | Letter-by-letter type-on blips with a glitch feel | todo |
+| T6 | 5.5 | Last far strike | Far thunder | todo |
+| T7 | 6.05 to 7.65 | The camera pushes into the logo's eye | Riser, low and building, ends in a cut | todo |
+| T8 | 7.75 | Pure black | Silence | no sound |
+| T9 | 8.2, 8.5, 9.2, 9.5 | Darkness with a heartbeat glow | Heartbeat lub-dub (two beats, twice) | todo |
+| T10 | 8.8 to 10.0 | A faint voice echoes: "Sesimi duyan var mı?" | The line spoken by a team member, with echo (if text-to-speech is used it must be declared as AI) | todo |
+| T11 | 10.0 to 12.35 | "Hayatın göremediğimiz boyutları vardır" | Soft sting for a statement | todo |
+| T12 | 12.4 | The darkness tears open into the Kahramanmaras diorama | Rip or whoosh, then the D1 Winter Wind from the game | todo (D1 exists) |
+| T13 | 14.3 to 16.6 | Title card "TAHMİN ET" | Title card hit (glitch plus low boom), the same for all 5 cards | todo |
+| T14 | 16.6, 28.0, 36.3, 43.8 | Four glitch cuts between clips | Short glitch or digital stutter (G7 style) | todo |
+| T15 | 19.2 | Zoom-blur whip to the globe | Whoosh (G5 exists) | reuse G5 |
+| T16 | 20.2 to 22.5 | Title card "KEŞFET" | Title card hit (T13) | todo |
+| T17 | 24.55 | The crosshair locks on the Indian Ocean | Target Lock (G4 exists) | reuse G4 |
+| T18 | 25.75 | Zoom flash into the ocean | Flash whoosh | todo |
+| T19 | 26.1 to 28.0 | Title card "MÜDAHALE ET" | Title card hit (T13) | todo |
+| T20 | 28 to 31 | Indian Ocean minigame clip | Game sounds: wave, water flow (C5, C6) | reuse game files |
+| T21 | 31.0 | Hard cut to black | Cut to silence with two heartbeats (T9) at 31.12 and 31.40 | todo |
+| T22 | 31.7 | The role menu opens | Menu music M1 and hover (M2) | reuse M1, M2 |
+| T23 | 32.25 | "Farkındalık tek taraflı değildir" | Statement sting (T11) | todo |
+| T24 | 34.3 | Title card "TERCİH ET" | Title card hit (T13) | todo |
+| T25 | 36.3 to 40 | The globe spins again, "Dünyanın dört bir yanından", "3 afet senaryosu" | Globe spin G2, statement stings | reuse G2 |
+| T26 | 39.7 | Pixelate into the Easter bunny scene | Pixelate or 8-bit sweep | todo |
+| T27 | 41.5 | The egg bursts and the bunny pops out | 8-bit pop or burst | todo |
+| T28 | 41.6 | "Belki bir de easter egg, kim bilir…" | Statement sting | todo |
+| T29 | 43.8 to 47.4 | Result card, the closing line types on (44.4 to 45.9) | Card swell (R1), typing (G3) | reuse R1, G3 |
+| T30 | 47.4 | Title card "FARK ET" | Title card hit (T13) | todo |
+| T31 | 49.1 | CRT power-off | TV or CRT switch-off sound | todo |
+| T32 | 49.8 to 50.3 | Black | Silence | no sound |
+| T33 | whole film | Music under the film | One music bed. To decide: the menu music M1 (Title.mp3) or a new track. | to decide |
