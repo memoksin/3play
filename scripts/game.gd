@@ -32,6 +32,8 @@ const COVER_OUT := 0.25
 const STABLE := 3
 const STABLE_MS := 25.0
 const STABLE_CAP := 90
+## A replaced scene is freed this long (seconds) after the switch.
+const RETIRE_AFTER := 1.0
 
 ## Play counts per disaster id, kept on this machine so every scenario shows up before any repeats.
 ## Tests set it to "" (nothing read or written, picks are random) or a temp path: never the real user file.
@@ -63,6 +65,9 @@ var _textures: Array[Resource] = []
 ## The pool's disasters, loaded at start-up and kept.
 var _disasters: Array[Resource] = []
 var _shaders := {}
+## Scenes taken out of the tree and waiting to be freed (see `_retire`).
+var _retired: Array[Node] = []
+var _retiring := false
 
 
 func _ready() -> void:
@@ -82,6 +87,10 @@ func _exit_tree() -> void:
 	_disasters.clear()
 	_shaders.clear()
 	_release_prepared()
+	for n in _retired:
+		if is_instance_valid(n):
+			n.free()
+	_retired.clear()
 	_warm_gen += 1
 
 
@@ -310,8 +319,11 @@ func _go(step: StringName) -> void:
 	if step == &"diorama" and is_instance_valid(_prepared):
 		var node := _prepared
 		node.get_parent().remove_child(node)
-		_release_prepared()
-		get_tree().change_scene_to_node.call_deferred(node)
+		# freeing the empty warm-up viewport and the globe costs tens of ms: not in this frame
+		_retire(_prepared_vp)
+		_prepared_vp = null
+		_prepared = null
+		_swap_scene.call_deferred(node)
 		return
 	var path := scene_path(step)
 	var scene: PackedScene = null
@@ -322,6 +334,41 @@ func _go(step: StringName) -> void:
 		get_tree().change_scene_to_packed.call_deferred(scene)
 	else:
 		get_tree().change_scene_to_file.call_deferred(path)
+
+
+## Switches to `node`; the old scene is taken out of the tree and freed later, a piece per frame.
+func _swap_scene(node: Node) -> void:
+	var old := get_tree().current_scene
+	if old:
+		get_tree().root.remove_child(old)
+		get_tree().current_scene = null
+		_retire(old)
+	get_tree().change_scene_to_node(node)
+
+
+## Frees `node` (out of the tree) a little later, one child per frame, so no frame pays for all of it.
+func _retire(node: Node) -> void:
+	if node == null:
+		return
+	_retired.append(node)
+	if _retiring:
+		return
+	_retiring = true
+	await get_tree().create_timer(RETIRE_AFTER).timeout
+	while is_inside_tree() and not _retired.is_empty():
+		var n: Node = _retired.pop_front()
+		if not is_instance_valid(n):
+			continue
+		for c in n.get_children():
+			c.free()
+			await get_tree().process_frame
+			if not is_inside_tree():
+				break
+		if is_instance_valid(n):
+			n.free()
+		if is_inside_tree():
+			await get_tree().process_frame
+	_retiring = false
 
 
 ## Role picked: the click frame only starts the cover. Nothing runs until the cover is fully opaque
@@ -390,7 +437,9 @@ func _warm_up(gen: int) -> void:
 	var diorama := packed_scene(scene_path(&"diorama"))
 	if diorama:
 		# kept: the diorama is built and drawn here, frozen, and taken over by the scene switch
-		_prepared_vp = _warm_viewport()
+		# full size at the window's font oversampling: the card's glyphs are rasterized (per oversampling) here
+		_prepared_vp = _warm_viewport(Vector2i(1280, 720))
+		_prepared_vp.oversampling_override = get_tree().root.get_final_transform().get_scale().x
 		_prepared = diorama.instantiate()
 		_prepared.set(&"preview", true)
 		_prepared_vp.add_child(_prepared)

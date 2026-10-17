@@ -16,6 +16,8 @@ const CAM_NEAR := 1.37
 ## CAM_DIVE, while the veil closes into the diorama's haze colour (Diorama.haze()).
 const CAM_DIVE := 1.14
 const DIVE_IN := 0.35
+## Frames drawn (veil only) before the globe hands over to the diorama.
+const HAND_OVER_FRAMES := 2
 const START_PITCH := 0.25
 ## Spin at t = 0: the prototype's rest orientation (three.js sphere at y = 0) in SphereMesh's layout.
 const START_SPIN := -PI / 2
@@ -274,7 +276,26 @@ func _process(delta: float) -> void:
 	_overlay.queue_redraw()
 	if t >= TOTAL and not paused and not _done:
 		_done = true
-		Game.next()
+		_hand_over()
+
+
+## The veil is solid now. Hide what is under it and let the GPU drain a frame or two before the scene
+## switch: `_exit_tree` changes the window's MSAA, which waits for the frames in flight, and a globe
+## frame on a 4K window is slow (the solar flare's most). The hold shows the veil's own colour.
+func _hand_over() -> void:
+	if DisplayServer.get_name() != "headless":
+		_fade.color.a = 1.0
+		for node: Node in [_stars, _axial, _atmo]:
+			node.visible = false
+		for child in $Hud.get_children():
+			if child != _fade:
+				child.visible = false
+		for i in HAND_OVER_FRAMES:
+			await get_tree().process_frame
+			await RenderingServer.frame_post_draw
+			if not is_inside_tree():
+				return
+	Game.next()
 
 
 func _unhandled_input(event: InputEvent) -> void:
