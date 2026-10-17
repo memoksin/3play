@@ -117,7 +117,7 @@ What happens on the card (`scenes/result.gd`): the card fades in, the score land
 | R2 | Score lands | The score appears | | | | | no sound | Not needed. |
 | R3 | Closing line typing | The closing line types on | Computer keyboard typing snippet mono [loop] | cabled_mess | https://freesound.org/people/cabled_mess/sounds/361639/ | CC0 | chosen | Same as G3 and D4. Needs typing start and finish signals, issue #99. |
 | R4 | Button hover and click | Play again and Main menu | UI_Hover (unfa) and Soft UI Button Click (Jummit) | unfa, Jummit | see M2 and M3 | CC0 | chosen | Same sounds as the main menu (M2, M3). |
-| R5 | Result music | While the card is open, calm and thoughtful | | | | | todo | Needs a search. Idea: another track from the Dark Sci-Fi Audio Pack (same source as the menu music), or a separate calm track. |
+| R5 | Result music | While the card is open, calm and thoughtful | Title.mp3 (from Dark Sci-Fi Audio Pack) | SRG774 | https://opengameart.org/content/dark-sci-fi-audio-pack | CC0 | chosen (may change) | Same as the main menu music (M1): the game starts and ends with the same music. May change after listening in the game; then try another track from the same pack (Sector, Airy) or another calm track. |
 
 ### Typed text everywhere (G3, D4, R3)
 
