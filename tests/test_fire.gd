@@ -83,13 +83,7 @@ func _data(d: Disaster) -> void:
 	_check("Game.SCENES has fire", game.SCENES.get(&"fire", "") == SCENE and ResourceLoader.exists(SCENE))
 	_check("Game.POOL citizen has black_saturday", DISASTER in game.POOL[&"citizen"])
 	_check("Game.PICK unchanged (F6 default)", game.PICK[&"citizen"] == "res://data/disasters/kahramanmaras.tres")
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 4
-	var seen := {}
-	for i in 40:
-		seen[game.choose(game.POOL[&"citizen"], {}, rng)] = true
-	_check("citizen pick: black saturday comes up", seen.has(DISASTER))
-	_check("citizen pick: least played wins", game.choose(game.POOL[&"citizen"], {"kahramanmaras": 1}, rng) == DISASTER)
+	_check("citizen path: black saturday is the Solar Flare partner", game.PATHS[1][&"citizen"] == DISASTER)
 	_check("place text resolves", d.text("PLACE") != "FIRE_PLACE")
 	_check("score line formats", (d.text("CARD_SCORE") % 2) == "2/3 done")
 

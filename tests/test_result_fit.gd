@@ -49,6 +49,7 @@ func _run() -> void:
 			var d: Resource = load(p)
 			game.disaster = d
 			game.role = d.role
+			game.reset_launch()  # the partner block shows: the card must fit with it
 			game.saved = 41
 			game.total = 44
 			change_scene_to_file(RESULT)
@@ -61,8 +62,13 @@ func _run() -> void:
 			var r := card.get_global_rect()
 			var name := "%s %s" % [locale, d.id]
 			_check(name + ": card inside the screen", view.encloses(r))
+			var partner: Control = current_scene.get_node("%Partner")
+			_check(name + ": partner block shown, inside the card", partner.visible
+					and r.encloses(partner.get_global_rect()) and r.encloses(current_scene.get_node("%PartnerPlay").get_global_rect()))
+			_check(name + ": partner text not clipped", not (current_scene.get_node("%PartnerText") as Label).get_line_count() > 3)
 			_check(name + ": card inside its column", r.position.x >= column.get_global_rect().position.x - 0.5
 					and r.end.x <= column.get_global_rect().end.x + 0.5)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp))
+	game.reset_launch()
 	story.progress_path = ""
 	quit(0 if ok else 1)

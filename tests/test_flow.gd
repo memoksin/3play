@@ -113,16 +113,21 @@ func _run() -> void:
 	load("res://scripts/story.gd").progress_path = ""  # never touch the real mission progress
 	_check_sun_glued()
 	var game := root.get_node("Game")
-	# a temp play-count file (never the real one): the two runs per role take both of its scenarios
+	# a temp play-count file (never the real one): each path's two games take the flow once
 	var tmp := OS.get_cache_dir().path_join("3play_test_flow_%d.cfg" % OS.get_process_id())
 	DirAccess.remove_absolute(tmp)
 	game.store_path = tmp
 	var played := {}
 	game.settings_path = ""  # the menu must not redirect to the language scene
-	for role in [&"citizen", &"state"]:
-		for win in [true, false]:
+	var win := true
+	for entry: Dictionary in game.PATHS:
+		for role: StringName in [&"citizen", &"state"]:
+			win = not win
+			game.reset_launch()
+			game.launch_path = entry  # a chosen path: no first-pick notice before the globe
 			game.start(role)
 			_check("%s disaster is from its pool" % role, game.disaster.role == role)
+			_check("%s disaster is the path's" % role, game.disaster.resource_path == entry[role])
 			played[game.disaster.id] = true
 			await _at(&"globe", role)
 			await _leave_globe(role, win)
@@ -137,6 +142,7 @@ func _run() -> void:
 			await _at(&"main", role)
 	DirAccess.remove_absolute(tmp)
 	game.store_path = ""
+	game.reset_launch()
 	for list: Array in game.POOL.values():
 		for path: String in list:
 			var id := path.get_file().get_basename()

@@ -21,6 +21,8 @@ func _wait(sec: float) -> void:
 func _globe() -> Node:
 	var game := root.get_node("Game")
 	game.store_path = ""  # never touch the real play counts
+	game.reset_launch()
+	game.launch_path = game.PATHS[0]  # a chosen path: no first-pick notice
 	game.start(&"state")
 	game.disaster = load("res://data/disasters/indian_ocean.tres")  # the pick is random; this test needs a normal run
 	await process_frame
@@ -157,6 +159,8 @@ func _run() -> void:
 func _glitch_globe() -> Node:
 	var game := root.get_node("Game")
 	game.store_path = ""
+	game.reset_launch()
+	game.launch_path = game.PATHS[0]  # a chosen path: no first-pick notice
 	game.start(&"state")
 	game.disaster = load("res://data/disasters/solar_flare.tres")
 	await process_frame

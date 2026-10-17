@@ -31,13 +31,15 @@ func _ready() -> void:
 	_optional(%Co, d, "CARD_CO")
 	%Replay.text = TextFx.upper(tr("RESULT_REPLAY"))
 	%Menu.text = TextFx.upper(tr("RESULT_MENU"))
-	%Replay.pressed.connect(Game.start.bind(Game.role))
+	_partner(d)
+	%Replay.pressed.connect(Game.replay)
 	%Menu.pressed.connect(Game.next)
 	get_viewport().size_changed.connect(fit)
 	fit.call_deferred()
 	# Entry: card fades in, the score lands, the closing line types on last.
 	TextFx.fade_in(%Card)
 	TextFx.fade_in(%Score, 0.3)
+	TextFx.fade_in(%Partner, 0.6)
 	TextFx.fade_in(%Buttons, 0.6)
 	TextFx.type_on($Center/Card/Box/Closing, 1.0, 24.0, closing_typing_started.emit, closing_typing_finished.emit)
 	# the run counts as done once its card is up; a first badge gets its moment once the card is in
@@ -53,6 +55,22 @@ func show_badge_moment() -> void:
 	badge_moment.setup(Game.disaster)
 	add_child(badge_moment)
 	badge_moment.play()
+
+
+## The recommendation block under the body, while the other game of the path (the other perspective) has
+## not been played in this launch; its button starts that game straight away.
+func _partner(d: Disaster) -> void:
+	Game.mark_played(d)
+	%Partner.visible = Game.partner_pending(d)
+	if not %Partner.visible:
+		return
+	var state_next := d.role != &"state"  # a Vatandaş game recommends Devlet
+	%PartnerText.text = tr("RESULT_PARTNER_STATE" if state_next else "RESULT_PARTNER_CITIZEN")
+	%PartnerText.add_theme_color_override("font_color", Palette.HUD_RED if state_next else Palette.HUD_BLUE)
+	%PartnerPlay.text = TextFx.upper(tr("RESULT_PARTNER_PLAY"))
+	%PartnerPlay.pressed.connect(func() -> void:
+		%PartnerPlay.disabled = true  # one click starts it
+		Game.play_partner())
 
 
 ## Sizes the scroll area to the body, capped so the whole card fits the screen.
