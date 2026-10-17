@@ -55,17 +55,20 @@ func _run() -> void:
 	await _settle(6)
 	_check("first run lands on main menu", current_scene.scene_file_path == game.scene_path(&"main"))
 	_check("default is not saved", not game.has_locale())
-	var tr_flag := current_scene.find_child("TR", true, false) as BaseButton
+	game.open_settings()  # the flags live in the Settings panel now
+	await _settle(2)
+	var tr_flag := game.settings_panel.find_child("TR", true, false) as BaseButton
 	_check("TR is selected in the menu", tr_flag != null and tr_flag.button_pressed)
 
 	# menu switch
-	var en := current_scene.find_child("EN", true, false) as BaseButton
+	var en := game.settings_panel.find_child("EN", true, false) as BaseButton
 	_check("menu switch exists", en != null)
 	en.pressed.emit()
 	await _settle(6)
 	_check("switch changes locale", TranslationServer.get_locale().begins_with("en"))
 	_check("switch saved", game.saved_locale() == "en")
 	_check("menu still shown", current_scene.scene_file_path == game.scene_path(&"main"))
+	game.settings_panel.close()
 
 	# saved locale: boot scene forwards straight to the menu
 	change_scene_to_file("res://scenes/language.tscn")

@@ -37,11 +37,29 @@ const STABLE_CAP := 90
 ## A replaced scene is freed this long (seconds) after the switch.
 const RETIRE_AFTER := 1.0
 
+## Mouse look range of the first-person minigame, set in the Settings panel.
+const SENS_MIN := 0.25
+const SENS_MAX := 3.0
+const SENS_DEFAULT := 1.0
+
 ## Play counts per disaster id, kept on this machine so every scenario shows up before any repeats.
 ## Tests set it to "" (nothing read or written, picks are random) or a temp path: never the real user file.
 var store_path := "user://played.cfg"
 ## Chosen UI language ([ui] locale). Tests set it to "" (nothing read or written) or a temp path.
 var settings_path := "user://settings.cfg"
+## Multiplier on the fire scene's own base look speed ([input] mouse_sensitivity).
+var mouse_sensitivity := SENS_DEFAULT
+## True = pushing the mouse up looks down ([input] invert_y).
+var invert_y := false
+## Volumes, linear 0..1 ([audio] master / music / sfx); effects drive the SFX and UI buses.
+var master_volume := 1.0
+var music_volume := 1.0
+var sfx_volume := 1.0
+## [display] fullscreen; the window is only touched once the player has chosen (fullscreen_saved).
+var fullscreen := false
+var fullscreen_saved := false
+## The Settings panel (mounted in _ready), opened with open_settings().
+var settings_panel: CanvasLayer
 var role: StringName
 var disaster: Disaster
 var saved := 0
@@ -74,10 +92,15 @@ var _retiring := false
 
 func _ready() -> void:
 	load_locale()
+	load_settings()
 	_make_cover()
 	_cache_scripts()
 	_draw_cover_once()
+	settings_panel = preload("res://scenes/ui/settings_panel.tscn").instantiate()
+	add_child(settings_panel)  # before the pause menu, which listens to it
 	add_child(preload("res://scenes/ui/pause_menu.tscn").instantiate())  # Esc during a run
+	apply_fullscreen()
+	apply_audio_settings.call_deferred()  # the Audio autoload makes its buses in its own _ready
 
 
 ## Requested scenes nobody took (e.g. the game quits on the globe) are collected, so none leaks.
@@ -128,6 +151,132 @@ func set_locale(code: String) -> void:
 	var cfg := ConfigFile.new()
 	cfg.load(settings_path)  # keep other keys; a missing file is fine
 	cfg.set_value("ui", "locale", code)
+	var err := cfg.save(settings_path)
+	if err != OK:
+		push_warning("Game: cannot save settings to %s (error %d)" % [settings_path, err])
+
+
+## Reads every saved setting (input, audio, display); missing file or keys = defaults. Never errors.
+func load_settings() -> void:
+	load_input_settings()
+	load_audio_settings()
+	load_display_settings()
+
+
+## Reads [input] from the settings file; missing file or keys = defaults. Never errors.
+func load_input_settings() -> void:
+	var cfg := _read_settings()
+	mouse_sensitivity = _num(cfg, "input", "mouse_sensitivity", SENS_DEFAULT, SENS_MIN, SENS_MAX)
+	invert_y = cfg.get_value("input", "invert_y", false) == true
+
+
+func set_mouse_sensitivity(v: float) -> void:
+	mouse_sensitivity = clampf(v, SENS_MIN, SENS_MAX)
+	_save_settings("input", {"mouse_sensitivity": mouse_sensitivity, "invert_y": invert_y})
+
+
+func set_invert_y(on: bool) -> void:
+	invert_y = on
+	_save_settings("input", {"mouse_sensitivity": mouse_sensitivity, "invert_y": invert_y})
+
+
+## Reads [audio] master / music / sfx (linear 0..1); missing or garbage = 1.0. Does not touch the buses.
+func load_audio_settings() -> void:
+	var cfg := _read_settings()
+	master_volume = _num(cfg, "audio", "master", 1.0, 0.0, 1.0)
+	music_volume = _num(cfg, "audio", "music", 1.0, 0.0, 1.0)
+	sfx_volume = _num(cfg, "audio", "sfx", 1.0, 0.0, 1.0)
+
+
+func set_master_volume(v: float) -> void:
+	master_volume = clampf(v, 0.0, 1.0)
+	_audio_changed()
+
+
+func set_music_volume(v: float) -> void:
+	music_volume = clampf(v, 0.0, 1.0)
+	_audio_changed()
+
+
+## The effects volume drives both the SFX and the UI bus.
+func set_sfx_volume(v: float) -> void:
+	sfx_volume = clampf(v, 0.0, 1.0)
+	_audio_changed()
+
+
+func _audio_changed() -> void:
+	apply_audio_settings()
+	_save_settings("audio", {"master": master_volume, "music": music_volume, "sfx": sfx_volume})
+
+
+## Puts the volumes on the buses (0 = muted). Idempotent; a bus that does not exist (yet) is skipped.
+func apply_audio_settings() -> void:
+	var levels := {&"Master": master_volume, &"Music": music_volume, &"SFX": sfx_volume, &"UI": sfx_volume}
+	for bus: StringName in levels:
+		var idx := AudioServer.get_bus_index(bus)
+		if idx == -1:
+			continue
+		var v: float = levels[bus]
+		AudioServer.set_bus_mute(idx, v <= 0.0)
+		AudioServer.set_bus_volume_db(idx, linear_to_db(maxf(v, 0.0001)))
+
+
+## Reads [display] fullscreen and remembers whether it was ever saved. Does not touch the window.
+func load_display_settings() -> void:
+	var cfg := _read_settings()
+	fullscreen_saved = cfg.has_section_key("display", "fullscreen")
+	fullscreen = fullscreen_saved and cfg.get_value("display", "fullscreen") == true
+
+
+## Sets, applies and saves the fullscreen mode (the window is left alone when headless).
+func set_fullscreen(on: bool) -> void:
+	fullscreen = on
+	fullscreen_saved = true
+	apply_fullscreen()
+	_save_settings("display", {"fullscreen": on})
+
+
+## Applies the saved window mode; nothing happens if the player never chose one.
+func apply_fullscreen() -> void:
+	if not fullscreen_saved or DisplayServer.get_name() == "headless":
+		return
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED)
+
+
+## Opens the Settings panel; `opener` gets the focus back when it closes.
+func open_settings(opener: Control = null) -> void:
+	if settings_panel:
+		settings_panel.open(opener)
+
+
+func _read_settings() -> ConfigFile:
+	var cfg := ConfigFile.new()
+	if settings_path == "":
+		return cfg
+	var err := cfg.load(settings_path)
+	if err != OK:
+		if err != ERR_FILE_NOT_FOUND:
+			push_warning("Game: cannot read settings %s (error %d)" % [settings_path, err])
+		return ConfigFile.new()
+	return cfg
+
+
+## A number from the file clamped to [lo, hi]; `def` when missing or not a number.
+static func _num(cfg: ConfigFile, section: String, key: String, def: float, lo: float, hi: float) -> float:
+	var v: Variant = cfg.get_value(section, key, def)
+	if (v is float or v is int) and is_finite(float(v)):
+		return clampf(float(v), lo, hi)
+	return def
+
+
+## Writes the keys into the section, keeping everything else in the file.
+func _save_settings(section: String, values: Dictionary) -> void:
+	if settings_path == "":
+		return
+	var cfg := ConfigFile.new()
+	cfg.load(settings_path)  # keep other keys; a missing file is fine
+	for key: String in values:
+		cfg.set_value(section, key, values[key])
 	var err := cfg.save(settings_path)
 	if err != OK:
 		push_warning("Game: cannot save settings to %s (error %d)" % [settings_path, err])
