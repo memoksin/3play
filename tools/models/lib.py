@@ -120,6 +120,46 @@ PAL = {
     "phone_glow":  {"c": "bfe0ff", "r": 1.0, "snow": 0, "emit": ("a8d4ff", 2.0)},
     "tail_light":  {"c": "c0201a", "r": 0.3, "snow": 0, "emit": ("ff2a1a", 1.2)},
     "head_light":  {"c": "fff3d8", "r": 0.2, "snow": 0, "emit": ("fff1d0", 2.5)},
+    # --- solar flare 3026 (#124): orbital hardware, Earth section, city ---
+    "hull_white":   {"c": "d9dad4", "r": 0.45, "snow": 0},
+    "hull_grey":    {"c": "8a9099", "r": 0.4, "snow": 0},
+    "hull_dark":    {"c": "2c3039", "r": 0.5, "snow": 0},
+    "foil_gold":    {"c": "c99a3e", "r": 0.28, "snow": 0},
+    "foil_silver":  {"c": "aab0b8", "r": 0.3, "snow": 0},
+    "solar_cell":   {"c": "1b2846", "r": 0.18, "snow": 0},
+    "trim_blue":    {"c": "3a72b8", "r": 0.45, "snow": 0},
+    "trim_violet":  {"c": "6a46a6", "r": 0.45, "snow": 0},
+    "trim_orange":  {"c": "c8622a", "r": 0.45, "snow": 0},
+    "trim_teal":    {"c": "2a8c80", "r": 0.45, "snow": 0},
+    "copper":       {"c": "a95f36", "r": 0.35, "snow": 0},
+    "scorch":       {"c": "3a2a26", "r": 0.8, "snow": 0},
+    "ocean":        {"c": "1c3c62", "r": 0.12, "snow": 0, "raw": True},
+    "ocean_shallow": {"c": "2d7487", "r": 0.15, "snow": 0, "raw": True},
+    "land_green":   {"c": "5c7a46", "r": 0.9, "snow": 0},
+    "land_dry":     {"c": "a3864f", "r": 0.9, "snow": 0},
+    "sand":         {"c": "cdb688", "r": 0.9, "snow": 0},
+    "crust_a":      {"c": "a8805a", "r": 0.95, "snow": 0},
+    "crust_b":      {"c": "9a5a40", "r": 0.95, "snow": 0},
+    "crust_c":      {"c": "6e625e", "r": 0.95, "snow": 0},
+    "basalt":       {"c": "3e3846", "r": 0.9, "snow": 0},
+    "cloud":        {"c": "e6eaee", "r": 1.0, "snow": 0},
+    "city_white":   {"c": "d5d8d6", "r": 0.5, "snow": 0},
+    "city_glass":   {"c": "263750", "r": 0.1, "snow": 0},
+    "city_green":   {"c": "4f8a5a", "r": 0.85, "snow": 0},
+    # unbaked metal ("raw": own material, kept out of the bake; "m" = metallic)
+    "mirror":       {"c": "dfe8f2", "r": 0.04, "snow": 0, "raw": True, "m": 1.0},
+    "mirror_gold":  {"c": "e8b860", "r": 0.08, "snow": 0, "raw": True, "m": 1.0},
+    # glowing
+    "magma":        {"c": "ff5a1c", "r": 1.0, "snow": 0, "emit": ("ff4410", 1.5)},
+    "led_blue":     {"c": "9ccfff", "r": 0.3, "snow": 0, "emit": ("6ab8ff", 4.0)},
+    "led_violet":   {"c": "d6b6ff", "r": 0.3, "snow": 0, "emit": ("b07cff", 4.0)},
+    "led_orange":   {"c": "ffc08a", "r": 0.3, "snow": 0, "emit": ("ff8a2a", 4.0)},
+    "led_red":      {"c": "ff8a7a", "r": 0.3, "snow": 0, "emit": ("ff2a1a", 4.0)},
+    "core_green":   {"c": "a8ffd9", "r": 0.2, "snow": 0, "emit": ("4dffb8", 6.0)},
+    "split_glass":  {"c": "c6a6ff", "r": 0.1, "snow": 0, "emit": ("8f5cff", 1.1)},
+    "hot_plate":    {"c": "ff6a3a", "r": 0.4, "snow": 0, "emit": ("ff3a12", 4.0)},
+    "city_neon":    {"c": "bff2ff", "r": 0.3, "snow": 0, "emit": ("6fe3ff", 3.0)},
+    "city_window":  {"c": "ffd9a8", "r": 1.0, "snow": 0, "emit": ("ffb866", 2.2)},
 }
 
 SNOW_RGB = PAL["snow"]["c"]
@@ -601,8 +641,9 @@ def finish(name: str, out_dir: str, tex: int = 1024, ground: bool = True, **opt)
     """Bevel + join + bake + export <out_dir>/<name>.glb. opt: snow, ao, ao_dist, edge, edge_r, grime,
     grime_h, tone, tone_scale, margin (uv island margin)."""
     sc = bpy.context.scene
-    glow = [o for o in _parts if "emit" in PAL[o["pal"]]]
-    solid = [o for o in _parts if "emit" not in PAL[o["pal"]]]
+    unbaked = lambda o: "emit" in PAL[o["pal"]] or PAL[o["pal"]].get("raw")
+    glow = [o for o in _parts if unbaked(o)]
+    solid = [o for o in _parts if not unbaked(o)]
     _apply_bevels(_parts)
 
     model = _join(solid, name)
@@ -681,9 +722,11 @@ def finish(name: str, out_dir: str, tex: int = 1024, ground: bool = True, **opt)
             b = gm.node_tree.nodes.get("Principled BSDF")
             b.inputs["Base Color"].default_value = (*hexc(p["c"]), 1.0)
             b.inputs["Roughness"].default_value = p["r"]
-            ec, es = p["emit"]
-            b.inputs["Emission Color"].default_value = (*hexc(ec), 1.0)
-            b.inputs["Emission Strength"].default_value = es
+            b.inputs["Metallic"].default_value = p.get("m", 0.0)
+            if "emit" in p:
+                ec, es = p["emit"]
+                b.inputs["Emission Color"].default_value = (*hexc(ec), 1.0)
+                b.inputs["Emission Strength"].default_value = es
             slot.material = gm
 
     os.makedirs(out_dir, exist_ok=True)
