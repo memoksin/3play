@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="Disaster" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/disaster.gd" id="1"]
-[ext_resource type="Resource" path="res://data/skins/kahramanmaras_fit.tres" id="2"]
+[ext_resource type="Resource" path="res://data/skins/kahramanmaras_fener.tres" id="2"]
 [ext_resource type="PackedScene" path="res://assets/3d/badges/badge_kahramanmaras.glb" id="3"]
 
 [resource]
@@ -13,6 +13,6 @@ lat = 37.58
 lon = 36.93
 year = 2023
 utc = "2023-02-06T01:17:00"
-minigame = &"fit"
+minigame = &"fener"
 skin = ExtResource("2")
 badge = ExtResource("3")

@@ -7,6 +7,10 @@ extends CanvasLayer
 
 ## The line is gone (hold and fade out done, or skipped).
 signal finished
+## Audio hook (docs/audio.md, typed text = keyboard typing loop): once per line, at its first and last
+## letter. A skipped or replaced line still emits typing_finished, so they always come in pairs.
+signal typing_started
+signal typing_finished
 
 const VOICE_COLOR := Color("f3e6c8")
 const TYPE_CPS := 15.0        # slow enough to read along (#128 playtest)
@@ -18,6 +22,7 @@ const BAND_ALPHA := 0.82      # dark band behind the line, so it reads over the 
 
 var _typing := false
 var _speaking := false
+var _keys := false  # typing_started emitted, typing_finished not yet
 var _t := 0.0
 var _hold_tween: Tween
 var _type_tween: Tween
@@ -88,6 +93,7 @@ func _input(event: InputEvent) -> void:
 ## A second say() while speaking replaces the line.
 func say(key: StringName, hold := 3.5) -> void:
 	_kill_tweens()
+	_typing_off()  # a line replaced mid-typing
 	_speaking = true
 	_typing = true
 	set_process(true)
@@ -101,7 +107,7 @@ func say(key: StringName, hold := 3.5) -> void:
 	_box_tween = create_tween().set_parallel()
 	_box_tween.tween_property(_box, "modulate:a", 1.0, FADE_IN)
 	_box_tween.tween_property(_tag, "modulate:a", 1.0, FADE_IN)
-	_type_tween = TextFx.type_on(_voice, 0.3, TYPE_CPS, Callable(), _on_typed.bind(hold))
+	_type_tween = TextFx.type_on(_voice, 0.3, TYPE_CPS, _typing_on, _on_typed.bind(hold))
 
 
 func is_speaking() -> bool:
@@ -157,6 +163,7 @@ func _release_globe(globe) -> void:
 
 func _on_typed(hold: float) -> void:
 	_typing = false
+	_typing_off()
 	if _box_tween:
 		_box_tween.custom_step(9999.0)
 		_box_tween.kill()
@@ -184,6 +191,18 @@ func _kill_tweens() -> void:
 	for tw in [_hold_tween, _type_tween, _box_tween]:
 		if tw:
 			tw.kill()
+
+
+func _typing_on() -> void:
+	_keys = true
+	typing_started.emit()
+
+
+## Ends the typing sound once: on the last letter, or when the line is skipped / replaced mid-way.
+func _typing_off() -> void:
+	if _keys:
+		_keys = false
+		typing_finished.emit()
 
 
 func _make_label(color: Color) -> Label:

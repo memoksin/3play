@@ -82,5 +82,40 @@ func _run() -> void:
 	_check("result normal order, once", rl == ["s", "f"])
 	r.queue_free()
 
+	# Prologue: a line typed through, the next skipped mid-typing (pairs stay closed).
+	root.get_node("Game").settings_path = ""  # skip() marks the prologue seen: nothing written
+	var p: Node = (load("res://scenes/prologue.tscn") as PackedScene).instantiate()
+	var pl: Array[String] = []
+	p.typing_started.connect(func(): pl.append("s"))
+	p.typing_finished.connect(func(): pl.append("f"))
+	root.add_child(p)
+	await _wait_until(func(): return pl.size() >= 1)
+	p.advance()  # finishes the typing of line 0
+	await process_frame
+	_check("prologue: click finishes the line, s f", pl == ["s", "f"])
+	await _wait_until(func(): return pl.size() >= 3)  # line 1 starts after the hold
+	p.skip()
+	await process_frame
+	_check("prologue: skip mid-line closes the pair", pl == ["s", "f", "s", "f"])
+	p.queue_free()
+	await process_frame
+
+	# Voice: a line replaced mid-typing, then finished with a click.
+	var v: Node = root.get_node("Voice")
+	var vl: Array[String] = []
+	v.typing_started.connect(func(): vl.append("s"))
+	v.typing_finished.connect(func(): vl.append("f"))
+	v.say(&"PROLOGUE_1")
+	await _wait_until(func(): return vl.size() >= 1)
+	v.say(&"PROLOGUE_2")  # replaces the line while it types
+	_check("voice: replaced line closes the pair", vl == ["s", "f"])
+	await _wait_until(func(): return vl.size() >= 3)
+	v.advance()
+	await process_frame
+	_check("voice: click finishes the line, pairs closed", vl == ["s", "f", "s", "f"])
+	v.advance()  # end the hold
+	await create_timer(1.0).timeout
+	_check("voice: nothing extra after it is gone", vl.size() == 4 and not v.is_speaking())
+
 	print("test_typing_signals: ", "OK" if ok else "FAILED")
 	quit(0 if ok else 1)

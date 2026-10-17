@@ -688,6 +688,110 @@ def _uv(ob, margin):
     bpy.ops.object.mode_set(mode="OBJECT")
 
 
+def _cut_vertex(a, b, axis, c):
+    """Where the edge a-b crosses the plane coord[axis] = c. a, b = (position, uv, normal). The end points are
+    ordered first, so the two faces that share the edge compute the very same point (no cracks)."""
+    if b[0] < a[0]:
+        a, b = b, a
+    t = (c - a[0][axis]) / (b[0][axis] - a[0][axis])
+    p = [a[0][i] + (b[0][i] - a[0][i]) * t for i in range(3)]
+    p[axis] = c
+    uv = tuple(a[1][i] + (b[1][i] - a[1][i]) * t for i in range(2))
+    n = [a[2][i] + (b[2][i] - a[2][i]) * t for i in range(3)]
+    ln = math.sqrt(sum(x * x for x in n)) or 1.0
+    return (tuple(p), uv, tuple(x / ln for x in n))
+
+
+def _clip_plane(poly, axis, c, keep_ge):
+    """Sutherland-Hodgman: the part of a convex polygon on one side of coord[axis] = c."""
+    out = []
+    for i, a in enumerate(poly):
+        b = poly[(i + 1) % len(poly)]
+        ina = (a[0][axis] >= c) if keep_ge else (a[0][axis] <= c)
+        inb = (b[0][axis] >= c) if keep_ge else (b[0][axis] <= c)
+        if ina:
+            out.append(a)
+        if ina != inb:
+            out.append(_cut_vertex(a, b, axis, c))
+    return out
+
+
+def _tile(ob, size, origin, material, keep=None):
+    """Split the joined, baked model into size x size (X, Y) tiles, one object each, for the Compatibility
+    renderer, which lights a mesh with at most 8 lights and pairs lights by mesh bounding box: a huge mesh sees
+    every light of the scene, a small tile only the few near it. The mesh is cut ON the grid lines (triangles are
+    clipped, UV and normal are interpolated, cut points are computed once per edge), so UVs stay continuous and
+    smooth normals stay continuous across a seam: the tiles are exactly the old mesh. All tiles keep the world
+    origin and the one material (one texture). keep(ix, iy) -> bool (optional) drops tiles nobody
+    ever sees. Returns the tile objects (the original is deleted)."""
+    me = ob.data
+    me.calc_loop_triangles()
+    uvs = me.uv_layers.active.data
+    nrm = me.corner_normals
+    co = [tuple(v.co) for v in me.vertices]
+    tiles = {}
+    for lt in me.loop_triangles:
+        tri = []
+        for li in lt.loops:
+            vi = me.loops[li].vertex_index
+            tri.append((co[vi], tuple(uvs[li].uv), tuple(nrm[li].vector)))
+        xs = [v[0][0] for v in tri]
+        ys = [v[0][1] for v in tri]
+        ix0 = math.floor((min(xs) - origin[0]) / size)
+        ix1 = math.floor((max(xs) - origin[0]) / size)
+        iy0 = math.floor((min(ys) - origin[1]) / size)
+        iy1 = math.floor((max(ys) - origin[1]) / size)
+        for ix in range(ix0, ix1 + 1):
+            for iy in range(iy0, iy1 + 1):
+                poly = tri
+                for axis, c, ge in ((0, origin[0] + ix * size, True), (0, origin[0] + (ix + 1) * size, False),
+                                    (1, origin[1] + iy * size, True), (1, origin[1] + (iy + 1) * size, False)):
+                    poly = _clip_plane(poly, axis, c, ge)
+                    if len(poly) < 3:
+                        break
+                if len(poly) < 3:
+                    continue
+                dedup = [p for i, p in enumerate(poly) if p[0] != poly[i - 1][0]]
+                for i in range(1, len(dedup) - 1):
+                    a, b, d = dedup[0][0], dedup[i][0], dedup[i + 1][0]
+                    ab = [b[k] - a[k] for k in range(3)]
+                    ad = [d[k] - a[k] for k in range(3)]
+                    cr = (ab[1] * ad[2] - ab[2] * ad[1], ab[2] * ad[0] - ab[0] * ad[2], ab[0] * ad[1] - ab[1] * ad[0])
+                    if cr[0] * cr[0] + cr[1] * cr[1] + cr[2] * cr[2] < 1e-14:
+                        continue  # a sliver on a grid line
+                    tiles.setdefault((ix, iy), []).append((dedup[0], dedup[i], dedup[i + 1]))
+    out = []
+    for (ix, iy), tris in sorted(tiles.items()):
+        if keep is not None and not keep(ix, iy):
+            continue
+        index, verts, faces, loop_uv, loop_n = {}, [], [], [], []
+        for t in tris:
+            f = []
+            for p, uv, n in t:
+                k = (p, uv, n)
+                if k not in index:
+                    index[k] = len(verts)
+                    verts.append(p)
+                f.append(index[k])
+                loop_uv.append(uv)
+                loop_n.append(n)
+            faces.append(f)
+        tm = bpy.data.meshes.new(f"{ob.name}_{ix}_{iy}")
+        tm.from_pydata(verts, [], faces)
+        tm.update()
+        tm.uv_layers.new(name="UVMap")
+        for li, uv in enumerate(loop_uv):
+            tm.uv_layers[0].data[li].uv = uv
+        tm.polygons.foreach_set("use_smooth", [True] * len(faces))
+        tm.normals_split_custom_set(loop_n)
+        tm.materials.append(material)
+        t_ob = bpy.data.objects.new(tm.name, tm)
+        bpy.context.scene.collection.objects.link(t_ob)
+        out.append(t_ob)
+    bpy.data.objects.remove(ob)
+    return out
+
+
 def _ground_plane(size=200.0):
     bm = bmesh.new()
     bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=size * 0.5)
@@ -704,7 +808,8 @@ def _ground_plane(size=200.0):
 def finish(name: str, out_dir: str, tex: int = 1024, ground: bool = True, **opt) -> str:
     """Bevel + join + bake + export <out_dir>/<name>.glb. opt: snow, ao, ao_dist, edge, edge_r, grime,
     grime_h, tone, tone_scale, margin (uv island margin), dust (hex colour of the up-face weather dust,
-    default snow; e.g. sand for a dry coast)."""
+    default snow; e.g. sand for a dry coast), tile + tile_origin (split the baked mesh into tile x tile (X, Y)
+    squares on a grid through tile_origin, see _tile; tile_keep(ix, iy) filters them)."""
     sc = bpy.context.scene
     unbaked = lambda o: "emit" in PAL[o["pal"]] or PAL[o["pal"]].get("raw")
     glow = [o for o in _parts if unbaked(o)]
@@ -796,7 +901,10 @@ def finish(name: str, out_dir: str, tex: int = 1024, ground: bool = True, **opt)
 
     os.makedirs(out_dir, exist_ok=True)
     path = os.path.join(out_dir, name + ".glb")
-    exp = [model] + ([glow_ob] if glow_ob else [])
+    tiles = [model]
+    if opt.get("tile"):
+        tiles = _tile(model, opt["tile"], opt.get("tile_origin", (0.0, 0.0)), fm, opt.get("tile_keep"))
+    exp = tiles + ([glow_ob] if glow_ob else [])
     _select_only(exp)
     bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", use_selection=True, export_apply=True,
             export_yup=True, export_materials="EXPORT", export_image_format="JPEG", export_jpeg_quality=88,

@@ -69,6 +69,26 @@ func _run() -> void:
 	var unhooked := early.filter(func(b: Node) -> bool: return not b.has_meta(&"audio_button"))
 	_check("buttons: settings panel + pause menu buttons hooked (%d found)" % early.size(),
 		early.size() >= 4 and unhooked.is_empty())
+	# Story typed text: the Voice autoload (hooked at start) and the prologue run the typing loop.
+	var voice := root.get_node_or_null("Voice")
+	if voice and voice.has_signal(&"typing_started"):
+		audio.inject_stream(&"ST2", _wav(1.0))
+		audio.reset_history()
+		voice.typing_started.emit()
+		voice.typing_finished.emit()
+		_check("story: Voice typing loops ST2 from first to last letter", _log() == ["loop:ST2", "stop:ST2"])
+	var pro: Node = load("res://scenes/prologue.tscn").instantiate()
+	audio.inject_stream(&"ST1", _wav(1.0))
+	root.add_child(pro)
+	await process_frame
+	audio.reset_history()
+	pro.typing_started.emit()
+	pro.typing_finished.emit()
+	_check("story: prologue typing loops ST1", _log() == ["loop:ST1", "stop:ST1"])
+	pro.queue_free()
+	await process_frame
+	audio.stop_all()
+	audio.clear_injected()
 	var pickers: Array[Node] = game_node.find_children("*", "", true, false).filter(
 		func(n: Node) -> bool: return n.scene_file_path == audio.LANG_PICKER_SCENE) if game_node else []
 	_check("buttons: settings language flags keep LS1/LS2 (%d pickers)" % pickers.size(),
@@ -155,10 +175,10 @@ func _run() -> void:
 	audio.stop_all()
 	audio.clear_injected()
 
-	# 5. Fit hooks, Kahramanmaras (#89).
+	# 5. Fit hooks, Kahramanmaras (#89; it plays Fener now, the old Fit skin on a copy).
 	var game := root.get_node("Game")
 	game.store_path = ""
-	game.disaster = load("res://data/disasters/kahramanmaras.tres")
+	game.disaster = _kahr_fit()
 	var fit: Control = load("res://scenes/minigames/fit.tscn").instantiate()
 	root.add_child(fit)
 	await process_frame
@@ -226,6 +246,20 @@ func _run() -> void:
 	var seen: Array = _log()
 	_check("connect: flow loop, then drain", "loop:C5" in seen and "stop:C5" in seen and "play:C9" in seen)
 	_check("connect: basins echo (C6) or lines spill (C7)", "play:C6" in seen or "play:C7" in seen)
+	for id in [&"C5", &"C6", &"C9"]:
+		audio.inject_stream(id, _wav(30.0))
+	con.sound_event.emit(&"flow", 0)
+	con.sound_event.emit(&"basin", 0)
+	var running: bool = audio.is_playing(&"C5") and audio.is_playing(&"C6")
+	con.sound_event.emit(&"drain", 0)
+	_check("connect: the water (C5, C6) stops at the drain, after the fill (Burcu)",
+		running and not audio._players.has(&"C5") and not audio._players.has(&"C6"))
+	con.sound_event.emit(&"flow", 0)
+	con.sound_event.emit(&"basin", 1)
+	con.finished.emit(1, 3)
+	_check("connect: the water stops when the minigame finishes",
+		not audio._players.has(&"C5") and not audio._players.has(&"C6"))
+	audio.clear_injected()
 	con.queue_free()
 	await process_frame
 
@@ -634,3 +668,11 @@ func _run() -> void:
 	await create_timer(0.5).timeout  # the audio thread releases the stopped streams; quitting at once leaks them (flaky)
 	print("OK" if ok else "FAILED")
 	quit(0 if ok else 1)
+
+
+## Kahramanmaras plays Fener now (#123): the Fit regression runs on a copy with its old Fit skin.
+static func _kahr_fit() -> Disaster:
+	var d: Disaster = (load("res://data/disasters/kahramanmaras.tres") as Disaster).duplicate()
+	d.minigame = &"fit"
+	d.skin = load("res://data/skins/kahramanmaras_fit.tres")
+	return d
