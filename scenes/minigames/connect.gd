@@ -278,10 +278,10 @@ func _update_hud() -> void:
 
 func _draw_bar() -> void:
 	var s := _bar.size
-	_bar.draw_rect(Rect2(Vector2.ZERO, s), Palette.PANEL_DARK)
+	_bar.draw_rect(Rect2(Vector2.ZERO, s), Color(Palette.HUD_BLUE, 0.1))
 	var f := clampf(1.0 - elapsed / skin.timer_seconds, 0.0, 1.0)
-	_bar.draw_rect(Rect2(0, 0, s.x * f, s.y), Palette.DANGER if _red else Palette.STATE)
-	_bar.draw_rect(Rect2(Vector2.ZERO, s), Palette.BORDER, false, 2.0)
+	_bar.draw_rect(Rect2(0, 0, s.x * f, s.y), Palette.DANGER if _red else Palette.HUD_BLUE)
+	_bar.draw_rect(Rect2(Vector2.ZERO, s), Color(Palette.HUD_BLUE, 0.3), false, 1.0)
 
 
 # --- input -------------------------------------------------------------------

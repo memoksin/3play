@@ -45,12 +45,12 @@ text = "60"
 horizontal_alignment = 2
 
 [node name="Bar" type="Control" parent="Hud/Box"]
-custom_minimum_size = Vector2(368, 12)
+custom_minimum_size = Vector2(360, 12)
 layout_mode = 2
 mouse_filter = 2
 
 [node name="Task" type="Label" parent="Hud/Box"]
-custom_minimum_size = Vector2(368, 0)
+custom_minimum_size = Vector2(360, 56)
 layout_mode = 2
 mouse_filter = 2
 theme_type_variation = &"MutedLabel"

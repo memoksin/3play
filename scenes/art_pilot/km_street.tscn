@@ -1,0 +1,1237 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/art_pilot/km_street.gd" id="1_script"]
+[ext_resource type="Shader" path="res://scenes/style/void_sky.gdshader" id="2_sky"]
+[ext_resource type="Shader" path="res://scenes/style/post_25d.gdshader" id="3_post"]
+[ext_resource type="Shader" path="res://scenes/style/light_beam.gdshader" id="4_beam"]
+[ext_resource type="Shader" path="res://scenes/style/soft_particle.gdshader" id="5_soft"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/tent_afad.glb" id="10"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/tent_kizilay.glb" id="11"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/tent_kitchen.glb" id="12"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/aid_blankets.glb" id="13"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/aid_boxes.glb" id="14"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/aid_water.glb" id="15"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/fire_barrel_tea.glb" id="16"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/fire_pit.glb" id="17"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/fire_barrel_low.glb" id="18"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/generator.glb" id="19"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/light_tower.glb" id="20"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/floodlight_tripod.glb" id="21"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/ambulance.glb" id="22"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/ambulance_open.glb" id="23"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/fire_truck.glb" id="24"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/backhoe.glb" id="25"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/excavator.glb" id="26"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/car_hatch_snow.glb" id="27"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/van_snow.glb" id="28"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/car_crushed.glb" id="29"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/car_shelter.glb" id="30"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/pole_upright.glb" id="31"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/pole_leaning.glb" id="32"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/pole_fallen.glb" id="33"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/cable_span.glb" id="34"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/cable_snapped.glb" id="35"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/asphalt_crack.glb" id="36"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/asphalt_heave.glb" id="37"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/asphalt_hole.glb" id="38"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/manhole_open.glb" id="39"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/tree_pine.glb" id="40"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/tree_pine_small.glb" id="41"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/tree_cypress.glb" id="42"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/tree_bare.glb" id="43"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/tree_fallen.glb" id="44"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bench_snow.glb" id="45"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/chair_plastic.glb" id="46"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bus_stop.glb" id="47"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/sign_stop_bent.glb" id="48"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/sign_street.glb" id="49"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/sign_assembly_arrow.glb" id="50"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/sign_cardboard.glb" id="51"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/barrier_set.glb" id="52"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/assembly_area.glb" id="53"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/collapse.glb" id="54"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/assembly_sign.glb" id="55"]
+
+[sub_resource type="ShaderMaterial" id="sky_mat"]
+shader = ExtResource("2_sky")
+
+[sub_resource type="Sky" id="sky"]
+sky_material = SubResource("sky_mat")
+
+[sub_resource type="Environment" id="env"]
+background_mode = 2
+sky = SubResource("sky")
+ambient_light_source = 2
+ambient_light_color = Color(0.3, 0.4, 0.72, 1)
+ambient_light_energy = 0.22
+reflected_light_source = 1
+tonemap_mode = 4
+glow_enabled = true
+glow_intensity = 0.9
+glow_bloom = 0.04
+glow_blend_mode = 1
+glow_hdr_threshold = 0.9
+fog_enabled = true
+fog_mode = 1
+fog_light_color = Color(0.07, 0.09, 0.18, 1)
+fog_density = 1.0
+fog_depth_begin = 85.0
+fog_depth_end = 150.0
+fog_depth_curve = 1.6
+adjustment_enabled = true
+adjustment_contrast = 1.08
+adjustment_saturation = 1.1
+
+[sub_resource type="ShaderMaterial" id="post_mat"]
+shader = ExtResource("3_post")
+
+[sub_resource type="StandardMaterial3D" id="snow_mat"]
+albedo_color = Color(0.74, 0.79, 0.86, 1)
+roughness = 0.8
+
+[sub_resource type="StandardMaterial3D" id="road_mat"]
+albedo_color = Color(0.27, 0.29, 0.33, 1)
+roughness = 0.5
+
+[sub_resource type="StandardMaterial3D" id="kerb_mat"]
+albedo_color = Color(0.7, 0.7, 0.68, 1)
+roughness = 0.8
+
+[sub_resource type="StandardMaterial3D" id="soil_mat"]
+albedo_color = Color(0.26, 0.19, 0.15, 1)
+roughness = 1.0
+
+[sub_resource type="PlaneMesh" id="tile_a"]
+material = SubResource("snow_mat")
+size = Vector2(4, 3.5)
+
+[sub_resource type="PlaneMesh" id="tile_b"]
+material = SubResource("snow_mat")
+size = Vector2(4, 2.5)
+
+[sub_resource type="PlaneMesh" id="road_tile"]
+material = SubResource("road_mat")
+size = Vector2(4, 6)
+
+[sub_resource type="BoxMesh" id="kerb"]
+material = SubResource("kerb_mat")
+size = Vector3(4, 0.14, 0.25)
+
+[sub_resource type="BoxMesh" id="slab"]
+material = SubResource("soil_mat")
+size = Vector3(52, 4, 30)
+
+[sub_resource type="ShaderMaterial" id="flake_mat"]
+render_priority = 2
+shader = ExtResource("5_soft")
+shader_parameter/tint = Color(0.9, 0.94, 1, 0.9)
+shader_parameter/glow = 0.35
+shader_parameter/hardness = 0.55
+
+[sub_resource type="QuadMesh" id="flake"]
+material = SubResource("flake_mat")
+size = Vector2(0.11, 0.11)
+
+[sub_resource type="ShaderMaterial" id="beam_tower_mat"]
+render_priority = 1
+shader = ExtResource("4_beam")
+shader_parameter/color = Color(0.85, 0.9, 1, 1)
+shader_parameter/strength = 0.3
+shader_parameter/height = 16
+
+[sub_resource type="CylinderMesh" id="beam_tower"]
+material = SubResource("beam_tower_mat")
+top_radius = 6
+bottom_radius = 0.4
+height = 16
+radial_segments = 20
+rings = 1
+cap_top = false
+cap_bottom = false
+
+[sub_resource type="ShaderMaterial" id="beam_tripod_mat"]
+render_priority = 1
+shader = ExtResource("4_beam")
+shader_parameter/color = Color(0.85, 0.9, 1, 1)
+shader_parameter/strength = 0.3
+shader_parameter/height = 9
+
+[sub_resource type="CylinderMesh" id="beam_tripod"]
+material = SubResource("beam_tripod_mat")
+top_radius = 3.2
+bottom_radius = 0.3
+height = 9
+radial_segments = 20
+rings = 1
+cap_top = false
+cap_bottom = false
+
+[sub_resource type="ShaderMaterial" id="beam_head_mat"]
+render_priority = 1
+shader = ExtResource("4_beam")
+shader_parameter/color = Color(1, 0.8, 0.5, 1)
+shader_parameter/strength = 0.3
+shader_parameter/height = 10
+
+[sub_resource type="CylinderMesh" id="beam_head"]
+material = SubResource("beam_head_mat")
+top_radius = 3.4
+bottom_radius = 0.5
+height = 10
+radial_segments = 20
+rings = 1
+cap_top = false
+cap_bottom = false
+
+[node name="KmStreet" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="Env" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
+
+[node name="Camera" type="Camera3D" parent="."]
+position = Vector3(-25.253, 56.565, 61.503)
+rotation_degrees = Vector3(-40, -22, 0)
+fov = 26
+near = 1.0
+far = 400.0
+
+[node name="CameraPlay" type="Camera3D" parent="."]
+position = Vector3(-14.348, 32.139, 34.513)
+rotation_degrees = Vector3(-40, -22, 0)
+fov = 26
+near = 1.0
+far = 400.0
+current = true
+
+[node name="CamCamp" type="Camera3D" parent="."]
+position = Vector3(-14.461, 16.712, 10.467)
+rotation_degrees = Vector3(-40, -22, 0)
+fov = 26
+near = 1.0
+far = 400.0
+
+[node name="CamRescue" type="Camera3D" parent="."]
+position = Vector3(2.539, 16.712, 12.467)
+rotation_degrees = Vector3(-40, -22, 0)
+fov = 26
+near = 1.0
+far = 400.0
+
+[node name="CamRoad" type="Camera3D" parent="."]
+position = Vector3(-10.461, 16.712, 20.467)
+rotation_degrees = Vector3(-40, -22, 0)
+fov = 26
+near = 1.0
+far = 400.0
+
+[node name="CamFront" type="Camera3D" parent="."]
+position = Vector3(-10.035, 17.998, 27.887)
+rotation_degrees = Vector3(-40, -22, 0)
+fov = 26
+near = 1.0
+far = 400.0
+
+[node name="Moon" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-48, -38, 0)
+light_color = Color(0.6, 0.72, 1, 1)
+light_energy = 0.32
+shadow_enabled = true
+shadow_blur = 1.5
+directional_shadow_mode = 0
+directional_shadow_max_distance = 140.0
+
+[node name="Ground" type="Node3D" parent="."]
+
+[node name="Slab" type="MeshInstance3D" parent="Ground"]
+position = Vector3(0, -2.02, -1)
+mesh = SubResource("slab")
+
+[node name="T1" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-24, 0, -14.25)
+mesh = SubResource("tile_a")
+
+[node name="T2" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-20, 0, -14.25)
+mesh = SubResource("tile_a")
+
+[node name="T3" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-16, 0, -14.25)
+mesh = SubResource("tile_a")
+
+[node name="T4" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-12, 0, -14.25)
+mesh = SubResource("tile_a")
+
+[node name="T5" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-8, 0, -14.25)
+mesh = SubResource("tile_a")
+
+[node name="T6" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-4, 0, -14.25)
+mesh = SubResource("tile_a")
+
+[node name="T7" type="MeshInstance3D" parent="Ground"]
+position = Vector3(0, 0, -14.25)
+mesh = SubResource("tile_a")
+
+[node name="T8" type="MeshInstance3D" parent="Ground"]
+position = Vector3(4, 0, -14.25)
+mesh = SubResource("tile_a")
+
+[node name="T9" type="MeshInstance3D" parent="Ground"]
+position = Vector3(8, 0, -14.25)
+mesh = SubResource("tile_a")
+
+[node name="T10" type="MeshInstance3D" parent="Ground"]
+position = Vector3(12, 0, -14.25)
+mesh = SubResource("tile_a")
+
+[node name="T11" type="MeshInstance3D" parent="Ground"]
+position = Vector3(16, 0, -14.25)
+mesh = SubResource("tile_a")
+
+[node name="T12" type="MeshInstance3D" parent="Ground"]
+position = Vector3(20, 0, -14.25)
+mesh = SubResource("tile_a")
+
+[node name="T13" type="MeshInstance3D" parent="Ground"]
+position = Vector3(24, 0, -14.25)
+mesh = SubResource("tile_a")
+
+[node name="T14" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-24, 0, -10.75)
+mesh = SubResource("tile_a")
+
+[node name="T15" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-20, 0, -10.75)
+mesh = SubResource("tile_a")
+
+[node name="T16" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-16, 0, -10.75)
+mesh = SubResource("tile_a")
+
+[node name="T17" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-12, 0, -10.75)
+mesh = SubResource("tile_a")
+
+[node name="T18" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-8, 0, -10.75)
+mesh = SubResource("tile_a")
+
+[node name="T19" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-4, 0, -10.75)
+mesh = SubResource("tile_a")
+
+[node name="T20" type="MeshInstance3D" parent="Ground"]
+position = Vector3(0, 0, -10.75)
+mesh = SubResource("tile_a")
+
+[node name="T21" type="MeshInstance3D" parent="Ground"]
+position = Vector3(4, 0, -10.75)
+mesh = SubResource("tile_a")
+
+[node name="T22" type="MeshInstance3D" parent="Ground"]
+position = Vector3(8, 0, -10.75)
+mesh = SubResource("tile_a")
+
+[node name="T23" type="MeshInstance3D" parent="Ground"]
+position = Vector3(12, 0, -10.75)
+mesh = SubResource("tile_a")
+
+[node name="T24" type="MeshInstance3D" parent="Ground"]
+position = Vector3(16, 0, -10.75)
+mesh = SubResource("tile_a")
+
+[node name="T25" type="MeshInstance3D" parent="Ground"]
+position = Vector3(20, 0, -10.75)
+mesh = SubResource("tile_a")
+
+[node name="T26" type="MeshInstance3D" parent="Ground"]
+position = Vector3(24, 0, -10.75)
+mesh = SubResource("tile_a")
+
+[node name="T27" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-24, 0, -7.25)
+mesh = SubResource("tile_a")
+
+[node name="T28" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-20, 0, -7.25)
+mesh = SubResource("tile_a")
+
+[node name="T29" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-16, 0, -7.25)
+mesh = SubResource("tile_a")
+
+[node name="T30" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-12, 0, -7.25)
+mesh = SubResource("tile_a")
+
+[node name="T31" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-8, 0, -7.25)
+mesh = SubResource("tile_a")
+
+[node name="T32" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-4, 0, -7.25)
+mesh = SubResource("tile_a")
+
+[node name="T33" type="MeshInstance3D" parent="Ground"]
+position = Vector3(0, 0, -7.25)
+mesh = SubResource("tile_a")
+
+[node name="T34" type="MeshInstance3D" parent="Ground"]
+position = Vector3(4, 0, -7.25)
+mesh = SubResource("tile_a")
+
+[node name="T35" type="MeshInstance3D" parent="Ground"]
+position = Vector3(8, 0, -7.25)
+mesh = SubResource("tile_a")
+
+[node name="T36" type="MeshInstance3D" parent="Ground"]
+position = Vector3(12, 0, -7.25)
+mesh = SubResource("tile_a")
+
+[node name="T37" type="MeshInstance3D" parent="Ground"]
+position = Vector3(16, 0, -7.25)
+mesh = SubResource("tile_a")
+
+[node name="T38" type="MeshInstance3D" parent="Ground"]
+position = Vector3(20, 0, -7.25)
+mesh = SubResource("tile_a")
+
+[node name="T39" type="MeshInstance3D" parent="Ground"]
+position = Vector3(24, 0, -7.25)
+mesh = SubResource("tile_a")
+
+[node name="T40" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-24, 0, -3.75)
+mesh = SubResource("tile_a")
+
+[node name="T41" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-20, 0, -3.75)
+mesh = SubResource("tile_a")
+
+[node name="T42" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-16, 0, -3.75)
+mesh = SubResource("tile_a")
+
+[node name="T43" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-12, 0, -3.75)
+mesh = SubResource("tile_a")
+
+[node name="T44" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-8, 0, -3.75)
+mesh = SubResource("tile_a")
+
+[node name="T45" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-4, 0, -3.75)
+mesh = SubResource("tile_a")
+
+[node name="T46" type="MeshInstance3D" parent="Ground"]
+position = Vector3(0, 0, -3.75)
+mesh = SubResource("tile_a")
+
+[node name="T47" type="MeshInstance3D" parent="Ground"]
+position = Vector3(4, 0, -3.75)
+mesh = SubResource("tile_a")
+
+[node name="T48" type="MeshInstance3D" parent="Ground"]
+position = Vector3(8, 0, -3.75)
+mesh = SubResource("tile_a")
+
+[node name="T49" type="MeshInstance3D" parent="Ground"]
+position = Vector3(12, 0, -3.75)
+mesh = SubResource("tile_a")
+
+[node name="T50" type="MeshInstance3D" parent="Ground"]
+position = Vector3(16, 0, -3.75)
+mesh = SubResource("tile_a")
+
+[node name="T51" type="MeshInstance3D" parent="Ground"]
+position = Vector3(20, 0, -3.75)
+mesh = SubResource("tile_a")
+
+[node name="T52" type="MeshInstance3D" parent="Ground"]
+position = Vector3(24, 0, -3.75)
+mesh = SubResource("tile_a")
+
+[node name="T53" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-24, 0, 1)
+mesh = SubResource("road_tile")
+
+[node name="T54" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-20, 0, 1)
+mesh = SubResource("road_tile")
+
+[node name="T55" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-16, 0, 1)
+mesh = SubResource("road_tile")
+
+[node name="T56" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-12, 0, 1)
+mesh = SubResource("road_tile")
+
+[node name="T57" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-8, 0, 1)
+mesh = SubResource("road_tile")
+
+[node name="T58" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-4, 0, 1)
+mesh = SubResource("road_tile")
+
+[node name="T59" type="MeshInstance3D" parent="Ground"]
+position = Vector3(0, 0, 1)
+mesh = SubResource("road_tile")
+
+[node name="T60" type="MeshInstance3D" parent="Ground"]
+position = Vector3(4, 0, 1)
+mesh = SubResource("road_tile")
+
+[node name="T61" type="MeshInstance3D" parent="Ground"]
+position = Vector3(8, 0, 1)
+mesh = SubResource("road_tile")
+
+[node name="T62" type="MeshInstance3D" parent="Ground"]
+position = Vector3(12, 0, 1)
+mesh = SubResource("road_tile")
+
+[node name="T63" type="MeshInstance3D" parent="Ground"]
+position = Vector3(16, 0, 1)
+mesh = SubResource("road_tile")
+
+[node name="T64" type="MeshInstance3D" parent="Ground"]
+position = Vector3(20, 0, 1)
+mesh = SubResource("road_tile")
+
+[node name="T65" type="MeshInstance3D" parent="Ground"]
+position = Vector3(24, 0, 1)
+mesh = SubResource("road_tile")
+
+[node name="T66" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-24, 0, 5.25)
+mesh = SubResource("tile_b")
+
+[node name="T67" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-20, 0, 5.25)
+mesh = SubResource("tile_b")
+
+[node name="T68" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-16, 0, 5.25)
+mesh = SubResource("tile_b")
+
+[node name="T69" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-12, 0, 5.25)
+mesh = SubResource("tile_b")
+
+[node name="T70" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-8, 0, 5.25)
+mesh = SubResource("tile_b")
+
+[node name="T71" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-4, 0, 5.25)
+mesh = SubResource("tile_b")
+
+[node name="T72" type="MeshInstance3D" parent="Ground"]
+position = Vector3(0, 0, 5.25)
+mesh = SubResource("tile_b")
+
+[node name="T73" type="MeshInstance3D" parent="Ground"]
+position = Vector3(4, 0, 5.25)
+mesh = SubResource("tile_b")
+
+[node name="T74" type="MeshInstance3D" parent="Ground"]
+position = Vector3(8, 0, 5.25)
+mesh = SubResource("tile_b")
+
+[node name="T75" type="MeshInstance3D" parent="Ground"]
+position = Vector3(12, 0, 5.25)
+mesh = SubResource("tile_b")
+
+[node name="T76" type="MeshInstance3D" parent="Ground"]
+position = Vector3(16, 0, 5.25)
+mesh = SubResource("tile_b")
+
+[node name="T77" type="MeshInstance3D" parent="Ground"]
+position = Vector3(20, 0, 5.25)
+mesh = SubResource("tile_b")
+
+[node name="T78" type="MeshInstance3D" parent="Ground"]
+position = Vector3(24, 0, 5.25)
+mesh = SubResource("tile_b")
+
+[node name="T79" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-24, 0, 7.75)
+mesh = SubResource("tile_b")
+
+[node name="T80" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-20, 0, 7.75)
+mesh = SubResource("tile_b")
+
+[node name="T81" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-16, 0, 7.75)
+mesh = SubResource("tile_b")
+
+[node name="T82" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-12, 0, 7.75)
+mesh = SubResource("tile_b")
+
+[node name="T83" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-8, 0, 7.75)
+mesh = SubResource("tile_b")
+
+[node name="T84" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-4, 0, 7.75)
+mesh = SubResource("tile_b")
+
+[node name="T85" type="MeshInstance3D" parent="Ground"]
+position = Vector3(0, 0, 7.75)
+mesh = SubResource("tile_b")
+
+[node name="T86" type="MeshInstance3D" parent="Ground"]
+position = Vector3(4, 0, 7.75)
+mesh = SubResource("tile_b")
+
+[node name="T87" type="MeshInstance3D" parent="Ground"]
+position = Vector3(8, 0, 7.75)
+mesh = SubResource("tile_b")
+
+[node name="T88" type="MeshInstance3D" parent="Ground"]
+position = Vector3(12, 0, 7.75)
+mesh = SubResource("tile_b")
+
+[node name="T89" type="MeshInstance3D" parent="Ground"]
+position = Vector3(16, 0, 7.75)
+mesh = SubResource("tile_b")
+
+[node name="T90" type="MeshInstance3D" parent="Ground"]
+position = Vector3(20, 0, 7.75)
+mesh = SubResource("tile_b")
+
+[node name="T91" type="MeshInstance3D" parent="Ground"]
+position = Vector3(24, 0, 7.75)
+mesh = SubResource("tile_b")
+
+[node name="T92" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-24, 0, 10.25)
+mesh = SubResource("tile_b")
+
+[node name="T93" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-20, 0, 10.25)
+mesh = SubResource("tile_b")
+
+[node name="T94" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-16, 0, 10.25)
+mesh = SubResource("tile_b")
+
+[node name="T95" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-12, 0, 10.25)
+mesh = SubResource("tile_b")
+
+[node name="T96" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-8, 0, 10.25)
+mesh = SubResource("tile_b")
+
+[node name="T97" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-4, 0, 10.25)
+mesh = SubResource("tile_b")
+
+[node name="T98" type="MeshInstance3D" parent="Ground"]
+position = Vector3(0, 0, 10.25)
+mesh = SubResource("tile_b")
+
+[node name="T99" type="MeshInstance3D" parent="Ground"]
+position = Vector3(4, 0, 10.25)
+mesh = SubResource("tile_b")
+
+[node name="T100" type="MeshInstance3D" parent="Ground"]
+position = Vector3(8, 0, 10.25)
+mesh = SubResource("tile_b")
+
+[node name="T101" type="MeshInstance3D" parent="Ground"]
+position = Vector3(12, 0, 10.25)
+mesh = SubResource("tile_b")
+
+[node name="T102" type="MeshInstance3D" parent="Ground"]
+position = Vector3(16, 0, 10.25)
+mesh = SubResource("tile_b")
+
+[node name="T103" type="MeshInstance3D" parent="Ground"]
+position = Vector3(20, 0, 10.25)
+mesh = SubResource("tile_b")
+
+[node name="T104" type="MeshInstance3D" parent="Ground"]
+position = Vector3(24, 0, 10.25)
+mesh = SubResource("tile_b")
+
+[node name="T105" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-24, 0, 12.75)
+mesh = SubResource("tile_b")
+
+[node name="T106" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-20, 0, 12.75)
+mesh = SubResource("tile_b")
+
+[node name="T107" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-16, 0, 12.75)
+mesh = SubResource("tile_b")
+
+[node name="T108" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-12, 0, 12.75)
+mesh = SubResource("tile_b")
+
+[node name="T109" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-8, 0, 12.75)
+mesh = SubResource("tile_b")
+
+[node name="T110" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-4, 0, 12.75)
+mesh = SubResource("tile_b")
+
+[node name="T111" type="MeshInstance3D" parent="Ground"]
+position = Vector3(0, 0, 12.75)
+mesh = SubResource("tile_b")
+
+[node name="T112" type="MeshInstance3D" parent="Ground"]
+position = Vector3(4, 0, 12.75)
+mesh = SubResource("tile_b")
+
+[node name="T113" type="MeshInstance3D" parent="Ground"]
+position = Vector3(8, 0, 12.75)
+mesh = SubResource("tile_b")
+
+[node name="T114" type="MeshInstance3D" parent="Ground"]
+position = Vector3(12, 0, 12.75)
+mesh = SubResource("tile_b")
+
+[node name="T115" type="MeshInstance3D" parent="Ground"]
+position = Vector3(16, 0, 12.75)
+mesh = SubResource("tile_b")
+
+[node name="T116" type="MeshInstance3D" parent="Ground"]
+position = Vector3(20, 0, 12.75)
+mesh = SubResource("tile_b")
+
+[node name="T117" type="MeshInstance3D" parent="Ground"]
+position = Vector3(24, 0, 12.75)
+mesh = SubResource("tile_b")
+
+[node name="K118" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-24, 0.06, -2)
+mesh = SubResource("kerb")
+
+[node name="K119" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-20, 0.06, -2)
+mesh = SubResource("kerb")
+
+[node name="K120" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-16, 0.06, -2)
+mesh = SubResource("kerb")
+
+[node name="K121" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-12, 0.06, -2)
+mesh = SubResource("kerb")
+
+[node name="K122" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-8, 0.06, -2)
+mesh = SubResource("kerb")
+
+[node name="K123" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-4, 0.06, -2)
+mesh = SubResource("kerb")
+
+[node name="K124" type="MeshInstance3D" parent="Ground"]
+position = Vector3(0, 0.06, -2)
+mesh = SubResource("kerb")
+
+[node name="K125" type="MeshInstance3D" parent="Ground"]
+position = Vector3(4, 0.06, -2)
+mesh = SubResource("kerb")
+
+[node name="K126" type="MeshInstance3D" parent="Ground"]
+position = Vector3(8, 0.06, -2)
+mesh = SubResource("kerb")
+
+[node name="K127" type="MeshInstance3D" parent="Ground"]
+position = Vector3(12, 0.06, -2)
+mesh = SubResource("kerb")
+
+[node name="K128" type="MeshInstance3D" parent="Ground"]
+position = Vector3(16, 0.06, -2)
+mesh = SubResource("kerb")
+
+[node name="K129" type="MeshInstance3D" parent="Ground"]
+position = Vector3(20, 0.06, -2)
+mesh = SubResource("kerb")
+
+[node name="K130" type="MeshInstance3D" parent="Ground"]
+position = Vector3(24, 0.06, -2)
+mesh = SubResource("kerb")
+
+[node name="K131" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-24, 0.06, 4)
+mesh = SubResource("kerb")
+
+[node name="K132" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-20, 0.06, 4)
+mesh = SubResource("kerb")
+
+[node name="K133" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-16, 0.06, 4)
+mesh = SubResource("kerb")
+
+[node name="K134" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-12, 0.06, 4)
+mesh = SubResource("kerb")
+
+[node name="K135" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-8, 0.06, 4)
+mesh = SubResource("kerb")
+
+[node name="K136" type="MeshInstance3D" parent="Ground"]
+position = Vector3(-4, 0.06, 4)
+mesh = SubResource("kerb")
+
+[node name="K137" type="MeshInstance3D" parent="Ground"]
+position = Vector3(0, 0.06, 4)
+mesh = SubResource("kerb")
+
+[node name="K138" type="MeshInstance3D" parent="Ground"]
+position = Vector3(4, 0.06, 4)
+mesh = SubResource("kerb")
+
+[node name="K139" type="MeshInstance3D" parent="Ground"]
+position = Vector3(8, 0.06, 4)
+mesh = SubResource("kerb")
+
+[node name="K140" type="MeshInstance3D" parent="Ground"]
+position = Vector3(12, 0.06, 4)
+mesh = SubResource("kerb")
+
+[node name="K141" type="MeshInstance3D" parent="Ground"]
+position = Vector3(16, 0.06, 4)
+mesh = SubResource("kerb")
+
+[node name="K142" type="MeshInstance3D" parent="Ground"]
+position = Vector3(20, 0.06, 4)
+mesh = SubResource("kerb")
+
+[node name="K143" type="MeshInstance3D" parent="Ground"]
+position = Vector3(24, 0.06, 4)
+mesh = SubResource("kerb")
+
+[node name="Set" type="Node3D" parent="."]
+
+[node name="AssemblyArea" parent="Set" instance=ExtResource("53")]
+position = Vector3(-12, 0, -9)
+
+[node name="BollardLight" type="OmniLight3D" parent="Set/AssemblyArea"]
+position = Vector3(-1, 0.8, -0.45)
+light_color = Color(1, 0.62, 0.3, 1)
+light_energy = 0.9
+omni_range = 4
+omni_attenuation = 1.3
+
+[node name="BoardLight" type="OmniLight3D" parent="Set/AssemblyArea"]
+position = Vector3(-2, 2, 4)
+light_color = Color(1, 0.62, 0.3, 1)
+light_energy = 1.2
+omni_range = 5
+omni_attenuation = 1.3
+
+[node name="TentAfad" parent="Set" instance=ExtResource("10")]
+position = Vector3(-11.5, 0.12, -10.6)
+
+[node name="TentLight" type="OmniLight3D" parent="Set/TentAfad"]
+position = Vector3(0, 1.2, 0.3)
+light_color = Color(1, 0.62, 0.3, 1)
+light_energy = 1.1
+omni_range = 5
+omni_attenuation = 1.3
+
+[node name="TentKizilay" parent="Set" instance=ExtResource("11")]
+position = Vector3(-7.6, 0.12, -9.9)
+rotation_degrees = Vector3(0, -8, 0)
+
+[node name="TentLight" type="OmniLight3D" parent="Set/TentKizilay"]
+position = Vector3(0, 1.2, 0.3)
+light_color = Color(1, 0.62, 0.3, 1)
+light_energy = 1
+omni_range = 5
+omni_attenuation = 1.3
+
+[node name="AssemblySign" parent="Set" instance=ExtResource("55")]
+position = Vector3(-15.5, 0.12, -6.2)
+rotation_degrees = Vector3(0, 15, 0)
+
+[node name="TentKitchen" parent="Set" instance=ExtResource("12")]
+position = Vector3(-1, 0, -9)
+
+[node name="KitchenLight" type="OmniLight3D" parent="Set/TentKitchen"]
+position = Vector3(0, 1.9, 0.9)
+light_color = Color(1, 0.62, 0.3, 1)
+light_energy = 2.4
+omni_range = 8
+omni_attenuation = 1.3
+
+[node name="AidBlankets" parent="Set" instance=ExtResource("13")]
+position = Vector3(2.6, 0, -8.3)
+rotation_degrees = Vector3(0, -10, 0)
+
+[node name="AidBoxes" parent="Set" instance=ExtResource("14")]
+position = Vector3(3.4, 0, -6.6)
+rotation_degrees = Vector3(0, 18, 0)
+
+[node name="AidWater" parent="Set" instance=ExtResource("15")]
+position = Vector3(2.2, 0, -5.4)
+rotation_degrees = Vector3(0, 4, 0)
+
+[node name="SignCardboard" parent="Set" instance=ExtResource("51")]
+position = Vector3(-3.8, 0, -5.2)
+rotation_degrees = Vector3(0, 12, 0)
+
+[node name="FireTea" parent="Set" instance=ExtResource("16")]
+position = Vector3(0.3, 0, -4.6)
+
+[node name="FireLight" type="OmniLight3D" parent="Set/FireTea"]
+position = Vector3(0, 1.3, 0)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 4.5
+omni_range = 8.5
+omni_attenuation = 1.3
+shadow_enabled = true
+shadow_bias = 0.1
+
+[node name="Chair1" parent="Set" instance=ExtResource("46")]
+position = Vector3(1.2, 0, -4)
+rotation_degrees = Vector3(0, -60, 0)
+
+[node name="Chair2" parent="Set" instance=ExtResource("46")]
+position = Vector3(-0.6, 0, -3.8)
+rotation_degrees = Vector3(0, 40, 0)
+
+[node name="Collapse" parent="Set" instance=ExtResource("54")]
+position = Vector3(18.5, 0, -11)
+
+[node name="Excavator" parent="Set" instance=ExtResource("26")]
+position = Vector3(11.5, 0, -6)
+rotation_degrees = Vector3(0, 75, 0)
+
+[node name="WorkLight" type="SpotLight3D" parent="Set/Excavator"]
+position = Vector3(-0.8, 2.9, 1.6)
+rotation_degrees = Vector3(-28, 180, 0)
+light_color = Color(0.86, 0.9, 1, 1)
+light_energy = 4
+spot_range = 14
+spot_angle = 38
+spot_angle_attenuation = 0.7
+
+[node name="AmberEx" type="OmniLight3D" parent="Set/Excavator"]
+position = Vector3(-0.5, 3.1, 0)
+light_color = Color(1, 0.6, 0.1, 1)
+light_energy = 1.6
+omni_range = 7
+omni_attenuation = 1.3
+
+[node name="LightTower" parent="Set" instance=ExtResource("20")]
+position = Vector3(8, 0, -11.5)
+rotation_degrees = Vector3(0, 55, 0)
+
+[node name="TowerLight" type="SpotLight3D" parent="Set/LightTower"]
+position = Vector3(0.55, 7.2, 0.3)
+rotation_degrees = Vector3(-32, 180, 0)
+light_color = Color(0.86, 0.9, 1, 1)
+light_energy = 9
+spot_range = 26
+spot_angle = 34
+spot_angle_attenuation = 0.7
+shadow_enabled = true
+shadow_bias = 0.12
+shadow_normal_bias = 2.0
+
+[node name="Beam" type="MeshInstance3D" parent="Set/LightTower/TowerLight"]
+position = Vector3(0, 0, -8)
+rotation_degrees = Vector3(-90, 0, 0)
+cast_shadow = 0
+mesh = SubResource("beam_tower")
+
+[node name="Generator" parent="Set" instance=ExtResource("19")]
+position = Vector3(4.8, 0, -11.8)
+rotation_degrees = Vector3(0, 10, 0)
+
+[node name="Tripod" parent="Set" instance=ExtResource("21")]
+position = Vector3(14.5, 0, -2.6)
+rotation_degrees = Vector3(0, 140, 0)
+
+[node name="TripodLight" type="SpotLight3D" parent="Set/Tripod"]
+position = Vector3(0, 2.5, 0.2)
+rotation_degrees = Vector3(-30, 180, 0)
+light_color = Color(0.86, 0.9, 1, 1)
+light_energy = 5
+spot_range = 14
+spot_angle = 40
+spot_angle_attenuation = 0.7
+
+[node name="Beam" type="MeshInstance3D" parent="Set/Tripod/TripodLight"]
+position = Vector3(0, 0, -4.5)
+rotation_degrees = Vector3(-90, 0, 0)
+cast_shadow = 0
+mesh = SubResource("beam_tripod")
+
+[node name="PoleUpright" parent="Set" instance=ExtResource("31")]
+position = Vector3(-5.5, 0, -2.8)
+
+[node name="CableSnapped" parent="Set" instance=ExtResource("35")]
+position = Vector3(-5.5, 0, -2.47)
+
+[node name="Spark1" type="OmniLight3D" parent="Set/CableSnapped"]
+position = Vector3(3.9, 0.25, 1.5)
+light_color = Color(0.75, 0.9, 1, 1)
+light_energy = 2.5
+omni_range = 4
+omni_attenuation = 1.3
+
+[node name="PoleLeaning" parent="Set" instance=ExtResource("32")]
+position = Vector3(6.5, 0, -2.8)
+
+[node name="Spark2" type="OmniLight3D" parent="Set/PoleLeaning"]
+position = Vector3(6.6, 0.25, 1.5)
+light_color = Color(0.75, 0.9, 1, 1)
+light_energy = 2.5
+omni_range = 4
+omni_attenuation = 1.3
+
+[node name="Span" parent="Set" instance=ExtResource("34")]
+position = Vector3(-17.5, 0, -2.8)
+
+[node name="PoleUpright2" parent="Set" instance=ExtResource("31")]
+position = Vector3(-17.5, 0, -2.8)
+
+[node name="FirePit" parent="Set" instance=ExtResource("17")]
+position = Vector3(-19.5, 0, -3.2)
+
+[node name="FireLight" type="OmniLight3D" parent="Set/FirePit"]
+position = Vector3(0, 0.9, 0)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 5
+omni_range = 9
+omni_attenuation = 1.3
+shadow_enabled = true
+shadow_bias = 0.1
+
+[node name="TreePineBack" parent="Set" instance=ExtResource("40")]
+position = Vector3(-21.5, 0, -11.5)
+
+[node name="TreeCypress" parent="Set" instance=ExtResource("42")]
+position = Vector3(-3.6, 0, -12.8)
+
+[node name="TreePineSmallBack" parent="Set" instance=ExtResource("41")]
+position = Vector3(1.5, 0, -12.5)
+
+[node name="Crack" parent="Set" instance=ExtResource("36")]
+position = Vector3(-3, 0, 1)
+rotation_degrees = Vector3(0, 8, 0)
+
+[node name="Heave" parent="Set" instance=ExtResource("37")]
+position = Vector3(5, 0, 2.4)
+rotation_degrees = Vector3(0, 80, 0)
+
+[node name="Hole" parent="Set" instance=ExtResource("38")]
+position = Vector3(12.5, 0, 2.3)
+
+[node name="Manhole" parent="Set" instance=ExtResource("39")]
+position = Vector3(-9, 0, 3)
+
+[node name="Barriers" parent="Set" instance=ExtResource("52")]
+position = Vector3(10, 0, 0)
+rotation_degrees = Vector3(0, -8, 0)
+
+[node name="FireTruck" parent="Set" instance=ExtResource("24")]
+position = Vector3(-14.5, 0, 0.9)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="BeaconRedF" type="OmniLight3D" parent="Set/FireTruck"]
+position = Vector3(-0.5, 3.2, 3.35)
+light_color = Color(1, 0.16, 0.12, 1)
+light_energy = 3
+omni_range = 12
+omni_attenuation = 1.3
+
+[node name="BeaconBlueF" type="OmniLight3D" parent="Set/FireTruck"]
+position = Vector3(0.5, 3.2, 3.35)
+light_color = Color(0.16, 0.34, 1, 1)
+light_energy = 3
+omni_range = 12
+omni_attenuation = 1.3
+
+[node name="SceneLight" type="SpotLight3D" parent="Set/FireTruck"]
+position = Vector3(-1.4, 2.85, -1)
+rotation_degrees = Vector3(-35, 90, 0)
+light_color = Color(0.86, 0.9, 1, 1)
+light_energy = 4
+spot_range = 12
+spot_angle = 50
+spot_angle_attenuation = 0.7
+
+[node name="AmbulanceOpen" parent="Set" instance=ExtResource("23")]
+position = Vector3(0.8, 0, 1)
+rotation_degrees = Vector3(0, 165, 0)
+
+[node name="CabinLight" type="OmniLight3D" parent="Set/AmbulanceOpen"]
+position = Vector3(0, 1.8, -1.6)
+light_color = Color(1, 0.9, 0.78, 1)
+light_energy = 2.2
+omni_range = 6
+omni_attenuation = 1.3
+
+[node name="Ambulance" parent="Set" instance=ExtResource("22")]
+position = Vector3(8, 0, 3)
+rotation_degrees = Vector3(0, -90, 0)
+
+[node name="BeaconRedA" type="OmniLight3D" parent="Set/Ambulance"]
+position = Vector3(-0.5, 2.9, 0.8)
+light_color = Color(1, 0.16, 0.12, 1)
+light_energy = 3
+omni_range = 14
+omni_attenuation = 1.3
+
+[node name="BeaconBlueA" type="OmniLight3D" parent="Set/Ambulance"]
+position = Vector3(0.5, 2.9, 0.8)
+light_color = Color(0.16, 0.34, 1, 1)
+light_energy = 3
+omni_range = 14
+omni_attenuation = 1.3
+
+[node name="Backhoe" parent="Set" instance=ExtResource("25")]
+position = Vector3(18.5, 0, 1.2)
+rotation_degrees = Vector3(0, -70, 0)
+
+[node name="WorkLight" type="SpotLight3D" parent="Set/Backhoe"]
+position = Vector3(0, 2.9, 0.8)
+rotation_degrees = Vector3(-25, 180, 0)
+light_color = Color(0.86, 0.9, 1, 1)
+light_energy = 3.5
+spot_range = 12
+spot_angle = 40
+spot_angle_attenuation = 0.7
+
+[node name="CarHatch" parent="Set" instance=ExtResource("27")]
+position = Vector3(-19.5, 0, 5.4)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="Van" parent="Set" instance=ExtResource("28")]
+position = Vector3(-9.5, 0, 5.5)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="CarCrushed" parent="Set" instance=ExtResource("29")]
+position = Vector3(2.5, 0, 5.6)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="CarShelter" parent="Set" instance=ExtResource("30")]
+position = Vector3(13, 0, 5.5)
+rotation_degrees = Vector3(0, -90, 0)
+
+[node name="CabinLight" type="OmniLight3D" parent="Set/CarShelter"]
+position = Vector3(0, 1, 0.3)
+light_color = Color(1, 0.75, 0.45, 1)
+light_energy = 0.9
+omni_range = 3.5
+omni_attenuation = 1.3
+
+[node name="Headlights" type="SpotLight3D" parent="Set/CarShelter"]
+position = Vector3(0, 0.6, 2)
+rotation_degrees = Vector3(-8, 180, 0)
+light_color = Color(1, 0.93, 0.78, 1)
+light_energy = 3
+spot_range = 14
+spot_angle = 24
+spot_angle_attenuation = 0.7
+
+[node name="Beam" type="MeshInstance3D" parent="Set/CarShelter/Headlights"]
+position = Vector3(0, 0, -5)
+rotation_degrees = Vector3(-90, 0, 0)
+cast_shadow = 0
+mesh = SubResource("beam_head")
+
+[node name="FireLow" parent="Set" instance=ExtResource("18")]
+position = Vector3(19, 0, 7.5)
+
+[node name="FireLight" type="OmniLight3D" parent="Set/FireLow"]
+position = Vector3(0, 1.1, 0)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 2.2
+omni_range = 5
+omni_attenuation = 1.3
+
+[node name="BusStop" parent="Set" instance=ExtResource("47")]
+position = Vector3(-14, 0, 8.6)
+
+[node name="SignStreet" parent="Set" instance=ExtResource("49")]
+position = Vector3(-17, 0, 7)
+
+[node name="SignStop" parent="Set" instance=ExtResource("48")]
+position = Vector3(-4, 0, 7)
+
+[node name="SignArrow" parent="Set" instance=ExtResource("50")]
+position = Vector3(21.5, 0, 7.4)
+rotation_degrees = Vector3(0, -15, 0)
+
+[node name="Bench" parent="Set" instance=ExtResource("45")]
+position = Vector3(-0.5, 0, 9)
+
+[node name="TreePine" parent="Set" instance=ExtResource("40")]
+position = Vector3(-22.5, 0, 10.5)
+
+[node name="TreePineSmall" parent="Set" instance=ExtResource("41")]
+position = Vector3(-6.5, 0, 10)
+
+[node name="TreeBare" parent="Set" instance=ExtResource("43")]
+position = Vector3(6, 0, 9)
+
+[node name="TreeBare2" parent="Set" instance=ExtResource("43")]
+position = Vector3(-11, 0, 11.5)
+rotation_degrees = Vector3(0, 140, 0)
+
+[node name="TreeFallen" parent="Set" instance=ExtResource("44")]
+position = Vector3(8.5, 0, 11.5)
+rotation_degrees = Vector3(0, 15, 0)
+
+[node name="PoleFallen" parent="Set" instance=ExtResource("33")]
+position = Vector3(-23, 0, 12.5)
+rotation_degrees = Vector3(0, -5, 0)
+
+[node name="Spark3" type="OmniLight3D" parent="Set/PoleFallen"]
+position = Vector3(12, 0.25, -2.2)
+light_color = Color(0.75, 0.9, 1, 1)
+light_energy = 2
+omni_range = 4
+omni_attenuation = 1.3
+
+[node name="TreeCypressF" parent="Set" instance=ExtResource("42")]
+position = Vector3(16.5, 0, 10.5)
+
+[node name="Snow" type="CPUParticles3D" parent="."]
+position = Vector3(0, 20, 0)
+amount = 3000
+lifetime = 16.0
+preprocess = 16.0
+mesh = SubResource("flake")
+emission_shape = 3
+emission_box_extents = Vector3(28, 1, 18)
+direction = Vector3(0.2, -1, 0)
+spread = 12.0
+gravity = Vector3(0.25, -0.9, 0)
+initial_velocity_min = 0.4
+initial_velocity_max = 0.9
+scale_amount_min = 0.6
+scale_amount_max = 1.5
+
+[node name="Post" type="CanvasLayer" parent="."]
+
+[node name="Grade" type="ColorRect" parent="Post"]
+material = SubResource("post_mat")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2

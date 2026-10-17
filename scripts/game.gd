@@ -7,8 +7,10 @@ const SCENES := {
 	&"diorama": "res://scenes/diorama.tscn",
 	&"fit": "res://scenes/minigames/fit.tscn",
 	&"connect": "res://scenes/minigames/connect.tscn",
+	&"beam": "res://scenes/minigames/beam.tscn",
 	&"result": "res://scenes/result.tscn",
 }
+const DEFAULT_LOCALE := "tr"  # until the player picks another with the menu's TR / EN switch
 const FLOW: Array[StringName] = [&"globe", &"diorama", &"minigame", &"result", &"main"]
 ## Disasters a role can get; the file name (without .tres) is the id in the play counts.
 const POOL := {
@@ -75,6 +77,7 @@ func _ready() -> void:
 	_make_cover()
 	_cache_scripts()
 	_draw_cover_once()
+	add_child(preload("res://scenes/ui/pause_menu.tscn").instantiate())  # Esc during a run
 
 
 ## Requested scenes nobody took (e.g. the game quits on the globe) are collected, so none leaks.
@@ -111,11 +114,10 @@ func has_locale() -> bool:
 	return saved_locale() != ""
 
 
-## Applies the saved locale, if any.
+## Applies the saved locale; with none saved, Turkish is the default.
 func load_locale() -> void:
 	var code := saved_locale()
-	if code != "":
-		TranslationServer.set_locale(code)
+	TranslationServer.set_locale(code if code != "" else DEFAULT_LOCALE)
 
 
 ## Applies the locale and saves it.
@@ -522,6 +524,20 @@ func _free_warm_keep() -> void:
 	for vp in _warm_keep:
 		vp.free()
 	_warm_keep.clear()
+
+
+## True while a scene change is fading in or out.
+func is_busy() -> bool:
+	return _cover != null and _cover.visible
+
+
+## Leaves the run (pause menu): drops what was built ahead and goes back to the main menu.
+func quit_to_menu() -> void:
+	_warm_gen += 1  # stops a warm-up that is still running
+	_release_prepared()
+	_release_prepared_mini()
+	_step = FLOW.size() - 1
+	_go(&"main")
 
 
 ## Frees the diorama that was built ahead and not used.

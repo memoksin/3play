@@ -1,0 +1,278 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/art_pilot/fire_fx/fire_fx.gd" id="1_r"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/fire_front.glb" id="2_r"]
+[ext_resource type="Shader" path="res://scenes/style/flame.gdshader" id="3_r"]
+[ext_resource type="Shader" path="res://scenes/style/soft_particle.gdshader" id="4_r"]
+[ext_resource type="Shader" path="res://scenes/style/soft_particle.gdshader" id="5_r"]
+
+[sub_resource type="ShaderMaterial" id="flame_mat"]
+resource_local_to_scene = true
+render_priority = 2
+shader = ExtResource("3_r")
+shader_parameter/intensity = 2.2
+shader_parameter/speed = 0.85
+shader_parameter/width = 0.4
+shader_parameter/lick = 1.2
+shader_parameter/wind = Vector2(0.28, 0)
+shader_parameter/fade = 1.0
+
+[sub_resource type="QuadMesh" id="flame_quad"]
+size = Vector2(1, 1)
+center_offset = Vector3(0, 0.5, 0)
+
+[sub_resource type="ShaderMaterial" id="smoke_mat"]
+render_priority = 1
+shader = ExtResource("4_r")
+shader_parameter/tint = Color(0.42, 0.36, 0.33, 0.6)
+shader_parameter/glow = 0.0
+shader_parameter/hardness = 0.0
+
+[sub_resource type="QuadMesh" id="smoke_quad"]
+material = SubResource("smoke_mat")
+size = Vector2(3.2, 3.2)
+
+[sub_resource type="Curve" id="smoke_scale"]
+_data = [Vector2(0, 0.35), 0.0, 1.2, 0, 0, Vector2(1, 1.8), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Gradient" id="smoke_ramp"]
+offsets = PackedFloat32Array(0, 0.15, 0.6, 1)
+colors = PackedColorArray(0.35, 0.22, 0.16, 0, 0.32, 0.24, 0.2, 0.75, 0.5, 0.44, 0.4, 0.45, 0.6, 0.55, 0.5, 0)
+
+[sub_resource type="ShaderMaterial" id="spark_mat"]
+render_priority = 3
+shader = ExtResource("5_r")
+shader_parameter/tint = Color(1, 0.55, 0.2, 1)
+shader_parameter/glow = 7.0
+shader_parameter/hardness = 0.65
+
+[sub_resource type="QuadMesh" id="spark_quad"]
+material = SubResource("spark_mat")
+size = Vector2(0.08, 0.08)
+
+[node name="FireFront" type="Node3D"]
+script = ExtResource("1_r")
+light_energy = 9.0
+light_on = true
+
+[node name="Base" parent="." instance=ExtResource("2_r")]
+
+[node name="Flames" type="Node3D" parent="."]
+
+[node name="F0" type="MeshInstance3D" parent="Flames"]
+position = Vector3(-5.800, 0.000, -0.352)
+scale = Vector3(2.858, 5.370, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F1" type="MeshInstance3D" parent="Flames"]
+position = Vector3(-5.725, 0.000, 0.043)
+scale = Vector3(1.499, 2.142, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F2" type="MeshInstance3D" parent="Flames"]
+position = Vector3(-5.041, 0.000, -0.185)
+scale = Vector3(2.798, 4.478, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F3" type="MeshInstance3D" parent="Flames"]
+position = Vector3(-4.323, 0.000, -0.029)
+scale = Vector3(3.276, 4.913, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F4" type="MeshInstance3D" parent="Flames"]
+position = Vector3(-4.135, 0.000, 0.328)
+scale = Vector3(1.294, 1.849, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F5" type="MeshInstance3D" parent="Flames"]
+position = Vector3(-3.428, 0.000, -0.321)
+scale = Vector3(2.882, 4.642, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F6" type="MeshInstance3D" parent="Flames"]
+position = Vector3(-2.566, 0.000, -0.135)
+scale = Vector3(2.756, 4.246, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F7" type="MeshInstance3D" parent="Flames"]
+position = Vector3(-2.886, 0.000, 0.212)
+scale = Vector3(1.151, 1.644, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F8" type="MeshInstance3D" parent="Flames"]
+position = Vector3(-1.932, 0.000, -0.351)
+scale = Vector3(2.739, 4.813, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F9" type="MeshInstance3D" parent="Flames"]
+position = Vector3(-2.099, 0.000, 0.254)
+scale = Vector3(1.627, 2.324, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F10" type="MeshInstance3D" parent="Flames"]
+position = Vector3(-1.115, 0.000, 0.064)
+scale = Vector3(3.124, 5.061, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F11" type="MeshInstance3D" parent="Flames"]
+position = Vector3(-1.375, 0.000, 0.369)
+scale = Vector3(1.040, 1.486, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F12" type="MeshInstance3D" parent="Flames"]
+position = Vector3(-0.134, 0.000, -0.136)
+scale = Vector3(2.370, 4.279, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F13" type="MeshInstance3D" parent="Flames"]
+position = Vector3(0.530, 0.000, -0.273)
+scale = Vector3(3.087, 4.974, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F14" type="MeshInstance3D" parent="Flames"]
+position = Vector3(1.503, 0.000, -0.332)
+scale = Vector3(3.248, 5.281, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F15" type="MeshInstance3D" parent="Flames"]
+position = Vector3(1.743, 0.000, 0.493)
+scale = Vector3(1.283, 1.832, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F16" type="MeshInstance3D" parent="Flames"]
+position = Vector3(2.161, 0.000, 0.087)
+scale = Vector3(2.677, 4.492, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F17" type="MeshInstance3D" parent="Flames"]
+position = Vector3(1.820, 0.000, 0.301)
+scale = Vector3(0.980, 1.400, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F18" type="MeshInstance3D" parent="Flames"]
+position = Vector3(2.813, 0.000, -0.015)
+scale = Vector3(3.163, 5.340, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F19" type="MeshInstance3D" parent="Flames"]
+position = Vector3(2.804, 0.000, 0.264)
+scale = Vector3(1.589, 2.269, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F20" type="MeshInstance3D" parent="Flames"]
+position = Vector3(3.521, 0.000, -0.163)
+scale = Vector3(2.695, 4.114, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F21" type="MeshInstance3D" parent="Flames"]
+position = Vector3(3.829, 0.000, 0.010)
+scale = Vector3(1.311, 1.872, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F22" type="MeshInstance3D" parent="Flames"]
+position = Vector3(4.136, 0.000, -0.270)
+scale = Vector3(3.291, 6.113, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F23" type="MeshInstance3D" parent="Flames"]
+position = Vector3(5.109, 0.000, 0.036)
+scale = Vector3(1.641, 2.782, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="F24" type="MeshInstance3D" parent="Flames"]
+position = Vector3(5.314, 0.000, 0.263)
+scale = Vector3(1.331, 1.901, 1.000)
+cast_shadow = 0
+mesh = SubResource("flame_quad")
+material_override = SubResource("flame_mat")
+
+[node name="Light" type="OmniLight3D" parent="."]
+position = Vector3(0.000, 2.500, 0.800)
+light_color = Color(1, 0.5, 0.17, 1)
+light_energy = 9.0
+omni_range = 24.0
+omni_attenuation = 1.3
+shadow_enabled = false
+
+[node name="Smoke" type="CPUParticles3D" parent="."]
+position = Vector3(0.000, 4.000, -0.600)
+amount = 70
+lifetime = 9.0
+preprocess = 9.0
+mesh = SubResource("smoke_quad")
+emission_shape = 3
+emission_box_extents = Vector3(5.800, 1.000, 0.800)
+direction = Vector3(0, 1, 0)
+spread = 14.0
+gravity = Vector3(0.800, 0.600, 0.900)
+initial_velocity_min = 1.5
+initial_velocity_max = 2.6
+scale_amount_min = 1.0
+scale_amount_max = 2.2
+scale_amount_curve = SubResource("smoke_scale")
+color_ramp = SubResource("smoke_ramp")
+
+[node name="Sparks" type="CPUParticles3D" parent="."]
+position = Vector3(0.000, 2.000, 0.000)
+amount = 140
+lifetime = 3.0
+preprocess = 3.0
+mesh = SubResource("spark_quad")
+emission_shape = 3
+emission_box_extents = Vector3(5.800, 1.000, 0.500)
+direction = Vector3(0, 1, 0)
+spread = 30.0
+gravity = Vector3(2.200, 0.600, 2.400)
+initial_velocity_min = 2.0
+initial_velocity_max = 4.5
+scale_amount_min = 0.5
+scale_amount_max = 1.3

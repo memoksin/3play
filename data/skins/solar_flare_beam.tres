@@ -1,0 +1,77 @@
+; Beam minigame waves, ported 1:1 from the "Işın Ağı" prototype (#124). Rules: scripts/beam_logic.gd.
+[gd_resource type="Resource" script_class="BeamSkin" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/beam_skin.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/beam_wave.gd" id="2"]
+
+[sub_resource type="Resource" id="wave_1"]
+script = ExtResource("2")
+title_key = "SF_BEAM_W1_TITLE"
+flare_class = "M4.2"
+time = 45.0
+sun = 2
+map = PackedStringArray("......", "M...M.", "..M...", "C.....", "......", ".....H", "..M.M.")
+earth = PackedStringArray("IST", "JKT", "LOS", "TYO", "CAI", "LIM")
+habitats = PackedStringArray("Lagrange-4")
+mech = &"mirror"
+chip_key = ""
+chip_style = &"new"
+intro_key = "SF_BEAM_W1_INTRO"
+tip_key = "SF_BEAM_W1_TIP"
+start = "55361"
+solution = "31213"
+
+[sub_resource type="Resource" id="wave_2"]
+script = ExtResource("2")
+title_key = "SF_BEAM_W2_TITLE"
+flare_class = "X1.8"
+time = 55.0
+sun = 3
+map = PackedStringArray("M..S.M.", ".C...M.", "..C....", ".......", "M.M....", "....H..", ".......")
+earth = PackedStringArray("SAO", "OSL", "BOM", "NBO", "SEL", "MEX", "SYD")
+habitats = PackedStringArray("Hilal")
+mech = &"splitter"
+chip_key = "SF_BEAM_W2_CHIP"
+chip_style = &"new"
+intro_key = "SF_BEAM_W2_INTRO"
+tip_key = ""
+start = "672510"
+solution = "321313"
+
+[sub_resource type="Resource" id="wave_3"]
+script = ExtResource("2")
+title_key = "SF_BEAM_W3_TITLE"
+flare_class = "X4.7"
+time = 65.0
+sun = 4
+map = PackedStringArray(".M....M", ".......", ".M.TS..", ".......", "C..T..C", ".......", "..H....", "...MM..")
+earth = PackedStringArray("DXB", "TYO", "LOS", "IST", "LIM", "CAI", "BOM")
+habitats = PackedStringArray("Vega")
+mech = &"thermal"
+chip_key = "SF_BEAM_W3_CHIP"
+chip_style = &"thermal"
+intro_key = "SF_BEAM_W3_INTRO"
+tip_key = ""
+start = "71447660"
+solution = "31103313"
+
+[sub_resource type="Resource" id="wave_4"]
+script = ExtResource("2")
+title_key = "SF_BEAM_W4_TITLE"
+flare_class = "X28"
+time = 80.0
+sun = 3
+map = PackedStringArray("......H", "..M...C", "..SS...", "......C", "..M..M.", "H..M...", "M..T.TM", ".......", ".....C.")
+earth = PackedStringArray("IST", "SEL", "NBO", "MEX", "JKT", "OSL", "SAO")
+habitats = PackedStringArray("Kepler", "Hilal")
+mech = &""
+chip_key = "SF_BEAM_W4_CHIP"
+chip_style = &"new"
+intro_key = "SF_BEAM_W4_INTRO"
+tip_key = "SF_BEAM_W4_TIP"
+start = "0577766372"
+solution = "303112?103"
+
+[resource]
+script = ExtResource("1")
+waves = Array[ExtResource("2")]([SubResource("wave_1"), SubResource("wave_2"), SubResource("wave_3"), SubResource("wave_4")])

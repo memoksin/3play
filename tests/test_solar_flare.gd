@@ -1,5 +1,6 @@
 extends SceneTree
-## Solar flare Fit skin: seats, scoring, radio warnings, flare ending, Kahramanmaras defaults untouched.
+## Solar flare Fit skin (no longer in the flow, see test_beam.gd): seats, scoring, radio warnings,
+## flare ending, Kahramanmaras defaults untouched.
 ## godot --headless --path . -s res://tests/test_solar_flare.gd
 
 const FRAME_CAP := 900
@@ -37,9 +38,12 @@ func _item(type: StringName, nth := 0) -> int:
 
 
 func _run() -> void:
-	var d: Disaster = load("res://data/disasters/solar_flare.tres")
+	# The solar flare plays Beam now (#124, tests/test_beam.gd); its old Fit skin is checked on a copy.
+	var d: Disaster = (load("res://data/disasters/solar_flare.tres") as Disaster).duplicate()
+	d.minigame = &"fit"
+	d.skin = load("res://data/skins/solar_flare_fit.tres")
 	skin = d.skin as FitSkin
-	_check("disaster links a FitSkin", skin != null and d.minigame == &"fit" and d.glitch)
+	_check("old Fit skin loads", skin != null and d.glitch)
 	var people := skin.items.filter(func(i: FitItem) -> bool: return i.type == &"person").size()
 	_check("12 people + 2 items", people == 12 and skin.items.size() == 14)
 	_check("zones: surface unlimited, shuttle 6, bunker 4",
