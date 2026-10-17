@@ -73,6 +73,9 @@ const FONT_SIZE := {
 ## Each fires once per lock, driven by game time (also when a seek / skip jumps past the window).
 signal coords_typing_started
 signal coords_typing_finished
+## Audio hook (docs/audio.md G2): the player starts / stops turning the globe by hand.
+signal spin_started
+signal spin_stopped
 
 const TYPE_START := 0.55
 const TYPE_LEN := 0.5
@@ -292,10 +295,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.pressed:
 			_dragging = true
 			_spin_vel = 0.0
+			spin_started.emit()
 			_drag_t0 = Time.get_ticks_usec()
 			_drag_samples = [Vector2(0, _drag_x)]
 		elif _dragging:
 			_dragging = false
+			spin_stopped.emit()
 			_drag_sample()
 			_release(_release_speed())
 	elif event is InputEventMouseMotion and _dragging:

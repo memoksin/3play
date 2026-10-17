@@ -4,6 +4,10 @@ extends Control
 ## Layout is in logical px (x4 = screen px, one cell = 16 logical = 64 px), see the sprite sheets in side/.
 
 signal finished(saved: int, total: int)
+## Audio hooks (docs/audio.md, scripts/audio.gd). sound_event kinds: wave_rising, wave_hit, flow,
+## basin (index = basin), spill (index = line), flood (index = village), drain.
+signal pipe_turned
+signal sound_event(kind: StringName, index: int)
 
 const PIPES: Texture2D = preload("res://assets/sprites/indian_ocean/side/side_pipes.png")
 const ROCKS: Texture2D = preload("res://assets/sprites/indian_ocean/side/side_rock.png")
@@ -94,6 +98,9 @@ var _wet_at := {}  # cell index -> flow time the pipe fills
 var _flood_at: Array[float] = []
 var _flow_total := 0.0
 var _red := false
+var _wave_cued := false
+var _events: Array[Dictionary] = []  # {t: seconds after the hit, kind, index}, sorted by t
+var _next_event := 0
 
 @onready var _timer: Label = $Hud/Box/Row/Timer
 @onready var _bar: Control = $Hud/Box/Bar
@@ -126,8 +133,14 @@ func advance(dt: float) -> void:
 	if _finished or dt <= 0.0:
 		return
 	elapsed += dt
+	if not _wave_cued and elapsed >= skin.timer_seconds - WAVE_LEAD:
+		_wave_cued = true
+		sound_event.emit(&"wave_rising", 0)
 	if not _hit and elapsed >= skin.timer_seconds:
 		_start_hit()
+	while _hit and _next_event < _events.size() and _hit_t() >= _events[_next_event].t:
+		sound_event.emit(_events[_next_event].kind, _events[_next_event].index)
+		_next_event += 1
 	if _hit and _hit_t() >= _end_time():
 		_finish()
 	for i in _turning.keys():
@@ -163,6 +176,7 @@ func rotate_cell(c: int, r: int, animate := false) -> bool:
 		return false
 	rots[i] = (rots[i] + 1) % 4
 	clicks += 1
+	pipe_turned.emit()
 	if animate:
 		_turning[i] = TURN_DUR
 	queue_redraw()
@@ -222,6 +236,23 @@ func _start_hit() -> void:
 			_flow_total = maxf(_flow_total, _flood_at[v] + 0.5)
 		elif not _saved[v]:
 			_flood_at[v] = 0.0
+	_build_events()
+	sound_event.emit(&"wave_hit", 0)
+
+
+## Sound cues of the flow after the hit, in hit time.
+func _build_events() -> void:
+	_events.clear()
+	_next_event = 0
+	_events.append({"t": FLOW_DELAY, "kind": &"flow", "index": 0})
+	for li in _lines.size():
+		var t: Dictionary = _lines[li]
+		_events.append({"t": FLOW_DELAY + t.end_t, "kind": &"basin" if t.complete else &"spill", "index": li})
+	for v in _flood_at.size():
+		if not _saved[v] and v < _lines.size():
+			_events.append({"t": FLOW_DELAY + _flood_at[v], "kind": &"flood", "index": v})
+	_events.append({"t": _drain_start(), "kind": &"drain", "index": 0})
+	_events.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.t < b.t)
 
 
 func _finish() -> void:

@@ -9,6 +9,15 @@ const SHAKE_QUAKE_AMP := 18.0
 const TOAST_DUR := 2.0
 const MESSAGE_DUR := 3.0
 const FLASH_DUR := 0.4
+## Audio hooks (docs/audio.md, scripts/audio.gd). `aftershock(i)` and `toast_ended(i)` bracket the
+## message of warning i; `quake_hit` is the final hit.
+signal item_selected
+signal item_placed
+signal item_rejected
+signal aftershock(index: int)
+signal toast_ended(index: int)
+signal quake_hit
+
 ## Seconds after the final hit.
 const COLLAPSE_START := 0.3
 const COLLAPSE_DUR := 1.3
@@ -65,6 +74,7 @@ var _shake_left := 0.0
 var _shake_dur := 1.0
 var _shake_amp := 0.0
 var _toast_left := 0.0
+var _toast_index := -1
 var _msg_left := 0.0
 var _collapse := 0.0
 var _rubble: Array[Rect2] = []
@@ -187,6 +197,10 @@ func advance(dt: float) -> void:
 			var key := skin.warning_keys[i] if i < skin.warning_keys.size() else skin.creak_key
 			_toast.get_node("Label").text = tr(key)
 			_toast_left = TOAST_DUR - (elapsed - at)
+			if _toast_index >= 0:
+				toast_ended.emit(_toast_index)
+			_toast_index = i
+			aftershock.emit(i)
 	if not _phase_quake and elapsed >= skin.timer_seconds:
 		_phase_quake = true
 		locked = true
@@ -196,6 +210,7 @@ func advance(dt: float) -> void:
 		if skin.ending == FitSkin.Ending.COLLAPSE:
 			_start_shake(SHAKE_QUAKE_DUR, SHAKE_QUAKE_AMP, _quake_t)
 		_banner.get_node("Label").text = tr(skin.quake_key)
+		quake_hit.emit()
 	elif _phase_quake:
 		_quake_t += dt
 	if _phase_quake:
@@ -216,6 +231,10 @@ func advance(dt: float) -> void:
 		_shaking = false
 	_toast_left = maxf(_toast_left - dt, 0.0)
 	var toast_on := _toast_left > 0.0
+	if not toast_on and _toast_index >= 0:
+		var ended := _toast_index
+		_toast_index = -1
+		toast_ended.emit(ended)
 	if _toast.visible != toast_on:
 		_toast.visible = toast_on
 	_msg_left = maxf(_msg_left - dt, 0.0)
@@ -258,6 +277,7 @@ func move(item_index: int, zone_id: StringName) -> bool:
 		_reject(item_index, zone_id)
 		return false
 	placement[item_index] = zone_id
+	item_placed.emit()
 	_chips[item_index].reparent(_zones[zone_id].flow, false)
 	_refresh()
 	return true
@@ -520,6 +540,7 @@ func _say(text: String, color: Color) -> void:
 func _reject(item_index: int, zone_id: StringName) -> void:
 	var v: ZoneView = _zones[zone_id]
 	v.flash = FLASH_DUR
+	item_rejected.emit()
 	var type := skin.type_of(item_index)
 	var item := skin.items[item_index]
 	var free := FitLogic.slots_free(skin, placement, zone_id)
@@ -541,6 +562,8 @@ func _finish() -> void:
 
 func _select(i: int) -> void:
 	_selected = i
+	if i >= 0:
+		item_selected.emit()
 	if _zones.has(_hover):
 		_zones[_hover].root.queue_redraw()
 	_update_chip_look()
