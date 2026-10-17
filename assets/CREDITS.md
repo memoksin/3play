@@ -136,6 +136,16 @@ Columns required per asset: name, author, link, license, where used.
 | audio/beam/laser_beam_loop.ogg | Laser Beam Firing by SecureSubset, https://freesound.org/people/SecureSubset/sounds/783986/. Beam runs (BM3). Preview from Freesound, trimmed with ffmpeg. 0.65 s crossfaded loop. | CC0 |
 | audio/beam/power_down_trim.ogg | power-down-01.wav by newagesoup, https://freesound.org/people/newagesoup/sounds/348249/. City lost (BM5). Preview from Freesound, trimmed with ffmpeg. From 1 s. | CC0 |
 | audio/beam/countdown_beeps.ogg | Bomb Countdown Beeps by snakebarney, https://freesound.org/people/snakebarney/sounds/138108/. Countdown tick (BM8). Preview from Freesound, trimmed with ffmpeg. Silence cut. | CC0 |
+| audio/trailer/t2_far_thunder.ogg | thunder.rumble.ogg by xUMR, https://freesound.org/people/xUMR/sounds/486557/. Pitch film (trailer) T2, T6. Preview from Freesound, trimmed with ffmpeg. Seconds 5 to 10. | CC0 |
+| audio/trailer/t3a_thunderclap.ogg | Thunderclap by Fission9, https://freesound.org/people/Fission9/sounds/534023/. Pitch film (trailer) T3. Preview from Freesound, trimmed with ffmpeg. 0.5 to 10.9 s. | CC0 |
+| audio/trailer/t3b_close_strike.ogg | Very close lightning strike by Simon Spiers, https://freesound.org/people/Simon%20Spiers/sounds/437243/. Pitch film (trailer) T3. Preview from Freesound, trimmed with ffmpeg. 19.9 to 27 s. | CC0 |
+| audio/trailer/t4_final_strike.ogg | Thunder with no rain by shazzakip, https://freesound.org/people/shazzakip/sounds/398013/. Pitch film (trailer) T4. Preview from Freesound, trimmed with ffmpeg. 15 to 24 s. | CC0 |
+| audio/trailer/t4_final_strike_layered.ogg | Mix of Thunder with no rain by shazzakip, https://freesound.org/people/shazzakip/sounds/398013/ and Very close lightning strike by Simon Spiers, https://freesound.org/people/Simon%20Spiers/sounds/437243/. Pitch film (trailer) T4 alternative. Previews from Freesound, mixed and trimmed with ffmpeg. | CC0 |
+| audio/trailer/t7_noise_riser.ogg | noise riser by reathance, https://freesound.org/people/reathance/sounds/503796/. Pitch film (trailer) T7. Preview from Freesound, trimmed with ffmpeg. First 4.6 s. | CC0 |
+| audio/trailer/t9_heartbeat.ogg | SLOW HEARTBEAT by daandraait, https://freesound.org/s/249716/. Pitch film (trailer) T9, T21. Preview from Freesound, trimmed with ffmpeg. 2.45 to 3.25 s (one lub-dub). | CC0 |
+| audio/trailer/t11_low_impact.ogg | Cinematic Low Pitch Impact by Jofae, https://freesound.org/people/Jofae/sounds/408141/. Pitch film (trailer) T11, T13, T23, T28. Preview from Freesound, trimmed with ffmpeg. First 6.15 s. | CC0 |
+| audio/trailer/t27_egg_crack.ogg | Egg cracking.wav by FngerSounds, https://freesound.org/s/250133/. Pitch film (trailer) T27. Preview from Freesound, trimmed with ffmpeg. First 2.7 s, -3 dB. | CC0 |
+| audio/trailer/t31_tv_off.ogg | Turning the TV off by Cloud-10, https://freesound.org/people/Cloud-10/sounds/648174/. Pitch film (trailer) T31. Preview from Freesound, trimmed with ffmpeg. First 0.28 s. | CC0 |
 
 ## Planned third-party assets (NOT in the repo yet: move a row up and fill every column once added)
 
