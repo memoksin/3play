@@ -17,7 +17,12 @@ Snowing, the grid is down. Your family and neighbours are scattered in the dark;
 - Darkness is real light: low moon and ambient, warm practicals (camp fires, tents, the bakery oven, work lights,
   beacons) and the torch (shadowed spot: walls cut it). Gameplay "seen" = torch cone with a clear line of sight
   (`FenerMap` solids >= 2.2 m block it) or the 2.4 m circle around you.
-- Time 3:30. Battery drains while the torch is on (about 80 s); two spare batteries lie in the map.
+- Time 5:00. Battery drains while the torch is on (about 130 s); two spare batteries lie in the map.
+- Beginner-friendly tuning (aim: a careful first run saves 4-5 of 6): slower aftershocks (first one after 40 s, 2.5 s warning),
+  4 hidden holes, long invulnerability after a hit, the light finds people 1.3 m beyond their body, crews and the
+  assembly area count a little beyond their edge, followers hurry to catch up (and snap back after 22 m).
+  HUD guide under the top-left panel: arrow + distance to the assembly area (and the crew when someone is trapped),
+  people left to save.
 - Finding someone (the light reaches their face): a heartbeat, a short slow motion, a warm light on the face.
 
 ## People (`data/skins/kahramanmaras_fener.tres`, `FenerPerson.Kind`)

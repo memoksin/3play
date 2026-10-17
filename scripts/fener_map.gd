@@ -14,10 +14,10 @@ const START := Vector2(-44, -4.8)
 ## Toplanma alanı: followers that enter it with the player are safe.
 const AREA := Rect2(27, 17, 16, 13)
 ## Where a trapped person can be reported (rescue crew, AFAD tent): centre, radius.
-const CREWS: Array[Vector3] = [Vector3(-30.5, -10.5, 3.8), Vector3(25.8, 25.0, 3.4)]
+const CREWS: Array[Vector3] = [Vector3(-30.5, -10.5, 5.5), Vector3(25.8, 25.0, 5.0)]
 const SIDEWALK_H := 0.12
 ## People are not placed closer than this to each other / to the start.
-const SPREAD := 16.0
+const SPREAD := 13.0
 
 ## Region name suffixes (text) and rects; outside all = the avenue / crossroads.
 const REGIONS := [
@@ -226,7 +226,7 @@ const HOLES: Array[Vector2] = [
 	Vector2(-46.0, 23.0), Vector2(-8.5, 23.4), Vector2(-30.0, 38.6), Vector2(15.0, 23.0),
 	Vector2(50.0, 30.0), Vector2(-22.0, -7.6), Vector2(27.0, -4.9), Vector2(-28.0, 16.0),
 ]
-const HOLE_COUNT := 7
+const HOLE_COUNT := 4
 const HOLE_R := 0.95
 ## The open manhole on the avenue: always there, not hidden.
 const MANHOLE := Vector2(40.0, 1.4)
@@ -261,12 +261,12 @@ const SHOCK_H := 4.0
 
 ## Candidate spots per person group (FenerPerson.spot_group).
 const SPOTS := {
-	&"lost_a": [Vector2(26.0, -20.0), Vector2(-17.0, 23.0), Vector2(47.0, -24.5), Vector2(12.0, 26.0)],
-	&"lost_b": [Vector2(-50.5, 38.0), Vector2(53.0, -24.0), Vector2(-9.0, -26.0), Vector2(-4.5, 33.0)],
-	&"slow": [Vector2(-52.0, 22.6), Vector2(-4.4, 25.0), Vector2(18.0, -24.6), Vector2(52.0, 38.0)],
+	&"lost_a": [Vector2(26.0, -20.0), Vector2(-17.0, 23.0), Vector2(40.0, -20.0), Vector2(12.0, 26.0)],
+	&"lost_b": [Vector2(-38.0, 23.2), Vector2(46.0, -21.0), Vector2(-9.0, -26.0), Vector2(-4.5, 33.0)],
+	&"slow": [Vector2(-48.0, 23.0), Vector2(-4.4, 25.0), Vector2(18.0, -24.6), Vector2(46.0, 33.0)],
 	&"trapped": [Vector2(-24.2, -23.4), Vector2(34.5, -23.6), Vector2(-15.6, 21.4)],
 	&"injured": [Vector2(-6.6, -1.4), Vector2(12.4, -16.2), Vector2(-42.0, 21.8)],
-	&"cold": [Vector2(-38.0, 37.6), Vector2(-14.0, 3.9), Vector2(52.0, -4.8)],
+	&"cold": [Vector2(-30.0, 30.0), Vector2(-14.0, 3.9), Vector2(40.0, -4.8)],
 }
 ## Pickups: kind -> candidate spots; ITEM_COUNT picks per kind.
 const ITEMS := {
