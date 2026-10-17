@@ -37,8 +37,8 @@ var _preview := false  # preview_hover pins the state; no mouse polling
 func _ready() -> void:
 	# Same HUD as the globe: spaced capitals, the year it starts counting back from.
 	%Year.text = str(Time.get_date_dict_from_system().year)
-	_build(%State, &"state", $Center/Box/Roles/StateCol, tr("ROLE_STATE"), Palette.HUD_BLUE)
-	_build(%Citizen, &"citizen", $Center/Box/Roles/CitizenCol, tr("ROLE_CITIZEN"), Palette.HUD_RED)
+	_build(%State, &"state", $Center/Box/Roles/StateCol, tr("ROLE_STATE"), Palette.HUD_RED)
+	_build(%Citizen, &"citizen", $Center/Box/Roles/CitizenCol, tr("ROLE_CITIZEN"), Palette.HUD_BLUE)
 	for b: Button in _cards:
 		b.pressed.connect(_press.bind(b))
 		b.mouse_entered.connect(_set_open.bind(b))

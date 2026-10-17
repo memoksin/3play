@@ -136,8 +136,8 @@ func _space_theme(regular: FontFile) -> Theme:
 	t.set_color("font_pressed_color", "Button", Palette.WHITE)
 	t.set_color("font_focus_color", "Button", Palette.WHITE)
 	t.set_color("font_disabled_color", "Button", Palette.HUD_DIM)
-	_space_role(t, "StateButton", Palette.HUD_BLUE, regular)
-	_space_role(t, "CitizenButton", Palette.HUD_RED, regular)
+	_space_role(t, "StateButton", Palette.HUD_RED, regular)
+	_space_role(t, "CitizenButton", Palette.HUD_BLUE, regular)
 
 	var sep := StyleBoxLine.new()
 	sep.color = Color(Palette.HUD_BLUE, 0.22)
