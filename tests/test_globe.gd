@@ -78,24 +78,24 @@ func _run() -> void:
 
 	# Weak synthetic drag: turns the globe, keeps turning, slows down, no launch
 	y0 = earth.rotation.y
-	await _drag(8.0, 8)  # ~500 px/s = 2 rad/s
+	await _drag(4.0, 4)  # 16 px (< LAUNCH_PX), ~250 px/s = 1 rad/s
 	await process_frame
 	var y1 := earth.rotation.y
 	var v1: float = g._spin_vel
-	_check("weak drag turns the globe (%.3f rad)" % (y1 - y0), y1 - y0 > 0.2)
-	_check("weak drag no launch (%.2f rad/s)" % v1, not g.launched and v1 > 0.5 and v1 < g.FLICK_MIN)
+	_check("short drag turns the globe (%.3f rad)" % (y1 - y0), y1 - y0 > 0.05)
+	_check("short drag no launch (%.2f rad/s)" % v1, not g.launched and v1 > 0.5 and v1 < g.FLICK_MIN)
 	await _wait(0.5)
-	_check("inertia keeps turning", earth.rotation.y > y1 + 0.1)
+	_check("inertia keeps turning", earth.rotation.y > y1 + 0.05)
 	_check("inertia slows down (%.2f -> %.2f)" % [v1, g._spin_vel], g._spin_vel < v1 * 0.7)
 
 	g.flick(g.FLICK_MIN * 0.6)
 	await process_frame
 	_check("weak flick() no launch", not g.launched)
 
-	# Strong synthetic drag: launches, continues from the current rotation and speed, locks on
+	# Slow drag past LAUNCH_PX: launches at FLICK_MIN or more, no flick needed
 	y0 = earth.rotation.y
-	await _drag(-40.0, 6)  # ~2500 px/s leftward = -10 rad/s
-	_check("strong drag launches", g.launched)
+	await _drag(-5.0, 8)  # 40 px, ~300 px/s leftward
+	_check("slow drag launches", g.launched)
 	var span: float = g._to_y - g._from_y
 	_check("launch from current rotation", absf(g._from_y - earth.rotation.y) < 0.2)
 	var v_start: float = span * g._spin_ease(1e-4) / (1e-4 * g.SPIN)
