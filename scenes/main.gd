@@ -37,6 +37,8 @@ var _preview := false  # preview_hover pins the state; no mouse polling
 func _ready() -> void:
 	# Same HUD as the globe: spaced capitals, the year it starts counting back from.
 	%Year.text = str(Time.get_date_dict_from_system().year)
+	%Back.pressed.connect(back)
+	_apply_back_text()
 	_build(%State, &"state", $Center/Box/Roles/StateCol, tr("ROLE_STATE"), Palette.HUD_RED)
 	_build(%Citizen, &"citizen", $Center/Box/Roles/CitizenCol, tr("ROLE_CITIZEN"), Palette.HUD_BLUE)
 	for b: Button in _cards:
@@ -50,6 +52,29 @@ func _ready() -> void:
 	TextFx.fade_in($Center/Box/Roles, 0.7)
 	for n in [$YearCaption, %Year, $Hint]:
 		TextFx.fade_in(n, 1.0, 0.6)
+
+
+## Esc or Back: back to the title screen. The Settings panel takes its own Esc first.
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed(&"ui_cancel"):
+		get_viewport().set_input_as_handled()
+		back()
+
+
+func back() -> void:
+	if _pressing:
+		return
+	get_tree().change_scene_to_file(Story.TITLE)
+
+
+## Back is set in code: follow a language switch made from the Settings panel.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
+		_apply_back_text()
+
+
+func _apply_back_text() -> void:
+	%Back.text = TextFx.upper(tr("MENU_BACK"))
 
 
 func _build(b: Button, role: StringName, col: Control, title: String, accent: Color) -> void:
