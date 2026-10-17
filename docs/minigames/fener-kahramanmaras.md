@@ -44,6 +44,19 @@ Four regions around a crossroads: collapsed apartments with the rescue crew (NW)
 tent camp with the assembly area (SE). A toppled block lies across the north cross street, a fallen pole across the
 south one. Top-down check: `godot --headless --path . -s res://tools/fener_map_png.gd` -> `export/shots/fener_map.png`.
 
+## Walking and collisions
+
+The player is a circle (radius 0.35 m) on the ground plane. What stops him is `FenerMap.WALK`: per model, the part
+that is higher than a step (0.4 m) and lower than nothing a person walks under (1.8 m), measured from the mesh
+(`scripts/fener_footprint.gd`): boxes at the exact yaw of the place, discs for trunks and barrels. Stones, bricks,
+flat debris and rubble aprons are stepped over; eaves, balconies and branches hang overhead. `FenerMap.FOOT` stays
+the mass of a model for the light, the fade, the aftershock risk and the rescuers' routes.
+Movement is in steps of at most 12 cm, each pushed out of what it hit (`fener.gd` `_try_move`): he slides along
+walls and round corners and trunks; buildings, rubble piles, vehicles and the map edge still stop him.
+After changing a model or a placement, re-measure: `godot --headless --path . -s res://tools/fener_footprints.gd`
+(`-- gen=1` prints a first WALK table), then `tests/test_fener_walk.gd`. Top-down check of blockers vs models:
+`godot --path . -s res://tools/fener_coll_shots.gd -- map=1` (or `-- models=a,b`) -> `export/shots/fener_coll_*.png`.
+
 ## Hazards (all warn before they hurt)
 
 | Hazard | Warning | Hurts when |
@@ -110,5 +123,6 @@ Ambience: FN1 (same as D1) for the whole scene.
 ## Tools
 
 - Tests: `godot --headless --path . -s res://tests/test_fener.gd` (bot plays 4 full runs, every mechanic, the figures' clips and the crew run).
+- Walking: `godot --headless --path . -s res://tests/test_fener_walk.gd` (shapes vs meshes, walks round every blocker, slides, edges).
 - Frames: `godot --path . -s res://tools/fener_shots.gd` -> `export/shots/fener_*.png`.
 - Frame cost: `godot --path . -s res://tools/perf.gd -- --only=fener`.
