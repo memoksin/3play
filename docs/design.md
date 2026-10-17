@@ -92,6 +92,7 @@ Prototype: claude.ai artifact "3play Globe Akışı" v2. Port it as is.
 - Data: `Disaster.lat`, `lon`, new `year`; place and date via `tr()` (`<PREFIX>_PLACE`, `<PREFIX>_YEAR`).
 - Glitch (Tier 2): `glitch_to(year)` stub now, it only jumps the counter. Effect later.
 - Tier 2 polish: clouds, day/night terminator, city lights, bump (#32).
+- Sun (#156): the real subsolar point of `Disaster.utc`, fixed in the Earth's own frame, so the terminator and the midnight meridian are glued to the surface and turn with it (drag, flick, timeline). Every continent keeps its real day / night for that moment; the target ends at its real local time (Kahramanmaras night, Sumatra morning). City lights burn on the night side only. Both roles share this look: the resting globe is turned so the real sun meets the camera with the prototype light, only the disaster (its UTC) differs. Proof: `tools/globe/shots.gd` (drag, spin and lock frames checked against the real sun, `proof_*` images).
 
 ## Decisions
 

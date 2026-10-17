@@ -18,12 +18,14 @@ func _at(step: StringName, label: String) -> void:
 	_check("%s at %s" % [label, step], current_scene.scene_file_path == root.get_node("Game").scene_path(step))
 
 
-## The sun is fixed in world space for the whole flow (earth, clouds, atmosphere share it), so the
-## Earth spins under a still terminator; at the lock pose the target sits at its real local time.
-func _check_sun_fixed() -> void:
+## The sun is fixed in the Earth's own frame (earth, clouds, atmosphere share it): the terminator and the
+## midnight meridian turn with the surface, whatever the spin, pitch or timeline time. It is the real
+## subsolar point of the scenario's UTC, so at the lock pose the target sits at its real local time.
+func _check_sun_glued() -> void:
 	var game := root.get_node("Game")
 	var packed: PackedScene = load("res://scenes/globe.tscn")
-	for path in ["res://data/disasters/indian_ocean.tres", "res://data/disasters/kahramanmaras.tres", ""]:
+	for path in ["res://data/disasters/indian_ocean.tres", "res://data/disasters/kahramanmaras.tres",
+			"res://data/disasters/solar_flare.tres", ""]:
 		var d: Disaster = load(path if path != "" else "res://data/disasters/indian_ocean.tres")
 		if path == "":
 			d = d.duplicate()
@@ -36,25 +38,53 @@ func _check_sun_fixed() -> void:
 		var mats := []
 		for n in ["Axial/Pitch/Earth", "Axial/Pitch/Clouds", "Atmosphere"]:
 			mats.append((globe.get_node(n) as MeshInstance3D).get_surface_override_material(0))
-		var want: Vector3 = mats[0].get_shader_parameter(&"sun_dir")
-		var spread := 0.0
+		var label := String(d.id) + (" fallback" if path == "" else "")
+		if path != "":
+			# resting globe: the real sun meets the camera with the prototype light (the same look in every run)
+			var rest: Vector3 = mats[0].get_shader_parameter(&"sun_dir")
+			_check("%s resting sun lit like the prototype (dot %.3f)" % [label, rest.dot(globe.SUN.normalized())],
+					rest.dot(globe.SUN.normalized()) > 0.8)  # the axial tilt caps it near 30 deg in December
+		var want := Vector3.ZERO
+		var shared := 0.0  # the three layers agree on the world sun
+		var glued := 0.0  # the sun in the Earth's frame never moves
 		var lock_dot := NAN
-		for time in [0.0, 0.3, 0.7, 1.2, 2.0, 3.0, 4.0, 5.5, 7.4]:
-			globe.seek(time)
+		var times := [0.0, 0.3, 0.7, 1.2, 2.0, 3.0, 4.0, 5.5, 7.4]
+		var posed := 0
+		# the resting globe turned by hand (drag, inertia) before any launch
+		for y in [0.0, 0.9, 2.4, -1.7, 4.1]:
+			earth.rotation.y = y
+			globe._pose()
+			var local: Vector3 = earth.global_basis.inverse() * (mats[0].get_shader_parameter(&"sun_dir") as Vector3)
+			want = want if posed > 0 else local
+			posed += 1
+			glued = maxf(glued, (local - want).length())
 			for m in mats:
-				spread = maxf(spread, ((m.get_shader_parameter(&"sun_dir") as Vector3) - want).length())
+				shared = maxf(shared, ((m.get_shader_parameter(&"sun_dir") as Vector3) - mats[0].get_shader_parameter(&"sun_dir")).length())
+		for time in times:
+			globe.seek(time)
+			var local: Vector3 = earth.global_basis.inverse() * (mats[0].get_shader_parameter(&"sun_dir") as Vector3)
+			glued = maxf(glued, (local - want).length())
+			for m in mats:
+				shared = maxf(shared, ((m.get_shader_parameter(&"sun_dir") as Vector3) - mats[0].get_shader_parameter(&"sun_dir")).length())
 			if time >= globe.SPIN:
 				var target: Vector3 = earth.global_basis * globe.surface_point(d.lat, d.lon)
 				lock_dot = (mats[0].get_shader_parameter(&"sun_dir") as Vector3).dot(target)
-		var label := String(d.id) + (" fallback" if path == "" else "")
-		_check("%s sun fixed in world space (spread %.5f)" % [label, spread], spread < 1e-5)
+		_check("%s layers share one sun (spread %.5f)" % [label, shared], shared < 1e-5)
+		_check("%s sun glued to the Earth (drift %.5f)" % [label, glued], glued < 1e-4)
 		if path != "":
 			var s: Vector2 = globe.subsolar_point(d.utc)
+			_check("%s sun is the real subsolar point" % label,
+					(want - globe.surface_point(s.x, s.y)).length() < 1e-4)
+			# midnight meridian: the point opposite the subsolar one is in full night at any spin
+			var night: Vector3 = earth.global_basis * globe.surface_point(-s.x, s.y + 180.0)
+			var sun_now: Vector3 = mats[0].get_shader_parameter(&"sun_dir")
+			_check("%s midnight stays opposite the sun (%.4f)" % [label, night.dot(sun_now)], night.dot(sun_now) < -0.9999)
 			var real: float = globe.surface_point(s.x, s.y).dot(globe.surface_point(d.lat, d.lon))
 			_check("%s target at real local time (%.4f vs %.4f)" % [label, lock_dot, real],
 					absf(lock_dot - real) < 1e-4)
 		else:
-			_check("%s fallback is the prototype SUN" % label, want.is_equal_approx(globe.SUN.normalized()))
+			_check("%s fallback is the prototype SUN at the lock" % label,
+					(mats[0].get_shader_parameter(&"sun_dir") as Vector3).is_equal_approx(globe.SUN.normalized()))
 		root.remove_child(globe)
 		globe.free()
 	game.disaster = null
@@ -80,7 +110,7 @@ func _leave_globe(role: StringName, space: bool) -> void:
 
 
 func _run() -> void:
-	_check_sun_fixed()
+	_check_sun_glued()
 	var game := root.get_node("Game")
 	game.store_path = ""  # never touch the real play counts
 	game.settings_path = ""  # the menu must not redirect to the language scene
