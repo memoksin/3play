@@ -39,3 +39,8 @@ static func type_on(label: Control, delay := 0.0, cps := TYPE_CPS, on_start := C
 ## Seconds type_on() needs for `label` at `cps`.
 static func type_time(label: Control, cps := TYPE_CPS) -> float:
 	return label.get_total_character_count() / cps
+
+
+## Locale-aware upper case: String.to_upper() maps Turkish i to I, not İ.
+static func upper(s: String) -> String:
+	return TextServerManager.get_primary_interface().string_to_upper(s, TranslationServer.get_locale())

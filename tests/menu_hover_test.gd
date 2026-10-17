@@ -2,9 +2,14 @@ extends SceneTree
 ## Real hover/focus test for the main menu role buttons. Run windowed:
 ##   godot --path . -s res://tests/menu_hover_test.gd
 ## Prints PASS and exits 0, or quits 1 on the first failure.
+## Robustness: state changes are polled frame by frame (the motion event is re-sent until the
+## menu reacts), and geometry / alpha are measured only after the hover tweens have finished,
+## never after a fixed sleep (a window that is unfocused or stalls renders fewer frames).
 
-const MAX_SECONDS := 60.0
-const PARK := Vector2(1275, 360)
+const MAX_SECONDS := 90.0
+const PARK := Vector2(6, 712)  # bottom-left: clear of the menu and the top-right language picker
+const FRAME_CAP := 240  # frames to wait for a state change before failing
+const SETTLE_CAP := 600  # frames to wait for the tweens to finish
 
 var _start_ms := Time.get_ticks_msec()
 var _menu: Control
@@ -35,14 +40,17 @@ func _run() -> void:
 	var win := root.get_window()
 	win.mode = Window.MODE_WINDOWED
 	win.size = Vector2i(1280, 720)
+	win.grab_focus()
 	await process_frame
 	_menu = load("res://scenes/main.tscn").instantiate()
 	root.add_child(_menu)
 	await _wait(1.8)  # entry animation
-	_move(Vector2(1275, 700))  # park the cursor twice: the window may still be settling
-	await _wait(0.4)
+	win.grab_focus()
 	_move(PARK)
-	await _wait(0.5)
+	if not await _until_role(&"", PARK):
+		return
+	if not await _settle(PARK):
+		return
 	_expect(&"", "start: nothing hovered")
 	var target: float = _menu.SIL_ALPHA
 	for role: StringName in [&"state", &"citizen"]:
@@ -55,8 +63,10 @@ func _run() -> void:
 			_fail("%s: glow visible while idle" % role)
 			return
 		# a. mouse in
-		_move(centre)
-		await _wait(0.5)
+		if not await _until_role(role, centre):
+			return
+		if not await _settle(centre):
+			return
 		_expect(role, "%s: hovered on mouse in" % role)
 		var a: float = _menu.silhouette_alpha(role)
 		if a < target * 0.9:
@@ -75,10 +85,12 @@ func _run() -> void:
 			_fail("%s: glow alpha %.2f (want 0.5-0.75)" % [role, ga])
 			return
 		var ph1: float = _menu.glow_phase(role)
-		await _wait(0.5)
+		var t1 := Time.get_ticks_msec()
+		await _wait(0.5, centre)
 		var ph2: float = _menu.glow_phase(role)
-		if absf(fposmod(ph2 - ph1, 1.0) - 0.2) > 0.08:  # period 2.5 s -> 0.2 of a loop in 0.5 s
-			_fail("%s: highlight did not travel (phase %.2f -> %.2f)" % [role, ph1, ph2])
+		var dt := (Time.get_ticks_msec() - t1) / 1000.0
+		if absf(fposmod(ph2 - ph1, 1.0) - dt / 2.5) > 0.08:  # period 2.5 s
+			_fail("%s: highlight did not travel (phase %.2f -> %.2f over %.2f s)" % [role, ph1, ph2, dt])
 			return
 		var glyph_bottom: float = float(_menu.title_y(role)) + _menu.TITLE_CAP / 2.0
 		var sil_top: float = _menu.silhouette_rect(role).position.y
@@ -104,14 +116,15 @@ func _run() -> void:
 		var strip := Vector2(centre.x, idle_rect.end.y - 2.0)
 		_move(strip)
 		for i in 15:
-			await _wait(0.03)
-			_move(strip)
+			await _wait(0.03, strip)
 			if _menu.hovered_role() != role:
 				_fail("%s: flicker over the uncovered bottom strip" % role)
 				return
 		# b. mouse out
-		_move(PARK)
-		await _wait(0.5)
+		if not await _until_role(&"", PARK):
+			return
+		if not await _settle(PARK):
+			return
 		_expect(&"", "%s: cleared on mouse out" % role)
 		a = _menu.silhouette_alpha(role)
 		if a > 0.02:
@@ -120,28 +133,38 @@ func _run() -> void:
 		# c. rapid in/out x5 within 0.3 s, ending hovered
 		for i in 5:
 			_move(centre)
-			await _wait(0.03)
+			await _wait(0.03, centre)
 			_move(PARK)
-			await _wait(0.03)
-		_move(centre)
-		await _wait(0.5)
+			await _wait(0.03, PARK)
+		if not await _until_role(role, centre):
+			return
+		if not await _settle(centre):
+			return
 		_expect(role, "%s: consistent hover after rapid in/out" % role)
 		a = _menu.silhouette_alpha(role)
 		if a < target * 0.9:
 			_fail("%s: rapid end state off (alpha %.2f)" % [role, a])
 			return
-		_move(PARK)
-		await _wait(0.5)
+		if not await _until_role(&"", PARK):
+			return
+		if not await _settle(PARK):
+			return
 		_expect(&"", "%s: cleared after rapid" % role)
 		if _menu.silhouette_alpha(role) > 0.02:
 			_fail("%s: silhouette stuck after rapid" % role)
 			return
 	# d. keyboard focus
 	_menu.get_node("%State").grab_focus()
-	await _wait(0.5)
+	if not await _until_role(&"state", PARK):
+		return
+	if not await _settle(PARK):
+		return
 	_expect(&"state", "focus State hovers it")
 	_menu.get_node("%Citizen").grab_focus()
-	await _wait(0.5)
+	if not await _until_role(&"citizen", PARK):
+		return
+	if not await _settle(PARK):
+		return
 	_expect(&"citizen", "focus Citizen swaps")
 	if _menu.silhouette_alpha(&"state") > 0.02 or _menu.silhouette_alpha(&"citizen") < target * 0.9:
 		_fail("focus swap: silhouettes not swapped")
@@ -158,10 +181,45 @@ func _move(pos: Vector2) -> void:
 	Input.parse_input_event(ev)
 
 
-func _wait(sec: float) -> void:
+## Waits `sec` of wall time, re-asserting the mouse position every frame if one is given.
+func _wait(sec: float, pos := Vector2(-1, -1)) -> void:
 	var end := Time.get_ticks_msec() + int(sec * 1000.0)
 	while Time.get_ticks_msec() < end:
+		if pos.x >= 0.0:
+			_move(pos)
 		await process_frame
+
+
+## Re-sends the mouse position every frame until hovered_role() == role (frame cap). Fails on timeout.
+func _until_role(role: StringName, pos: Vector2) -> bool:
+	for i in FRAME_CAP:
+		_move(pos)
+		await process_frame
+		if _menu.hovered_role() == role:
+			return true
+	_fail("hovered_role never became '%s' (stuck at '%s')" % [role, _menu.hovered_role()])
+	return false
+
+
+func _animating() -> bool:
+	for c: Dictionary in _menu._cards.values():
+		var tw: Tween = c.tw
+		if tw != null and tw.is_valid() and tw.is_running():
+			return true
+	return false
+
+
+## Waits until no hover tween is running for 3 consecutive frames (frame cap). Fails on timeout.
+func _settle(pos: Vector2) -> bool:
+	var calm := 0
+	for i in SETTLE_CAP:
+		_move(pos)
+		await process_frame
+		calm = 0 if _animating() else calm + 1
+		if calm >= 3:
+			return true
+	_fail("hover tweens never settled")
+	return false
 
 
 func _expect(role: StringName, what: String) -> void:

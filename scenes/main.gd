@@ -55,7 +55,7 @@ func _ready() -> void:
 func _build(b: Button, role: StringName, col: Control, title: String, accent: Color) -> void:
 	b.text = ""  # the title is a child label so it can lift inside the grown button
 	var tl := Label.new()
-	tl.text = title.to_upper()
+	tl.text = TextFx.upper(title)
 	tl.add_theme_font_override("font", b.get_theme_font("font"))
 	tl.add_theme_font_size_override("font_size", TITLE_SIZE)
 	tl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

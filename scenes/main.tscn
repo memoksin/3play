@@ -103,7 +103,7 @@ offset_top = 33.0
 offset_right = 200.0
 offset_bottom = 56.0
 theme_type_variation = &"HudCaption"
-text = "YEAR"
+text = "GLOBE_YEAR"
 
 [node name="Year" type="Label" parent="."]
 unique_name_in_owner = true

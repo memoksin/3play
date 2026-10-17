@@ -30,12 +30,12 @@ func _ready() -> void:
 ## `coords`: e.g. "37.58°N  036.93°E" (see coords_text()); empty hides the
 ## coordinate and LOCKED rows.
 func show_text(place: String, date: String, lines: Array[String], coords := "") -> void:
-	%Place.text = place.to_upper()
-	%Date.text = date.to_upper()
+	%Place.text = TextFx.upper(place)
+	%Date.text = TextFx.upper(date)
 	%Coords.text = coords
 	%Coords.visible = coords != ""
 	%Locked.visible = coords != ""
-	%Next.text = tr("INTRO_NEXT").to_upper()
+	%Next.text = TextFx.upper(tr("INTRO_NEXT"))
 	for c in %Lines.get_children():
 		c.queue_free()
 	var labels: Array[Label] = []
