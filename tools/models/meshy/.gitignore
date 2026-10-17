@@ -1,0 +1,8 @@
+work/
+out/*/*.jpg
+out/*/*.import
+out/*/idle.glb
+out/*/walk.glb
+out/*/run.glb
+out/*.png*
+__pycache__/
