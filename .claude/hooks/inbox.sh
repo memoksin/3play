@@ -10,7 +10,11 @@ state=$("$(dirname "$0")/state-dir.sh") || exit 1
 last=$(cat "$state/$name.last" 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)
 # ponytail: catch-up capped at 1h so a long gap does not flood the Monitor.
 last=$(jq -rn --arg l "$last" '[($l | fromdate), now - 3600] | max | floor | todate')
-while true; do
+# Exit on our own: the Monitor timeout does not always kill this loop (Windows left orphans
+# polling forever and burned the GitHub rate limit). Stop after the Monitor window or when the parent dies.
+end=$((SECONDS + ${INBOX_MAX:-1800}))
+parent=$PPID
+while [ "$SECONDS" -lt "$end" ] && kill -0 "$parent" 2>/dev/null; do
   touch "$state/$name.beat"
   sleep "${INBOX_INTERVAL:-30}"
   now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
