@@ -106,18 +106,18 @@ const CUES := {
 	&"S5a": {"path": "fit/radio_beep.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "radio call beep, before and after each message; NOT CHOSEN YET"},
 	&"S5b": {"path": "fit/radio_static.ogg", "bus": &"SFX", "volume_db": -18.0, "loop": true, "notes": "radio static bed, quiet, while the message shows; NOT CHOSEN YET"},
 	&"S5c": {"path": "fit/radio_alarm.ogg", "bus": &"SFX", "volume_db": -8.0, "loop": true, "notes": "harder alarm on the last call; NOT CHOSEN YET"},
-	# Fener (#123). Files only, not wired to a scene yet.
-	&"FN1": {"path": F_SNOW, "bus": &"SFX", "volume_db": -4.0, "loop": true, "fade_in": 0.5, "notes": "snowstorm ambience, same file as D1 (not wired yet)"},
-	&"FN2": {"path": F_FOOT, "bus": &"SFX", "volume_db": 0.0, "loop": true, "notes": "footsteps while the player walks; 8 s stride loop, quiet source (not wired yet)"},
-	&"FN3a": {"path": "fener/flashlight_on.ogg", "bus": &"SFX", "volume_db": -4.0, "notes": "flashlight on (not wired yet)"},
-	&"FN3b": {"path": "fener/flashlight_off.ogg", "bus": &"SFX", "volume_db": 8.0, "notes": "flashlight off; very quiet source, +8 dB (not wired yet)"},
-	&"FN4": {"path": "fener/battery_low_beeps.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "battery low, 4 beeps (not wired yet)"},
-	&"FN5": {"path": "fener/whistle_trim.ogg", "bus": &"SFX", "volume_db": -2.0, "notes": "whistle, first 3 s (not wired yet)"},
-	&"FN6": {"path": F_PICK, "bus": &"SFX", "volume_db": -6.0, "notes": "found a family member, same file as F2 (not wired yet)"},
-	&"FN7": {"path": F_GLOCK, "bus": &"SFX", "volume_db": 0.0, "notes": "family at the assembly point, same file as C10 (not wired yet)"},
-	&"FN8": {"path": F_CRACK, "bus": &"SFX", "volume_db": -4.0, "notes": "aftershock, same file as F6 (not wired yet)"},
-	&"FN8a": {"path": "fener/building_crack.ogg", "bus": &"SFX", "volume_db": -4.0, "notes": "building crack: aftershock warning and start (not wired yet)"},
-	&"FN9": {"path": "fener/hurt.ogg", "bus": &"SFX", "volume_db": -2.0, "notes": "player hurt near a building, about 0.2 s (not wired yet)"},
+	# Fener (#123), see _hook_fener. Volumes measured (LUFS of the file + volume_db, peak): see docs/audio.md.
+	&"FN1": {"path": F_SNOW, "bus": &"SFX", "volume_db": -4.0, "loop": true, "fade_in": 0.5, "notes": "snowstorm ambience, same file as D1"},
+	&"FN2": {"path": F_FOOT, "bus": &"SFX", "volume_db": 12.0, "loop": true, "notes": "footsteps while the player walks; 8 s stride loop, very quiet source so +12 dB"},
+	&"FN3a": {"path": "fener/flashlight_on.ogg", "bus": &"SFX", "volume_db": -2.0, "cut": true, "notes": "flashlight on"},
+	&"FN3b": {"path": "fener/flashlight_off.ogg", "bus": &"SFX", "volume_db": 18.0, "cut": true, "notes": "flashlight off; very quiet source (peak -40 dB) so +18 dB"},
+	&"FN4": {"path": "fener/battery_low_beeps.ogg", "bus": &"SFX", "volume_db": -14.0, "cut": true, "notes": "battery low / dead, 4 beeps; hot source (-10 LUFS) so -14 dB"},
+	&"FN5": {"path": "fener/whistle_trim.ogg", "bus": &"SFX", "volume_db": -6.0, "cut": true, "notes": "whistle of a person, 3 s; level follows the distance (volume_of)"},
+	&"FN6": {"path": F_PICK, "bus": &"SFX", "volume_db": -6.0, "cut": true, "notes": "found a family member, or picked up an item; same file as F2"},
+	&"FN7": {"path": F_GLOCK, "bus": &"SFX", "volume_db": 0.0, "cut": true, "notes": "a person reaches the assembly point, same file as C10"},
+	&"FN8": {"path": F_CRACK, "bus": &"SFX", "volume_db": -8.0, "cut": true, "notes": "aftershock hit and collapse, same file as F6; hot source so -8 dB"},
+	&"FN8a": {"path": "fener/building_crack.ogg", "bus": &"SFX", "volume_db": -4.0, "cut": true, "notes": "building crack: aftershock warning and leaning wall"},
+	&"FN9": {"path": "fener/hurt.ogg", "bus": &"SFX", "volume_db": 4.0, "cut": true, "notes": "player hurt, about 0.2 s; short and quiet source so +4 dB"},
 	# Fire (Black Saturday, scenes/minigames/fire.gd), see _hook_fire.
 	&"FR1": {"path": "fire/wildfire_wind_loop.ogg", "bus": &"SFX", "volume_db": -8.0, "loop": true, "fade_in": 0.5, "notes": "fire and wind ambience, 10 s seamless loop"},
 	&"FR2": {"path": F_FOOT, "bus": &"SFX", "volume_db": 0.0, "loop": true, "notes": "footsteps, same file as FN2"},
@@ -157,6 +157,7 @@ const SCENE_HOOKS := {
 	"res://scenes/minigames/connect.tscn": &"_hook_connect",
 	"res://scenes/minigames/beam.tscn": &"_hook_beam",
 	"res://scenes/minigames/fire.tscn": &"_hook_fire",
+	"res://scenes/minigames/fener.tscn": &"_hook_fener",
 	"res://scenes/result.tscn": &"_hook_result",
 }
 const LANG_PICKER_SCENE := "res://scenes/ui/lang_picker.tscn"
@@ -169,6 +170,7 @@ const G2_STOP_SPEED := 0.3
 const G2_SMOOTH := 8.0
 const G2_FLOOR_DB := -40.0
 ## Fire: footsteps (FR2) end this long after the last step event; kangaroo gallop (FR11a) repeats.
+const FENER_STEP_HOLD := 0.6
 const FIRE_STEP_HOLD := 0.55
 const FIRE_GALLOPS := 3
 const FIRE_GALLOP_GAP := 0.3
@@ -837,3 +839,51 @@ func _hook_fire(f) -> void:
 				# jump, cut, hose, heartbeat, gust: no sound.
 		)
 		_bind_exit(f, [&"FR1", &"FR2", &"FR5", &"FR8", &"FR9", &"FR11a", &"FR11b"], 0.5))
+
+
+## Fener (docs/minigames/fener-kahramanmaras.md). tap, call, cry, heartbeat, treat, report, spark,
+## debris, all_saved (same moment as the last saved): no sound yet.
+func _hook_fener(f) -> void:
+	_when_ready(f, func() -> void:
+		loop(&"FN1")
+		var st := {"step": -99.0}
+		var fid: int = f.get_instance_id()  # the lambdas must not capture the node: it may be freed
+		_polls.append(func() -> bool:
+			if instance_from_id(fid) == null:
+				return true
+			if clock - st.step > FENER_STEP_HOLD:
+				stop(&"FN2", 0.1)
+			return false)
+		f.sound_event.connect(func(kind: StringName, index: int, pos: Vector3) -> void:
+			match kind:
+				&"step":
+					st.step = clock
+					loop(&"FN2")
+				&"lamp_on":
+					stop(&"FN3b", CUT_FADE)
+					play(&"FN3a")
+				&"lamp_off":
+					stop(&"FN3a", CUT_FADE)
+					play(&"FN3b")
+				&"battery_low", &"battery_dead":
+					play(&"FN4")
+				&"whistle":
+					var g := instance_from_id(fid)
+					var near: float = g.volume_of(pos) if g else 1.0
+					play(&"FN5", {"volume_db": linear_to_db(near)})
+				&"found", &"pickup":
+					play(&"FN6")
+				&"saved":
+					play(&"FN7")
+				&"aftershock_warn", &"creak":
+					play(&"FN8a")
+				&"aftershock_hit", &"collapse":
+					play(&"FN8")
+				&"hurt":
+					play(&"FN9")
+		)
+		# The loops end with the minigame (the result card opens after `finished`).
+		f.finished.connect(func(_saved: int, _total: int, _extra: Dictionary) -> void:
+			stop(&"FN1", 0.5)
+			stop(&"FN2", 0.3))
+		_bind_exit(f, [&"FN1", &"FN2", &"FN3a", &"FN3b", &"FN4", &"FN5", &"FN6", &"FN7", &"FN8", &"FN8a", &"FN9"], 0.4))
