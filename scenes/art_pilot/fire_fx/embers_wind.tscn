@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[ext_resource type="Shader" path="res://scenes/style/soft_particle.gdshader" id="1_r"]
+
+[sub_resource type="ShaderMaterial" id="ember_mat"]
+render_priority = 3
+shader = ExtResource("1_r")
+shader_parameter/tint = Color(1, 0.5, 0.15, 1)
+shader_parameter/glow = 9.0
+shader_parameter/hardness = 0.7
+
+[sub_resource type="QuadMesh" id="ember_quad"]
+material = SubResource("ember_mat")
+size = Vector2(0.07, 0.07)
+
+[sub_resource type="Gradient" id="ember_ramp"]
+offsets = PackedFloat32Array(0, 0.1, 0.7, 1)
+colors = PackedColorArray(1, 0.8, 0.4, 0, 1, 0.7, 0.3, 1, 1, 0.35, 0.08, 1, 0.6, 0.1, 0.02, 0)
+
+[node name="Embers" type="Node3D"]
+
+[node name="Embers" type="CPUParticles3D" parent="."]
+position = Vector3(0.000, 6.000, 0.000)
+amount = 420
+lifetime = 7.0
+preprocess = 7.0
+mesh = SubResource("ember_quad")
+emission_shape = 3
+emission_box_extents = Vector3(22, 5, 4)
+direction = Vector3(0.7, 0.1, 0.7)
+spread = 25.0
+gravity = Vector3(0.4, -0.25, 0.4)
+initial_velocity_min = 4.0
+initial_velocity_max = 8.0
+orbit_velocity_min = 0.0
+orbit_velocity_max = 0.0
+scale_amount_min = 0.5
+scale_amount_max = 1.4
+color_ramp = SubResource("ember_ramp")

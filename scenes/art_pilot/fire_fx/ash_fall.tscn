@@ -1,0 +1,32 @@
+[gd_scene format=3]
+
+[ext_resource type="Shader" path="res://scenes/style/soft_particle.gdshader" id="1_r"]
+
+[sub_resource type="ShaderMaterial" id="ash_mat"]
+render_priority = 2
+shader = ExtResource("1_r")
+shader_parameter/tint = Color(0.75, 0.72, 0.68, 0.85)
+shader_parameter/glow = 0.15
+shader_parameter/hardness = 0.5
+
+[sub_resource type="QuadMesh" id="ash_quad"]
+material = SubResource("ash_mat")
+size = Vector2(0.08, 0.08)
+
+[node name="AshFall" type="Node3D"]
+
+[node name="Ash" type="CPUParticles3D" parent="."]
+position = Vector3(0.000, 14.000, 0.000)
+amount = 1600
+lifetime = 14.0
+preprocess = 14.0
+mesh = SubResource("ash_quad")
+emission_shape = 3
+emission_box_extents = Vector3(26, 1, 20)
+direction = Vector3(0.5, -1, 0.5)
+spread = 20.0
+gravity = Vector3(0.6, -0.7, 0.6)
+initial_velocity_min = 0.4
+initial_velocity_max = 1.0
+scale_amount_min = 0.5
+scale_amount_max = 1.5
