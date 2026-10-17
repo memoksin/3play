@@ -46,14 +46,18 @@ func _init() -> void:
 	_label_var(t, "MutedLabel", regular, 28, Palette.MUTED)
 	_label_var(t, "NumberLabel", bold, 56, Palette.GOLD)
 	_label_var(t, "SafeLabel", bold, 56, Palette.SAFE)
-	_label_var(t, "TimerLabel", bold, 56, Palette.SAFE)
+	_label_var(t, "TimerLabel", bold, 56, Palette.HUD_BLUE)
 	_label_var(t, "ClosingLabel", regular, 32, Palette.MUTED)
 
 	_role_button(t, "StateButton", Palette.STATE)
 	_role_button(t, "CitizenButton", Palette.CITIZEN)
 
-	var hud := _box(Color(Palette.BG, 0.85), Palette.BORDER)
-	hud.set_content_margin_all(PX * 2)
+	# In-game HUD panel: the globe's plate (translucent dark, thin blue edge, accent bar on the left).
+	var hud := _plate(Palette.HUD_BLUE)
+	hud.content_margin_left = 16
+	hud.content_margin_right = 14
+	hud.content_margin_top = 8
+	hud.content_margin_bottom = 8
 	t.set_type_variation("HudPanel", "PanelContainer")
 	t.set_stylebox("panel", "HudPanel", hud)
 
@@ -64,7 +68,7 @@ func _init() -> void:
 	t.set_constant("separation", "HSeparator", PX * 4)
 
 	t.set_type_variation("TimerBar", "ProgressBar")
-	t.set_stylebox("background", "TimerBar", _box(Palette.BG, Palette.BORDER))
+	t.set_stylebox("background", "TimerBar", _box(Color(Palette.HUD_BLUE, 0.1), Color(Palette.HUD_BLUE, 0.3), 0, 1))
 	# Fill has no margins: ProgressBar adds the fill's minimum width, which would overstate low values.
 	var fill := _box(Palette.SAFE, Color(0, 0, 0, 0), 0, 0)
 	fill.set_content_margin_all(0)

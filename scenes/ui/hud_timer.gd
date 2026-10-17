@@ -86,7 +86,7 @@ func _refresh() -> void:
 		return
 	var secs := ceili(time_left)
 	_time.text = "%d:%02d" % [secs / 60, secs % 60]
-	var color := Palette.SAFE
+	var color := Palette.HUD_BLUE
 	if time_left < DANGER_AT:
 		color = Palette.DANGER
 	elif time_left < WARN_AT:
