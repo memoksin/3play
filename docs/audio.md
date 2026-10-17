@@ -124,8 +124,8 @@ Timeline from `scenes/minigames/connect.gd`: a calm bay until about 6 s before t
 |---|---|---|---|---|---|---|---|---|
 | C1 | Calm bay ambience | From the start until the wave arrives | Morning Birds in a Quiet Urban Garden | WhisperingEarth | https://freesound.org/people/WhisperingEarth/sounds/798842/ | CC0 | in repo | Layer on top of the D2 wave sound (jamgypsy), which starts first and keeps playing. Two players at once. Issue #95. |
 | C2 | Rotate a pipe | The player clicks a pipe (0.1 s turn) | Clank1.wav | BMacZero | https://freesound.org/people/BMacZero/sounds/94127/ | CC0 | in repo | |
-| C3 | Wave rising | The wave comes into view, 15 s before the hit | Rumble fade in 10s | unfa | https://freesound.org/people/unfa/sounds/258341/ | CC0 | in repo | Starts when the wave comes into view. Chosen by Burcu. |
-| C4 | Wave hits | The wave crosses the bay and breaks on the beach, with the shake | Ocean Waves.wav | Noted451 | https://freesound.org/people/Noted451/sounds/531015/ | CC0 | in repo | Use seconds 32 to 37 of the file (the big wave). |
+| C3 | Wave rising | The wave comes into view, 15 s before the hit | Rumble · fade in 10s | unfa | https://freesound.org/people/unfa/sounds/258341/ | CC0 (verify) | in repo | Low rumble that fades in over 10 s: the wave approaching. Starts when the wave comes into view. |
+| C4 | Wave hits | The wave crosses the bay and breaks on the beach, with the shake | Ocean Waves.wav | Noted451 | https://freesound.org/people/Noted451/sounds/531015/ | CC0 (verify) | in repo | Use seconds 32 to 37 of the file (the big wave). |
 | C5 | Water flows through the pipes | Water flows tile by tile after the hit | Hydrophone underwater stream close pipe gurgle.wav | JavierZumer | https://freesound.org/people/JavierZumer/sounds/422660/ | CC0 | in repo | Use the part from about 0:40 onward. |
 | C6 | Basin fills | The water reaches a basin and it fills | Water Echo.wav | eeriedescence | https://freesound.org/people/eeriedescence/sounds/419741/ | CC0 | in repo | Well-like echo. |
 | C7 | Broken line spills | The water spills out of a broken line | Big Water Splash | qubodup | https://freesound.org/people/qubodup/sounds/442773/ | CC0 | in repo (to test) | Repeat the same splash several times, each starting before the previous ends, to build an overflow. Try it, replace the sound if it feels fake. Issue #95. |
@@ -185,7 +185,7 @@ Dark snowy street, a flashlight with a battery, a whistle that shows the directi
 | FN6 | Found a family member | The player reaches a family member | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | in repo (not wired yet; reuse of F2) | First second of the file. |
 | FN7 | Success | The family reaches the assembly point | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | in repo (not wired yet) | One success sound for FN7, FR6 and BM4. |
 | FN8 | Aftershock | The aftershock hits | Cracking Earthquake | uagadugu | https://freesound.org/people/uagadugu/sounds/222521/ | CC0 | in repo (not wired yet; reuse of F6) | Trim to the shaking. |
-| FN8a | Building creak | Aftershock warning and the start of the aftershock | breaking_concrete | zatar | https://freesound.org/people/zatar/sounds/755522/ | CC0 (and its 4 source sounds, checked) | in repo (not wired yet) | First crack only (about 1 s). Made from Breaking Ice (Mrthenoronha) and three iwanPlays rock/brick sounds, all CC0. |
+| FN8a | Building crack | Aftershock warning and the start of the aftershock | breaking_concrete | zatar | https://freesound.org/people/zatar/sounds/755522/ | CC0 (verify) | in repo (not wired yet) | Burcu picked it: a hammer breaking concrete, for the building body cracking. Plays with FN8 (Cracking Earthquake). Trim to the first crack by ear. |
 | FN9 | Hurt | The player is hurt near a building | Hurt_C_07 | cabled_mess | https://freesound.org/people/cabled_mess/sounds/350926/ | CC0 | in repo (not wired yet) | Retro-style hurt sound, about 0.2 s. |
 
 ## Fire (Black Saturday, kangaroo farm, first person)
@@ -198,9 +198,9 @@ Spec: `docs/minigames/fire-farm.md`.
 | FR2 | Footsteps | The player walks | Footsteps Dirt Gravel | PotatokingXII | https://freesound.org/people/PotatokingXII/sounds/352870/ | CC0 | in repo | Same as FN2. Trim to a clean stride loop. |
 | FR3 | Jump and landing on debris | The player jumps over the debris | Human Impact on Ground | alegemaate | https://freesound.org/people/alegemaate/sounds/364690/ | CC0 | in repo | Short clip of a person landing after a jump. |
 | FR4 | Pick up the wire cutters | The player picks up the wire cutters (was the knife) | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | in repo (reuse of F2) | First second of the file. A metal clank would fit the cutters better. |
-| FR5 | Cut the fence (hold) | The player holds the cut on the fence | Sanding_a_Piece_Of_Wood.wav | CapsLok | https://freesound.org/people/CapsLok/sounds/204948/ | CC0 | in repo | Seconds 16 to 19, short loop. Plays while the player holds the cut. |
-| FR5.1 | Fence panel crashes down | The cut panel slams onto the ground (event `panel_land`, index 0), the little hop after it (index 1) | Scrap metal dropping / crashing | SamsterBirdies | https://freesound.org/people/SamsterBirdies/sounds/587443/ | CC0 | in repo | Steel mesh panel hitting dirt: a rattling crash (seconds 2 to 4), then a small clink (a quiet piece, 3.5 to 3.9 s). |
-| FR5.2 | Snip a fence tie | Each wire tie is cut while the player holds (event `snip`, 6 per fence) | Scissors Cutting Air.wav | RutgerMuller | https://freesound.org/people/RutgerMuller/sounds/51164/ | CC0 | in repo | Only seconds 2.8 to 3.2. A short metal snip per tie. |
+| FR5 | Cut the fence (hold) | While the player holds to cut the fence ties (event `snip` is the per-tie sound below) | Sanding_a_Piece_Of_Wood.wav | CapsLok | https://freesound.org/people/CapsLok/sounds/204948/ | CC0 | in repo | Burcu: use 16 s to 19 s as a short loop while the player holds. Each tie that breaks also plays a short metal snip (FR5.2, todo). |
+| FR5.2 | Snip a fence tie | Each wire tie is cut (event `snip`, 6 per fence) | Scissors Cutting Air.wav | RutgerMuller | https://freesound.org/people/RutgerMuller/sounds/51164/ | CC0 (verify) | in repo | Use only 2.8 s to 3.2 s of the file (short metal cut). No CC0 wire-cutter recording exists. |
+| FR5.1 | Fence panel crashes down | The cut panel slams onto the ground (event `panel_land`, index 0), the little hop after it (index 1) | Scrap metal dropping / crashing | SamsterBirdies | https://freesound.org/people/SamsterBirdies/sounds/587443/ | CC0 (verify) | in repo | Use 2 s to 4 s of the file (index 0 crash). For the small hop (index 1) reuse a short piece of the same file. |
 | FR6 | Success | A task is done (fence cut, flame out) | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | in repo (same as FN7) | The same success sound as FN7 and BM4. |
 | FR7.1 | Hose attached | The hose is put on the valve | Door Lock.wav | nebulasnails | https://freesound.org/people/nebulasnails/sounds/405534/ | CC0 | in repo | About 0.75 s door latch. |
 | FR7.2 | Valve turn | The valve is turned | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | in repo | Use 0:58 to 1:03 of the file. |
@@ -209,7 +209,7 @@ Spec: `docs/minigames/fire-farm.md`.
 | FR10 | Flame goes out | The flame is put out | | | | | decided | No separate sound: the flame sound (FR9) fades out. |
 | FR11 | Kangaroos run out | 2 to 3 kangaroos run through the gap | Horse Gallop Loop.wav + Footsteps Dirt 01 | DeadxCreed + aglinder | https://freesound.org/people/DeadxCreed/sounds/322448/ and https://freesound.org/people/aglinder/sounds/264469/ | CC0 (verify both) | in repo (to test) | No kangaroo hop CC0 exists. Layer both and play the pair 2 to 3 times, each starting before the previous ends. Replace if it sounds fake. |
 | FR12 | Smoke (cough, breath) | The smoke thickens | | | | | no sound | Not needed. |
-| FR13 | Ending shot | The camera rises out of first person over the burning farm (event `exit`), or the dark version when time runs out (event `lose`) | | | | | in repo (FR1 reuse) | No file: on `exit` the FR1 wind and fire roar opens up (+6 dB, low-pass opens over 1.5 s), then goes quiet before the result card. On `lose` FR1 turns heavier (low-pass 800 Hz, slower, a little quieter). |
+| FR13 | Ending shot | The camera rises out of first person over the burning farm (event `exit`), or the dark version when time runs out (event `lose`) | FR1 mix (digital wildfire + wind), raised | vekoN + Podcapocalipsis | see FR1 | CC0 | in repo (FR1 reuse) | No new file. On `exit`: raise the FR1 volume and open it up, then a held quiet before the result card. On `lose`: the same sound lowered (low-pass) and heavier. Burcu agreed. |
 
 ## Beam network (Isin Agi, solar flare 3026, #124)
 
@@ -218,12 +218,12 @@ Rotate satellites to route the solar beam into collectors, waves, a countdown, "
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
 | BM1 | Space ambience | Whole minigame | Solar Storm.wav | Puniho | https://freesound.org/s/151098/ | CC0 | in repo (reuse of D3) | |
-| BM2 | Rotate a satellite | The player rotates a satellite | Servo_1_Panera.wav | sinmente0987 | https://freesound.org/people/sinmente0987/sounds/160712/ | CC0 (checked by Sude) | in repo | Burcu: replaces Servo motor (Burningmonkey). The file is 9 servo moves over 18 s; one move (0.25 to 1.75 s) is used per rotation. |
+| BM2 | Rotate a satellite | The player rotates a satellite | Servo_1_Panera.wav | sinmente0987 | https://freesound.org/people/sinmente0987/sounds/160712/ | CC0 (checked by Sude) | in repo | Burcu picked it instead of Servo motor (Burningmonkey). Use only the first 1 s to 1.5 s of the file. |
 | BM3 | Beam | The beam runs through the satellites | Laser Beam Firing | SecureSubset | https://freesound.org/people/SecureSubset/sounds/783986/ | CC0 | in repo | About 0.75 s. Repeat it back to back so it becomes a continuous sound while the beam runs. |
 | BM4 | Collector charged, city saved | A collector is charged | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | in repo (same as FN7) | The same success sound as FN7 and FR6. |
 | BM5 | City lost | A city is lost | power-down-01.wav | newagesoup | https://freesound.org/people/newagesoup/sounds/348249/ | CC0 | in repo | Use the part from 1 s onward. |
-| BM6 | Wave warning | A wave is coming | | | | | no sound | Burcu: stay silent, the countdown (BM8) covers the warning. |
-| BM7 | Wave hits | The wave hits | | | | | no sound | Burcu: stay silent, the countdown (BM8) covers the warning. |
+| BM6 | Wave warning | A wave is coming (briefing card, countdown start) |  |  |  |  | no sound | Burcu: silent for now. The countdown beeps (BM8) already cover it. Decide after a test in the game. |
+| BM7 | Wave hits | The shot (the beam travels) |  |  |  |  | no sound | Burcu: silent. The shot is already BM3 (beam) with BM4 and BM5. Optional later: a short low boom on wave 4. |
 | BM8 | Countdown | The countdown runs | Bomb Countdown Beeps | snakebarney | https://freesound.org/people/snakebarney/sounds/138108/ | CC0 | in repo |  |
 
 ## Pitch film (trailer, about 50 s, silent render, sounds added by the team)
@@ -241,7 +241,7 @@ Source: `tools/video/film.html` cue sheet and `tools/video/intro_stack_v2.html` 
 | T7 | 6.05 to 7.65 | The camera pushes into the logo's eye | Riser, low and building, ends in a cut | todo |
 | T8 | 7.75 | Pure black | Silence | no sound |
 | T9 | 8.2, 8.5, 9.2, 9.5 | Darkness with a heartbeat glow | Heartbeat lub-dub (two beats, twice) | todo |
-| T10 | 8.8 to 10.0 | A faint voice echoes: "Sesimi duyan var mı?" | The line spoken by a team member, with echo (if text-to-speech is used it must be declared as AI) | todo |
+| T10 | 8.8 to 10.0 | A faint voice echoes: "Sesimi duyan var mı?" |  | Burcu: no voice recording. Silent. | | | no sound | Dropped by Burcu. The on-screen text stays. |
 | T11 | 10.0 to 12.35 | "Hayatın göremediğimiz boyutları vardır" | Soft sting for a statement | todo |
 | T12 | 12.4 | The darkness tears open into the Kahramanmaras diorama | Rip or whoosh, then the D1 Winter Wind from the game | todo (D1 exists) |
 | T13 | 14.3 to 16.6 | Title card "TAHMİN ET" | Title card hit (glitch plus low boom), the same for all 5 cards | todo |
