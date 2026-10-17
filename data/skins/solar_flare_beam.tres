@@ -71,8 +71,8 @@ script = ExtResource("2")
 title_key = "SF_BEAM_W4_TITLE"
 flare_class = "X28"
 time = 80.0
-sun = 4
-map = PackedStringArray(".......", "..M.S..", "H.S..C.", "...C..H", "C.T.M..", ".......", "..TM...", ".......")
+sun = 3
+map = PackedStringArray(".......", ".......", ".M.S.C.", "...H.C.", "H......", "M....TC", "TS...M.", ".......")
 earth = PackedStringArray("IST", "SEL", "NBO", "MEX", "JKT", "OSL", "SAO")
 habitats = PackedStringArray("Kepler", "Hilal")
 mech = &""
@@ -80,8 +80,8 @@ chip_key = "SF_BEAM_W4_CHIP"
 chip_style = &"new"
 intro_key = "SF_BEAM_W4_INTRO"
 tip_key = "SF_BEAM_W4_TIP"
-start = "2431066"
-solution = "3310313"
+start = "6021512"
+solution = "3232123"
 
 [resource]
 script = ExtResource("1")

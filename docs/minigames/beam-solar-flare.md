@@ -29,8 +29,8 @@ Cities per wave: columns + 3 (W, E ring, Parker) + habitats. Waves: 10, 11, 11, 
 
 ## Flow
 
-Title card (rules, route preview toggle) > per wave: briefing (class, time, new piece diagrams, tip) > countdown
-(turn satellites; fire early or wait) > the shot (0.58 s charge, the beam travels at 9.5 cells/s, events play on
+Title card (four rule cards without numbers, route preview toggle) > per wave: briefing (class, time, new piece diagrams, tip) > countdown
+(turn satellites; solve the puzzle and the clock drops to 5 s, then the flare fires by itself) > the shot (0.58 s charge, the beam travels at 9.5 cells/s, events play on
 time) > result card (saved/total, stars, lost cities, energy, time left; retry or next) > summary (sum of the best
 run per wave, rank, stars, mean energy; play again or **Continue**) > `Game.finish_minigame(saved, 44,
 {stars, energy, rank})` > the game's result card (`SF_CARD_SCORE`, "%d/44").
@@ -43,15 +43,24 @@ run per wave, rank, stars, mean energy; play again or **Continue**) > `Game.fini
 | 4 Super Flare | X28 | 80 s | everything |
 
 Waves 3 and 4 were redesigned easier than the prototype's (10 satellites, 5 perfect setups, 10 clicks): the jury should solve
-them without a struggle. Now 5 / 6 / 6 / 7 satellites, one or two perfect setups of 4^n, 6 / 6 / 7 / 8 clicks from the start, no
-idle satellite. Each wave forces its new piece in every perfect run: 1 a mirror reflects, 2 a splitter splits, 3 a thermal
-reflects, 4 splitters + a thermal that overheats (the tip: burn one out on purpose) + a mirror. Same cities (10, 11, 11, 12 = 44),
-same texts (wave 4: 2 splitters, 2 thermals, 3 collectors). `tests/test_beam.gd` `_difficulty` runs every setup through
-`BeamLogic` to prove it; the prototype's old waves 3 and 4 stay in that test as parity fixtures.
+them without a struggle. Now 5 / 6 / 6 / 7 satellites, exactly one perfect setup of 4^n in every wave, 6 / 6 / 7 / 7 clicks from the
+start (the start already fails by 1-2 cities), no idle satellite. Each wave forces its new piece in every perfect run: 1 a mirror reflects,
+2 a splitter splits, 3 a thermal reflects, 4 splitters + a thermal that overheats (the tip: burn one out on purpose) + a mirror.
+Same cities (10, 11, 11, 12 = 44), same pieces in wave 4 (3 mirrors, 2 splitters, 2 thermals, 3 collectors, 2 habitats).
+`tests/test_beam.gd` `_difficulty` runs every setup through `BeamLogic` to prove it; the prototype's old waves 3 and 4 stay in that
+test as parity fixtures.
 
-**Rush**: the moment the route turns perfect (the puzzle is solved, preview on or off) the clock drops to 3 s (only if more
+Wave 4 was re-laid out once more (same pieces, new map, Sun column 3, start `6021512`, solution `3232123`) because players got lost:
+the Sun beam meets a splitter at once (one half goes straight to a collector), the other half goes down a mirror to a second
+splitter, whose halves meet again at one thermal satellite: the first beam passes it, the second overheats it and passes straight
+into the collector behind it. An offline search (pruned depth-first search that follows the beam and
+stops a branch when it reaches a city; node count = dead ends a player meets) gives 53 nodes for the new wave 4 against 161 for the old
+one (waves 1-3: 21 / 81 / 25). The intro text now says "three parts" (two splitters in a row make three).
+
+**Rush**: the moment the route turns perfect (the puzzle is solved, preview on or off) the clock drops to 5 s (`RUSH_TIME`, only if more
 was left, once per countdown), the screen shakes (a spike, then a rumble), the alarm "FLARE INCOMING!" / "PATLAMA GELİYOR!"
-(`SF_BEAM_RUSH`) blinks under the Fire button, and the flare fires by itself at 0. The player then goes on to the next
+(`SF_BEAM_RUSH`) blinks in the right column, and the flare fires by itself at 0. Because of this the **Fire button is hidden**
+(`beam.gd` `show_fire_button`, false; the button and its glow stay in the scene and the `F` key still fires, a debug / test hook). The player then goes on to the next
 wave without sitting out the rest of the countdown. Turning satellites away and back does not give time back.
 
 Stars per wave: 3 with no city lost, 2 with one, 1 with two, else 0. Rank by total stars: 12 Sun Warden,
@@ -62,7 +71,7 @@ Stars per wave: 3 with no city lost, 2 with one, 1 with two, else 0. Rank by tot
 - Mouse: click a satellite = +45 degrees, right-click / Shift+click = back, wheel = either way. Hover shows a ghost
   of the next position.
 - Keyboard (countdown only): Tab / Shift+Tab or arrows pick a satellite, E / Space / Enter turn it, Q turns back,
-  F fires. Cards: Enter presses the main button.
+  F fires (hidden shortcut, no button). Cards: Enter presses the main button.
 
 ## Route preview (on by default)
 
@@ -70,8 +79,8 @@ Dashed route, red cross where it reaches a city, warning ring on that city, a pu
 it hits (Earth city, habitat, ring, Parker base: `sf/alerts.gd`, fed by `beam.gd` from `BeamLogic.Result.hit`, so a
 skin's pieces cannot leave a strike unmarked; `tests/test_beam.gd` checks every hit of every wave over random setups),
 ring on reached collectors, "!" on a
-thermal satellite that will overheat, forecast in the HUD ("2 AT RISK" / "SAFE"), "ROUTE SAFE" toast and a glowing
-Fire button once the route is perfect. Off ("blind"): none of it.
+thermal satellite that will overheat, forecast in the HUD ("2 AT RISK" / "SAFE") and the "ROUTE SAFE" toast once the route
+is perfect (the Fire button's glow only shows when `show_fire_button` is on). Off ("blind"): none of it.
 
 ## Code
 
@@ -110,7 +119,7 @@ art pilot (`scenes/art_pilot/solar_flare.tscn`, CameraPlay "Piano Tiles" lane vi
   follows `fire_t`, a glint and a light where a segment ends. The 2D `fx.tscn` (bursts, rising labels) is still the effects
   layer: it works in screen px, which `board.event_pos` gives.
 - **Screen shake** turns the real camera by the board's px offset; the maths above uses the unshaken camera.
-- **HUD** keeps off the Sun's band and the cities: left panel top-left, Fire + hint top-right, toast just under the Parker
+- **HUD** keeps off the Sun's band and the cities: left panel top-left, hint (and the Fire button when shown) top-right, toast just under the Parker
   truss (`beam.tscn`, `TOAST_Y`). The briefing diagrams stay flat 2D (`diagram_satellite_scene` = the placeholder satellite).
 
 ## Art: replacing the placeholders
@@ -142,4 +151,4 @@ Parker above (1.45 cells) and the Earth below (1.85 cells).
 The prototype's synth sounds were not ported. `beam.gd` emits `satellite_turned(index, dir)` and
 `sound_event(kind, index)`: `ready` (route turned safe), `tick` (last 10 s; index 1 = last 3 s), `charge`,
 `fire` (beam leaves the Sun), `reflect` (index = nth reflection), `split`, `overheat`, `collect`, `blackout`,
-`wave_good`, `wave_bad`, `rush` (route found: clock cut to 3 s). Nothing in `scripts/audio.gd` hooks the scene yet.
+`wave_good`, `wave_bad`, `rush` (route found: clock cut to 5 s). Nothing in `scripts/audio.gd` hooks the scene yet.

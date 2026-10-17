@@ -241,8 +241,8 @@ func _difficulty() -> void:
 			if r.perfect():
 				sols.append(rots)
 				results.append(r)
-		_check("wave %d: %d satellites, %d of %d setups are perfect (solvable, and few)" % [i + 1, n, sols.size(), 1 << (2 * n)],
-			sols.size() >= 1 and sols.size() <= 2 and n <= 7)
+		_check("wave %d: %d satellites, %d of %d setups are perfect (solvable, exactly one)" % [i + 1, n, sols.size(), 1 << (2 * n)],
+			sols.size() == 1 and n <= 7)
 		# the new piece of the wave is in every perfect run
 		var uses := true
 		var note := ""
@@ -274,6 +274,21 @@ func _difficulty() -> void:
 		_check("wave %d: %d clicks to solve, %.1f s per satellite" % [i + 1, clicks, w.time / n], clicks <= 9 and w.time / n >= 9.0)
 	_check("waves 3 and 4 are about as hard as 1 and 2 (satellites %s, clicks %s)" % [sat_count, clicks_of],
 		sat_count[2] <= sat_count[1] and sat_count[3] <= sat_count[1] + 1 and clicks_of[2] <= clicks_of[1] + 2 and clicks_of[3] <= clicks_of[1] + 3)
+	# the last wave (7 satellites: 3 mirrors, 2 splitters, 2 thermals, 3 collectors, 2 habitats) is no harder to start than the
+	# first three: no more clicks from the start than the most of them, one perfect setup like each of them
+	var w4 := skin.waves[3]
+	var kinds := {}
+	for ch in "".join(w4.map):
+		kinds[ch] = kinds.get(ch, 0) + 1
+	_check("wave 4: 3 mirrors, 2 splitters, 2 thermals, 3 collectors, 2 habitats (the piece list is unchanged)",
+		kinds.get("M", 0) == 3 and kinds.get("S", 0) == 2 and kinds.get("T", 0) == 2 and kinds.get("C", 0) == 3 and kinds.get("H", 0) == 2)
+	_check("wave 4: %d clicks from the start, no more than waves 1-3 (%s)" % [clicks_of[3], clicks_of.slice(0, 3)],
+		clicks_of[3] <= maxi(clicks_of[0], maxi(clicks_of[1], clicks_of[2])))
+	# the start already shows a plan that fails, the way waves 1-3 do (some cities at risk, not the whole map)
+	for i in skin.waves.size():
+		var lv := BeamLogic.parse(skin.waves[i])
+		var risk := BeamLogic.simulate(lv, lv.start).hit.size()
+		_check("wave %d: the start fails by %d cities (1-3)" % [i + 1, risk], risk >= 1 and risk <= 3)
 
 
 # --- scene ---------------------------------------------------------------------
@@ -393,13 +408,26 @@ func _scene_flow() -> void:
 	var P = s.Phase
 	_check("scene: opens on the title card with the preview toggle", s.phase == P.TITLE and s.get_node("%Overlay").visible
 		and s.get_node("%CardBox").find_child("Preview", true, false) != null)
+	var rules := s.get_node("%CardBox").get_children().filter(func(c: Node) -> bool: return c.name.begins_with("Rule"))
+	_check("title: four rule cards, no number badges (just the text)", rules.size() == 4 and rules.all(func(c: Node) -> bool:
+		return c.find_children("*", "Label", true, false).is_empty() and c.find_children("*", "RichTextLabel", true, false).size() == 1))
+	_check("title: no rule talks about a Fire button", not tr("SF_BEAM_TITLE_RULE_3").to_lower().contains("fire it yourself") and not tr("SF_BEAM_TITLE_RULE_4").contains("F fires"))
 	_check("scene: title -> briefing 1", _press(s, "Go") and s.phase == P.BRIEF and s.wave_index == 0)
 	_check("scene: briefing shows the mirror diagrams", s.get_node("%CardBox").find_children("*", "Control", true, false)
 		.filter(func(c: Control) -> bool: return c.get_script() == preload("res://scenes/minigames/beam/mini.gd")).size() == 3)
 	_check("scene: satellites do not turn before the countdown", not s.rotate_sat(0, 1))
 	_check("scene: briefing -> countdown 45 s", _press(s, "Go") and s.phase == P.PLAN and s.time_left == 45.0 and not s.get_node("%Overlay").visible)
 	_check("scene: forecast shows the risk", s.get_node("%Forecast").text == tr("SF_BEAM_RISK") % s.sim.hit.size())
-	_check("scene: fire button armed", not s.get_node("%Fire").disabled)
+	var fire_btn := s.get_node("%Fire") as Button
+	_check("scene: fire button hidden (a solved puzzle fires by itself), still armed under the flag", not s.show_fire_button
+		and not fire_btn.visible and not fire_btn.disabled)
+	s.show_fire_button = true
+	s.advance(0.0)
+	s.advance(0.01)
+	_check("scene: show_fire_button brings the Fire button back", fire_btn.visible)
+	s.show_fire_button = false
+	s.advance(0.01)
+	_check("scene: and hides it again", not fire_btn.visible)
 
 	# real mouse: left click +1, right click -1, shift click -1, wheel
 	var r0: int = s.rots[0]
@@ -430,18 +458,18 @@ func _scene_flow() -> void:
 	_check("wave 1: solved with %d clicks, route safe" % n, s.perfect and s.sim.hit.is_empty())
 	_check("wave 1: forecast SAFE, safe toast, ready cue", s.get_node("%Forecast").text == tr("SF_BEAM_SAFE")
 		and s.get_node("%Toast").text == tr("SF_BEAM_TOAST_SAFE") and events.has([&"ready", 0]))
-	_check("wave 1: the solved route cuts the clock to 3 s (rush cue)", s.rushed and s.time_left == s.RUSH_TIME and events.has([&"rush", 0]))
+	_check("wave 1: the solved route cuts the clock to 5 s (rush cue)", s.rushed and s.time_left == s.RUSH_TIME and events.has([&"rush", 0]))
 	s.advance(1.0)
 	await _key(KEY_F)
-	_check("keys: F fires early", s.phase == P.FIRE and s.fired_at == 2.0 and events.has([&"charge", 0]))
+	_check("keys: F fires early", s.phase == P.FIRE and s.fired_at == 4.0 and events.has([&"charge", 0]))
 	_check("fire: no turning during the shot", not s.rotate_sat(0, 1))
 	s.advance(0.3)
 	_check("fire: charging first, beam not out yet", s.fire_t < 0.0 and not events.has([&"fire", 0]))
 	_run_until_not(s, P.FIRE)
 	_check("fire: beam left the Sun, reached the collector", events.has([&"fire", 0]) and events.any(func(e: Array) -> bool: return e[0] == &"collect"))
 	var res: Dictionary = s.last_result
-	_check("wave 1 result: 10/10, 3 stars, 100%% energy, 2 s left", s.phase == P.RESULT and res.saved == 10 and res.total == 10
-		and res.stars == 3 and res.energy == 100 and res.early == 2 and s.dark.is_empty())
+	_check("wave 1 result: 10/10, 3 stars, 100%% energy, 4 s left", s.phase == P.RESULT and res.saved == 10 and res.total == 10
+		and res.stars == 3 and res.energy == 100 and res.early == 4 and s.dark.is_empty())
 	_check("wave 1 result card shows 10/10", (s.get_node("%CardBox").find_child("Score", true, false) as Label).text == "10/10")
 	_check("wave 1: good cue", events.has([&"wave_good", 0]))
 
@@ -608,7 +636,7 @@ func _scene_alerts() -> void:
 	await process_frame
 
 
-## The route is found (puzzle really solved): the clock drops to 3 s, the screen shakes, the alarm shows, the
+## The route is found (puzzle really solved): the clock drops to 5 s, the screen shakes, the alarm shows, the
 ## flare fires on its own and the player goes on to the next wave.
 func _scene_rush() -> void:
 	var s := await _new_scene()
@@ -622,7 +650,7 @@ func _scene_rush() -> void:
 	await _mouse(s.sat_screen(0), MOUSE_BUTTON_RIGHT)
 	s.advance(5.0)
 	var n := await _solve_by_mouse(s)
-	_check("rush: solved by %d clicks -> clock is 3 s, cue, alarm text in the language" % n, s.perfect and s.rushed and s.time_left == 3.0
+	_check("rush: solved by %d clicks -> clock is 5 s, cue, alarm text in the language" % n, s.perfect and s.rushed and s.time_left == 5.0
 		and events.filter(func(e: Array) -> bool: return e[0] == &"rush").size() == 1 and rush.visible
 		and rush.text == TextFx.upper(tr("SF_BEAM_RUSH")) and tr("SF_BEAM_RUSH") != "SF_BEAM_RUSH")
 	_check("rush: screen shakes (a spike, then a rumble)", s._shake >= s.RUSH_SHAKE - 0.01)
@@ -643,13 +671,13 @@ func _scene_rush() -> void:
 		s.advance(0.05)
 		if s.phase != P.PLAN:
 			break
-	_check("rush: the flare fires by itself when the 3 s are up (last ticks hard)", s.phase == P.FIRE and s.fired_at == 0.0 and not rush.visible
-		and events.filter(func(e: Array) -> bool: return e[0] == &"tick").all(func(e: Array) -> bool: return e[1] == 1) and tick3.size() >= 1)
+	_check("rush: the flare fires by itself when the 5 s are up (last ticks hard)", s.phase == P.FIRE and s.fired_at == 0.0 and not rush.visible
+		and events.filter(func(e: Array) -> bool: return e[0] == &"tick").slice(-3).all(func(e: Array) -> bool: return e[1] == 1) and tick3.size() >= 1)
 	_run_until_not(s, P.FIRE)
 	_check("rush: shot is clean, 10/10", s.last_result.saved == 10 and s.last_result.stars == 3)
 	_check("rush: on to wave 2 without waiting, a fresh 55 s clock", _press(s, "Next") and _press(s, "Go") and s.wave_index == 1 and s.phase == P.PLAN
 		and not s.rushed and s.time_left == 55.0 and not rush.visible)
-	# already under 3 s: nothing to cut, no alarm
+	# already under 5 s: nothing to cut, no alarm
 	s.advance(53.0)
 	events.clear()
 	s.solve()

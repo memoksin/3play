@@ -1,9 +1,9 @@
 extends Control
 ## Beam minigame (solar flare 3026, #124), a port of the team's "Işın Ağı" prototype. The flare
 ## comes down as one beam; the player turns satellites (45 degree steps) so every part of it ends in
-## a collector. Every city the beam touches loses power. Four waves: briefing, countdown (fire early
-## or wait), the shot, a result card (retry or go on); a summary hands the best run of every wave to
-## Game.finish_minigame(saved, total, extra).
+## a collector. Every city the beam touches loses power. Four waves: briefing, countdown (a solved puzzle
+## cuts it short and the flare fires by itself), the shot, a result card (retry or go on); a summary
+## hands the best run of every wave to Game.finish_minigame(saved, total, extra).
 ## Rules: BeamLogic. Data: Game.disaster.skin (BeamSkin). Look: scenes/minigames/beam/ (board and
 ## placeholder pieces, each replaceable by a skin field). Spec: docs/minigames/beam-solar-flare.md.
 ## Time runs in game seconds (real time * time_scale); tests drive it with advance().
@@ -44,7 +44,7 @@ const TOAST_TIME := 1.3
 const TOAST_Y := 324.0
 ## Route found (the puzzle is solved): the countdown drops to RUSH_TIME seconds, the screen shakes
 ## (RUSH_SHAKE once, then a RUSH_TREMOR rumble) and the alarm shows until the flare fires.
-const RUSH_TIME := 3.0
+const RUSH_TIME := 5.0
 const RUSH_SHAKE := 12.0
 const RUSH_TREMOR := 4.0
 ## A blackout slows the shot for a moment (hit stop).
@@ -53,6 +53,9 @@ const HIT_STOP_SPEED := 0.25
 
 ## Debug / test hooks.
 var time_scale := 1.0
+## The Fire button is hidden: a solved puzzle cuts the clock and the flare fires by itself. true shows it again
+## (the F key fires either way).
+var show_fire_button := false
 ## false: emit `finished` but do not call Game (tests).
 var submit := true
 var phase := Phase.TITLE
@@ -740,10 +743,14 @@ func _update_hud() -> void:
 	else:
 		var n := dark.size()
 		_set_forecast(_t("DARKENED") % n if n > 0 else _t("CLEAN"), BAD if n > 0 else OK)
+	var rush_top := 256.0 if show_fire_button else 160.0  # under the right panel (taller with the Fire button)
+	_rush.offset_top = rush_top
+	_rush.offset_bottom = rush_top + 116.0
 	_rush.visible = phase == Phase.PLAN and rushed
 	if _rush.visible:
 		_rush.text = TextFx.upper(_t("RUSH"))
 		_rush.modulate.a = 0.75 + 0.25 * sin(_clock * 14.0)
+	_fire.visible = show_fire_button
 	_fire.disabled = phase != Phase.PLAN
 	_fire.text = TextFx.upper(_t("FIRED") if phase == Phase.FIRE else _t("FIRE"))
 	var ready := phase == Phase.PLAN and preview and perfect
@@ -852,7 +859,7 @@ func _text(bbcode: String, size := 18) -> RichTextLabel:
 	return r
 
 
-## One briefing rule as its own badge: a rounded, faintly filled and edged card (the HUD plate's look) with a numbered tile.
+## One briefing rule as its own card: rounded, faintly filled and edged (the HUD plate's look), no number.
 func _rule_card(n: int, bbcode: String) -> void:
 	var p := PanelContainer.new()
 	p.name = "Rule%d" % n
@@ -862,40 +869,20 @@ func _rule_card(n: int, bbcode: String) -> void:
 	sb.border_color = Color(0.62, 0.85, 1.0, 0.22)
 	sb.set_border_width_all(1)
 	sb.set_corner_radius_all(12)
-	sb.content_margin_left = 12
+	sb.content_margin_left = 16
 	sb.content_margin_right = 16
 	sb.content_margin_top = 10
 	sb.content_margin_bottom = 10
 	p.add_theme_stylebox_override(&"panel", sb)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override(&"separation", 14)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	p.add_child(row)
-	var tile := PanelContainer.new()
-	tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	tile.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	tile.custom_minimum_size = Vector2(40, 40)
-	var tsb := StyleBoxFlat.new()
-	tsb.bg_color = Color(SUN, 0.18)
-	tsb.border_color = Color(SUN, 0.75)
-	tsb.set_border_width_all(2)
-	tsb.set_corner_radius_all(20)
-	tile.add_theme_stylebox_override(&"panel", tsb)
-	var num := Label.new()
-	num.text = str(n)
-	num.theme_type_variation = &"HudCaption"
-	num.add_theme_font_size_override(&"font_size", 26)
-	num.add_theme_color_override(&"font_color", Color("ffd27a"))
-	num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	num.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	tile.add_child(num)
-	row.add_child(tile)
 	var r := RichTextLabel.new()
 	r.bbcode_enabled = true
 	r.fit_content = true
 	r.scroll_active = false
 	r.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	r.custom_minimum_size.x = 440
+	r.custom_minimum_size.x = 488
 	r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	r.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
