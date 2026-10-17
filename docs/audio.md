@@ -194,7 +194,7 @@ Spec: `docs/minigames/fire-farm.md`.
 | FR7.1 | Hose attached | The hose is put on the valve | Door Lock.wav | nebulasnails | https://freesound.org/people/nebulasnails/sounds/405534/ | CC0 | chosen | About 0.75 s door latch. |
 | FR7.2 | Valve turn | The valve is turned | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | chosen | Use 0:58 to 1:03 of the file. |
 | FR8 | Water spray | The hose sprays | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | chosen | Use 1:07 to 1:18 of the file (confirmed). |
-| FR9 | Small flame | The small flame burns |  |  |  |  | todo | Burcu will pick a new sound herself and send it to Sude. The earlier picks (ricardoemfield, AlexanderChe mix) are dropped. Fades out when the flame is put out (FR10). |
+| FR9 | Small flame | The small flame burns | fire crackling, fireplace, BBQ | AlexanderChe | https://freesound.org/people/AlexanderChe/sounds/410404/ | CC0 (checked by Sude) | chosen | Alone, no wind mix. Small wood fire, about 16 s, loop. Fades out when the flame is put out (FR10). |
 | FR10 | Flame goes out | The flame is put out | | | | | decided | No separate sound: the flame sound (FR9) fades out. |
 | FR11 | Kangaroos run out | 2 to 3 kangaroos run through the gap | Horse Gallop Loop.wav + Footsteps Dirt 01 | DeadxCreed + aglinder | https://freesound.org/people/DeadxCreed/sounds/322448/ and https://freesound.org/people/aglinder/sounds/264469/ | CC0 (verify both) | chosen (to test) | No kangaroo hop CC0 exists. Layer both and play the pair 2 to 3 times, each starting before the previous ends. Replace if it sounds fake. |
 | FR12 | Smoke (cough, breath) | The smoke thickens | | | | | no sound | Not needed. |
