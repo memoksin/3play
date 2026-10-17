@@ -1,5 +1,5 @@
 ; PLACEHOLDER CONTENT for burcubaran22 (#17): names, roles, labels and texts (SF_* keys in locale/strings.csv) are drafts to rewrite.
-[gd_resource type="Resource" script_class="FitSkin" load_steps=28 format=3]
+[gd_resource type="Resource" script_class="FitSkin" load_steps=42 format=3]
 
 [ext_resource type="Script" path="res://scripts/fit_skin.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/fit_zone.gd" id="2"]
@@ -7,6 +7,20 @@
 [ext_resource type="Script" path="res://scripts/fit_item.gd" id="4"]
 [ext_resource type="Texture2D" path="res://assets/sprites/solar_flare/sf_bg.png" id="bg"]
 [ext_resource type="PackedScene" path="res://scenes/minigames/solar_flare/sf_background.tscn" id="bg_scene"]
+[ext_resource type="Texture2D" path="res://assets/sprites/solar_flare/person_amara.png" id="p_amara"]
+[ext_resource type="Texture2D" path="res://assets/sprites/solar_flare/person_kenji.png" id="p_kenji"]
+[ext_resource type="Texture2D" path="res://assets/sprites/solar_flare/person_lia.png" id="p_lia"]
+[ext_resource type="Texture2D" path="res://assets/sprites/solar_flare/person_tomas.png" id="p_tomas"]
+[ext_resource type="Texture2D" path="res://assets/sprites/solar_flare/person_noor.png" id="p_noor"]
+[ext_resource type="Texture2D" path="res://assets/sprites/solar_flare/person_ravi.png" id="p_ravi"]
+[ext_resource type="Texture2D" path="res://assets/sprites/solar_flare/person_okafor.png" id="p_okafor"]
+[ext_resource type="Texture2D" path="res://assets/sprites/solar_flare/person_sol.png" id="p_sol"]
+[ext_resource type="Texture2D" path="res://assets/sprites/solar_flare/person_yuki.png" id="p_yuki"]
+[ext_resource type="Texture2D" path="res://assets/sprites/solar_flare/person_dmitri.png" id="p_dmitri"]
+[ext_resource type="Texture2D" path="res://assets/sprites/solar_flare/person_ines.png" id="p_ines"]
+[ext_resource type="Texture2D" path="res://assets/sprites/solar_flare/person_ben.png" id="p_ben"]
+[ext_resource type="Texture2D" path="res://assets/sprites/solar_flare/item_vault.png" id="i_vault"]
+[ext_resource type="Texture2D" path="res://assets/sprites/solar_flare/item_recycler.png" id="i_recycler"]
 
 [sub_resource type="Resource" id="zone_surface"]
 script = ExtResource("2")
@@ -67,84 +81,98 @@ script = ExtResource("4")
 type = &"person"
 name_key = "SF_FIT_P_AMARA"
 role_key = "SF_FIT_R_AMARA"
+texture = ExtResource("p_amara")
 
 [sub_resource type="Resource" id="item_1"]
 script = ExtResource("4")
 type = &"person"
 name_key = "SF_FIT_P_KENJI"
 role_key = "SF_FIT_R_KENJI"
+texture = ExtResource("p_kenji")
 
 [sub_resource type="Resource" id="item_2"]
 script = ExtResource("4")
 type = &"person"
 name_key = "SF_FIT_P_LIA"
 role_key = "SF_FIT_R_LIA"
+texture = ExtResource("p_lia")
 
 [sub_resource type="Resource" id="item_3"]
 script = ExtResource("4")
 type = &"person"
 name_key = "SF_FIT_P_TOMAS"
 role_key = "SF_FIT_R_TOMAS"
+texture = ExtResource("p_tomas")
 
 [sub_resource type="Resource" id="item_4"]
 script = ExtResource("4")
 type = &"person"
 name_key = "SF_FIT_P_NOOR"
 role_key = "SF_FIT_R_NOOR"
+texture = ExtResource("p_noor")
 
 [sub_resource type="Resource" id="item_5"]
 script = ExtResource("4")
 type = &"person"
 name_key = "SF_FIT_P_RAVI"
 role_key = "SF_FIT_R_RAVI"
+texture = ExtResource("p_ravi")
 
 [sub_resource type="Resource" id="item_6"]
 script = ExtResource("4")
 type = &"person"
 name_key = "SF_FIT_P_OKAFOR"
 role_key = "SF_FIT_R_OKAFOR"
+texture = ExtResource("p_okafor")
 
 [sub_resource type="Resource" id="item_7"]
 script = ExtResource("4")
 type = &"person"
 name_key = "SF_FIT_P_SOL"
 role_key = "SF_FIT_R_SOL"
+texture = ExtResource("p_sol")
 
 [sub_resource type="Resource" id="item_8"]
 script = ExtResource("4")
 type = &"person"
 name_key = "SF_FIT_P_YUKI"
 role_key = "SF_FIT_R_YUKI"
+texture = ExtResource("p_yuki")
 
 [sub_resource type="Resource" id="item_9"]
 script = ExtResource("4")
 type = &"person"
 name_key = "SF_FIT_P_DMITRI"
 role_key = "SF_FIT_R_DMITRI"
+texture = ExtResource("p_dmitri")
 
 [sub_resource type="Resource" id="item_10"]
 script = ExtResource("4")
 type = &"person"
 name_key = "SF_FIT_P_INES"
 role_key = "SF_FIT_R_INES"
+texture = ExtResource("p_ines")
 
 [sub_resource type="Resource" id="item_11"]
 script = ExtResource("4")
 type = &"person"
 name_key = "SF_FIT_P_BEN"
 role_key = "SF_FIT_R_BEN"
+texture = ExtResource("p_ben")
 
 [sub_resource type="Resource" id="item_12"]
 script = ExtResource("4")
 type = &"vault"
 name_key = ""
 role_key = "SF_FIT_R_VAULT"
+texture = ExtResource("i_vault")
 
 [sub_resource type="Resource" id="item_13"]
 script = ExtResource("4")
 type = &"recycler"
 name_key = ""
 role_key = "SF_FIT_R_RECYCLER"
+texture = ExtResource("i_recycler")
 
 [resource]
 script = ExtResource("1")
