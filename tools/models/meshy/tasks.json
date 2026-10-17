@@ -1,0 +1,7 @@
+{
+  "player":  {"model": "01a14a8e-e819-77ac-954b-22dba6c4c58d", "rig": "01a14a90-626e-7481-b84e-bd3d3190d7f9", "idle": "01a14a92-0043-751b-9494-2c37cdefb70d"},
+  "mom":     {"model": "01a14a90-70c1-72c6-8a20-7d1fef49cb37", "rig": "01a14a91-ce03-7761-b37d-726ea82fec3e", "idle": "01a14a92-311f-7467-8236-772d04b8d944"},
+  "child":   {"model": "01a14a90-7767-75db-8cfe-21d8ed647d94", "rig": "01a14a91-da89-7675-9f7a-ccc381a5dd89", "idle": "01a14a92-33ad-72b5-ba21-1bc686cfaa17"},
+  "grandpa": {"model": "01a14a90-7c95-75d6-854c-2a51fda0af6f", "rig": "01a14a91-e74f-7116-9101-7e65406a396f", "idle": "01a14a92-3638-716d-89dd-56ae79117110"},
+  "rescuer": {"model": "01a14a90-7ffa-7043-ba19-3f2c03aa5a28", "rig": "01a14a91-f413-75f4-87cb-ab77585a3330", "idle": "01a14a92-3854-77ec-a891-b0c863103c9e"}
+}

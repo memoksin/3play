@@ -44,7 +44,11 @@ func _item(fit: Control, type: StringName, nth := 0) -> int:
 
 
 func _run() -> void:
-	root.get_node("Game").ensure_disaster(&"citizen")
+	# Kahramanmaras plays Fener now (#123): its old Fit skin on a copy
+	var kahr: Disaster = (load("res://data/disasters/kahramanmaras.tres") as Disaster).duplicate()
+	kahr.minigame = &"fit"
+	kahr.skin = load("res://data/skins/kahramanmaras_fit.tres")
+	root.get_node("Game").disaster = kahr
 	var fit: Control = load("res://scenes/minigames/fit.tscn").instantiate()
 	root.add_child(fit)
 	await process_frame
