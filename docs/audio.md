@@ -258,11 +258,11 @@ Source: `tools/video/film.html` cue sheet and `tools/video/intro_stack_v2.html` 
 | T24 | 34.3 | Title card "TERCİH ET" | Title card hit (T13) | todo |
 | T25 | 36.3 to 40 | The globe spins again, "Dünyanın dört bir yanından", "3 afet senaryosu" | Globe spin G2, statement stings | reuse G2 |
 | T26 | 39.7 | Pixelate into the Easter bunny scene | Pixelate or 8-bit sweep | todo |
-| T27 | 41.5 | The egg bursts and the bunny pops out | Another sound, to search. Candidates: egg crack CC0: Egg cracking.wav (FngerSounds) https://freesound.org/s/250133/ | to choose |
+| T27 | 41.5 | The egg bursts and the bunny pops out | Egg cracking.wav (FngerSounds) https://freesound.org/s/250133/ , CC0 | chosen |
 | T28 | 41.6 | "Belki bir de easter egg, kim bilir…" | Statement sting | todo |
 | T29 | 43.8 to 47.4 | Result card, the closing line types on (44.4 to 45.9) | Card swell (R1), typing (G3) | reuse R1, G3 |
 | T30 | 47.4 | Title card "FARK ET" | Title card hit (T13) | todo |
-| T31 | 49.1 | CRT power-off | Another sound, to search. Candidates: https://freesound.org/s/616850/ , https://freesound.org/people/SpliceSound/sounds/188197/ , https://freesound.org/people/Cloud-10/sounds/648174/ (check licence) | to choose |
+| T31 | 49.1 | CRT power-off | Turning the TV off (Cloud-10) https://freesound.org/people/Cloud-10/sounds/648174/ . Check the page says CC0; if not, use TV, CRT, turning on off (TRP) https://freesound.org/s/616850/ | chosen (licence to verify) |
 | T32 | 49.8 to 50.3 | Black | Silence | no sound |
 | T33 | whole film | Music under the film | One music bed. To decide: the menu music M1 (Title.mp3) or a new track. | to decide |
 
