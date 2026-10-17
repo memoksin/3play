@@ -61,6 +61,19 @@ func _run() -> void:
 		_check("bus " + b, AudioServer.get_bus_index(b) != -1)
 	audio.set_process(false)  # the test drives the clock
 
+	# The settings panel and pause menu are built by the Game autoload, before Audio connects
+	# node_added: their buttons must still get the hover/click hook (UI3/UI4).
+	await process_frame
+	var game_node := root.get_node_or_null("Game")
+	var early: Array[Node] = game_node.find_children("*", "BaseButton", true, false) if game_node else []
+	var unhooked := early.filter(func(b: Node) -> bool: return not b.has_meta(&"audio_button"))
+	_check("buttons: settings panel + pause menu buttons hooked (%d found)" % early.size(),
+		early.size() >= 4 and unhooked.is_empty())
+	var pickers: Array[Node] = game_node.find_children("*", "", true, false).filter(
+		func(n: Node) -> bool: return n.scene_file_path == audio.LANG_PICKER_SCENE) if game_node else []
+	_check("buttons: settings language flags keep LS1/LS2 (%d pickers)" % pickers.size(),
+		pickers.is_empty() or pickers.all(func(n: Node) -> bool: return n.has_meta(&"audio_hooked")))
+
 	# 1. No files: every call is a silent no-op.
 	var silent := true
 	var cues := 0
@@ -424,6 +437,10 @@ func _run() -> void:
 	bm.satellite_turned.emit(0, 1)
 	_check("beam: satellite_turned plays BM2", _log() == ["play:BM2"])
 	audio.reset_history()
+	bm.satellite_turned.emit(1, 1)
+	_check("beam: a repeat BM2 cuts the one still playing",
+		_log() == ["stop:BM2", "play:BM2"] and audio._players.get(&"BM2", []).size() == 1)
+	audio.reset_history()
 	bm.sound_event.emit(&"charge", 0)
 	_check("beam: charge plays BM4", _log() == ["play:BM4"])
 	audio.reset_history()
@@ -442,7 +459,8 @@ func _run() -> void:
 	audio.reset_history()
 	bm.sound_event.emit(&"tick", 0)
 	bm.sound_event.emit(&"tick", 1)
-	_check("beam: tick plays BM8 each time", _log() == ["play:BM8", "play:BM8"])
+	_check("beam: tick plays BM8 each time, cutting the previous tick",
+		_log() == ["play:BM8", "stop:BM8", "play:BM8"])
 	bm.queue_free()
 	await process_frame
 	_check("beam: leaving stops BM1", "stop:BM1" in _log())
