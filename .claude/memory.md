@@ -18,3 +18,4 @@ Shared by every agent. Loaded via CLAUDE.md. Hard cap 40 lines; one line per fac
 - Globe sun comes from `Disaster.utc` (real event time): Kahramanmaras locks at night, Sumatra in the morning. Intended.
 - Cloud sessions (claude.ai/code, e.g. Burcu on tablet): `gh` GraphQL commands (`gh issue/pr/repo ...`) get HTTP 403. Use `gh api` REST; the hooks already do.
 - Night shift: memoksin hands tasks to sleeping teammates' sessions on #115. Work in a worktree from origin/dev (never the owner's tree), DRAFT PRs only, report ACK/PROGRESS/QUESTION/DONE there with send.sh.
+- After editing `locale/strings.csv`, run `godot --headless --path . --import` then `godot --headless --path . -s tools/audit_strings.gd` (exit 1 on a missing key, empty text, duplicate or %s mismatch). Always append a row on a new line: the file has no final newline.
