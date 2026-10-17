@@ -163,8 +163,11 @@ func _run() -> void:
 	await process_frame
 	_check("fit: leaving the scene stops the ambience", "stop:F1" in _log())
 
-	# 6. Fit hooks, solar flare (#107).
-	game.disaster = load("res://data/disasters/solar_flare.tres")
+	# 6. Fit hooks, solar flare (#107). The flare plays Beam now (#124): its old Fit skin on a copy.
+	var sf: Disaster = (load("res://data/disasters/solar_flare.tres") as Disaster).duplicate()
+	sf.minigame = &"fit"
+	sf.skin = load("res://data/skins/solar_flare_fit.tres")
+	game.disaster = sf
 	fit = load("res://scenes/minigames/fit.tscn").instantiate()
 	root.add_child(fit)
 	await process_frame

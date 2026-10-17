@@ -7,6 +7,7 @@ const SCENES := {
 	&"diorama": "res://scenes/diorama.tscn",
 	&"fit": "res://scenes/minigames/fit.tscn",
 	&"connect": "res://scenes/minigames/connect.tscn",
+	&"beam": "res://scenes/minigames/beam.tscn",
 	&"result": "res://scenes/result.tscn",
 }
 const DEFAULT_LOCALE := "tr"  # until the player picks another with the menu's TR / EN switch
