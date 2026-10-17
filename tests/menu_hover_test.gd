@@ -177,7 +177,8 @@ func _move(pos: Vector2) -> void:
 	var ev := InputEventMouseMotion.new()
 	ev.position = pos
 	ev.global_position = pos
-	Input.warp_mouse(pos)  # the real cursor would otherwise compete with the synthetic event
+	if OS.get_environment("PF_OFFSCREEN") != "1":  # offscreen runs: warping drags the real cursor to the virtual screen
+		Input.warp_mouse(pos)  # the real cursor would otherwise compete with the synthetic event
 	Input.parse_input_event(ev)
 
 

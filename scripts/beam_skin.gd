@@ -25,6 +25,9 @@ extends Resource
 @export var backdrop_scene: PackedScene
 @export var grid_scene: PackedScene
 @export var satellite_scene: PackedScene
+## Flat 2D satellite for the briefing diagrams (mini.gd); null = satellite_scene. Needed when satellite_scene
+## is a 3D piece (it stands in the board's world, not in a card).
+@export var diagram_satellite_scene: PackedScene
 @export var collector_scene: PackedScene
 @export var habitat_scene: PackedScene
 ## Earth city under a column.

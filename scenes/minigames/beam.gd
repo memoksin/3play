@@ -40,7 +40,7 @@ const SPARK_COL := Color8(255, 210, 120)
 const FLASH_FIRE := Color8(255, 200, 120)
 const FLASH_HIT := Color8(255, 60, 40)
 const TOAST_TIME := 1.3
-const TOAST_Y := 150.0
+const TOAST_Y := 324.0
 ## A blackout slows the shot for a moment (hit stop).
 const HIT_STOP := 0.12
 const HIT_STOP_SPEED := 0.25
@@ -796,7 +796,7 @@ func _figures(mech: StringName) -> void:
 		var m: Control = MINI.new()
 		m.spec_id = specs[i]
 		m.side = 150.0 if specs.size() == 2 else 140.0
-		m.satellite_scene = skin.satellite_scene
+		m.satellite_scene = skin.diagram_satellite_scene if skin.diagram_satellite_scene else skin.satellite_scene
 		col.add_child(m)
 		var cap := Label.new()
 		cap.text = _t("MECH_%s_%d" % [String(mech).to_upper(), i + 1])
