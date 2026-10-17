@@ -1,9 +1,9 @@
 extends Control
 ## Beam minigame (solar flare 3026, #124), a port of the team's "Işın Ağı" prototype. The flare
 ## comes down as one beam; the player turns satellites (45 degree steps) so every part of it ends in
-## a collector. Every city the beam touches loses power. Four waves: briefing, countdown (fire early
-## or wait), the shot, a result card (retry or go on); a summary hands the best run of every wave to
-## Game.finish_minigame(saved, total, extra).
+## a collector. Every city the beam touches loses power. Four waves: briefing, countdown (a solved puzzle
+## cuts it short and the flare fires by itself), the shot, a result card (retry or go on); a summary
+## hands the best run of every wave to Game.finish_minigame(saved, total, extra).
 ## Rules: BeamLogic. Data: Game.disaster.skin (BeamSkin). Look: scenes/minigames/beam/ (board and
 ## placeholder pieces, each replaceable by a skin field). Spec: docs/minigames/beam-solar-flare.md.
 ## Time runs in game seconds (real time * time_scale); tests drive it with advance().
@@ -11,7 +11,8 @@ extends Control
 signal finished(saved: int, total: int)
 signal satellite_turned(index: int, dir: int)
 ## Audio hooks (no sounds wired yet). kind / index:
-## ready (route turned safe), tick (last seconds; index 1 = last 3), charge (shot starts),
+## ready (route turned safe), rush (route safe: the clock drops to RUSH_TIME and the flare is coming),
+## tick (last seconds; index 1 = last 3), charge (shot starts),
 ## fire (beam leaves the Sun), reflect (index = nth reflection of the shot), split, overheat,
 ## collect, blackout (a city goes dark), wave_good / wave_bad (result card).
 signal sound_event(kind: StringName, index: int)
@@ -41,12 +42,20 @@ const FLASH_FIRE := Color8(255, 200, 120)
 const FLASH_HIT := Color8(255, 60, 40)
 const TOAST_TIME := 1.3
 const TOAST_Y := 324.0
+## Route found (the puzzle is solved): the countdown drops to RUSH_TIME seconds, the screen shakes
+## (RUSH_SHAKE once, then a RUSH_TREMOR rumble) and the alarm shows until the flare fires.
+const RUSH_TIME := 5.0
+const RUSH_SHAKE := 12.0
+const RUSH_TREMOR := 4.0
 ## A blackout slows the shot for a moment (hit stop).
 const HIT_STOP := 0.12
 const HIT_STOP_SPEED := 0.25
 
 ## Debug / test hooks.
 var time_scale := 1.0
+## The Fire button is hidden: a solved puzzle cuts the clock and the flare fires by itself. true shows it again
+## (the F key fires either way).
+var show_fire_button := true
 ## false: emit `finished` but do not call Game (tests).
 var submit := true
 var phase := Phase.TITLE
@@ -63,6 +72,8 @@ var time_left := 0.0
 var time_total := 0.0
 var fire_t := 0.0
 var fired_at := 0.0
+## The route was found this countdown and the clock was cut to RUSH_TIME.
+var rushed := false
 ## Best run per wave: {saved, total, energy, stars, early, lost} or null.
 var best: Array = []
 ## Last wave result shown.
@@ -88,6 +99,9 @@ var _clock := 0.0
 var _toast_left := 0.0
 var _finished := false
 var _fire_style: StyleBoxFlat
+var _rush: Label
+var _alert_sim: BeamLogic.Result
+var _alert_marks := {}
 var _hidden := false
 var _windowed := DisplayServer.get_name() != "headless"
 
@@ -119,6 +133,7 @@ func _ready() -> void:
 	_forecast_caption.text = TextFx.upper(_t("FORECAST"))
 	_bar.draw.connect(_draw_bar)
 	_fire.pressed.connect(fire)
+	_make_rush_label()
 	var card := StyleBoxFlat.new()  # the prototype's card: near opaque, so the board does not show through
 	card.bg_color = Color(0.035, 0.055, 0.11, 0.95)
 	card.border_color = Color(0.47, 0.67, 1.0, 0.22)
@@ -176,6 +191,7 @@ func load_wave(i: int) -> void:
 	fired_at = 0.0
 	fire_t = 0.0
 	_last_sec = 99
+	rushed = false
 	hover = -1
 	focus = -1
 	board.build(level, wave, skin, AREA, get_viewport_rect().size)
@@ -198,9 +214,8 @@ func _show_title() -> void:
 	_open_card()
 	_kick(_t("TITLE_KICK"))
 	_heading(_t("TITLE"), true)
-	_text(_t("TITLE_BODY"))
-	for k in ["TITLE_RULE_1", "TITLE_RULE_2", "TITLE_RULE_3", "TITLE_RULE_4"]:
-		_text("[color=#ffb347]◆[/color]  " + _t(k), 15)
+	for i in 4:
+		_rule_card(i + 1, _t("TITLE_RULE_%d" % (i + 1)))
 	var tog := CheckBox.new()
 	tog.name = "Preview"
 	tog.text = _t("PREVIEW_TOGGLE")
@@ -208,6 +223,7 @@ func _show_title() -> void:
 	tog.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	tog.custom_minimum_size.x = 520
 	tog.add_theme_font_size_override(&"font_size", 18)
+	_style_toggle(tog)
 	tog.toggled.connect(func(on: bool) -> void:
 		preview = on
 		_refresh_view()
@@ -227,14 +243,12 @@ func show_brief(i: int) -> void:
 	_open_card()
 	_kick(_t("WAVE_OF") % [i + 1, skin.waves.size()])
 	_heading(tr(wave.title_key))
-	var chips := HFlowContainer.new()
-	chips.add_theme_constant_override(&"h_separation", 8)
-	chips.add_child(_chip(_t("CHIP_CLASS") % wave.flare_class, SUN))
-	chips.add_child(_chip(_t("CHIP_TIME") % int(wave.time), SUN))
 	if wave.chip_key != "":
+		var chips := HFlowContainer.new()
 		chips.add_child(_chip(tr(wave.chip_key), HOT if wave.chip_style == &"thermal" else VIOLET))
-	_box.add_child(chips)
-	_text(tr(wave.intro_key))
+		_box.add_child(chips)
+	if wave.intro_key != "":
+		_text(tr(wave.intro_key))
 	if wave.mech != &"":
 		_figures(wave.mech)
 	if wave.tip_key != "":
@@ -250,6 +264,7 @@ func start_countdown() -> void:
 	phase = Phase.PLAN
 	time_left = time_total
 	_last_sec = 99
+	rushed = false
 	_toast_text(_t("TOAST_WAVE") % (wave_index + 1), Color("ffd27a"))
 	_refresh_view()
 	_update_hud()
@@ -417,6 +432,8 @@ func advance(dt: float) -> void:
 					board.fx.spark(h, SPARK_COL)
 	_shake *= pow(0.02, dt)
 	_flash *= pow(0.05, dt)
+	if phase == Phase.PLAN and rushed:
+		_shake = maxf(_shake, RUSH_TREMOR)
 	board.position = Vector2(randf() - 0.5, randf() - 0.5) * _shake if _shake > 0.1 else Vector2.ZERO
 	_toast_left = maxf(0.0, _toast_left - dt)
 	_toast.modulate.a = minf(minf(1.0, (TOAST_TIME - _toast_left) / 0.15), _toast_left / 0.3)
@@ -498,9 +515,23 @@ func rotate_sat(si: int, dir: int) -> bool:
 	if preview and perfect and not was:
 		sound_event.emit(&"ready", 0)
 		_toast_text(_t("TOAST_SAFE"), OK)
+	if perfect and not was:
+		_rush_clock()
 	_refresh_view()
 	_update_hud()
 	return true
+
+
+## The puzzle is solved: the flare is coming, the clock drops to RUSH_TIME (once per countdown, and
+## only if more than that is left), the screen shakes and the alarm shows.
+func _rush_clock() -> void:
+	if phase != Phase.PLAN or rushed or time_left <= RUSH_TIME:
+		return
+	rushed = true
+	time_left = RUSH_TIME
+	_shake = maxf(_shake, RUSH_SHAKE)
+	_flash_now(0.3, FLASH_HIT)
+	sound_event.emit(&"rush", 0)
 
 
 ## Debug: turn every satellite to the wave's solution (the prototype's SF.solve()).
@@ -634,6 +665,8 @@ func _refresh_view() -> void:
 		p.heat = heat
 		p.locked = locked
 		p.overheat_predicted = show_route and c.t == "T" and sim.over.has(si)
+	if board.has_method(&"set_alerts"):
+		board.set_alerts(_alerts() if show_route else {})
 	var cities: Dictionary = board.cities()
 	for key: String in cities:
 		var piece: Node2D = cities[key]
@@ -653,6 +686,38 @@ func _refresh_view() -> void:
 	bd.charging = phase == Phase.FIRE and fire_t < 0.0
 	bd.arrow = planning or phase == Phase.BRIEF
 	_flash_rect.color = Color(_flash_col, _flash if _flash > 0.01 else 0.0)
+
+
+## City key -> screen px of the "!" over it, for every place the previewed flare hits (a city, a habitat,
+## a ring or the Parker base, the first strike of each).
+func _alerts() -> Dictionary:
+	if sim != _alert_sim:
+		_alert_sim = sim
+		_alert_marks = {}
+		for ev in sim.events:
+			if ev.city != "" and not _alert_marks.has(ev.city):
+				_alert_marks[ev.city] = board.alert_pos(ev)
+	return _alert_marks
+
+
+func _make_rush_label() -> void:
+	_rush = Label.new()
+	_rush.name = "Rush"
+	_rush.theme_type_variation = &"HudTitle"
+	_rush.add_theme_color_override(&"font_color", BAD)
+	_rush.add_theme_color_override(&"font_outline_color", Color(0.1, 0.0, 0.0, 0.9))
+	_rush.add_theme_constant_override(&"outline_size", 8)
+	_rush.add_theme_font_size_override(&"font_size", 44)
+	_rush.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_rush.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_rush.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_rush.visible = false
+	$Hud.add_child(_rush)
+	_rush.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	_rush.offset_left = -284.0
+	_rush.offset_right = -24.0
+	_rush.offset_top = 256.0
+	_rush.offset_bottom = 372.0
 
 
 func _update_hud() -> void:
@@ -678,6 +743,14 @@ func _update_hud() -> void:
 	else:
 		var n := dark.size()
 		_set_forecast(_t("DARKENED") % n if n > 0 else _t("CLEAN"), BAD if n > 0 else OK)
+	var rush_top := 256.0 if show_fire_button else 160.0  # under the right panel (taller with the Fire button)
+	_rush.offset_top = rush_top
+	_rush.offset_bottom = rush_top + 116.0
+	_rush.visible = phase == Phase.PLAN and rushed
+	if _rush.visible:
+		_rush.text = TextFx.upper(_t("RUSH"))
+		_rush.modulate.a = 0.75 + 0.25 * sin(_clock * 14.0)
+	_fire.visible = show_fire_button
 	_fire.disabled = phase != Phase.PLAN
 	_fire.text = TextFx.upper(_t("FIRED") if phase == Phase.FIRE else _t("FIRE"))
 	var ready := phase == Phase.PLAN and preview and perfect
@@ -746,9 +819,28 @@ func _heading(text: String, big := false) -> void:
 	l.theme_type_variation = &"HudTitle" if big else &"HudHeader"
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.custom_minimum_size.x = 520
-	if big:
+	if big:  # the title card heading: one line
+		l.autowrap_mode = TextServer.AUTOWRAP_OFF
+		l.add_theme_font_size_override(&"font_size", 34)
 		l.add_theme_color_override(&"font_color", Color("ffcf8a"))
 	_box.add_child(l)
+
+
+## The theme's Button plates (blue fill on hover) break a CheckBox: keep it flat, tint only on hover.
+func _style_toggle(tog: CheckBox) -> void:
+	var flat := StyleBoxFlat.new()
+	flat.bg_color = Color(0, 0, 0, 0)
+	flat.set_content_margin_all(6)
+	var hov: StyleBoxFlat = flat.duplicate()
+	hov.bg_color = Color(1, 1, 1, 0.06)
+	hov.set_corner_radius_all(6)
+	for st in [&"normal", &"pressed", &"disabled"]:
+		tog.add_theme_stylebox_override(st, flat)
+	for st in [&"hover", &"hover_pressed"]:
+		tog.add_theme_stylebox_override(st, hov)
+	tog.add_theme_stylebox_override(&"focus", StyleBoxEmpty.new())
+	for c in [&"font_color", &"font_hover_color", &"font_pressed_color", &"font_hover_pressed_color", &"font_focus_color"]:
+		tog.add_theme_color_override(c, Color("c9d5ee"))
 
 
 func _text(bbcode: String, size := 18) -> RichTextLabel:
@@ -765,6 +857,41 @@ func _text(bbcode: String, size := 18) -> RichTextLabel:
 	r.text = bbcode
 	_box.add_child(r)
 	return r
+
+
+## One briefing rule as its own card: rounded, faintly filled and edged (the HUD plate's look), no number.
+func _rule_card(n: int, bbcode: String) -> void:
+	var p := PanelContainer.new()
+	p.name = "Rule%d" % n
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.62, 0.85, 1.0, 0.06)
+	sb.border_color = Color(0.62, 0.85, 1.0, 0.22)
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(12)
+	sb.content_margin_left = 16
+	sb.content_margin_right = 16
+	sb.content_margin_top = 10
+	sb.content_margin_bottom = 10
+	p.add_theme_stylebox_override(&"panel", sb)
+	var row := HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.add_child(row)
+	var r := RichTextLabel.new()
+	r.bbcode_enabled = true
+	r.fit_content = true
+	r.scroll_active = false
+	r.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	r.custom_minimum_size.x = 488
+	r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	r.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	r.add_theme_font_size_override(&"normal_font_size", 19)
+	r.add_theme_font_size_override(&"bold_font_size", 19)
+	r.add_theme_color_override(&"default_color", Color("dbe5f7"))
+	r.text = bbcode
+	row.add_child(r)
+	_box.add_child(p)
 
 
 func _chip(text: String, col: Color) -> PanelContainer:

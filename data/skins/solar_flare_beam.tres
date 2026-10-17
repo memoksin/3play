@@ -27,8 +27,8 @@ habitats = PackedStringArray("Lagrange-4")
 mech = &"mirror"
 chip_key = ""
 chip_style = &"new"
-intro_key = "SF_BEAM_W1_INTRO"
-tip_key = "SF_BEAM_W1_TIP"
+intro_key = ""
+tip_key = ""
 start = "55361"
 solution = "31213"
 
@@ -55,7 +55,7 @@ title_key = "SF_BEAM_W3_TITLE"
 flare_class = "X4.7"
 time = 65.0
 sun = 4
-map = PackedStringArray(".M....M", ".......", ".M.TS..", ".......", "C..T..C", ".......", "..H....", "...MM..")
+map = PackedStringArray(".......", "....T..", "H......", ".M..T..", "......C", ".......", ".M.M..M")
 earth = PackedStringArray("DXB", "TYO", "LOS", "IST", "LIM", "CAI", "BOM")
 habitats = PackedStringArray("Vega")
 mech = &"thermal"
@@ -63,8 +63,8 @@ chip_key = "SF_BEAM_W3_CHIP"
 chip_style = &"thermal"
 intro_key = "SF_BEAM_W3_INTRO"
 tip_key = ""
-start = "71447660"
-solution = "31103313"
+start = "524310"
+solution = "233103"
 
 [sub_resource type="Resource" id="wave_4"]
 script = ExtResource("2")
@@ -72,7 +72,7 @@ title_key = "SF_BEAM_W4_TITLE"
 flare_class = "X28"
 time = 80.0
 sun = 3
-map = PackedStringArray("......H", "..M...C", "..SS...", "......C", "..M..M.", "H..M...", "M..T.TM", ".......", ".....C.")
+map = PackedStringArray(".......", ".......", ".M.S.C.", "...H.C.", "H......", "M....TC", "TS...M.", ".......")
 earth = PackedStringArray("IST", "SEL", "NBO", "MEX", "JKT", "OSL", "SAO")
 habitats = PackedStringArray("Kepler", "Hilal")
 mech = &""
@@ -80,8 +80,8 @@ chip_key = "SF_BEAM_W4_CHIP"
 chip_style = &"new"
 intro_key = "SF_BEAM_W4_INTRO"
 tip_key = "SF_BEAM_W4_TIP"
-start = "0577766372"
-solution = "303112?103"
+start = "6021512"
+solution = "3232123"
 
 [resource]
 script = ExtResource("1")

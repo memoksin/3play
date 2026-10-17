@@ -5,6 +5,8 @@ shader_type spatial;
 // White-hot core, gold body, red-orange haze, plasma streaming from start to end, two strands coiling
 // around the core. Round soft caps hide the joints. `fill` (0..1) cuts the beam at its travelling head.
 // `energy` (1 full, 0.5 after a split, 0.25 ...) scales width and brightness.
+// `sink` > 0 (a beam a collector swallows): over its last `taper` m the beam is pulled into a funnel, thin and
+// hot at the end, its body turning `sink_color`, with bands rushing faster and tighter into the mouth.
 render_mode blend_add, unshaded, cull_disabled, depth_draw_never, shadows_disabled, fog_disabled;
 
 #include "res://assets/3d/solar_flare/fx/sf_noise.gdshaderinc"
@@ -18,6 +20,9 @@ uniform float intensity = 1.0;
 uniform float fill = 1.0;
 uniform float flow_speed = 14.0;    // m/s plasma flow
 uniform float seed = 0.0;
+uniform float sink = 0.0;           // 0 = plain end, 1 = swallowed at the end
+uniform float taper = 3.0;          // m of funnel before the end
+uniform vec3 sink_color : source_color = vec3(0.35, 1.0, 0.7);
 
 varying float along_m;
 varying float across_m;
@@ -47,8 +52,12 @@ void vertex() {
 
 void fragment() {
 	float head = fill * seg_len;
+	// funnel: 0 along the beam .. 1 at the swallowed end; the beam keeps its width, then is drawn in fast
+	float to_end = seg_len - along_m;
+	float fk = sink > 0.0 ? sink * pow(1.0 - clamp(to_end / taper, 0.0, 1.0), 1.8) : 0.0;
+	float hw = half_w * (1.0 - 0.86 * fk);
 	float da = along_m < 0.0 ? -along_m : (along_m > head ? along_m - head : 0.0);
-	float d = length(vec2(across_m, da)) / half_w;      // 0 axis .. 1 haze edge
+	float d = length(vec2(across_m, da)) / hw;      // 0 axis .. 1 haze edge
 	if (d >= 1.0 || fill <= 0.0) {
 		discard;
 	}
@@ -67,6 +76,17 @@ void fragment() {
 	float strands = (s1 + s2) * (0.6 + 0.8 * n2);
 	// hot travelling head
 	float hb = fill < 0.999 ? exp(-pow(max(head - along_m, 0.0) / (half_w * 1.4), 2.0)) * exp(-pow(d / 0.5, 2.0)) : 0.0;
-	vec3 c = core_color * (core * 5.0 + strands * 1.4 + hb * 4.0) + body_color * body * 1.7 + haze_color * haze * 0.8;
+	vec3 bc = body_color;
+	vec3 hc = haze_color;
+	if (fk > 0.0) {
+		// bands evenly spaced in log(distance to the mouth): they speed up and crowd as they are swallowed
+		float w = -log(max(to_end, 0.04) / taper);
+		float band = pow(0.5 + 0.5 * cos((w * 2.2 - TIME * 4.5 + seed) * 6.2832), 6.0) * exp(-pow(d / 0.6, 2.0));
+		bc = mix(body_color, sink_color, fk * 0.85);
+		hc = mix(haze_color, sink_color * 0.7, fk);
+		core *= 1.0 + 1.2 * fk;
+		strands += band * fk * 2.2 * step(along_m, head);
+	}
+	vec3 c = core_color * (core * 5.0 + strands * 1.4 + hb * 4.0) + bc * body * 1.7 + hc * haze * 0.8;
 	ALBEDO = c * intensity * flick * mix(0.55, 1.0, e);
 }

@@ -4,6 +4,7 @@ extends Node3D
 ##   add_segment(a, b, energy, [width, intensity]) -> MeshInstance3D   one ribbon (fx/beam.gdshader); energy 1, 0.5, 0.25 ...
 ##   add_glint(p, color, size, spikes)              lens glint at a hit / split / collect point
 ##   set_fill(seg, f)                               0..1: how far the beam has travelled along it
+##   set_sink(seg, taper, color)                    the segment's end swallows it (a collector): funnel + colour
 ##   clear()
 ## Every segment gets its own material so energy / fill can differ per segment.
 
@@ -57,6 +58,13 @@ static func place(mi: Node3D, a: Vector3, b: Vector3) -> void:
 
 static func set_fill(mi: MeshInstance3D, f: float) -> void:
 	(mi.material_override as ShaderMaterial).set_shader_parameter("fill", f)
+
+
+static func set_sink(mi: MeshInstance3D, taper := 3.0, color := Color(0.35, 1.0, 0.7)) -> void:
+	var m := mi.material_override as ShaderMaterial
+	m.set_shader_parameter("sink", 1.0)
+	m.set_shader_parameter("taper", taper)
+	m.set_shader_parameter("sink_color", color)
 
 
 func add_glint(p: Vector3, color := Color(1.0, 0.75, 0.4), size := 4.0, spikes := 4.0, intensity_ := 1.0) -> MeshInstance3D:

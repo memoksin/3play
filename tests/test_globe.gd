@@ -182,9 +182,21 @@ func _glitch_run() -> void:
 	var dir_before := 0.0
 	var dir_after := 0.0
 	var prev_y := earth.rotation.y
+	var sun_seen := 0
+	var sun_spread := 0.0
+	var sun_world_swing := 0.0
+	var sun_first := Vector2.ZERO
 	var deadline := Time.get_ticks_msec() + 15000
 	while g.t < g.SPIN + 0.05 and Time.get_ticks_msec() < deadline:
 		await process_frame
+		# The flare's halo keeps one screen direction for the whole run, though the Earth-fixed sun turns with the spin
+		if g._flare != null and g._flare.visible:
+			var s2: Vector2 = (g._flare.material as ShaderMaterial).get_shader_parameter(&"sun2d")
+			if sun_seen == 0:
+				sun_first = s2
+			sun_seen += 1
+			sun_spread = maxf(sun_spread, s2.distance_to(sun_first))
+			sun_world_swing = maxf(sun_world_swing, Vector2(g._sun_world.x, -g._sun_world.y).normalized().distance_to(sun_first))
 		var dy: float = earth.rotation.y - prev_y
 		prev_y = earth.rotation.y
 		var year: int = int(g._year.text) if g._year.text.is_valid_int() else -1
@@ -203,6 +215,8 @@ func _glitch_run() -> void:
 	_check("glitch: counter turns red mid-tear", red_scramble)
 	_check("glitch: counts forward after the tear", forward and prev_year > g.NOW)
 	_check("glitch: spin reverses after the swap (%.2f / %.2f rad)" % [dir_before, dir_after], dir_before * dir_after < 0.0)
+	_check("glitch: halo never moves (%d frames, spread %.5f; the spinning sun swings %.2f)" % [sun_seen, sun_spread, sun_world_swing],
+			sun_seen > 20 and sun_spread < 1e-4 and sun_world_swing > 0.5)
 	var d: Disaster = root.get_node("Game").disaster
 	_check("glitch: lock reached", (earth.global_basis * g.surface_point(d.lat, d.lon)).normalized().z > 0.9999)
 	_check("glitch: year %s at the lock" % g._year.text, g._year.text == "3026" and g._year.label_settings.font_color == g.RED)

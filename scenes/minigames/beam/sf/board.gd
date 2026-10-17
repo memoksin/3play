@@ -6,6 +6,7 @@ extends Node2D
 ##   cell_at(pos) / cell_center(cell)   a ray from the camera against the satellites' plane (y = BEAM_Y),
 ##                                      and the projection back: clicks land cell by cell in perspective
 ##   event_pos(ev), seg_points(seg)     screen px of an event / the ends of a segment
+##   alert_pos(ev), set_alerts(marks)   where the "!" over a struck city hangs / show those badges (alerts.gd)
 ##   cell, origin                       px of one cell around the grid's middle / of the grid's far-left corner
 ## A piece is still a Node2D at its screen position (the HUD-side bits, like city codes, are drawn in 2D);
 ## its model is a Node3D child standing at the piece's `world` position. Every piece is a BeamSkin *_scene
@@ -21,6 +22,7 @@ const HABITAT := preload("res://scenes/minigames/beam/sf/habitat.tscn")
 const CITY := preload("res://scenes/minigames/beam/sf/city.tscn")
 const STATION := preload("res://scenes/minigames/beam/sf/station.tscn")
 const BEAMS := preload("res://scenes/minigames/beam/sf/beams.tscn")
+const ALERTS := preload("res://scenes/minigames/beam/sf/alerts.gd")
 ## The 2D effects layer (bursts, rising labels) is reused: it works in screen px, which is what event_pos gives.
 const FX := preload("res://scenes/minigames/beam/fx.tscn")
 
@@ -41,6 +43,7 @@ var font: Font
 var backdrop: Node2D
 var grid: Node2D
 var beams: Node2D
+var alerts: Node2D
 var fx: Node2D
 var _stage: Node2D
 var _sats: Array[Node2D] = []
@@ -122,6 +125,8 @@ func build(level: BeamLogic.Level, wave: BeamWave, skin_: BeamSkin, _area: Rect2
 			"C":
 				p = _spawn(skin.collector_scene, COLLECTOR, pieces, false)
 				_collectors[c.i] = p
+				p.set(&"feed", _cities.get("E%d" % c.pos.x))
+				p.set(&"feed_path", _feed_path(c.pos))
 			"H":
 				p = _spawn(skin.habitat_scene, HABITAT, pieces, false)
 				p.label = c.name
@@ -139,9 +144,33 @@ func build(level: BeamLogic.Level, wave: BeamWave, skin_: BeamSkin, _area: Rect2
 	beams = _spawn(skin.beams_scene, BEAMS, _stage, false)
 	beams.board = self
 	_stage.add_child(beams)
+	alerts = ALERTS.new()
+	alerts.name = "Alerts"
+	alerts.cell = cell
+	_stage.add_child(alerts)
 	fx = _spawn(skin.fx_scene, FX, _stage)
 	fx.font = font
 	fx.cell = cell
+
+
+## The line a collector's harvest runs down to the Earth city of its column: out from under its deck along the
+## orbital plane to the board's Earth edge, then curving down to the city.
+func _feed_path(c: Vector2i) -> PackedVector3Array:
+	var y := L.GRID_Y + 0.05
+	var a := lay.cell_pos(c.x + 0.5, c.y + 0.5) + Vector3(0, y - L.BEAM_Y, 1.0)
+	var e := lay.cell_pos(c.x + 0.5, rows) + Vector3(0, y - L.BEAM_Y, 0)
+	var city := lay.city_world(c.x) + Vector3(0, 0.9, 0)
+	var out := PackedVector3Array()
+	var steps := maxi(2, ceili((e.z - a.z) / 1.5))
+	for i in steps:
+		out.append(a.lerp(e, float(i) / steps))
+	var c1 := e + Vector3(0, 0, 2.5)
+	var c2 := city + Vector3(0, 2.5, 0)
+	for i in 17:
+		var t := i / 16.0
+		var m := 1.0 - t
+		out.append(e * m * m * m + c1 * 3.0 * m * m * t + c2 * 3.0 * m * t * t + city * t * t * t)
+	return out
 
 
 func _spawn(custom: PackedScene, fallback: PackedScene, parent: Node, add := true) -> Node2D:
@@ -155,7 +184,7 @@ func tick(dt: float) -> void:
 	# the shake (a board offset in px, set by the scene) turns the camera; the layers in 2D move with the board
 	var k := position * SHAKE_RAD
 	_cam.transform = Transform3D(lay.cam.basis * Basis.from_euler(Vector3(k.y, k.x, 0.0)), lay.cam.origin)
-	for n in [backdrop, beams, fx]:
+	for n in [backdrop, beams, alerts, fx]:
 		if n and n.has_method(&"tick"):
 			n.tick(dt)
 	for p in _sats:
@@ -220,6 +249,18 @@ func event_pos(ev: BeamLogic.Event) -> Vector2:
 			return screen_of(lay.cell_pos(ev.pos.x + 0.5, -0.5))
 		return screen_of(lay.cell_pos(-0.5 if ev.city == "W" else cols + 0.5, ev.pos.y + 0.5))
 	return cell_center(ev.pos)
+
+
+## Where the "!" over the city this event strikes hangs, in screen px: above the city, the habitat, the
+## stretch of ring the beam leaves through, the Parker truss at the column it returns by.
+func alert_pos(ev: BeamLogic.Event) -> Vector2:
+	var up := 0.85 if ev.kind == &"earth" else (0.7 if ev.city == "N" else (0.75 if ev.kind == &"habitat" else 0.45))
+	return event_pos(ev) + Vector2(0, -cell * up)
+
+
+## Shows the "!" badges: city key -> screen px (empty = none).
+func set_alerts(marks: Dictionary) -> void:
+	alerts.set_marks(marks)
 
 
 func seg_points(s: BeamLogic.Seg) -> PackedVector2Array:
