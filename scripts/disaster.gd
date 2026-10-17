@@ -11,6 +11,9 @@ extends Resource
 @export var year := 0
 ## Event time, ISO UTC ("2023-02-06T01:17:00"): the globe lights the Earth from the real sun. Empty = the prototype sun at the lock pose.
 @export var utc := ""
+## Weather and time of day at the place (sun, ambient, sky, fog): the diorama set and the minigame world
+## both light themselves from it. Null = each keeps its own scene's light.
+@export var atmosphere: Atmosphere
 ## Key in Game.SCENES: fit, connect, beam.
 @export var minigame: StringName
 ## Mechanic data (FitSkin, ConnectSkin, BeamSkin). Owned by the minigame.

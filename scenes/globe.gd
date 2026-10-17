@@ -571,7 +571,7 @@ func _setup_fade() -> void:
 	mat.shader = load("res://scenes/globe/dive.gdshader")
 	_fade.material = mat
 	var dio: GDScript = load("res://scenes/diorama/diorama.gd")
-	_fade.color = Color(dio.haze(_disaster.id), 0.0)
+	_fade.color = Color(dio.haze(_disaster), 0.0)
 	var fit := func() -> void:
 		mat.set_shader_parameter(&"aspect", _fade.size.x / maxf(1.0, _fade.size.y))
 	_fade.resized.connect(fit)

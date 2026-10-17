@@ -24,6 +24,8 @@ const CARD_TOP := 0.48
 ## for the Sea (`shallow`, `deep`); `ground` (optional): shader colours per ground node, e.g. the Beach;
 ## `plain`: the ground runs on to the horizon (the Sun's corona glows behind the set, so a
 ## ground edge in front of it would show) instead of ending in a rim.
+## A disaster with an `atmosphere` (Disaster.atmosphere, shared with its minigame world) takes haze, sky,
+## fog, exposure, ambient and the key light from there instead (config()).
 const SETS := {
 	&"kahramanmaras": {
 		"scene": "res://scenes/diorama/set_kahramanmaras.tscn",
@@ -34,8 +36,7 @@ const SETS := {
 	&"indian_ocean": {
 		"scene": "res://scenes/diorama/set_indian_ocean.tscn",
 		"from": -38.0, "to": 12.0, "radius": 42.0, "elevation": [26.0, 20.0], "lift": 5.0,
-		"haze": Color(0.07, 0.16, 0.24), "sky": [Color(0.07, 0.16, 0.24), Color(0.07, 0.16, 0.24)],
-		"fog": [48.0, 140.0], "exposure": 0.8, "dive_fog": 0.0, "sun": 0.8,
+		"dive_fog": 0.0,  # atmosphere: data/disasters/indian_ocean.tres
 	},
 	&"solar_flare": {
 		"scene": "res://scenes/diorama/set_solar_flare.tscn",
@@ -192,9 +193,9 @@ func _ready() -> void:
 		process_mode = Node.PROCESS_MODE_DISABLED
 	Game.ensure_disaster(&"citizen")
 	var d := Game.disaster
-	_cfg = SETS.get(d.id, SETS[&"kahramanmaras"])
+	_cfg = config(d)
 	_set = Game.packed_scene(_cfg.scene).instantiate()
-	_atmosphere()
+	_atmosphere(d.atmosphere)
 	add_child(_set)
 	var focus := _set.get_node_or_null("Focus") as Node3D
 	if focus:
@@ -210,8 +211,12 @@ func _ready() -> void:
 		var ground_mat := (_set.get_node(node_name) as MeshInstance3D).material_override as ShaderMaterial
 		for k: String in _cfg.ground[node_name]:
 			ground_mat.set_shader_parameter(k, _cfg.ground[node_name][k])
-	for l in _set.find_children("*", "DirectionalLight3D", false, false):
-		(l as DirectionalLight3D).light_energy *= float(_cfg.get("sun", 1.0))
+	var lights := _set.find_children("*", "DirectionalLight3D", false, false)
+	if d.atmosphere and not lights.is_empty():
+		d.atmosphere.light(lights[0])  # the key light
+	else:
+		for l in lights:
+			(l as DirectionalLight3D).light_energy *= float(_cfg.get("sun", 1.0))
 	for n in _set.find_children("Float", "Node3D", true, false):
 		for b in n.get_children():
 			_floats.append(b)
@@ -229,7 +234,7 @@ func _ready() -> void:
 	_veil = ColorRect.new()
 	_veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_veil.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_veil.color = haze(d.id)
+	_veil.color = haze(d)
 	_ui.add_child(_veil)
 	_pose(0.0)
 
@@ -281,9 +286,25 @@ func _unhandled_input(event: InputEvent) -> void:
 			(_intro.get_node("%Next") as Button).pressed.emit()
 
 
+## The disaster's entry in SETS, with its atmosphere's haze, sky, fog (scaled from the atmosphere's
+## fog_ref to the orbit radius) and exposure when it has one.
+static func config(d: Disaster) -> Dictionary:
+	var cfg: Dictionary = SETS.get(d.id, SETS[&"kahramanmaras"])
+	var atm := d.atmosphere
+	if atm == null:
+		return cfg
+	cfg = cfg.duplicate()
+	var k: float = cfg.radius / atm.fog_ref
+	cfg.haze = atm.haze
+	cfg.sky = [atm.sky_top, atm.sky_bottom]
+	cfg.fog = [atm.fog.x * k, atm.fog.y * k]
+	cfg.exposure = atm.exposure
+	return cfg
+
+
 ## On-screen haze colour of a disaster's set (the globe fades into it before the cut).
-static func haze(id: StringName) -> Color:
-	var cfg: Dictionary = SETS.get(id, SETS[&"kahramanmaras"])
+static func haze(d: Disaster) -> Color:
+	var cfg := config(d)
 	return filmic(cfg.haze, cfg.get("exposure", 1.0))
 
 
@@ -300,13 +321,15 @@ static func _filmic(x: float) -> float:
 
 
 ## Soft atmosphere on the set's WorldEnvironment: a screen-space background gradient and
-## depth fog in the haze colour, which the ground's rim also fades into.
-func _atmosphere() -> void:
+## depth fog in the haze colour, which the ground's rim also fades into. `atm`: tonemap and ambient too.
+func _atmosphere(atm: Atmosphere) -> void:
 	var we := _set.get_node_or_null("Env") as WorldEnvironment
 	if we == null or we.environment == null:
 		return
 	_env = we.environment.duplicate()
 	we.environment = _env
+	if atm:
+		atm.environment(_env)
 	_env.tonemap_exposure = _cfg.get("exposure", 1.0)
 	_sky = ShaderMaterial.new()
 	var mat := _sky

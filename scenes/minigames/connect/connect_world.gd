@@ -59,6 +59,12 @@ const SEA_STEP := 0.2  # the sea / flood mesh: 0.2 m along the coast normal (the
 const SEA_ROWS := 26   # 0.5 m in depth
 const LENS_DUR := 3.2
 const SOFT := preload("res://scenes/style/soft_particle.gdshader")
+## Weather and time of day come from the disaster (Disaster.atmosphere), like the diorama set before the
+## game, and the background is the diorama's screen gradient sky: the cut keeps the same world.
+const DIORAMA := preload("res://scenes/diorama/diorama.gd")
+const DISASTER := "res://data/disasters/indian_ocean.tres"  # run alone (F6, art shots)
+const DEEP_FOG_Y := -15.5  # height fog under the grid: the deep rock fades out
+const DEEP_FOG := 0.35
 
 @onready var coast: Node3D = $Coast
 @onready var camera: Camera3D = $CameraPlay
@@ -104,15 +110,12 @@ var _fish: MultiMesh
 var _fish_seed: Array[Vector4] = []   # school, phase, offset y, offset z
 var _gulls: Array[Node3D] = []
 var _smokes: Array[CPUParticles3D] = []
-var _chunks: Array[Node3D] = []
-var _chunk_y: Array[float] = []
 var _sun_energy := 1.0
 var _sun_color := Color.WHITE
 var _amb_energy := 1.0
 var _sky: ShaderMaterial
-var _sky_top := Color.BLACK
-var _sky_mid := Color.BLACK
-var _sky_glow := Color.BLACK
+var _atm: Atmosphere
+var _env: Environment
 const FISH := 42
 ## Cooking smoke over two back houses (coast u, depth d, chimney height): a Sunday breakfast.
 const SMOKE_AT: Array[Vector3] = [Vector3(11.4, 5.9, 3.3), Vector3(25.9, 8.1, 3.3)]
@@ -123,11 +126,14 @@ const SMOKE_AT: Array[Vector3] = [Vector3(11.4, 5.9, 3.3), Vector3(25.9, 8.1, 3.
 @export var hero_dist := 86.0
 ## Play framing: square to the front cut (no yaw against the slab), from a little above and tilted
 ## `play_pitch` deg down, so the grid reads as a flat board with a light perspective while the slab top
-## and the village show a little. `play_center` = the front-cut point at the screen centre (coast
-## frame), `play_dist` = camera distance to it, `play_shift` = vertical lens shift (view fraction at
-## near = 1, framing only: it does not change the perspective).
-@export var play_center := Vector2(10.6, 0.0)
-@export var play_dist := 61.0
+## and the village show a little. Close enough that the slab fills the screen width (sea at the left
+## edge, strata past the right one) and the deep body runs out at the bottom: no void at the sides or
+## under the board; the four communities stay just under the HUD and the grid's last row above the
+## bottom edge. `play_center` = the front-cut point at the screen centre (coast frame), `play_dist` =
+## camera distance to it, `play_shift` = vertical lens shift (view fraction at near = 1, framing only:
+## it does not change the perspective).
+@export var play_center := Vector2(10.6, -1.05)
+@export var play_dist := 48.5
 @export var play_pitch := -16.0
 @export var play_yaw := 0.0
 @export var play_shift := 0.0
@@ -143,6 +149,7 @@ var _shake := Vector2.ZERO
 
 
 func _ready() -> void:
+	_atmosphere()
 	_frame($Camera, hero_target, hero_dist)
 	_hero_xf = ($Camera as Camera3D).transform
 	var turn := Basis(Vector3.UP, deg_to_rad(play_yaw)) * Basis(Vector3.RIGHT, deg_to_rad(play_pitch))
@@ -186,6 +193,25 @@ func _dress() -> void:
 		props.add_child(n)
 
 
+## Sun, ambient, fog and sky from the disaster's atmosphere (the same as its diorama set).
+func _atmosphere() -> void:
+	var d: Disaster = Game.disaster if Game.disaster and Game.disaster.atmosphere else load(DISASTER)
+	_atm = d.atmosphere
+	_atm.light($Sun, coast.basis)
+	_env = ($Env as WorldEnvironment).environment
+	_atm.environment(_env)
+	# the slab's body runs on deep down (coast_slab.py ZB) and sinks into the haze: no floating island
+	_env.fog_height = DEEP_FOG_Y
+	_env.fog_height_density = DEEP_FOG
+	_sky = ShaderMaterial.new()
+	_sky.shader = Game.shader_for(DIORAMA.SKY)
+	_sky.set_shader_parameter(&"tan_half", tan(deg_to_rad(FOV * 0.5)))
+	_sky.set_shader_parameter(&"top", _atm.sky_top)
+	_sky.set_shader_parameter(&"bottom", _atm.sky_bottom)
+	_sky.set_shader_parameter(&"haze", _atm.haze)
+	_env.sky.sky_material = _sky
+
+
 func _frame(cam: Camera3D, target: Vector3, dist: float) -> void:
 	cam.rotation_degrees = Vector3(-40.0, -22.0, 0.0)
 	cam.position = to_local(coast.to_global(target)) + cam.basis.z * dist
@@ -197,6 +223,12 @@ func _view(k: float) -> void:
 	var xf := _hero_xf.interpolate_with(_play_xf, e)
 	camera.transform = xf
 	camera.frustum_offset = _play_offset * e + _shake + _impact_shake() * camera.size
+	# fog depths follow the camera's distance to the slab, as they would in the diorama's orbit
+	var k_fog := lerpf(hero_dist, play_dist, e) / _atm.fog_ref
+	_env.fog_depth_begin = _atm.fog.x * k_fog
+	_env.fog_depth_end = _atm.fog.y * k_fog
+	_sky.set_shader_parameter(&"cam_up", camera.global_basis.y)
+	_sky.set_shader_parameter(&"cam_fwd", -camera.global_basis.z)
 
 
 ## Builds the grid for `skin`. rock_variant: cell index -> 0..2.
@@ -662,12 +694,7 @@ func _build_life() -> void:
 	var sun := $Sun as DirectionalLight3D
 	_sun_energy = sun.light_energy
 	_sun_color = sun.light_color
-	var env := ($Env as WorldEnvironment).environment
-	_amb_energy = env.ambient_light_energy
-	_sky = env.sky.sky_material as ShaderMaterial
-	_sky_top = _sky.get_shader_parameter(&"top_color")
-	_sky_mid = _sky.get_shader_parameter(&"mid_color")
-	_sky_glow = _sky.get_shader_parameter(&"glow_color")
+	_amb_energy = _env.ambient_light_energy
 	# fish: tiny lit prisms, three schools
 	var fm := PrismMesh.new()
 	fm.size = Vector3(0.12, 0.34, 0.06)
@@ -741,9 +768,6 @@ func _build_life() -> void:
 		sm.position = ud(p.x, p.y, LAND + p.z)
 		$Coast/Props.add_child(sm)
 		_smokes.append(sm)
-	for c in $Coast/Debris.get_children():
-		_chunks.append(c)
-		_chunk_y.append(c.position.y)
 
 
 func _show_life(s: Node, t: float, calm: float) -> void:
@@ -778,9 +802,6 @@ func _show_life(s: Node, t: float, calm: float) -> void:
 		g.scale = Vector3.ONE * maxf(calm, 0.001)
 	for sm in _smokes:
 		sm.emitting = calm > 0.3
-	for i in _chunks.size():
-		_chunks[i].position.y = _chunk_y[i] + sin(t * 0.6 + i * 1.7) * 0.25
-		_chunks[i].rotate_y(0.0005 * (1.0 if i % 2 else -1.0))
 	# mood: the bright morning loses its warmth as the wave rises, back a little after the drain
 	var dark := clampf(1.0 - left / s.WAVE_LEAD, 0.0, 1.0)
 	if s._hit:
@@ -789,10 +810,11 @@ func _show_life(s: Node, t: float, calm: float) -> void:
 	var sun := $Sun as DirectionalLight3D
 	sun.light_energy = lerpf(_sun_energy, _sun_energy * 0.55, dark)
 	sun.light_color = _sun_color.lerp(Color(0.78, 0.84, 0.95), dark * 0.8)
-	($Env as WorldEnvironment).environment.ambient_light_energy = lerpf(_amb_energy, _amb_energy * 0.8, dark)
-	_sky.set_shader_parameter(&"top_color", _sky_top.lerp(_sky_top * 0.45, dark))
-	_sky.set_shader_parameter(&"mid_color", _sky_mid.lerp(Color(0.05, 0.07, 0.11), dark))
-	_sky.set_shader_parameter(&"glow_color", _sky_glow.lerp(Color(0.18, 0.2, 0.26), dark))
+	_env.ambient_light_energy = lerpf(_amb_energy, _amb_energy * 0.8, dark)
+	var low := _atm.sky_bottom.lerp(Color(0.05, 0.07, 0.11), dark)
+	_sky.set_shader_parameter(&"top", _atm.sky_top.lerp(_atm.sky_top * 0.45, dark))
+	_sky.set_shader_parameter(&"bottom", low)
+	_env.fog_light_color = _atm.haze.lerp(low, dark)  # the slab's far parts keep fading into the sky
 
 
 # --- per frame -------------------------------------------------------------------------------------
