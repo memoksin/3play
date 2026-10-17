@@ -9,6 +9,12 @@ const SHAKE_QUAKE_AMP := 18.0
 const TOAST_DUR := 2.0
 const MESSAGE_DUR := 3.0
 const FLASH_DUR := 0.4
+## Overlay text (toast, message, banner): fade + slide + type-on in, fade out at the end. Driven by game time.
+const OVERLAY_IN := 0.22
+const OVERLAY_OUT := 0.35
+const OVERLAY_CPS := 55.0
+const CLOCK_WARN_LEFT := 30.0
+const CLOCK_DANGER_LEFT := 10.0
 ## Audio hooks (docs/audio.md, scripts/audio.gd). `aftershock(i)` and `toast_ended(i)` bracket the
 ## message of warning i; `quake_hit` is the final hit.
 signal item_selected
@@ -96,6 +102,11 @@ var _hover: StringName = &""
 var _hidden_chip := -1
 var _fx: Control
 var _bg: Control  # skin.background_scene instance, driven by elapsed
+var _toast_base := Vector2.ZERO
+var _msg_base_y := 0.0
+var _banner_base := Vector2.ZERO
+var _bar: Control  # time-left bar in the HUD panel
+var _clock_color := Color.TRANSPARENT
 
 @onready var _world: Control = $World
 @onready var _zone_root: Control = $World/Zones
@@ -123,21 +134,11 @@ func _ready() -> void:
 	skin = Game.disaster.skin as FitSkin
 	assert(skin != null, "Disaster has no FitSkin")
 	placement = FitLogic.start_placement(skin)
-	# Dark backing so the message stays readable over busy background art
-	var msg_bg := StyleBoxFlat.new()
-	msg_bg.bg_color = Color(Palette.BG, 0.85)
-	msg_bg.set_content_margin_all(6)
-	_message.add_theme_stylebox_override("normal", msg_bg)
+	_style_overlays()
 	_message.visible = false
 	_fired.resize(skin.aftershock_times.size())
 	_fired.fill(false)
 	_task.text = Game.disaster.text("TASK")
-	var banner_style := StyleBoxFlat.new()
-	banner_style.bg_color = Palette.BG
-	banner_style.border_color = Palette.DANGER
-	banner_style.set_border_width_all(4)
-	banner_style.set_content_margin_all(16)
-	_banner.add_theme_stylebox_override("panel", banner_style)
 	_chip_normal = _chip_style(Palette.BORDER, 2)
 	_chip_selected = _chip_style(Palette.GOLD, 4)
 	var rng := RandomNumberGenerator.new()
@@ -196,6 +197,8 @@ func advance(dt: float) -> void:
 				_start_shake(SHAKE_AFTER_DUR, SHAKE_AFTER_AMP, elapsed - at)
 			var key := skin.warning_keys[i] if i < skin.warning_keys.size() else skin.creak_key
 			_toast.get_node("Label").text = tr(key)
+			_toast.reset_size()  # fit the text, stay right-aligned
+			_toast_base.x = 1264.0 - _toast.size.x
 			_toast_left = TOAST_DUR - (elapsed - at)
 			if _toast_index >= 0:
 				toast_ended.emit(_toast_index)
@@ -210,12 +213,19 @@ func advance(dt: float) -> void:
 		if skin.ending == FitSkin.Ending.COLLAPSE:
 			_start_shake(SHAKE_QUAKE_DUR, SHAKE_QUAKE_AMP, _quake_t)
 		_banner.get_node("Label").text = tr(skin.quake_key)
+		_banner.reset_size()  # fit the text, stay centred
+		_banner_base.x = (1280.0 - _banner.size.x) / 2.0
 		quake_hit.emit()
 	elif _phase_quake:
 		_quake_t += dt
 	if _phase_quake:
 		_collapse = clampf((_quake_t - COLLAPSE_START) / COLLAPSE_DUR, 0.0, 1.0)
 		_banner.visible = _quake_t >= BANNER_DELAY
+		if _banner.visible:
+			var b_age := _quake_t - BANNER_DELAY
+			_overlay_anim(_banner, _banner.get_node("Label"), b_age, FINISH_DELAY - _quake_t, _banner_base, Vector2.ZERO)
+			_banner.pivot_offset = _banner.size / 2.0
+			_banner.scale = Vector2.ONE * lerpf(1.12, 1.0, _ease_out(b_age / OVERLAY_IN))
 		if _flare:
 			_flare_alpha = _flare_level(_quake_t)
 			_flare.visible = _flare_alpha > 0.0
@@ -237,10 +247,14 @@ func advance(dt: float) -> void:
 		toast_ended.emit(ended)
 	if _toast.visible != toast_on:
 		_toast.visible = toast_on
+	if toast_on:
+		_overlay_anim(_toast, _toast.get_node("Label"), TOAST_DUR - _toast_left, _toast_left, _toast_base, Vector2(48, 0))
 	_msg_left = maxf(_msg_left - dt, 0.0)
 	if _msg_left <= 0.0 and _message.text != "":
 		_message.text = ""
 		_message.visible = false
+	elif _msg_left > 0.0:
+		_overlay_anim(_message, _message, MESSAGE_DUR - _msg_left, _msg_left, Vector2(_message.position.x, _msg_base_y), Vector2(0, 20))
 	var art_key := Vector2(crack_stage, _collapse)
 	var art_dirty := art_key != _art_key
 	_art_key = art_key
@@ -518,6 +532,14 @@ func _update_chip_look() -> void:
 
 func _update_clock() -> void:
 	var f := clampf(elapsed / skin.timer_seconds, 0.0, 1.0)
+	var left := skin.timer_seconds - elapsed
+	var color := Palette.DANGER if left <= CLOCK_DANGER_LEFT else (Palette.WARN if left <= CLOCK_WARN_LEFT else Palette.SAFE)
+	if color != _clock_color:
+		_clock_color = color
+		_clock.add_theme_color_override("font_color", color)
+	if _bar:
+		_bar.queue_redraw()
+	$World/Hud.modulate.a = _ease_out(elapsed / 0.5)
 	var minutes := int(lerpf(skin.clock_start_min, skin.clock_end_min, f))
 	if minutes != _clock_min:
 		_clock_min = minutes
@@ -534,7 +556,74 @@ func _say(text: String, color: Color) -> void:
 	_message.text = text
 	_message.visible = true
 	_message.add_theme_color_override("font_color", color)
+	_message.add_theme_stylebox_override("normal", _overlay_style(color, 3, 8, 20))
+	_message.reset_size()  # shrink to the text, then centre
+	_message.position.x = (1280.0 - _message.size.x) / 2.0
 	_msg_left = MESSAGE_DUR
+	_overlay_anim(_message, _message, 0.0, MESSAGE_DUR, Vector2(_message.position.x, _msg_base_y), Vector2(0, 20))
+
+
+## Panel look for the overlays: dark card, accent outline, hard offset shadow, no corner smoothing.
+func _overlay_style(accent: Color, border: int, margin_v: int, margin_h: int) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = Color(Palette.BG, 0.94)
+	s.border_color = accent
+	s.set_border_width_all(border)
+	s.content_margin_left = margin_h
+	s.content_margin_right = margin_h
+	s.content_margin_top = margin_v
+	s.content_margin_bottom = margin_v
+	s.shadow_color = Color(0, 0, 0, 0.55)
+	s.shadow_size = 2
+	s.shadow_offset = Vector2(6, 6)
+	s.anti_aliasing = false
+	return s
+
+
+func _style_overlays() -> void:
+	var hud: PanelContainer = $World/Hud
+	hud.add_theme_stylebox_override("panel", _overlay_style(Palette.BORDER, 4, 8, 16))
+	_toast.add_theme_stylebox_override("panel", _overlay_style(Palette.WARN, 4, 10, 20))
+	var toast_label: Label = _toast.get_node("Label")
+	toast_label.add_theme_font_size_override("font_size", 36)
+	toast_label.add_theme_color_override("font_color", Palette.WHITE)
+	_banner.add_theme_stylebox_override("panel", _overlay_style(Palette.DANGER, 6, 16, 28))
+	var banner_label: Label = _banner.get_node("Label")
+	banner_label.add_theme_font_size_override("font_size", 64)
+	banner_label.add_theme_color_override("font_color", Palette.WHITE)
+	_message.add_theme_font_size_override("font_size", 32)
+	for l: Label in [toast_label, banner_label, _message]:
+		l.visible_characters_behavior = TextServer.VC_CHARS_AFTER_SHAPING
+	_toast_base = _toast.position
+	_banner_base = _banner.position
+	_msg_base_y = _message.position.y
+	# Time-left bar under the clock row.
+	_bar = Control.new()
+	_bar.custom_minimum_size = Vector2(0, 10)
+	_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bar.draw.connect(_draw_bar)
+	var box: VBoxContainer = $World/Hud/Box
+	box.add_child(_bar)
+	box.move_child(_bar, 1)
+
+
+func _ease_out(x: float) -> float:
+	return 1.0 - pow(1.0 - clampf(x, 0.0, 1.0), 3.0)
+
+
+## Fade + slide + type-on in for `age` seconds, fade out over the last OVERLAY_OUT of `left`.
+func _overlay_anim(node: Control, label: Label, age: float, left: float, base: Vector2, slide: Vector2) -> void:
+	var a := _ease_out(age / OVERLAY_IN)
+	node.modulate.a = a * clampf(left / OVERLAY_OUT, 0.0, 1.0)
+	node.position = base + slide * (1.0 - a)
+	var chars := maxi(label.get_total_character_count(), 1)
+	label.visible_ratio = clampf(maxf(age, 0.0) * OVERLAY_CPS / chars, 0.0, 1.0)
+
+
+func _draw_bar() -> void:
+	var left := clampf(1.0 - elapsed / skin.timer_seconds, 0.0, 1.0)
+	_bar.draw_rect(Rect2(Vector2.ZERO, _bar.size), Palette.PANEL_DARK)
+	_bar.draw_rect(Rect2(Vector2.ZERO, Vector2(_bar.size.x * left, _bar.size.y)), _clock_color)
 
 
 func _reject(item_index: int, zone_id: StringName) -> void:
