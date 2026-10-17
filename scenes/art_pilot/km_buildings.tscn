@@ -1,0 +1,1323 @@
+[gd_scene format=3]
+
+[ext_resource type="Shader" path="res://scenes/style/void_sky.gdshader" id="2_sky"]
+[ext_resource type="Shader" path="res://scenes/style/post_25d.gdshader" id="3_post"]
+[ext_resource type="Shader" path="res://scenes/style/soft_particle.gdshader" id="4_soft"]
+[ext_resource type="Shader" path="res://scenes/style/light_beam.gdshader" id="5_beam"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/fire_barrel.glb" id="6_fire"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_apt_blue_3.glb" id="10_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_apt_mint_4.glb" id="11_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_apt_peach_5.glb" id="12_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_apt_yellow_6.glb" id="13_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_apt_grey_8.glb" id="14_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_cut_half.glb" id="15_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_cut_facade.glb" id="16_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_cut_corner.glb" id="17_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_pancake_mid.glb" id="18_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_pancake_soft.glb" id="19_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_pancake_full.glb" id="20_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_pancake_slide.glb" id="21_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_toppled.glb" id="22_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_rubble_s.glb" id="23_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_rubble_lot.glb" id="24_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_rubble_l.glb" id="25_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_rubble_spill.glb" id="26_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_shop_bakkal.glb" id="27_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_shop_firin.glb" id="28_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_shop_eczane.glb" id="29_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_shop_berber.glb" id="30_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_shop_dondurma.glb" id="31_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_shop_manav.glb" id="32_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_wall_garden.glb" id="33_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_wall_garden_broken.glb" id="34_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_wall_garden_fallen.glb" id="35_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_wall_gate.glb" id="36_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_wall_ruin.glb" id="37_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_wall_frame.glb" id="38_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_facade_fallen.glb" id="39_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_house_old.glb" id="40_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_house_open.glb" id="41_m"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/bld_house_collapsed.glb" id="42_m"]
+
+[sub_resource type="ShaderMaterial" id="sky_mat"]
+shader = ExtResource("2_sky")
+
+[sub_resource type="Sky" id="sky"]
+sky_material = SubResource("sky_mat")
+
+[sub_resource type="Environment" id="env"]
+background_mode = 2
+sky = SubResource("sky")
+ambient_light_source = 2
+ambient_light_color = Color(0.3, 0.4, 0.72, 1)
+ambient_light_energy = 0.22
+reflected_light_source = 1
+tonemap_mode = 4
+glow_enabled = true
+glow_intensity = 0.9
+glow_bloom = 0.04
+glow_blend_mode = 1
+glow_hdr_threshold = 0.9
+fog_enabled = true
+fog_mode = 1
+fog_light_color = Color(0.07, 0.09, 0.18, 1)
+fog_density = 1.0
+fog_depth_begin = 70.0
+fog_depth_end = 140.0
+fog_depth_curve = 1.6
+adjustment_enabled = true
+adjustment_contrast = 1.08
+adjustment_saturation = 1.1
+
+[sub_resource type="ShaderMaterial" id="post_mat"]
+shader = ExtResource("3_post")
+
+[sub_resource type="StandardMaterial3D" id="snow_mat"]
+albedo_color = Color(0.78, 0.82, 0.88, 1)
+roughness = 0.8
+
+[sub_resource type="PlaneMesh" id="ground"]
+material = SubResource("snow_mat")
+size = Vector2(1800, 200)
+
+[sub_resource type="StandardMaterial3D" id="asphalt_mat"]
+albedo_color = Color(0.2, 0.21, 0.24, 1)
+roughness = 0.45
+
+[sub_resource type="PlaneMesh" id="road"]
+material = SubResource("asphalt_mat")
+size = Vector2(1800, 7)
+
+[sub_resource type="StandardMaterial3D" id="walk_mat"]
+albedo_color = Color(0.55, 0.53, 0.5, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="walk"]
+material = SubResource("walk_mat")
+size = Vector3(1800, 0.15, 2.6)
+
+[sub_resource type="ShaderMaterial" id="flake_mat"]
+render_priority = 2
+shader = ExtResource("4_soft")
+shader_parameter/tint = Color(0.9, 0.94, 1, 0.9)
+shader_parameter/glow = 0.35
+shader_parameter/hardness = 0.55
+
+[sub_resource type="QuadMesh" id="flake"]
+material = SubResource("flake_mat")
+size = Vector2(0.11, 0.11)
+
+[sub_resource type="ShaderMaterial" id="beam_torch"]
+render_priority = 1
+shader = ExtResource("5_beam")
+shader_parameter/color = Color(1, 0.86, 0.6, 1)
+shader_parameter/strength = 0.3
+shader_parameter/height = 16.0
+
+[sub_resource type="CylinderMesh" id="beam_torch_mesh"]
+material = SubResource("beam_torch")
+top_radius = 3.4
+bottom_radius = 0.04
+height = 16.0
+radial_segments = 20
+rings = 1
+cap_top = false
+cap_bottom = false
+
+[node name="KmBuildings" type="Node3D"]
+
+[node name="Env" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
+
+[node name="Moon" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-48, -38, 0)
+light_color = Color(0.6, 0.72, 1, 1)
+light_energy = 0.32
+shadow_enabled = true
+shadow_blur = 1.5
+directional_shadow_mode = 2
+directional_shadow_max_distance = 160.0
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+position = Vector3(250, -0.01, 0)
+mesh = SubResource("ground")
+
+[node name="Road" type="MeshInstance3D" parent="."]
+position = Vector3(250, 0.0, 11)
+mesh = SubResource("road")
+
+[node name="Walk" type="MeshInstance3D" parent="."]
+position = Vector3(250, 0.0, 6.2)
+mesh = SubResource("walk")
+
+[node name="CamApartments" type="Camera3D" parent="."]
+position = Vector3(3.48, 68.77, 70.36)
+rotation_degrees = Vector3(-40, -22, 0)
+fov = 26.0
+near = 1.0
+far = 400.0
+current = true
+
+[node name="CamCutaways" type="Camera3D" parent="."]
+position = Vector3(102.48, 50.83, 50.54)
+rotation_degrees = Vector3(-40, -22, 0)
+fov = 26.0
+near = 1.0
+far = 400.0
+
+[node name="CamPancakes" type="Camera3D" parent="."]
+position = Vector3(203.53, 69.76, 71.46)
+rotation_degrees = Vector3(-40, -22, 0)
+fov = 26.0
+near = 1.0
+far = 400.0
+
+[node name="CamToppled" type="Camera3D" parent="."]
+position = Vector3(299.72, 41.35, 40.06)
+rotation_degrees = Vector3(-40, -22, 0)
+fov = 26.0
+near = 1.0
+far = 400.0
+
+[node name="CamRubble" type="Camera3D" parent="."]
+position = Vector3(403.20, 63.79, 64.85)
+rotation_degrees = Vector3(-40, -22, 0)
+fov = 26.0
+near = 1.0
+far = 400.0
+
+[node name="CamShops" type="Camera3D" parent="."]
+position = Vector3(497.72, 41.35, 40.06)
+rotation_degrees = Vector3(-40, -22, 0)
+fov = 26.0
+near = 1.0
+far = 400.0
+
+[node name="CamWalls" type="Camera3D" parent="."]
+position = Vector3(602.21, 45.85, 45.04)
+rotation_degrees = Vector3(-40, -22, 0)
+fov = 26.0
+near = 1.0
+far = 400.0
+
+[node name="CamHouses" type="Camera3D" parent="."]
+position = Vector3(701.72, 41.35, 40.06)
+rotation_degrees = Vector3(-40, -22, 0)
+fov = 26.0
+near = 1.0
+far = 400.0
+
+[node name="CamHood" type="Camera3D" parent="."]
+position = Vector3(-245.60, 70.28, 72.03)
+rotation_degrees = Vector3(-40, -22, 0)
+fov = 26.0
+near = 1.0
+far = 400.0
+
+[node name="CamHoodNear" type="Camera3D" parent="."]
+position = Vector3(-254.44, 70.26, 93.01)
+rotation_degrees = Vector3(-40, -22, 0)
+fov = 26.0
+near = 1.0
+far = 400.0
+
+[node name="Models" type="Node3D" parent="."]
+
+[node name="bld_apt_blue_3" parent="Models" instance=ExtResource("10_m")]
+position = Vector3(4.50, 0, 0.00)
+
+[node name="bld_apt_mint_4" parent="Models" instance=ExtResource("11_m")]
+position = Vector3(15.60, 0, 0.00)
+
+[node name="bld_apt_peach_5" parent="Models" instance=ExtResource("12_m")]
+position = Vector3(28.20, 0, 0.00)
+
+[node name="bld_apt_yellow_6" parent="Models" instance=ExtResource("13_m")]
+position = Vector3(40.80, 0, 0.00)
+
+[node name="bld_apt_grey_8" parent="Models" instance=ExtResource("14_m")]
+position = Vector3(54.90, 0, 0.00)
+
+[node name="bld_cut_half" parent="Models" instance=ExtResource("15_m")]
+position = Vector3(106.00, 0, 0.00)
+
+[node name="bld_cut_facade" parent="Models" instance=ExtResource("16_m")]
+position = Vector3(121.00, 0, 0.00)
+
+[node name="bld_cut_corner" parent="Models" instance=ExtResource("17_m")]
+position = Vector3(136.00, 0, 0.00)
+
+[node name="bld_pancake_mid" parent="Models" instance=ExtResource("18_m")]
+position = Vector3(206.00, 0, 0.00)
+
+[node name="bld_pancake_soft" parent="Models" instance=ExtResource("19_m")]
+position = Vector3(221.00, 0, 0.00)
+
+[node name="bld_pancake_full" parent="Models" instance=ExtResource("20_m")]
+position = Vector3(237.00, 0, 0.00)
+
+[node name="bld_pancake_slide" parent="Models" instance=ExtResource("21_m")]
+position = Vector3(254.00, 0, 0.00)
+
+[node name="bld_toppled" parent="Models" instance=ExtResource("22_m")]
+position = Vector3(314.00, 0, -2.00)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="bld_rubble_s" parent="Models" instance=ExtResource("23_m")]
+position = Vector3(403.00, 0, 0.00)
+
+[node name="bld_rubble_lot" parent="Models" instance=ExtResource("24_m")]
+position = Vector3(415.50, 0, 0.00)
+
+[node name="bld_rubble_l" parent="Models" instance=ExtResource("25_m")]
+position = Vector3(432.50, 0, 0.00)
+
+[node name="bld_rubble_spill" parent="Models" instance=ExtResource("26_m")]
+position = Vector3(449.00, 0, 4.00)
+
+[node name="bld_shop_bakkal" parent="Models" instance=ExtResource("27_m")]
+position = Vector3(502.25, 0, 0.00)
+
+[node name="bld_shop_firin" parent="Models" instance=ExtResource("28_m")]
+position = Vector3(506.75, 0, 0.00)
+
+[node name="bld_shop_eczane" parent="Models" instance=ExtResource("29_m")]
+position = Vector3(511.25, 0, 0.00)
+
+[node name="bld_shop_berber" parent="Models" instance=ExtResource("30_m")]
+position = Vector3(515.75, 0, 0.00)
+
+[node name="bld_shop_dondurma" parent="Models" instance=ExtResource("31_m")]
+position = Vector3(520.25, 0, 0.00)
+
+[node name="bld_shop_manav" parent="Models" instance=ExtResource("32_m")]
+position = Vector3(524.75, 0, 0.00)
+
+[node name="bld_wall_garden" parent="Models" instance=ExtResource("33_m")]
+position = Vector3(601.50, 0, 0.00)
+
+[node name="bld_wall_garden_broken" parent="Models" instance=ExtResource("34_m")]
+position = Vector3(605.50, 0, 0.00)
+
+[node name="bld_wall_garden_fallen" parent="Models" instance=ExtResource("35_m")]
+position = Vector3(609.50, 0, 0.00)
+
+[node name="bld_wall_gate" parent="Models" instance=ExtResource("36_m")]
+position = Vector3(613.50, 0, 0.00)
+
+[node name="bld_wall_ruin" parent="Models" instance=ExtResource("37_m")]
+position = Vector3(619.00, 0, 0.00)
+
+[node name="bld_wall_frame" parent="Models" instance=ExtResource("38_m")]
+position = Vector3(625.50, 0, 0.00)
+
+[node name="bld_facade_fallen" parent="Models" instance=ExtResource("39_m")]
+position = Vector3(634.00, 0, 0.00)
+
+[node name="bld_house_old" parent="Models" instance=ExtResource("40_m")]
+position = Vector3(704.50, 0, 0.00)
+
+[node name="bld_house_open" parent="Models" instance=ExtResource("41_m")]
+position = Vector3(715.50, 0, 0.00)
+
+[node name="bld_house_collapsed" parent="Models" instance=ExtResource("42_m")]
+position = Vector3(727.50, 0, 0.00)
+
+[node name="Hood_bld_apt_peach_5" parent="Models" instance=ExtResource("12_m")]
+position = Vector3(-254.00, 0, 0.00)
+
+[node name="Hood_bld_cut_facade" parent="Models" instance=ExtResource("16_m")]
+position = Vector3(-241.70, 0, 0.00)
+
+[node name="Hood_bld_shop_firin" parent="Models" instance=ExtResource("28_m")]
+position = Vector3(-233.15, 0, 0.00)
+
+[node name="Hood_bld_shop_bakkal" parent="Models" instance=ExtResource("27_m")]
+position = Vector3(-228.35, 0, 0.00)
+
+[node name="Hood_bld_shop_manav" parent="Models" instance=ExtResource("32_m")]
+position = Vector3(-223.55, 0, 0.00)
+
+[node name="Hood_bld_pancake_full" parent="Models" instance=ExtResource("20_m")]
+position = Vector3(-214.50, 0, 0.00)
+
+[node name="Hood_bld_apt_blue_3" parent="Models" instance=ExtResource("10_m")]
+position = Vector3(-203.20, 0, 0.00)
+
+[node name="Hood_bld_cut_half" parent="Models" instance=ExtResource("15_m")]
+position = Vector3(-192.40, 0, 0.00)
+
+[node name="Hood_bld_rubble_spill" parent="Models" instance=ExtResource("26_m")]
+position = Vector3(-180.10, 0, 7.00)
+
+[node name="HoodNear_bld_wall_garden" parent="Models" instance=ExtResource("33_m")]
+position = Vector3(-256.50, 0, 21.00)
+rotation_degrees = Vector3(0, 180, 0)
+
+[node name="HoodNear_bld_wall_gate" parent="Models" instance=ExtResource("36_m")]
+position = Vector3(-253.00, 0, 21.00)
+rotation_degrees = Vector3(0, 180, 0)
+
+[node name="HoodNear_bld_wall_garden_broken" parent="Models" instance=ExtResource("34_m")]
+position = Vector3(-249.50, 0, 21.00)
+rotation_degrees = Vector3(0, 180, 0)
+
+[node name="HoodNear_bld_house_old" parent="Models" instance=ExtResource("40_m")]
+position = Vector3(-243.00, 0, 21.00)
+rotation_degrees = Vector3(0, 180, 0)
+
+[node name="HoodNear_bld_wall_garden_fallen" parent="Models" instance=ExtResource("35_m")]
+position = Vector3(-236.50, 0, 21.00)
+rotation_degrees = Vector3(0, 180, 0)
+
+[node name="HoodNear_bld_rubble_lot" parent="Models" instance=ExtResource("24_m")]
+position = Vector3(-228.00, 0, 21.00)
+rotation_degrees = Vector3(0, 180, 0)
+
+[node name="HoodNear_bld_house_collapsed" parent="Models" instance=ExtResource("42_m")]
+position = Vector3(-215.50, 0, 21.00)
+rotation_degrees = Vector3(0, 180, 0)
+
+[node name="HoodNear_bld_wall_frame" parent="Models" instance=ExtResource("38_m")]
+position = Vector3(-207.00, 0, 21.00)
+rotation_degrees = Vector3(0, 180, 0)
+
+[node name="HoodNear_bld_facade_fallen" parent="Models" instance=ExtResource("39_m")]
+position = Vector3(-199.00, 0, 21.00)
+
+[node name="OvenLight" type="OmniLight3D" parent="Models/bld_shop_firin"]
+position = Vector3(0, 0.8, -1.5)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 3.0
+omni_range = 5.5
+omni_attenuation = 1.3
+
+[node name="OvenLight" type="OmniLight3D" parent="Models/Hood_bld_shop_firin"]
+position = Vector3(0, 0.8, -1.5)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 3.0
+omni_range = 5.5
+omni_attenuation = 1.3
+
+[node name="Labels" type="Node3D" parent="."]
+
+[node name="L_bld_apt_blue_3" type="Label3D" parent="Labels"]
+position = Vector3(4.50, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_apt_blue_3"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_apt_mint_4" type="Label3D" parent="Labels"]
+position = Vector3(15.60, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_apt_mint_4"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_apt_peach_5" type="Label3D" parent="Labels"]
+position = Vector3(28.20, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_apt_peach_5"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_apt_yellow_6" type="Label3D" parent="Labels"]
+position = Vector3(40.80, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_apt_yellow_6"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_apt_grey_8" type="Label3D" parent="Labels"]
+position = Vector3(54.90, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_apt_grey_8"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_cut_half" type="Label3D" parent="Labels"]
+position = Vector3(106.00, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_cut_half"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_cut_facade" type="Label3D" parent="Labels"]
+position = Vector3(121.00, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_cut_facade"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_cut_corner" type="Label3D" parent="Labels"]
+position = Vector3(136.00, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_cut_corner"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_pancake_mid" type="Label3D" parent="Labels"]
+position = Vector3(206.00, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_pancake_mid"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_pancake_soft" type="Label3D" parent="Labels"]
+position = Vector3(221.00, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_pancake_soft"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_pancake_full" type="Label3D" parent="Labels"]
+position = Vector3(237.00, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_pancake_full"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_pancake_slide" type="Label3D" parent="Labels"]
+position = Vector3(254.00, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_pancake_slide"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_toppled" type="Label3D" parent="Labels"]
+position = Vector3(314.00, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_toppled"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_rubble_s" type="Label3D" parent="Labels"]
+position = Vector3(403.00, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_rubble_s"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_rubble_lot" type="Label3D" parent="Labels"]
+position = Vector3(415.50, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_rubble_lot"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_rubble_l" type="Label3D" parent="Labels"]
+position = Vector3(432.50, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_rubble_l"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_rubble_spill" type="Label3D" parent="Labels"]
+position = Vector3(449.00, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_rubble_spill"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_shop_bakkal" type="Label3D" parent="Labels"]
+position = Vector3(502.25, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_shop_bakkal"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_shop_firin" type="Label3D" parent="Labels"]
+position = Vector3(506.75, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_shop_firin"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_shop_eczane" type="Label3D" parent="Labels"]
+position = Vector3(511.25, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_shop_eczane"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_shop_berber" type="Label3D" parent="Labels"]
+position = Vector3(515.75, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_shop_berber"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_shop_dondurma" type="Label3D" parent="Labels"]
+position = Vector3(520.25, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_shop_dondurma"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_shop_manav" type="Label3D" parent="Labels"]
+position = Vector3(524.75, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_shop_manav"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_wall_garden" type="Label3D" parent="Labels"]
+position = Vector3(601.50, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_wall_garden"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_wall_garden_broken" type="Label3D" parent="Labels"]
+position = Vector3(605.50, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_wall_garden_broken"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_wall_garden_fallen" type="Label3D" parent="Labels"]
+position = Vector3(609.50, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_wall_garden_fallen"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_wall_gate" type="Label3D" parent="Labels"]
+position = Vector3(613.50, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_wall_gate"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_wall_ruin" type="Label3D" parent="Labels"]
+position = Vector3(619.00, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_wall_ruin"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_wall_frame" type="Label3D" parent="Labels"]
+position = Vector3(625.50, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_wall_frame"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_facade_fallen" type="Label3D" parent="Labels"]
+position = Vector3(634.00, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_facade_fallen"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_house_old" type="Label3D" parent="Labels"]
+position = Vector3(704.50, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_house_old"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_house_open" type="Label3D" parent="Labels"]
+position = Vector3(715.50, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_house_open"
+font_size = 64
+outline_size = 0
+
+[node name="L_bld_house_collapsed" type="Label3D" parent="Labels"]
+position = Vector3(727.50, 0.05, 7.70)
+rotation_degrees = Vector3(-90, 0, 0)
+pixel_size = 0.01
+modulate = Color(0.75, 0.82, 0.95, 0.85)
+shaded = false
+double_sided = false
+text = "bld_house_collapsed"
+font_size = 64
+outline_size = 0
+
+[node name="Lights" type="Node3D" parent="."]
+
+[node name="Fire1" parent="Lights" instance=ExtResource("6_fire")]
+position = Vector3(8.00, 0, 8.60)
+
+[node name="Light" type="OmniLight3D" parent="Lights/Fire1"]
+position = Vector3(0, 1.3, 0)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 5.0
+omni_range = 10.0
+omni_attenuation = 1.4
+
+[node name="Fire2" parent="Lights" instance=ExtResource("6_fire")]
+position = Vector3(30.00, 0, 8.60)
+
+[node name="Light" type="OmniLight3D" parent="Lights/Fire2"]
+position = Vector3(0, 1.3, 0)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 5.0
+omni_range = 10.0
+omni_attenuation = 1.4
+
+[node name="BeaconApartments" type="OmniLight3D" parent="Lights"]
+position = Vector3(67.00, 3, 6.00)
+light_color = Color(1, 0.16, 0.12, 1)
+light_energy = 2.4
+omni_range = 20.0
+omni_attenuation = 1.2
+
+[node name="SnowApartments" type="CPUParticles3D" parent="."]
+position = Vector3(31.50, 22, 2.00)
+amount = 1800
+lifetime = 16.0
+preprocess = 16.0
+mesh = SubResource("flake")
+emission_shape = 3
+emission_box_extents = Vector3(37.5, 1, 16)
+direction = Vector3(0.2, -1, 0)
+spread = 12.0
+gravity = Vector3(0.25, -0.9, 0)
+initial_velocity_min = 0.4
+initial_velocity_max = 0.9
+scale_amount_min = 0.6
+scale_amount_max = 1.5
+
+[node name="Fire3" parent="Lights" instance=ExtResource("6_fire")]
+position = Vector3(108.00, 0, 8.60)
+
+[node name="Light" type="OmniLight3D" parent="Lights/Fire3"]
+position = Vector3(0, 1.3, 0)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 5.0
+omni_range = 10.0
+omni_attenuation = 1.4
+
+[node name="Fire4" parent="Lights" instance=ExtResource("6_fire")]
+position = Vector3(130.00, 0, 8.60)
+
+[node name="Light" type="OmniLight3D" parent="Lights/Fire4"]
+position = Vector3(0, 1.3, 0)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 5.0
+omni_range = 10.0
+omni_attenuation = 1.4
+
+[node name="Torch5" type="SpotLight3D" parent="Lights"]
+position = Vector3(104.00, 1.3, 9.00)
+rotation_degrees = Vector3(40.9, -10.3, 0)
+light_color = Color(1, 0.95, 0.85, 1)
+light_energy = 18.0
+spot_range = 26.0
+spot_angle = 14.0
+spot_angle_attenuation = 0.6
+shadow_enabled = true
+shadow_bias = 0.12
+shadow_normal_bias = 2.0
+
+[node name="Beam" type="MeshInstance3D" parent="Lights/Torch5"]
+position = Vector3(0, 0, -8)
+rotation_degrees = Vector3(-90, 0, 0)
+cast_shadow = 0
+mesh = SubResource("beam_torch_mesh")
+
+[node name="Torch6" type="SpotLight3D" parent="Lights"]
+position = Vector3(117.00, 1.3, 9.00)
+rotation_degrees = Vector3(32.3, -9.5, 0)
+light_color = Color(1, 0.95, 0.85, 1)
+light_energy = 18.0
+spot_range = 26.0
+spot_angle = 14.0
+spot_angle_attenuation = 0.6
+shadow_enabled = true
+shadow_bias = 0.12
+shadow_normal_bias = 2.0
+
+[node name="Beam" type="MeshInstance3D" parent="Lights/Torch6"]
+position = Vector3(0, 0, -8)
+rotation_degrees = Vector3(-90, 0, 0)
+cast_shadow = 0
+mesh = SubResource("beam_torch_mesh")
+
+[node name="BeaconCutaways" type="OmniLight3D" parent="Lights"]
+position = Vector3(149.00, 3, 6.00)
+light_color = Color(1, 0.16, 0.12, 1)
+light_energy = 2.4
+omni_range = 20.0
+omni_attenuation = 1.2
+
+[node name="SnowCutaways" type="CPUParticles3D" parent="."]
+position = Vector3(122.50, 22, 2.00)
+amount = 1800
+lifetime = 16.0
+preprocess = 16.0
+mesh = SubResource("flake")
+emission_shape = 3
+emission_box_extents = Vector3(28.5, 1, 16)
+direction = Vector3(0.2, -1, 0)
+spread = 12.0
+gravity = Vector3(0.25, -0.9, 0)
+initial_velocity_min = 0.4
+initial_velocity_max = 0.9
+scale_amount_min = 0.6
+scale_amount_max = 1.5
+
+[node name="Fire7" parent="Lights" instance=ExtResource("6_fire")]
+position = Vector3(208.00, 0, 8.60)
+
+[node name="Light" type="OmniLight3D" parent="Lights/Fire7"]
+position = Vector3(0, 1.3, 0)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 5.0
+omni_range = 10.0
+omni_attenuation = 1.4
+
+[node name="Fire8" parent="Lights" instance=ExtResource("6_fire")]
+position = Vector3(230.00, 0, 8.60)
+
+[node name="Light" type="OmniLight3D" parent="Lights/Fire8"]
+position = Vector3(0, 1.3, 0)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 5.0
+omni_range = 10.0
+omni_attenuation = 1.4
+
+[node name="Torch9" type="SpotLight3D" parent="Lights"]
+position = Vector3(230.00, 1.3, 9.00)
+rotation_degrees = Vector3(4.3, -12.5, 0)
+light_color = Color(1, 0.95, 0.85, 1)
+light_energy = 18.0
+spot_range = 26.0
+spot_angle = 14.0
+spot_angle_attenuation = 0.6
+shadow_enabled = true
+shadow_bias = 0.12
+shadow_normal_bias = 2.0
+
+[node name="Beam" type="MeshInstance3D" parent="Lights/Torch9"]
+position = Vector3(0, 0, -8)
+rotation_degrees = Vector3(-90, 0, 0)
+cast_shadow = 0
+mesh = SubResource("beam_torch_mesh")
+
+[node name="BeaconPancakes" type="OmniLight3D" parent="Lights"]
+position = Vector3(268.00, 3, 6.00)
+light_color = Color(1, 0.16, 0.12, 1)
+light_energy = 2.4
+omni_range = 20.0
+omni_attenuation = 1.2
+
+[node name="SnowPancakes" type="CPUParticles3D" parent="."]
+position = Vector3(232.00, 22, 2.00)
+amount = 1800
+lifetime = 16.0
+preprocess = 16.0
+mesh = SubResource("flake")
+emission_shape = 3
+emission_box_extents = Vector3(38.0, 1, 16)
+direction = Vector3(0.2, -1, 0)
+spread = 12.0
+gravity = Vector3(0.25, -0.9, 0)
+initial_velocity_min = 0.4
+initial_velocity_max = 0.9
+scale_amount_min = 0.6
+scale_amount_max = 1.5
+
+[node name="Fire10" parent="Lights" instance=ExtResource("6_fire")]
+position = Vector3(308.00, 0, 8.60)
+
+[node name="Light" type="OmniLight3D" parent="Lights/Fire10"]
+position = Vector3(0, 1.3, 0)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 5.0
+omni_range = 10.0
+omni_attenuation = 1.4
+
+[node name="BeaconToppled" type="OmniLight3D" parent="Lights"]
+position = Vector3(335.00, 3, 6.00)
+light_color = Color(1, 0.16, 0.12, 1)
+light_energy = 2.4
+omni_range = 20.0
+omni_attenuation = 1.2
+
+[node name="SnowToppled" type="CPUParticles3D" parent="."]
+position = Vector3(315.50, 22, 2.00)
+amount = 1800
+lifetime = 16.0
+preprocess = 16.0
+mesh = SubResource("flake")
+emission_shape = 3
+emission_box_extents = Vector3(21.5, 1, 16)
+direction = Vector3(0.2, -1, 0)
+spread = 12.0
+gravity = Vector3(0.25, -0.9, 0)
+initial_velocity_min = 0.4
+initial_velocity_max = 0.9
+scale_amount_min = 0.6
+scale_amount_max = 1.5
+
+[node name="Fire11" parent="Lights" instance=ExtResource("6_fire")]
+position = Vector3(408.00, 0, 8.60)
+
+[node name="Light" type="OmniLight3D" parent="Lights/Fire11"]
+position = Vector3(0, 1.3, 0)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 5.0
+omni_range = 10.0
+omni_attenuation = 1.4
+
+[node name="Fire12" parent="Lights" instance=ExtResource("6_fire")]
+position = Vector3(430.00, 0, 8.60)
+
+[node name="Light" type="OmniLight3D" parent="Lights/Fire12"]
+position = Vector3(0, 1.3, 0)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 5.0
+omni_range = 10.0
+omni_attenuation = 1.4
+
+[node name="Torch13" type="SpotLight3D" parent="Lights"]
+position = Vector3(425.00, 1.3, 9.00)
+rotation_degrees = Vector3(28.8, -20.6, 0)
+light_color = Color(1, 0.95, 0.85, 1)
+light_energy = 18.0
+spot_range = 26.0
+spot_angle = 14.0
+spot_angle_attenuation = 0.6
+shadow_enabled = true
+shadow_bias = 0.12
+shadow_normal_bias = 2.0
+
+[node name="Beam" type="MeshInstance3D" parent="Lights/Torch13"]
+position = Vector3(0, 0, -8)
+rotation_degrees = Vector3(-90, 0, 0)
+cast_shadow = 0
+mesh = SubResource("beam_torch_mesh")
+
+[node name="BeaconRubble" type="OmniLight3D" parent="Lights"]
+position = Vector3(462.00, 3, 6.00)
+light_color = Color(1, 0.16, 0.12, 1)
+light_energy = 2.4
+omni_range = 20.0
+omni_attenuation = 1.2
+
+[node name="SnowRubble" type="CPUParticles3D" parent="."]
+position = Vector3(429.00, 22, 2.00)
+amount = 1800
+lifetime = 16.0
+preprocess = 16.0
+mesh = SubResource("flake")
+emission_shape = 3
+emission_box_extents = Vector3(35.0, 1, 16)
+direction = Vector3(0.2, -1, 0)
+spread = 12.0
+gravity = Vector3(0.25, -0.9, 0)
+initial_velocity_min = 0.4
+initial_velocity_max = 0.9
+scale_amount_min = 0.6
+scale_amount_max = 1.5
+
+[node name="Fire14" parent="Lights" instance=ExtResource("6_fire")]
+position = Vector3(508.00, 0, 8.60)
+
+[node name="Light" type="OmniLight3D" parent="Lights/Fire14"]
+position = Vector3(0, 1.3, 0)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 5.0
+omni_range = 10.0
+omni_attenuation = 1.4
+
+[node name="Torch15" type="SpotLight3D" parent="Lights"]
+position = Vector3(509.00, 1.3, 9.00)
+rotation_degrees = Vector3(1.1, 11.3, 0)
+light_color = Color(1, 0.95, 0.85, 1)
+light_energy = 18.0
+spot_range = 26.0
+spot_angle = 14.0
+spot_angle_attenuation = 0.6
+shadow_enabled = true
+shadow_bias = 0.12
+shadow_normal_bias = 2.0
+
+[node name="Beam" type="MeshInstance3D" parent="Lights/Torch15"]
+position = Vector3(0, 0, -8)
+rotation_degrees = Vector3(-90, 0, 0)
+cast_shadow = 0
+mesh = SubResource("beam_torch_mesh")
+
+[node name="BeaconShops" type="OmniLight3D" parent="Lights"]
+position = Vector3(531.00, 3, 6.00)
+light_color = Color(1, 0.16, 0.12, 1)
+light_energy = 2.4
+omni_range = 20.0
+omni_attenuation = 1.2
+
+[node name="SnowShops" type="CPUParticles3D" parent="."]
+position = Vector3(513.50, 22, 2.00)
+amount = 1800
+lifetime = 16.0
+preprocess = 16.0
+mesh = SubResource("flake")
+emission_shape = 3
+emission_box_extents = Vector3(19.5, 1, 16)
+direction = Vector3(0.2, -1, 0)
+spread = 12.0
+gravity = Vector3(0.25, -0.9, 0)
+initial_velocity_min = 0.4
+initial_velocity_max = 0.9
+scale_amount_min = 0.6
+scale_amount_max = 1.5
+
+[node name="Fire16" parent="Lights" instance=ExtResource("6_fire")]
+position = Vector3(608.00, 0, 8.60)
+
+[node name="Light" type="OmniLight3D" parent="Lights/Fire16"]
+position = Vector3(0, 1.3, 0)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 5.0
+omni_range = 10.0
+omni_attenuation = 1.4
+
+[node name="Torch17" type="SpotLight3D" parent="Lights"]
+position = Vector3(614.00, 1.3, 9.00)
+rotation_degrees = Vector3(10.4, -12.5, 0)
+light_color = Color(1, 0.95, 0.85, 1)
+light_energy = 18.0
+spot_range = 26.0
+spot_angle = 14.0
+spot_angle_attenuation = 0.6
+shadow_enabled = true
+shadow_bias = 0.12
+shadow_normal_bias = 2.0
+
+[node name="Beam" type="MeshInstance3D" parent="Lights/Torch17"]
+position = Vector3(0, 0, -8)
+rotation_degrees = Vector3(-90, 0, 0)
+cast_shadow = 0
+mesh = SubResource("beam_torch_mesh")
+
+[node name="BeaconWalls" type="OmniLight3D" parent="Lights"]
+position = Vector3(644.00, 3, 6.00)
+light_color = Color(1, 0.16, 0.12, 1)
+light_energy = 2.4
+omni_range = 20.0
+omni_attenuation = 1.2
+
+[node name="SnowWalls" type="CPUParticles3D" parent="."]
+position = Vector3(620.00, 22, 2.00)
+amount = 1800
+lifetime = 16.0
+preprocess = 16.0
+mesh = SubResource("flake")
+emission_shape = 3
+emission_box_extents = Vector3(26.0, 1, 16)
+direction = Vector3(0.2, -1, 0)
+spread = 12.0
+gravity = Vector3(0.25, -0.9, 0)
+initial_velocity_min = 0.4
+initial_velocity_max = 0.9
+scale_amount_min = 0.6
+scale_amount_max = 1.5
+
+[node name="Fire18" parent="Lights" instance=ExtResource("6_fire")]
+position = Vector3(708.00, 0, 8.60)
+
+[node name="Light" type="OmniLight3D" parent="Lights/Fire18"]
+position = Vector3(0, 1.3, 0)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 5.0
+omni_range = 10.0
+omni_attenuation = 1.4
+
+[node name="Torch19" type="SpotLight3D" parent="Lights"]
+position = Vector3(710.00, 1.3, 9.00)
+rotation_degrees = Vector3(13.6, -10.3, 0)
+light_color = Color(1, 0.95, 0.85, 1)
+light_energy = 18.0
+spot_range = 26.0
+spot_angle = 14.0
+spot_angle_attenuation = 0.6
+shadow_enabled = true
+shadow_bias = 0.12
+shadow_normal_bias = 2.0
+
+[node name="Beam" type="MeshInstance3D" parent="Lights/Torch19"]
+position = Vector3(0, 0, -8)
+rotation_degrees = Vector3(-90, 0, 0)
+cast_shadow = 0
+mesh = SubResource("beam_torch_mesh")
+
+[node name="BeaconHouses" type="OmniLight3D" parent="Lights"]
+position = Vector3(739.00, 3, 6.00)
+light_color = Color(1, 0.16, 0.12, 1)
+light_energy = 2.4
+omni_range = 20.0
+omni_attenuation = 1.2
+
+[node name="SnowHouses" type="CPUParticles3D" parent="."]
+position = Vector3(717.50, 22, 2.00)
+amount = 1800
+lifetime = 16.0
+preprocess = 16.0
+mesh = SubResource("flake")
+emission_shape = 3
+emission_box_extents = Vector3(23.5, 1, 16)
+direction = Vector3(0.2, -1, 0)
+spread = 12.0
+gravity = Vector3(0.25, -0.9, 0)
+initial_velocity_min = 0.4
+initial_velocity_max = 0.9
+scale_amount_min = 0.6
+scale_amount_max = 1.5
+
+[node name="Fire20" parent="Lights" instance=ExtResource("6_fire")]
+position = Vector3(-252.00, 0, 8.60)
+
+[node name="Light" type="OmniLight3D" parent="Lights/Fire20"]
+position = Vector3(0, 1.3, 0)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 5.0
+omni_range = 10.0
+omni_attenuation = 1.4
+
+[node name="Fire21" parent="Lights" instance=ExtResource("6_fire")]
+position = Vector3(-230.00, 0, 8.60)
+
+[node name="Light" type="OmniLight3D" parent="Lights/Fire21"]
+position = Vector3(0, 1.3, 0)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 5.0
+omni_range = 10.0
+omni_attenuation = 1.4
+
+[node name="Fire22" parent="Lights" instance=ExtResource("6_fire")]
+position = Vector3(-208.00, 0, 8.60)
+
+[node name="Light" type="OmniLight3D" parent="Lights/Fire22"]
+position = Vector3(0, 1.3, 0)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 5.0
+omni_range = 10.0
+omni_attenuation = 1.4
+
+[node name="Torch23" type="SpotLight3D" parent="Lights"]
+position = Vector3(-228.00, 1.3, 9.00)
+rotation_degrees = Vector3(29.2, -11.3, 0)
+light_color = Color(1, 0.95, 0.85, 1)
+light_energy = 18.0
+spot_range = 26.0
+spot_angle = 14.0
+spot_angle_attenuation = 0.6
+shadow_enabled = true
+shadow_bias = 0.12
+shadow_normal_bias = 2.0
+
+[node name="Beam" type="MeshInstance3D" parent="Lights/Torch23"]
+position = Vector3(0, 0, -8)
+rotation_degrees = Vector3(-90, 0, 0)
+cast_shadow = 0
+mesh = SubResource("beam_torch_mesh")
+
+[node name="BeaconHood" type="OmniLight3D" parent="Lights"]
+position = Vector3(-169.80, 3, 6.00)
+light_color = Color(1, 0.16, 0.12, 1)
+light_energy = 2.4
+omni_range = 20.0
+omni_attenuation = 1.2
+
+[node name="SnowHood" type="CPUParticles3D" parent="."]
+position = Vector3(-216.90, 22, 2.00)
+amount = 1800
+lifetime = 16.0
+preprocess = 16.0
+mesh = SubResource("flake")
+emission_shape = 3
+emission_box_extents = Vector3(49.1, 1, 16)
+direction = Vector3(0.2, -1, 0)
+spread = 12.0
+gravity = Vector3(0.25, -0.9, 0)
+initial_velocity_min = 0.4
+initial_velocity_max = 0.9
+scale_amount_min = 0.6
+scale_amount_max = 1.5
+
+[node name="Fire24" parent="Lights" instance=ExtResource("6_fire")]
+position = Vector3(-250.00, 0, 29.60)
+
+[node name="Light" type="OmniLight3D" parent="Lights/Fire24"]
+position = Vector3(0, 1.3, 0)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 5.0
+omni_range = 10.0
+omni_attenuation = 1.4
+
+[node name="Fire25" parent="Lights" instance=ExtResource("6_fire")]
+position = Vector3(-228.00, 0, 29.60)
+
+[node name="Light" type="OmniLight3D" parent="Lights/Fire25"]
+position = Vector3(0, 1.3, 0)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 5.0
+omni_range = 10.0
+omni_attenuation = 1.4
+
+[node name="BeaconHoodNear" type="OmniLight3D" parent="Lights"]
+position = Vector3(-189.50, 3, 27.00)
+light_color = Color(1, 0.16, 0.12, 1)
+light_energy = 2.4
+omni_range = 20.0
+omni_attenuation = 1.2
+
+[node name="SnowHoodNear" type="CPUParticles3D" parent="."]
+position = Vector3(-225.75, 22, 23.00)
+amount = 1800
+lifetime = 16.0
+preprocess = 16.0
+mesh = SubResource("flake")
+emission_shape = 3
+emission_box_extents = Vector3(38.2, 1, 16)
+direction = Vector3(0.2, -1, 0)
+spread = 12.0
+gravity = Vector3(0.25, -0.9, 0)
+initial_velocity_min = 0.4
+initial_velocity_max = 0.9
+scale_amount_min = 0.6
+scale_amount_max = 1.5
+
+[node name="Post" type="CanvasLayer" parent="."]
+
+[node name="Grade" type="ColorRect" parent="Post"]
+material = SubResource("post_mat")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+

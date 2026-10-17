@@ -568,6 +568,29 @@ def snowcap(name, size, loc, rot=(0, 0, 0), droop=0.6, seed=None, lumpy=0.08):
     return ob
 
 
+def pal_add(entries: dict) -> None:
+    """Register extra palette entries for one model set (same fields as PAL). Never overrides a key:
+    sets add what they need (interior paints, furniture fabrics) without touching the shared PAL."""
+    for k, v in entries.items():
+        if k in PAL and PAL[k] != v:
+            raise ValueError("pal_add: palette key already taken: " + k)
+        PAL[k] = v
+
+
+def import_stub(glb_path: str, **params) -> str:
+    """Write <glb>.import before Godot first sees the file, so the first import already uses
+    gltf/embedded_image_handling=2 (Basis Universal, no extracted PNGs). Keeps an existing .import."""
+    p = glb_path + ".import"
+    if os.path.exists(p):
+        return p
+    params.setdefault("gltf/embedded_image_handling", 2)
+    with open(p, "w") as f:
+        f.write('[remap]\n\nimporter="scene"\nimporter_version=1\ntype="PackedScene"\n\n[params]\n\n')
+        for k, v in params.items():
+            f.write(f"{k}={v}\n")
+    return p
+
+
 def parent_to(obs, empty_loc=(0, 0, 0), empty_rot=(0, 0, 0)):
     """Move/rotate a group of parts together (bake applies transforms)."""
     M = Matrix.Translation(Vector(empty_loc)) @ (
