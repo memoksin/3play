@@ -8,6 +8,7 @@ Shared by every agent. Loaded via CLAUDE.md. Hard cap 40 lines; one line per fac
 - Pick: `Game.POOL` per role; `start()` takes the disaster least played on this machine (`user://played.cfg`, ties random). F6 `ensure_disaster` uses fixed `Game.PICK`. Tests set `Game.store_path = ""`. 2.5D reform (#128): State: Indian Ocean (Connect, art to 2.5D #122) or solar flare 3026 (new game, TBD #124); citizen: Kahramanmaras (Fener, TBD #123). Fire scenario: TBD #125.
 - Owners (#128): minigames, art reform, globe, `Game` = memoksin; UI/UX polish, theme, result card = iremaltunsgt; sound integration, diorama = sudeimete; assets, sounds, card text, submission = burcubaran22; fire minigame design = burcubaran22 + sudeimete. Ask on the issue before editing another owner's scene.
 
+- 2.5D art: models only from `tools/models/` (headless Blender, `python3 tools/models/build.py`); camera, light, palette rules in `docs/art/style-2.5d.md` (#121).
 ## Gotchas
 - PRs to `dev` auto-merge and `Closes #N` never fires there: close the issue by hand after merge.
 - After adding assets or editing `locale/strings.csv`, run `godot --headless --path . --import`, or new keys show raw.
