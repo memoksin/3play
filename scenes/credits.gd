@@ -2,7 +2,8 @@ extends Control
 ## Credits screen, opened from the title screen: one card per team member (photo + name). Esc or
 ## Back returns to the title screen. A photo is assets/sprites/ui/team/<id>.png (any size, cropped
 ## to a square, id = first name in lowercase: mehmet, sude, burcu, irem); until that file exists the
-## card shows a person placeholder. The full asset and AI list is assets/CREDITS.md.
+## card shows a person placeholder. The portraits are AI-made (Gemini): the note under the cards shows
+## as soon as one exists. The full asset and AI list is assets/CREDITS.md.
 
 const TEAM := [
 	[&"mehmet", "Mehmet Yiğit Keskin"],
@@ -21,8 +22,11 @@ func _ready() -> void:
 	%Title.text = TextFx.upper(tr("CREDITS_TITLE"))
 	%Back.text = TextFx.upper(tr("CREDITS_BACK"))
 	%Back.pressed.connect(back)
+	var any_photo := false
 	for m: Array in TEAM:
 		_add_card(m[0], m[1])
+		any_photo = any_photo or ResourceLoader.exists("%s%s.png" % [PHOTO_DIR, m[0]])
+	%AiNote.visible = any_photo  # the portraits are AI-made (Gemini): say so as soon as they are shown
 	TextFx.fade_in(%Title, 0.0, 0.4)
 	TextFx.fade_in(%Cards, 0.3, 0.5)
 	TextFx.fade_in(%Back, 0.5, 0.4)

@@ -144,6 +144,10 @@ func _run() -> void:
 	credits_btn.pressed.emit()
 	await _wait_scene(story.CREDITS)
 	_check("credits shows four cards", current_scene.get_node("%Cards").get_child_count() == 4)
+	var any_photo := false
+	for id in ["mehmet", "sude", "burcu", "irem"]:
+		any_photo = any_photo or ResourceLoader.exists("res://assets/sprites/ui/team/%s.png" % id)
+	_check("AI note shows only with a portrait", current_scene.get_node("%AiNote").visible == any_photo)
 	current_scene.back()
 	await _wait_scene(story.TITLE)
 	_check("credits back returns to the title", current_scene.scene_file_path == story.TITLE)
