@@ -185,7 +185,7 @@ Spec: `docs/minigames/fire-farm.md`.
 
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
-| FR1 | Fire and wind ambience | Whole minigame | FR9 flame mixed with WIND BLOWING.mp3 | Podcapocalipsis | https://freesound.org/people/Podcapocalipsis/sounds/521696/ | CC0 (verify) | todo | Waits for the new FR9 flame sound. Mix it with seconds 9 to 14 of the wind sound, loop it. Sude mixes, Burcu approves by ear. |
+| FR1 | Fire and wind ambience | Whole minigame | Big fire mixed with WIND BLOWING.mp3 | craigsmith or vekoN + Podcapocalipsis | A: https://freesound.org/people/craigsmith/sounds/483318/ (R27-25-Large Fire Burning) or B: https://freesound.org/people/vekoN/sounds/537530/ (digital wildfire); wind: https://freesound.org/people/Podcapocalipsis/sounds/521696/ | CC0 (verify all) | chosen (to test) | Sude makes both mixes (A and B), each with seconds 9 to 14 of the wind sound, looped. Burcu listens and picks one. |
 | FR2 | Footsteps | The player walks | Footsteps Dirt Gravel | PotatokingXII | https://freesound.org/people/PotatokingXII/sounds/352870/ | CC0 | chosen | Same as FN2. Trim to a clean stride loop. |
 | FR3 | Jump and landing on debris | The player jumps over the debris | Human Impact on Ground | alegemaate | https://freesound.org/people/alegemaate/sounds/364690/ | CC0 | chosen | Short clip of a person landing after a jump. |
 | FR4 | Pick up the knife | The player picks up the knife | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen (reuse of F2) | First second of the file. |
@@ -194,7 +194,7 @@ Spec: `docs/minigames/fire-farm.md`.
 | FR7.1 | Hose attached | The hose is put on the valve | Door Lock.wav | nebulasnails | https://freesound.org/people/nebulasnails/sounds/405534/ | CC0 | chosen | About 0.75 s door latch. |
 | FR7.2 | Valve turn | The valve is turned | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | chosen | Use 0:58 to 1:03 of the file. |
 | FR8 | Water spray | The hose sprays | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | chosen | Use 1:07 to 1:18 of the file (confirmed). |
-| FR9 | Small flame | The small flame burns |  |  |  |  | todo | The pick (Forest fire in the Cerrado biome, ricardoemfield 752028) is CC BY-NC 4.0, not allowed. New CC0 flame sound being chosen. Fades out when the flame is put out (FR10). |
+| FR9 | Small flame | The small flame burns | fire crackling, fireplace, BBQ, mixed with WIND BLOWING.mp3 | AlexanderChe + Podcapocalipsis | https://freesound.org/people/AlexanderChe/sounds/410404/ and https://freesound.org/people/Podcapocalipsis/sounds/521696/ | CC0 (verify both) | chosen (to test) | Mix with seconds 9 to 14 of the wind sound, same wind as FR1. Fades out when the flame is put out (FR10). The earlier pick ricardoemfield 752028 is CC BY-NC, not allowed. |
 | FR10 | Flame goes out | The flame is put out | | | | | decided | No separate sound: the flame sound (FR9) fades out. |
 | FR11 | Kangaroos run out | 2 to 3 kangaroos run through the gap | Horse Gallop Loop.wav + Footsteps Dirt 01 | DeadxCreed + aglinder | https://freesound.org/people/DeadxCreed/sounds/322448/ and https://freesound.org/people/aglinder/sounds/264469/ | CC0 (verify both) | chosen (to test) | No kangaroo hop CC0 exists. Layer both and play the pair 2 to 3 times, each starting before the previous ends. Replace if it sounds fake. |
 | FR12 | Smoke (cough, breath) | The smoke thickens | | | | | no sound | Not needed. |
