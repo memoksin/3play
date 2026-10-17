@@ -198,9 +198,8 @@ func _show_title() -> void:
 	_open_card()
 	_kick(_t("TITLE_KICK"))
 	_heading(_t("TITLE"), true)
-	_text(_t("TITLE_BODY"))
 	for k in ["TITLE_RULE_1", "TITLE_RULE_2", "TITLE_RULE_3", "TITLE_RULE_4"]:
-		_text("[color=#ffb347]◆[/color]  " + _t(k), 15)
+		_text("[color=#ffb347]◆[/color]  " + _t(k), 17)
 	var tog := CheckBox.new()
 	tog.name = "Preview"
 	tog.text = _t("PREVIEW_TOGGLE")
@@ -208,6 +207,7 @@ func _show_title() -> void:
 	tog.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	tog.custom_minimum_size.x = 520
 	tog.add_theme_font_size_override(&"font_size", 18)
+	_style_toggle(tog)
 	tog.toggled.connect(func(on: bool) -> void:
 		preview = on
 		_refresh_view()
@@ -227,14 +227,12 @@ func show_brief(i: int) -> void:
 	_open_card()
 	_kick(_t("WAVE_OF") % [i + 1, skin.waves.size()])
 	_heading(tr(wave.title_key))
-	var chips := HFlowContainer.new()
-	chips.add_theme_constant_override(&"h_separation", 8)
-	chips.add_child(_chip(_t("CHIP_CLASS") % wave.flare_class, SUN))
-	chips.add_child(_chip(_t("CHIP_TIME") % int(wave.time), SUN))
 	if wave.chip_key != "":
+		var chips := HFlowContainer.new()
 		chips.add_child(_chip(tr(wave.chip_key), HOT if wave.chip_style == &"thermal" else VIOLET))
-	_box.add_child(chips)
-	_text(tr(wave.intro_key))
+		_box.add_child(chips)
+	if wave.intro_key != "":
+		_text(tr(wave.intro_key))
 	if wave.mech != &"":
 		_figures(wave.mech)
 	if wave.tip_key != "":
@@ -746,9 +744,28 @@ func _heading(text: String, big := false) -> void:
 	l.theme_type_variation = &"HudTitle" if big else &"HudHeader"
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.custom_minimum_size.x = 520
-	if big:
+	if big:  # the title card heading: one line
+		l.autowrap_mode = TextServer.AUTOWRAP_OFF
+		l.add_theme_font_size_override(&"font_size", 34)
 		l.add_theme_color_override(&"font_color", Color("ffcf8a"))
 	_box.add_child(l)
+
+
+## The theme's Button plates (blue fill on hover) break a CheckBox: keep it flat, tint only on hover.
+func _style_toggle(tog: CheckBox) -> void:
+	var flat := StyleBoxFlat.new()
+	flat.bg_color = Color(0, 0, 0, 0)
+	flat.set_content_margin_all(6)
+	var hov: StyleBoxFlat = flat.duplicate()
+	hov.bg_color = Color(1, 1, 1, 0.06)
+	hov.set_corner_radius_all(6)
+	for st in [&"normal", &"pressed", &"disabled"]:
+		tog.add_theme_stylebox_override(st, flat)
+	for st in [&"hover", &"hover_pressed"]:
+		tog.add_theme_stylebox_override(st, hov)
+	tog.add_theme_stylebox_override(&"focus", StyleBoxEmpty.new())
+	for c in [&"font_color", &"font_hover_color", &"font_pressed_color", &"font_hover_pressed_color", &"font_focus_color"]:
+		tog.add_theme_color_override(c, Color("c9d5ee"))
 
 
 func _text(bbcode: String, size := 18) -> RichTextLabel:

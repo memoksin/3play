@@ -104,7 +104,7 @@ func _data() -> void:
 			rect and w.sun >= 0 and w.sun < lv.cols and lv.sats.size() == w.start.length() and lv.sats.size() == w.solution.length())
 		_check("wave %d: a city code per column, habitat names, city names translated" % (i + 1),
 			w.earth.size() == lv.cols and w.habitats.size() == habs and names)
-		_check("wave %d: texts translated" % (i + 1), tr(w.title_key) != w.title_key and tr(w.intro_key) != w.intro_key
+		_check("wave %d: texts translated" % (i + 1), tr(w.title_key) != w.title_key and (w.intro_key == "" or tr(w.intro_key) != w.intro_key)
 			and (w.tip_key == "" or tr(w.tip_key) != w.tip_key) and (w.chip_key == "" or tr(w.chip_key) != w.chip_key))
 		total += BeamLogic.count_cities(lv)
 	_check("44 cities over 4 waves (10, 11, 11, 12)", total == 44 and skin.total_cities() == 44)

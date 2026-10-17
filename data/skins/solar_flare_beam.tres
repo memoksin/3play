@@ -27,8 +27,8 @@ habitats = PackedStringArray("Lagrange-4")
 mech = &"mirror"
 chip_key = ""
 chip_style = &"new"
-intro_key = "SF_BEAM_W1_INTRO"
-tip_key = "SF_BEAM_W1_TIP"
+intro_key = ""
+tip_key = ""
 start = "55361"
 solution = "31213"
 
