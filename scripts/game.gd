@@ -25,6 +25,7 @@ const PICK := {
 	&"state": "res://data/disasters/indian_ocean.tres",
 }
 const STORE_SECTION := "played"
+const LAST_SECTION := "last"
 const SET_SCENE := "res://scenes/diorama/set_%s.tscn"
 ## Off-screen warm-up viewport size.
 const WARM_SIZE := Vector2i(128, 72)
@@ -47,6 +48,7 @@ const SENS_DEFAULT := 1.0
 ## Play counts per disaster id, kept on this machine so every scenario shows up before any repeats.
 ## Tests set it to "" (nothing read or written, picks are random) or a temp path: never the real user file.
 var store_path := "user://played.cfg"
+var _last := {}  # role -> last id, when there is no store (tests)
 ## Chosen UI language ([ui] locale). Tests set it to "" (nothing read or written) or a temp path.
 var settings_path := "user://settings.cfg"
 ## Multiplier on the fire scene's own base look speed ([input] mouse_sensitivity).
@@ -336,13 +338,18 @@ func _load_scripts_of(path: String) -> void:
 			load(file)
 
 
-## The least played disaster of the role on this machine (ties: random); counts it as played.
+## The least played disaster of the role on this machine (ties: random), never the one this machine
+## played last for the role; counts it as played.
 func pick_for(for_role: StringName) -> String:
 	var counts := load_counts()
-	var path: String = choose(POOL[for_role], counts, RandomNumberGenerator.new())
+	var last := load_last(for_role)
+	var pool: Array = (POOL[for_role] as Array).filter(func(p: String) -> bool: return _id_of(p) != last)
+	if pool.is_empty():
+		pool = POOL[for_role]
+	var path: String = choose(pool, counts, RandomNumberGenerator.new())
 	var id := _id_of(path)
 	counts[id] = int(counts.get(id, 0)) + 1
-	save_counts(counts)
+	save_counts(counts, for_role, id)
 	return path
 
 
@@ -369,10 +376,25 @@ func load_counts() -> Dictionary:
 	return counts
 
 
-func save_counts(counts: Dictionary) -> void:
+## Id of the disaster this machine played last for the role ("" = none yet).
+func load_last(for_role: StringName) -> String:
+	if store_path == "":
+		return _last.get(for_role, "")
+	var cfg := ConfigFile.new()
+	if cfg.load(store_path) != OK:
+		return ""
+	return str(cfg.get_value(LAST_SECTION, String(for_role), ""))
+
+
+func save_counts(counts: Dictionary, for_role := &"", last_id := "") -> void:
+	if for_role != &"":
+		_last[for_role] = last_id
 	if store_path == "":
 		return
 	var cfg := ConfigFile.new()
+	cfg.load(store_path)  # keeps the last-played section; a missing file is fine
+	if for_role != &"":
+		cfg.set_value(LAST_SECTION, String(for_role), last_id)
 	for id: String in counts:
 		cfg.set_value(STORE_SECTION, id, counts[id])
 	var err := cfg.save(store_path)

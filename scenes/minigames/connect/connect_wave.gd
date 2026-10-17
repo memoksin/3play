@@ -11,11 +11,11 @@ extends Node3D
 ##   0             it breaks on the beach: crash spray, camera kick, lens splash
 ##   0 .. RUN      the bore runs over the beach and the whole town, past the back of the slab
 ##   .. +PEAK      the town stands in the water
-##   then BACKWASH the flood drains back into the sea (or with the controller's drain, if sooner); the
-##                 communities whose line failed keep their water (connect_world.gd floods)
-## Recede, not stay: the town under water for good would hide the result, which communities the player
-## saved; the backwash leaves exactly those dry, and the water running back to the sea is the 2004
-## footage people remember.
+##   then BACKWASH the sea settles back to its level (or with the controller's drain, if sooner). If a
+##                 community was lost (keep_flood) the flood over the land does not go back: it stands
+##                 there, still and muddy, until the result card (ts_hold); the unsaved communities past
+##                 the run-up keep their own water (connect_world.gd floods). Nothing lost: the run-up on
+##                 the beach runs back with the sea.
 
 signal impact(kind: StringName)  ## &"shore": the wave breaks on the beach
 
@@ -34,6 +34,7 @@ const HELD_PLAT := 1.4     # m the sea stands at the peak when the run-up is hel
 const CALM := {
 	"ts_front": -1000.0, "ts_crest": 0.0, "ts_plat": 0.0, "ts_back": 6.0, "ts_face": 2.0,
 	"ts_lean": 0.0, "ts_draw": 0.0, "ts_inland": 0.0, "ts_churn": 0.0, "ts_flow": 0.0, "ts_mud": 0.0,
+	"ts_hold": 0.0, "ts_hold_slope": 0.0,
 }
 
 var p := CALM.duplicate()
@@ -47,6 +48,11 @@ var depth := 13.0
 var reach := INF
 var reach_y := 0.35
 var _held := false  # the bore front has stopped at the reach
+## A community was lost: after the peak the flood over the land stays (ts_hold) while the sea settles.
+## hold_level: the sea level the flood was measured from (before the controller's drain lowers it).
+var keep_flood := false
+var hold_level := -0.6
+var beach_w := 5.0
 var _spray: CPUParticles3D     # torn off the head while it steepens
 var _crash: CPUParticles3D     # the wave breaks on the beach: droplets up and toward the camera
 var _crash_foam: CPUParticles3D
@@ -208,10 +214,17 @@ func update(tau: float, lead: float, drain: float, sea_level: float) -> void:
 			p.ts_plat = lerpf(p.ts_plat, 0.0, q)
 			p.ts_crest *= 1.0 - q
 			p.ts_inland = lerpf(0.025, 0.14, q)
-			p.ts_flow = lerpf(p.ts_flow, -4.5, smoothstep(0.0, 0.25, q)) * (1.0 - 0.6 * smoothstep(0.7, 1.0, q))
-			p.ts_churn = lerpf(p.ts_churn, 0.12, q)
-			p.ts_mud = lerpf(1.0, 0.35, smoothstep(0.5, 1.0, q))
+			if keep_flood:  # the water over the land comes to rest instead of running back
+				p.ts_flow = p.ts_flow * (1.0 - smoothstep(0.0, 0.6, q))
+				p.ts_churn = lerpf(p.ts_churn, 0.04, q)
+				p.ts_mud = lerpf(1.0, 0.85, q)
+			else:
+				p.ts_flow = lerpf(p.ts_flow, -4.5, smoothstep(0.0, 0.25, q)) * (1.0 - 0.6 * smoothstep(0.7, 1.0, q))
+				p.ts_churn = lerpf(p.ts_churn, 0.12, q)
+				p.ts_mud = lerpf(1.0, 0.35, smoothstep(0.5, 1.0, q))
 		_hold_back()
+		if keep_flood and tau >= RUN + PEAK:
+			_hold_flood()
 	_show_spray(tau)
 
 
@@ -226,6 +239,18 @@ func _hold_back() -> void:
 	var over: float = level + p.ts_plat + p.ts_crest * 1.16 - reach_y + 0.05  # 1.16: eta()'s crest wobble
 	if over > 0.0:
 		p.ts_inland = maxf(p.ts_inland, over / maxf(reach, 0.5))
+
+
+## The flood over the land stands at its peak height (from hold_level, so the controller's drain of the
+## sea does not lower it): eta() never drops under ts_hold - ts_hold_slope * u over the land. Over the
+## whole town (reach past the slab) or, held back, down to the ground at the reach, like the peak.
+func _hold_flood() -> void:
+	var h := FLOOD if reach >= u_end else HELD_PLAT
+	var slope := 0.025
+	if reach < u_end:
+		slope = maxf(slope, (hold_level + HELD_PLAT + 0.8 * 1.16 - reach_y + 0.05) / maxf(reach, 0.5))  # the peak's crest: 0.8
+	p.ts_hold = h + hold_level - level
+	p.ts_hold_slope = slope
 
 
 ## Pushes the field into the water materials.
@@ -248,7 +273,10 @@ func eta(u: float, d: float) -> float:
 	var crest: float = p.ts_crest * (1.0 + 0.1 * sin(d * 0.8 + 0.7) + 0.06 * sin(d * 2.1 + 1.9))
 	var plat: float = p.ts_plat - p.ts_inland * maxf(u, 0.0)
 	var draw: float = p.ts_draw * exp(-pow((u + 1.6) / 4.5, 2.0)) * smoothstep(-1.0, 3.0, x)
-	return crest * head + plat * ahead - draw
+	var e: float = crest * head + plat * ahead - draw
+	if p.ts_hold > 0.0:
+		e = maxf(e, (p.ts_hold - p.ts_hold_slope * maxf(u, 0.0)) * smoothstep(-1.0, beach_w, u))
+	return e
 
 
 ## Sea / flood surface height (slab frame) at coast (u, d), without the chop.

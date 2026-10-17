@@ -184,11 +184,67 @@ def top_kahramanmaras():
     L.box("line", (0.04, 0.5, 0.004), (-0.18, -0.4, 0.0), mat="lane_paint", bevel=0.0, base=True)
 
 
+def flame(name, x, y, h, w=0.07, lean=0.0):
+    """A cartoon flame facing the camera: a red-orange tongue with an orange and a hot yellow one inside."""
+    def tongue(k, mat, thick):
+        ww, hh = w * k, h * k
+        pts = [(-ww, 0.0), (ww, 0.0), (ww * 1.05, hh * 0.3), (ww * 0.55 + lean * hh, hh * 0.58), (ww * 0.2 + lean * hh, hh),
+               (-ww * 0.05 + lean * hh * 0.7, hh * 0.68), (-ww * 0.45, hh * 0.8), (-ww * 0.8, hh * 0.5), (-ww * 1.05, hh * 0.22)]
+        L.prism(f"{name}_{mat}", pts, thick, (x, y, 0.0), mat=mat, bevel=0.008, axis="y")
+    tongue(1.0, "ember_dim", 0.06)
+    tongue(0.72, "ember_glow", 0.07)
+    tongue(0.42, "flame_hot", 0.08)
+
+
+def top_black_saturday():
+    """Dry paddock at dusk (7 Feb 2009): a weatherboard farmhouse, a gum tree, the fire coming over the
+    back edge, burnt ground behind the fence."""
+    L.palette_bush()
+    L.set_dust("ash")
+    full = lambda k: circle(R * k)
+    L.prism("paddock", full(1.0), 0.08, (0, 0, -0.08), mat="grass_dry", bevel=0.03)
+    z, k = strata([("topsoil", 0.1), ("clay_red", 0.16), ("clay_ochre", 0.12), ("mudstone", 0.14)], full, z_top=-0.08)
+    hanging_rock(z, k, mat="mudstone")
+    # burnt ground at the back, a patch of ash on the way
+    burnt = [(0.7 * math.cos(a) * 0.95, 0.66 + 0.3 * math.sin(a)) for a in [2 * math.pi * i / 20 for i in range(20)]]
+    L.prism("burnt", burnt, 0.012, (0, 0, 0.0), mat="char", bevel=0.004)
+    ash = [(-0.35 + 0.22 * math.cos(a), 0.3 + 0.12 * math.sin(a)) for a in [2 * math.pi * i / 14 for i in range(14)]]
+    L.prism("ash_patch", ash, 0.01, (0, 0, 0.0), mat="ash", bevel=0.004)
+    # the fire front along the back edge
+    for i, (fx, fh, lean) in enumerate(((-0.72, 0.2, 0.2), (-0.5, 0.34, -0.15), (-0.25, 0.26, 0.1), (0.0, 0.4, -0.1),
+                                      (0.26, 0.3, 0.15), (0.5, 0.36, -0.2), (0.72, 0.22, 0.1))):
+        fy = math.sqrt(max(0.0, 0.93 ** 2 - fx * fx)) - 0.1
+        flame(f"flame{i}", fx, fy, fh, w=0.06 + fh * 0.1, lean=lean)
+    # gum tree with a burning crown, on the left
+    L.rod("trunk", (-0.55, 0.38, 0.0), (-0.52, 0.4, 0.46), 0.05, mat="bark_white", verts=7, r2=0.035)
+    L.rod("limb", (-0.52, 0.4, 0.36), (-0.4, 0.38, 0.55), 0.025, mat="bark_grey", verts=6, r2=0.015)
+    L.lump("crown0", (0.42, 0.36, 0.24), (-0.5, 0.4, 0.44), mat="leaf_gum_dark", lumpy=0.2, subdiv=1)
+    L.lump("crown1", (0.28, 0.24, 0.18), (-0.36, 0.38, 0.5), mat="leaf_scorch", lumpy=0.2, subdiv=1)
+    flame("crown_fire", -0.5, 0.32, 0.22, w=0.08, lean=0.1)
+    # farmhouse: weatherboard walls, red roof, lit windows, a tank
+    hx, hy = 0.32, -0.12
+    L.box("house", (0.4, 0.28, 0.18), (hx, hy, 0.0), mat="weatherboard", bevel=0.012, base=True)
+    L.prism("roof", [(-0.23, 0.0), (0.23, 0.0), (0.0, 0.13)], 0.32, (hx, hy, 0.18), mat="roof_red", bevel=0.01, axis="y")
+    for i, wx in enumerate((-0.12, 0.12)):
+        L.box(f"win{i}", (0.07, 0.012, 0.07), (hx + wx, hy - 0.14, 0.07), mat="window_glow", bevel=0.0, base=True)
+    L.box("door", (0.06, 0.012, 0.1), (hx, hy - 0.14, 0.0), mat="timber_dark", bevel=0.0, base=True)
+    L.cyl("tank", 0.06, 0.16, (hx + 0.3, hy + 0.06, 0.0), mat="zinc", verts=10)
+    # a short fence with the burnt side behind it
+    for i in range(6):
+        fx = -0.28 + i * 0.12
+        L.rod(f"post{i}", (fx, 0.52, 0.0), (fx, 0.52, 0.1), 0.012, mat="timber_grey", verts=5)
+    L.rod("rail0", (-0.28, 0.52, 0.07), (0.32, 0.52, 0.07), 0.007, mat="timber_grey", verts=4)
+    L.rod("rail1", (-0.28, 0.52, 0.035), (0.32, 0.52, 0.035), 0.007, mat="timber_grey", verts=4)
+    for i, (x, y) in enumerate(((0.55, -0.45), (-0.62, -0.1), (0.1, -0.7), (-0.05, 0.12))):
+        L.tuft(f"tuft{i}", (x, y, 0.0), n=10, h=0.12, spread=0.06, mat="grass_straw")
+
+
 # --------------------------------------------------------------------------------------------- build
 
 BADGES = {
     "badge_indian_ocean": (top_indian_ocean, "2004", dict(snow=0.25, dust="d8c08c")),
     "badge_kahramanmaras": (top_kahramanmaras, "2023", dict(snow=0.4)),
+    "badge_black_saturday": (top_black_saturday, "2009", dict(snow=0.2, dust="b9b2a6")),
 }
 
 if __name__ == "__main__":  # time_gyro.py imports the shared parts above
