@@ -49,16 +49,22 @@ const CUES := {
 	&"G3": {"path": F_TYPING, "bus": &"SFX", "volume_db": -12.0, "loop": true, "notes": "coordinates typing"},
 	&"G4": {"path": "globe/target_lock_trim.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "lock reticle; first 1 s only"},
 	&"G5": {"path": "globe/whoosh.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "zoom to country"},
+	&"G9": {"path": "globe/earth_ambience.ogg", "bus": &"SFX", "volume_db": -14.0, "loop": true, "fade_in": 1.0, "notes": "globe ambience, space or Earth feel, no water; NOT CHOSEN YET (stub, plays when the file lands)"},
 	&"G7": {"path": "globe/glitch_corruption.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "Tier 2 glitch jump"},
 	# Menu
 	&"M1": {"path": F_MUSIC, "bus": &"Music", "volume_db": -8.0, "loop": true, "fade_in": 1.0, "notes": "menu music; slight crossfade when looping"},
 	&"M2": {"path": "menu/ui_hover.ogg", "bus": &"UI", "volume_db": -10.0, "notes": "button hover (optional); also R4"},
 	&"M3": {"path": "menu/soft_ui_button_click.ogg", "bus": &"UI", "volume_db": -6.0, "notes": "button click; also R4"},
+	&"M4": {"path": F_TYPING, "bus": &"SFX", "volume_db": -12.0, "loop": true, "notes": "main menu prompt typing, same file as G3"},
+	# Language picker: the same sounds as the menu buttons
+	&"LS1": {"path": "menu/ui_hover.ogg", "bus": &"UI", "volume_db": -10.0, "notes": "flag hover, same file as M2"},
+	&"LS2": {"path": "menu/soft_ui_button_click.ogg", "bus": &"UI", "volume_db": -6.0, "notes": "flag click, same file as M3"},
 	# Diorama
 	&"D1": {"path": F_SNOW, "bus": &"SFX", "volume_db": -12.0, "loop": true, "fade_in": 0.5, "notes": "Kahramanmaras ambience; about 1:47 to 2:43, soft ends"},
 	&"D2": {"path": F_WAVES, "bus": &"SFX", "volume_db": -12.0, "loop": true, "fade_in": 0.5, "notes": "Indian Ocean waves; also the base layer of C1"},
 	&"D3": {"path": F_SOLAR, "bus": &"SFX", "volume_db": -12.0, "loop": true, "fade_in": 0.5, "notes": "solar flare ambience"},
 	&"D4": {"path": F_TYPING, "bus": &"SFX", "volume_db": -12.0, "loop": true, "notes": "intro text typing, same file as G3"},
+	&"D6": {"path": "menu/ui_hover.ogg", "bus": &"UI", "volume_db": -6.0, "notes": "Continue prompt hover, M2 file about 4 dB louder"},
 	# Fit (Kahramanmaras)
 	&"F1": {"path": F_SNOW, "bus": &"SFX", "volume_db": -12.0, "loop": true, "fade_in": 0.5, "notes": "ambience, same file as D1"},
 	&"F2": {"path": F_PICK, "bus": &"SFX", "volume_db": -6.0, "notes": "select; first 1 s only"},
@@ -74,7 +80,7 @@ const CUES := {
 	&"C4": {"path": "connect/wave_hit.ogg", "bus": &"SFX", "volume_db": -4.0, "notes": "wave breaks on the beach; NOT CHOSEN YET (later)"},
 	&"C5": {"path": "connect/pipe_water_stream.ogg", "bus": &"SFX", "volume_db": -10.0, "loop": true, "fade_in": 0.2, "notes": "water flows through the pipes; from about 0:40"},
 	&"C6": {"path": "connect/water_echo.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "basin fills"},
-	&"C7": {"path": "connect/big_water_splash.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "broken line spills; repeated and overlapping (#95)"},
+	&"C7": {"path": "connect/big_water_splash.ogg", "bus": &"SFX", "volume_db": -12.0, "notes": "broken line spills; repeated and overlapping (#95)"},
 	&"C9": {"path": "connect/wave_drain_trim.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "water drains; first 4 s only"},
 	# Result card
 	&"R1": {"path": F_SWELL, "bus": &"SFX", "volume_db": -6.0, "notes": "card appears, same file as G1 (proposed)"},
@@ -96,6 +102,7 @@ const SCENE_HOOKS := {
 	"res://scenes/globe.tscn": &"_hook_globe",
 	"res://scenes/diorama.tscn": &"_hook_diorama",
 	"res://scenes/ui/intro_text.tscn": &"_hook_intro_text",
+	"res://scenes/ui/lang_picker.tscn": &"_hook_lang_picker",
 	"res://scenes/minigames/fit.tscn": &"_hook_fit",
 	"res://scenes/minigames/connect.tscn": &"_hook_connect",
 	"res://scenes/result.tscn": &"_hook_result",
@@ -103,6 +110,12 @@ const SCENE_HOOKS := {
 ## Buttons owned by these scenes get the hover (M2) and click (M3) sounds.
 const BUTTON_SCENES: Array[String] = ["res://scenes/main.tscn", "res://scenes/result.tscn"]
 const DIORAMA_AMBIENCE := {&"kahramanmaras": &"D1", &"indian_ocean": &"D2", &"solar_flare": &"D3"}
+## Globe spin sound (G2): the level follows the spin speed (rad/s) up to G2_FULL_SPEED, smoothed at
+## G2_SMOOTH (1/s); the loop ends once the globe is slower than G2_STOP_SPEED and not held.
+const G2_FULL_SPEED := 6.0
+const G2_STOP_SPEED := 0.3
+const G2_SMOOTH := 8.0
+const G2_FLOOR_DB := -40.0
 const HISTORY_CAP := 256
 
 ## Test/debug log of every call: {op, id, t (Audio clock), played, fade}. Newest last.
@@ -379,8 +392,13 @@ func _bind_exit(node: Node, ids: Array, fade := 0.4) -> void:
 # --- scene hooks -------------------------------------------------------------
 
 func _on_node_added(node: Node) -> void:
+	# Scenes built ahead off-screen (game.gd warm-up, SubViewports) stay silent; their hooks run when
+	# the node enters the real tree at the scene switch.
+	if node.get_viewport() != get_tree().root:
+		return
 	var path := node.scene_file_path
-	if path != "" and SCENE_HOOKS.has(path):
+	if path != "" and SCENE_HOOKS.has(path) and not node.has_meta(&"audio_hooked"):
+		node.set_meta(&"audio_hooked", true)
 		call(SCENE_HOOKS[path], node)
 	if node is BaseButton and node.owner and BUTTON_SCENES.has(node.owner.scene_file_path):
 		var b := node as BaseButton
@@ -390,7 +408,34 @@ func _on_node_added(node: Node) -> void:
 
 func _hook_main(n: Node) -> void:
 	loop(&"M1")
-	_bind_exit(n, [&"M1"], 0.6)
+	# M4: the prompt types on by TextFx.type_on (no signals), so follow its visible_ratio.
+	_when_ready(n, func() -> void:
+		var prompt := n.get_node_or_null("Center/Box/Prompt") as Label
+		if prompt == null:
+			return
+		var pid := prompt.get_instance_id()
+		var st := {"on": false}
+		_polls.append(func() -> bool:
+			var l := instance_from_id(pid) as Label
+			if l == null:
+				return true
+			if not st.on and l.visible_ratio > 0.0 and l.visible_ratio < 1.0:
+				st.on = true
+				loop(&"M4")
+			elif st.on and l.visible_ratio >= 1.0:
+				stop(&"M4", 0.05)
+				return true
+			return false))
+	_bind_exit(n, [&"M1", &"M4"], 0.6)
+
+
+func _hook_lang_picker(n: Node) -> void:
+	_when_ready(n, func() -> void:
+		for b in n.get_node("Box").get_children():
+			if b is BaseButton:
+				var btn := b as BaseButton
+				btn.mouse_entered.connect(func() -> void: play(&"LS1"))
+				btn.pressed.connect(func() -> void: play(&"LS2")))
 
 
 func _hook_result(n: Node) -> void:
@@ -405,6 +450,10 @@ func _hook_result(n: Node) -> void:
 func _hook_intro_text(n: Node) -> void:
 	n.typing_started.connect(func() -> void: loop(&"D4"))
 	n.typing_finished.connect(func() -> void: stop(&"D4", 0.05))
+	_when_ready(n, func() -> void:
+		var next := n.get_node_or_null("%Next") as BaseButton
+		if next:
+			next.mouse_entered.connect(func() -> void: if not next.disabled: play(&"D6")))
 	_bind_exit(n, [&"D4"], 0.05)
 
 
@@ -420,12 +469,12 @@ func _hook_globe(g) -> void:
 	play(&"G1")
 	g.coords_typing_started.connect(func() -> void: loop(&"G3"))
 	g.coords_typing_finished.connect(func() -> void: stop(&"G3", 0.05))
+	loop(&"G9")  # stub: silent until the file lands
+	var gid: int = g.get_instance_id()
 	if g.has_signal(&"spin_started"):
-		g.spin_started.connect(func() -> void: loop(&"G2"))
-		g.spin_stopped.connect(func() -> void: stop(&"G2", 0.3))
+		g.spin_started.connect(func() -> void: _follow_spin(gid))
 	# G4 lock, G5 zoom and G7 glitch follow the globe's own timeline (t, launched, glitching).
 	var seen := {"lock": false, "zoom": false, "glitch": false, "launched": false}
-	var gid: int = g.get_instance_id()
 	_polls.append(func() -> bool:
 		var gl: Variant = instance_from_id(gid)  # the lambda must not capture the node: it may be freed
 		if gl == null:
@@ -434,8 +483,7 @@ func _hook_globe(g) -> void:
 		var lock_at: float = gl.SPIN
 		var zoom_at: float = gl.SPIN + gl.LOCK
 		if gl.launched and not seen.launched:
-			seen.launched = true
-			stop(&"G2", 0.3)
+			seen.launched = true  # G2 keeps following the spin until it slows down
 		if gl.launched and not seen.lock and t >= lock_at:
 			seen.lock = true
 			if t < zoom_at:  # a skip past the lock plays no lock beep
@@ -447,7 +495,44 @@ func _hook_globe(g) -> void:
 			seen.glitch = true
 			play(&"G7")
 		return false)
-	_bind_exit(g, [&"G1", &"G2", &"G3", &"G4", &"G5", &"G7"], 0.3)
+	_bind_exit(g, [&"G1", &"G2", &"G3", &"G4", &"G5", &"G7", &"G9"], 0.3)
+
+
+## G2 while the globe turns: starts at the drag, then its level follows the speed of the Earth's
+## rotation (drag, flick, slowing spin), and it stops when the globe is still and not held.
+func _follow_spin(gid: int) -> void:
+	var gl: Variant = instance_from_id(gid)
+	if gl == null or is_playing(&"G2"):
+		return
+	var earth: Node3D = gl.get(&"_earth")
+	if earth == null:
+		return
+	var p := loop(&"G2", {"fade": 0.0})
+	var st := {"y": earth.rotation.y, "t": clock, "level": 0.0}
+	if p:
+		p.volume_db = SILENT_DB
+	_polls.append(func() -> bool:
+		var g2: Variant = instance_from_id(gid)
+		if g2 == null or not is_instance_valid(earth) or not is_playing(&"G2"):
+			return true
+		var dt: float = clock - st.t
+		if dt <= 0.0:
+			return false
+		var speed: float = absf(earth.rotation.y - st.y) / dt
+		st.y = earth.rotation.y
+		st.t = clock
+		var held: bool = g2.get(&"_dragging")
+		var target := clampf(speed / G2_FULL_SPEED, 0.0, 1.0)
+		if held:
+			target = maxf(target, 0.3)  # a held globe is not silent
+		st.level += (target - st.level) * (1.0 - exp(-G2_SMOOTH * dt))
+		if not held and speed < G2_STOP_SPEED and st.level < 0.05:
+			stop(&"G2", 0.2)
+			return true
+		var base: float = CUES[&"G2"].volume_db
+		for pl: AudioStreamPlayer in _players.get(&"G2", []):
+			pl.volume_db = base + maxf(linear_to_db(maxf(st.level, 1e-4)), G2_FLOOR_DB)
+		return false)
 
 
 func _hook_fit(f) -> void:
