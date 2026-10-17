@@ -716,3 +716,228 @@ def variants_arg():
     if "--only" in argv:
         return argv[argv.index("--only") + 1].split(",")
     return None
+
+
+# ---------------------------------------------------------------------------------------------
+# street + rescue set (#123 Fener): extra palette and helpers. Added only; nothing above changes.
+# ---------------------------------------------------------------------------------------------
+
+def rescue_palette() -> None:
+    """Add the street + rescue set palette entries to PAL (tents, aid, vehicles, poles, trees).
+    Call once after reset(). Existing keys are never overwritten."""
+    extra = {
+        # canvas, aid, fabric
+        "canvas_white":  {"c": "d9dad2", "r": 0.9, "snow": 1, "snow_bias": 0.25},
+        "canvas_cream":  {"c": "d3c9ae", "r": 0.9, "snow": 1, "snow_bias": 0.25},
+        "canvas_grey":   {"c": "9a9d9c", "r": 0.9, "snow": 1, "snow_bias": 0.25},
+        "afad_blue":     {"c": "1f4f9e", "r": 0.6, "snow": 0.5},
+        "afad_navy":     {"c": "1d2b4f", "r": 0.7, "snow": 0.6},
+        "kizilay_red":   {"c": "c1262d", "r": 0.6, "snow": 0.5},
+        "tarp_blue":     {"c": "2a64a8", "r": 0.55, "snow": 1, "snow_bias": 0.2},
+        "rope":          {"c": "b9a27a", "r": 1.0, "snow": 0.3},
+        "cardboard":     {"c": "b08758", "r": 0.95, "snow": 0.9},
+        "cardboard_dk":  {"c": "8a6640", "r": 0.95, "snow": 0.7},
+        "tape":          {"c": "c9b48a", "r": 0.4, "snow": 0.2},
+        "pallet":        {"c": "a5865c", "r": 0.95, "snow": 0.9},
+        "blanket_grey":  {"c": "7c7e85", "r": 1.0, "snow": 0.6},
+        "blanket_navy":  {"c": "3a4562", "r": 1.0, "snow": 0.6},
+        "blanket_brown": {"c": "7b5a47", "r": 1.0, "snow": 0.6},
+        "pet_clear":     {"c": "8eb2cc", "r": 0.12, "snow": 0.4},
+        "pet_cap":       {"c": "2f62b2", "r": 0.4, "snow": 0.2},
+        "plastic_white": {"c": "dedcd4", "r": 0.45, "snow": 1},
+        "plastic_red":   {"c": "c43a2c", "r": 0.45, "snow": 0.8},
+        "cone_orange":   {"c": "e0602a", "r": 0.5, "snow": 0.6},
+        "pot_steel":     {"c": "a9afb5", "r": 0.25, "snow": 0.3},
+        "enamel_red":    {"c": "b8352c", "r": 0.3, "snow": 0.3},
+        # machines + vehicles
+        "machine_yellow": {"c": "dda42a", "r": 0.45, "snow": 1},
+        "machine_orange": {"c": "cf6a2b", "r": 0.45, "snow": 1},
+        "fire_red":       {"c": "b8251e", "r": 0.3, "snow": 1},
+        "hivis_lime":     {"c": "c5d533", "r": 0.5, "snow": 0.8},
+        "rubber":         {"c": "2b2a2c", "r": 0.85, "snow": 0.4},
+        "alu":            {"c": "b3b8bd", "r": 0.3, "snow": 0.8},
+        "seat":           {"c": "3a3836", "r": 0.9, "snow": 0},
+        "car_blue":       {"c": "3d5d8c", "r": 0.25, "snow": 1},
+        "car_green":      {"c": "5b7656", "r": 0.25, "snow": 1},
+        "car_grey":       {"c": "868c93", "r": 0.25, "snow": 1},
+        # street + nature
+        "asphalt_cut":   {"c": "55575c", "r": 0.85, "snow": 0.3},
+        "ice":           {"c": "9fb7c9", "r": 0.06, "snow": 0},
+        "bark":          {"c": "4f3b2d", "r": 0.95, "snow": 0.9, "snow_bias": 0.1},
+        "pine":          {"c": "2c4a36", "r": 0.9, "snow": 1, "snow_bias": 0.3},
+        "pine_dark":     {"c": "223a2b", "r": 0.9, "snow": 1, "snow_bias": 0.2},
+        "cypress":       {"c": "28402f", "r": 0.9, "snow": 1, "snow_bias": 0.0},
+        "pole_concrete": {"c": "a7a49c", "r": 0.95, "snow": 0.9},
+        "wood_pole":     {"c": "5d4633", "r": 0.95, "snow": 0.8},
+        "ceramic":       {"c": "c7d0d2", "r": 0.2, "snow": 0.3},
+        "iron_green":    {"c": "2f4a3c", "r": 0.5, "snow": 0.9},
+        "sign_red":      {"c": "c02a26", "r": 0.45, "snow": 0.4},
+        "sign_yellow":   {"c": "e0b42c", "r": 0.45, "snow": 0.4},
+        "marker_black":  {"c": "24221f", "r": 0.8, "snow": 0},
+        "flag_red":      {"c": "d0222a", "r": 0.9, "snow": 0.2},
+        # glowing (unbaked, emissive): every light source in the set is one of these
+        "beacon_red":    {"c": "e0281c", "r": 0.3, "snow": 0, "emit": ("ff2414", 7.0)},
+        "beacon_blue":   {"c": "2a52e0", "r": 0.3, "snow": 0, "emit": ("2a5cff", 7.0)},
+        "beacon_amber":  {"c": "ffa21e", "r": 0.3, "snow": 0, "emit": ("ff9a12", 6.0)},
+        "flood_lamp":    {"c": "f4f6ff", "r": 0.2, "snow": 0, "emit": ("eef2ff", 9.0)},
+        "tent_glow":     {"c": "ffc27a", "r": 1.0, "snow": 0, "emit": ("ffad5c", 1.5)},
+        "cabin_glow":    {"c": "ffd49a", "r": 1.0, "snow": 0, "emit": ("ffc988", 1.3)},
+        "bulb_warm":     {"c": "ffe2b0", "r": 0.3, "snow": 0, "emit": ("ffd08a", 7.0)},
+        "spark":         {"c": "eafcff", "r": 1.0, "snow": 0, "emit": ("dff6ff", 14.0)},
+        "gas_flame":     {"c": "6fa4ff", "r": 1.0, "snow": 0, "emit": ("4f86ff", 5.0)},
+        "led_green":     {"c": "6aff8a", "r": 0.3, "snow": 0, "emit": ("4dff74", 4.0)},
+    }
+    for k, v in extra.items():
+        PAL.setdefault(k, v)
+
+
+def catenary(name, p0, p1, sag=0.4, r=0.012, mat="car_trim", n=8, verts=5):
+    """Hanging cable from p0 to p1 that sags `sag` metres at mid-span (chain of short rods)."""
+    a, b = Vector(p0), Vector(p1)
+    pts = []
+    for i in range(n + 1):
+        t = i / n
+        p = a.lerp(b, t)
+        p.z -= sag * 4.0 * t * (1.0 - t)
+        pts.append(p)
+    return [rod(name, tuple(q0), tuple(q1), r, mat=mat, verts=verts) for q0, q1 in zip(pts, pts[1:])]
+
+
+def polyline(name, pts, r=0.012, mat="car_trim", verts=5):
+    """Cable / hose / rope through a list of points (chain of rods with ball joints hidden by overlap)."""
+    out = []
+    for q0, q1 in zip(pts, pts[1:]):
+        a, b = Vector(q0), Vector(q1)
+        d = (b - a)
+        ext = d.normalized() * min(r * 0.8, d.length * 0.2)
+        out.append(rod(name, tuple(a - ext), tuple(b + ext), r, mat=mat, verts=verts))
+    return out
+
+
+def drape(name, size, loc, mat="tarp_blue", rot=(0, 0, 0), droop=1.0, seed=None, lumpy=0.12, cuts=3):
+    """Soft cloth / tarp / blanket pillow lying ON something (like snowcap, any palette key).
+    size = (x, y, thickness); droop pulls the rim down past the bottom (hangs over edges)."""
+    sx, sy, sz = size
+    r = random.Random(seed if seed is not None else _rng.random())
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0)
+    bmesh.ops.subdivide_edges(bm, edges=bm.edges, cuts=cuts, use_grid_fill=True)
+    for v in bm.verts:
+        x, y, z = v.co
+        edge = max(abs(x), abs(y)) * 2.0
+        v.co.x = x * sx
+        v.co.y = y * sy
+        if z > 0:
+            v.co.z = sz * (1.0 + r.uniform(-lumpy, lumpy) * 2.0) * (1.0 - 0.25 * edge ** 2)
+        else:
+            v.co.z = -droop * sz * (edge ** 4) * (1.0 + r.uniform(0, lumpy))
+    ob = _obj(name, bm, mat, loc, rot, 0.0, 1, smooth=80.0)
+    ob["subsurf"] = 1
+    return ob
+
+
+def wheel(name, r, w, loc, tyre="tyre", rim="metal", hub="chrome", verts=16, side=1):
+    """Road wheel with its axle along X. side=+1 / -1: which way the rim face points."""
+    x, y, z = loc
+    out = [cyl(name + "_t", r, w, (x - w * 0.5, y, z), mat=tyre, rot=(0, 90, 0), verts=verts, bevel=min(0.05, r * 0.18))]
+    out.append(cyl(name + "_r", r * 0.6, 0.03, (x + side * (w * 0.5 - 0.005) - 0.015, y, z), mat=rim, rot=(0, 90, 0),
+                   verts=verts, bevel=0.01))
+    out.append(cyl(name + "_h", r * 0.22, 0.04, (x + side * (w * 0.5 + 0.01) - 0.02, y, z), mat=hub, rot=(0, 90, 0),
+                   verts=8, bevel=0.008))
+    return out
+
+
+def crescent_pts(R=1.0, r=0.8, d=0.38, n=24, cx=0.0, cy=0.0, ang=0.0):
+    """Outline (CCW) of a crescent: circle R at origin minus circle r at (d, 0), opening to +u.
+    Used for the Red Crescent mark and the flag. ang rotates it (degrees)."""
+    # intersection of the two circles
+    xi = (R * R - r * r + d * d) / (2 * d)
+    yi = math.sqrt(max(R * R - xi * xi, 0.0))
+    a0 = math.atan2(yi, xi)
+    b0 = math.atan2(yi, xi - d)
+    pts = []
+    for i in range(n + 1):     # outer arc, from +a0 around the back to -a0
+        a = a0 + (2 * math.pi - 2 * a0) * i / n
+        pts.append((R * math.cos(a), R * math.sin(a)))
+    for i in range(1, n):      # inner arc back through its far-left point (the concave side)
+        a = -b0 - (2 * math.pi - 2 * b0) * i / n
+        pts.append((d + r * math.cos(a), r * math.sin(a)))
+    c, s = math.cos(math.radians(ang)), math.sin(math.radians(ang))
+    return [(cx + u * c - v * s, cy + u * s + v * c) for u, v in pts]
+
+
+def star_pts(R=1.0, ri=0.38, n=5, cx=0.0, cy=0.0, ang=90.0):
+    """Outline (CCW) of an n-pointed star, first point at angle ang (degrees)."""
+    out = []
+    for i in range(2 * n):
+        a = math.radians(ang) + math.pi * i / n
+        rr = R if i % 2 == 0 else ri
+        out.append((cx + rr * math.cos(a), cy + rr * math.sin(a)))
+    return out
+
+
+def drift(name, length, depth, height, loc=(0, 0, 0), rot=(0, 0, 0), seed=None, n=8, mat="snow"):
+    """Snow drift banked against a wall: the wall is the local XZ plane at y = 0, the drift runs along X
+    and slopes out toward -Y. Ends taper; the wall side and the bottom are open (they sit against things)."""
+    r = random.Random(seed if seed is not None else _rng.random())
+    prof = [(0.0, 1.0), (0.1, 0.95), (0.3, 0.74), (0.55, 0.42), (0.8, 0.14), (1.0, 0.0)]
+    bm = bmesh.new()
+    rows = []
+    for i in range(n + 1):
+        t = i / n
+        env = math.sin(math.pi * (0.03 + 0.94 * t)) ** 0.55
+        k = 1.0 + r.uniform(-0.18, 0.18)
+        x = (t - 0.5) * length
+        rows.append([bm.verts.new((x, -u * depth * (0.55 + 0.45 * env) * k, v * height * env * k)) for u, v in prof])
+    base = [bm.verts.new((row[0].co.x, 0.0, 0.0)) for row in rows]   # foot of the wall side
+    for i, (a, b) in enumerate(zip(rows, rows[1:])):
+        for j in range(len(prof) - 1):
+            bm.faces.new([a[j], a[j + 1], b[j + 1], b[j]])
+        bm.faces.new([a[0], b[0], base[i + 1], base[i]])                # closed back: stands free too
+    for row, foot, flip in ((rows[0], base[0], False), (rows[-1], base[-1], True)):
+        for j in range(len(prof) - 1):                                    # end caps
+            f = [foot, row[j + 1], row[j]]
+            bm.faces.new(f[::-1] if flip else f)
+    bm.normal_update()
+    ob = _obj(name, bm, mat, loc, rot, 0.0, 1, smooth=80.0)
+    ob["subsurf"] = 1
+    return ob
+
+
+def text_lo(name, s, size, loc=(0, 0, 0), mat="sign_white", rot=(90, 0, 0), depth=0.01, align="CENTER", res=2):
+    """text() with a low curve resolution: same look at game distance for a fraction of the triangles."""
+    cu = bpy.data.curves.new(name, "FONT")
+    cu.body = s
+    cu.size = size
+    cu.extrude = depth
+    cu.align_x = align
+    cu.align_y = "CENTER"
+    cu.resolution_u = res
+    tob = bpy.data.objects.new(name + "_c", cu)
+    bpy.context.scene.collection.objects.link(tob)
+    dg = bpy.context.evaluated_depsgraph_get()
+    me = bpy.data.meshes.new_from_object(tob.evaluated_get(dg))
+    bpy.data.objects.remove(tob)
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    return _obj(name, bm, mat, loc, rot, 0.0, 1, smooth=10.0)
+
+
+def beam(name, p0, p1, w, h, mat="metal", bevel=0.03, taper=1.0):
+    """Box beam from p0 to p1: width w across (world X when the beam lies in a YZ plane), height h.
+    taper < 1 narrows the height toward p1 (booms, arms)."""
+    a, b = Vector(p0), Vector(p1)
+    d = b - a
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0)
+    for v in bm.verts:
+        t = v.co.z + 0.5
+        v.co.x *= w
+        v.co.y *= h * (1.0 + (taper - 1.0) * t)
+        v.co.z = t * d.length
+    ob = _obj(name, bm, mat, tuple(a), (0, 0, 0), bevel, 2)
+    ob.rotation_mode = "QUATERNION"
+    ob.rotation_quaternion = d.normalized().to_track_quat("Z", "Y")
+    ob.rotation_mode = "XYZ"
+    return ob
