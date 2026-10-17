@@ -1,10 +1,12 @@
 extends SceneTree
-## Disaster pick rule: pure choice with fake counts, play-count file on a temp path, pool sanity.
+## Disaster pick rule: 65/35 first pick per launch, the fixed two-game paths and their partner, pool sanity.
 ## godot --headless --path . -s res://tests/test_pick.gd
 
 const FRAME_CAP := 600
 const IO := "res://data/disasters/indian_ocean.tres"
 const SF := "res://data/disasters/solar_flare.tres"
+const KAHR := "res://data/disasters/kahramanmaras.tres"
+const BS := "res://data/disasters/black_saturday.tres"
 
 var ok := true
 var frames := 0
@@ -31,57 +33,69 @@ func _check(name: String, cond: bool) -> void:
 func _run() -> void:
 	var game := root.get_node("Game")
 	game.store_path = ""
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 1
-	_check("least played wins (io 2, sf 0)", game.choose([IO, SF], {"indian_ocean": 2}, rng) == SF)
-	_check("least played wins (io 0, sf 3)", game.choose([IO, SF], {"solar_flare": 3}, rng) == IO)
-	_check("single candidate", game.choose([IO], {"indian_ocean": 9}, rng) == IO)
-	var seen := {}
-	for i in 60:
-		seen[game.choose([IO, SF], {}, rng)] = true
-	_check("empty counts: both come up (random)", seen.size() == 2)
-	seen.clear()
-	for i in 60:
-		seen[game.choose([IO, SF], {"indian_ocean": 4, "solar_flare": 4}, rng)] = true
-	_check("tie: both come up (random)", seen.size() == 2)
+	# the roll: 65% the first path, 35% the second
+	_check("roll 0.0 -> Indian Ocean path", game.path_for_roll(0.0)[&"state"] == IO)
+	_check("roll 0.649 -> Indian Ocean path", game.path_for_roll(0.649)[&"citizen"] == KAHR)
+	_check("roll 0.65 -> Solar Flare path", game.path_for_roll(0.65)[&"state"] == SF)
+	_check("roll 0.999 -> Black Saturday path", game.path_for_roll(0.999)[&"citizen"] == BS)
 
-	# rotation: every scenario once before any repeat
-	var counts := {}
-	var picked := []
-	for i in 2:
-		var path: String = game.choose([IO, SF], counts, rng)
-		picked.append(path)
-		counts[path.get_file().get_basename()] = 1
-	_check("two picks cover both", picked.has(IO) and picked.has(SF))
+	# first picks with a seeded rng: ~65 / 35 for either role
+	for role: StringName in [&"state", &"citizen"]:
+		game.pick_rng.seed = 7
+		var main := 0
+		var runs := 2000
+		for i in runs:
+			game.reset_launch()
+			if game.pick_for(role) == (IO if role == &"state" else KAHR):
+				main += 1
+		var share := float(main) / runs
+		_check("%s first pick: main disaster %.3f of %d (0.65 +- 0.04)" % [role, share, runs], absf(share - 0.65) < 0.04)
 
-	# persistence on a temp file
+	# the path holds for the rest of the launch, for both roles
+	game.pick_rng.seed = 3
+	game.reset_launch()
+	var first: String = game.pick_for(&"state")
+	var path_cit: String = BS if first == SF else KAHR
+	_check("first pick is Indian Ocean or Solar Flare", first == IO or first == SF)
+	_check("same role again: same disaster", game.pick_for(&"state") == first)
+	_check("other role: the path's citizen game", game.pick_for(&"citizen") == path_cit)
+	game.reset_launch()
+	var cit: String = game.pick_for(&"citizen")
+	_check("citizen first: state gets the path partner", game.pick_for(&"state") == (IO if cit == KAHR else SF))
+
+	# partner lookup
+	var io: Disaster = load(IO)
+	var sf: Disaster = load(SF)
+	var kahr: Disaster = load(KAHR)
+	var bs: Disaster = load(BS)
+	_check("partner of Indian Ocean is Kahramanmaras", game.partner_of(io) == KAHR)
+	_check("partner of Kahramanmaras is Indian Ocean", game.partner_of(kahr) == IO)
+	_check("partner of Solar Flare is Black Saturday", game.partner_of(sf) == BS)
+	_check("partner of Black Saturday is Solar Flare", game.partner_of(bs) == SF)
+	for entry: Dictionary in game.PATHS:
+		_check("%s: path roles match" % entry, (load(entry[&"state"]) as Disaster).role == &"state" and (load(entry[&"citizen"]) as Disaster).role == &"citizen")
+	game.reset_launch()
+	_check("partner pending before it is played", game.partner_pending(io))
+	game.mark_played(io)
+	_check("playing Indian Ocean does not clear its partner", game.partner_pending(io))
+	game.mark_played(kahr)
+	_check("both played: no partner pending (either side)", not game.partner_pending(io) and not game.partner_pending(kahr))
+	_check("the other path is untouched", game.partner_pending(sf) and game.partner_pending(bs))
+	game.reset_launch()
+
+	# the play counts file is kept for stats only
 	var tmp := OS.get_cache_dir().path_join("3play_test_played_%d.cfg" % OS.get_process_id())
 	DirAccess.remove_absolute(tmp)
 	game.store_path = tmp
 	_check("no file: empty counts", game.load_counts().is_empty())
-	var first: String = game.pick_for(&"state")
-	var second: String = game.pick_for(&"state")
-	_check("two state picks differ", first != second)
-	var stored: Dictionary = game.load_counts()
-	_check("counts stored: 1 each", stored.get("indian_ocean", 0) == 1 and stored.get("solar_flare", 0) == 1)
-	var third: String = game.pick_for(&"state")
-	_check("third pick counted", game.load_counts().get(third.get_file().get_basename(), 0) == 2)
-	var c1: String = game.pick_for(&"citizen")
-	var c2: String = game.pick_for(&"citizen")
-	_check("citizen pool: kahramanmaras and black saturday, each once before a repeat",
-		c1 != c2 and [c1, c2].has("res://data/disasters/kahramanmaras.tres") and [c1, c2].has("res://data/disasters/black_saturday.tres"))
-	var last: String = c2
-	var repeat := false
-	for i in 6:
-		var c: String = game.pick_for(&"citizen")
-		repeat = repeat or c == last
-		last = c
-	_check("never the same disaster twice in a row (counts tied or not)", not repeat)
-	var counts_now: Dictionary = game.load_counts()
-	_check("last pick kept beside the counts", game.load_last(&"citizen") == last.get_file().get_basename() and counts_now.size() == 4)
+	game.start(&"state", IO)
+	game.start(&"state", IO)
+	game.start(&"citizen", KAHR)
+	var counts: Dictionary = game.load_counts()
+	_check("counts stored per run", counts.get("indian_ocean", 0) == 2 and counts.get("kahramanmaras", 0) == 1)
 	DirAccess.remove_absolute(tmp)
 	game.store_path = ""
-	_check("real user file untouched by this test", game.store_path == "")
+	game.reset_launch()
 
 	# pool sanity
 	for role: StringName in game.POOL:
@@ -89,6 +103,8 @@ func _run() -> void:
 			var d: Disaster = load(path)
 			_check("%s: role matches" % path, d != null and d.role == role)
 			_check("%s: file name is id" % path, d != null and path.get_file().get_basename() == String(d.id))
+			_check("%s: in a path" % path, not game.path_of(path).is_empty())
 	_check("no store: pick_for still works", game.pick_for(&"state") in game.POOL[&"state"])
 	print("test_pick ok" if ok else "test_pick FAIL")
+	game.reset_launch()
 	quit(0 if ok else 1)
