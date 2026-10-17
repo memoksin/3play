@@ -255,8 +255,6 @@ func _start_hit() -> void:
 	_deny.clear()
 	_lines = ConnectLogic.traces(skin, rots)
 	_saved = ConnectLogic.saved_basins(skin, rots)
-	if _saved.has(false):  # all or nothing: one open line and every community floods
-		_saved.fill(false)
 	_flow_total = 0.0
 	_flood_at.clear()
 	_flood_at.resize(_saved.size())
