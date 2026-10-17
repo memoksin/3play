@@ -89,6 +89,7 @@ func _item(type: StringName, nth := 0) -> int:
 
 
 func _run() -> void:
+	TranslationServer.set_locale("en")  # message checks below are English; a saved user locale must not leak in
 	root.get_node("Game").ensure_disaster(&"citizen")
 	fit = load("res://scenes/minigames/fit.tscn").instantiate()
 	root.add_child(fit)
