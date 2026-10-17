@@ -268,11 +268,15 @@ const SPOTS := {
 	&"injured": [Vector2(-6.6, -1.4), Vector2(12.4, -16.2), Vector2(-42.0, 21.8)],
 	&"cold": [Vector2(-30.0, 30.0), Vector2(-14.0, 3.9), Vector2(40.0, -4.8)],
 }
-## Pickups: kind -> candidate spots; ITEM_COUNT picks per kind.
+## Pickups are handed out at the rescue crews (CREWS), a couple of metres beside the crew's post.
+## kind -> spots; the first ITEM_COUNT spots are used. Batteries and the kit lie out from the start (the
+## first battery and the kit at the crew near the start, the second battery at the camp crew). The blanket
+## only appears when a person who needs one is found: at one of its spots, by the crew that is the
+## shorter detour from the player.
 const ITEMS := {
-	&"battery": [Vector2(10.0, -4.4), Vector2(-12.0, 34.6), Vector2(-21.6, 0.6), Vector2(44.5, -24.4)],
-	&"kit": [Vector2(19.0, -4.4), Vector2(-31.6, -7.6)],
-	&"blanket": [Vector2(-44.0, 23.8), Vector2(46.0, -18.0), Vector2(-8.4, 9.0)],
+	&"battery": [Vector2(-28.1, -12.0), Vector2(28.2, 23.6)],
+	&"kit": [Vector2(-28.1, -9.0)],
+	&"blanket": [Vector2(-28.0, -10.6), Vector2(28.4, 26.2)],
 }
 const ITEM_COUNT := {&"battery": 2, &"kit": 1, &"blanket": 1}
 

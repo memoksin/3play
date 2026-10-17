@@ -405,3 +405,40 @@ func _s_cues() -> void:
 	await _frames(3)
 	_steps(8)
 	await _frames(4)
+
+
+## The crew hands out the kit and a battery (nothing else is out yet): the player walks up from the start.
+func _s_supplies() -> void:
+	_fresh()
+	_goto(Vector2(-35.0, -6.0), Vector2(-28.0, -10.0))
+	_steps(2)
+	await _frames(50)
+
+
+## A cold person was found: the blanket shows up beside the crew and the HUD says where it is.
+func _blanket_up() -> void:
+	_fresh()
+	var p = _person(FenerPerson.Kind.COLD)
+	_goto(_near_spot(p.pos, 3.0), p.pos)
+	_steps(3)
+	f.slowmo = 0.0
+	var b = null
+	for it in f.items:
+		if it.kind == &"blanket":
+			b = it
+	var c := Vector2(FenerMap.CREWS[f._crew_at(b.pos)].x, FenerMap.CREWS[f._crew_at(b.pos)].y)
+	_goto(c + Vector2(-5.0, 2.0), b.pos)
+	_steps(2)
+
+
+func _s_blanket() -> void:
+	_blanket_up()
+	await _frames(50)
+
+
+func _s_blanket_dark() -> void:
+	_blanket_up()
+	f.l_on = false
+	f.lamp_on = false
+	_steps(2)
+	await _frames(50)

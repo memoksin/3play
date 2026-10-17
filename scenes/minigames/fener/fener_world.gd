@@ -1225,7 +1225,8 @@ func show_state(c: Node, dt: float) -> void:
 	for i in mini(_items.size(), ctrl.items.size()):
 		var it = ctrl.items[i]
 		var n := _items[i]
-		n.visible = not it.taken
+		n.visible = it.active and not it.taken
+		n.position = Vector3(it.pos.x, FenerMap.ground_y(it.pos), it.pos.y)
 		var m := n.get_node_or_null(^"Model") as Node3D
 		if m:
 			m.position.y = 0.15 + sin(_t * 2.4 + i) * 0.06
