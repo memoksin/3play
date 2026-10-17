@@ -24,6 +24,9 @@ const CARD_TOP := 0.48
 ## for the Sea (`shallow`, `deep`); `ground` (optional): shader colours per ground node, e.g. the Beach;
 ## `plain`: the ground runs on to the horizon (the Sun's corona glows behind the set, so a
 ## ground edge in front of it would show) instead of ending in a rim.
+## `seam` (optional): the set's `Slab` (the minigame's coast model) sits in a ground plane a few cm below
+## its top; its grass is multiplied by this colour to the plane's and the cut faces above the plane are
+## dropped (SLAB_SEAM), so the slab's top reads as part of the plane.
 ## A disaster with an `atmosphere` (Disaster.atmosphere, shared with its minigame world) takes haze, sky,
 ## fog, exposure, ambient and the key light from there instead (config()).
 const SETS := {
@@ -37,6 +40,7 @@ const SETS := {
 		"scene": "res://scenes/diorama/set_indian_ocean.tscn",
 		"from": -38.0, "to": 12.0, "radius": 42.0, "elevation": [26.0, 20.0], "lift": 5.0,
 		"dive_fog": 0.0,  # atmosphere: data/disasters/indian_ocean.tres
+		"seam": Color(0.65, 0.71, 0.61),  # coast_slab.glb's baked grass -> the Ground's (diorama_gen.gd _io())
 	},
 	&"solar_flare": {
 		"scene": "res://scenes/diorama/set_solar_flare.tscn",
@@ -150,6 +154,41 @@ void fragment() {
 }
 """
 const SKIRT_Y := 0.25
+## SETS `seam`: the slab's baked material (texture + roughness, double-sided) with its grass recoloured
+## and its cut faces dropped between `below` m under the coast top and the top (the ground plane runs on
+## under the slab there). Coast frame and beach_y() as the Sea's water shader (connect's water.gdshader).
+const SLAB_SEAM := """shader_type spatial;
+render_mode cull_disabled, diffuse_burley, specular_schlick_ggx;  // as the StandardMaterial3D it replaces
+uniform sampler2D albedo_tex : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D rough_tex : hint_roughness_g, filter_linear_mipmap, repeat_enable;
+uniform vec3 grass : source_color = vec3(1.0);
+uniform float k_skew = 0.40402622;
+uniform float beach_w = 5.0;
+uniform float land = 0.35;
+uniform float below = 0.08;
+varying vec3 lp;
+varying float up;
+float beach_y(float u) {
+	if (u <= 0.0) return -0.9;
+	if (u >= beach_w) return land;
+	float t = u / beach_w;
+	return -0.9 + (land + 0.9) * (1.0 - (1.0 - t) * (1.0 - t));
+}
+void vertex() {
+	lp = VERTEX;
+	up = NORMAL.y;
+}
+void fragment() {
+	float top = beach_y(lp.x - k_skew * lp.z);
+	// the front cut's pieces (0.6 m deep, their right ends too); 45 deg bevels go, the beach top stays
+	if (lp.x > 0.0 && lp.z > -0.65 && up < 0.8 && lp.y > top - below && lp.y < top + 0.005) discard;
+	vec3 c = texture(albedo_tex, UV).rgb;
+	float g = (c.g - max(c.r, c.b)) / max(c.g, 0.0001);  // green-ness, whatever the baked shading
+	float k = smoothstep(0.03, 0.1, g);  // grass ~0.2..0.4, sand, path and stones <= 0
+	ALBEDO = c * mix(vec3(1.0), grass, k);
+	ROUGHNESS = mix(texture(rough_tex, UV).g, 1.0, k);  // the plane's
+}
+"""
 const PLAIN := 1200.0
 
 ## Set by Game before the scene enters the tree: Game builds and draws the scene off-screen ahead of
@@ -207,6 +246,9 @@ func _ready() -> void:
 		_sea = sea.material_override
 		for k: String in _cfg.get("sea", {}):
 			_sea.set_shader_parameter(k, _cfg.sea[k])
+	var slab := _set.get_node_or_null("Slab")
+	if slab and _sea and _cfg.has("seam"):
+		_blend_slab(slab, _cfg.seam)
 	for node_name: String in _cfg.get("ground", {}):
 		var ground_mat := (_set.get_node(node_name) as MeshInstance3D).material_override as ShaderMaterial
 		for k: String in _cfg.ground[node_name]:
@@ -465,6 +507,20 @@ func _pose(time: float) -> void:
 		_sea.set_shader_parameter(&"swell", smoothstep(DRAWBACK_START - 0.5, LENGTH - 0.5, time))
 		for i in _floats.size():
 			_floats[i].position.y = _float_y[i] - DRAWBACK * back
+
+
+## SETS `seam`: the slab's meshes get SLAB_SEAM with their own textures and the Sea's coast frame.
+func _blend_slab(slab: Node, grass: Color) -> void:
+	for mi: MeshInstance3D in slab.find_children("*", "MeshInstance3D", true, false):
+		var src := mi.get_active_material(0) as StandardMaterial3D
+		var sm := ShaderMaterial.new()
+		sm.shader = Game.shader_for(SLAB_SEAM)
+		sm.set_shader_parameter(&"albedo_tex", src.albedo_texture)
+		sm.set_shader_parameter(&"rough_tex", src.roughness_texture)
+		sm.set_shader_parameter(&"grass", grass)
+		for p in [&"k_skew", &"beach_w", &"land"]:
+			sm.set_shader_parameter(p, _sea.get_shader_parameter(p))
+		mi.material_override = sm
 
 
 ## Snow on every upward face: an overlay that whitens surfaces facing the sky.
