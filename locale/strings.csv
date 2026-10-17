@@ -261,7 +261,7 @@ PROLOGUE_2,"As their world fell, they only blamed each other.","Dünyaları yok 
 PROLOGUE_3,"You were chosen for this mission, Agent.","Bu görev için sen seçildin, Ajan."
 PROLOGUE_4,"Go, and wake your people.","Git ve halkını uyandır."
 PROLOGUE_HINT,"CLICK · NEXT | ESC · SKIP","TIKLA · DEVAM | ESC · ATLA"
-SPLASH_HINT,"ANY KEY · SKIP","HERHANGİ BİR TUŞ · ATLA"
+SPLASH_HINT,"CLICK OR ANY KEY · SKIP","TIKLA VEYA HERHANGİ BİR TUŞ · ATLA"
 
 SET_REPLAY_PROLOGUE,"Replay prologue","Prologu tekrar izle"
 KAHR_FENER_START,"Cut through the dark with your torch. Follow the whistles, taps and calls. Our meeting point: the assembly area in the park to the southeast.","Fenerinle karanlığı yar. Düdükleri, tıkırtıları, çağrıları takip et. Buluşma noktamız: güneydoğudaki parkın toplanma alanı."
@@ -364,3 +364,4 @@ CREDITS_TITLE,"Credits","Emeği Geçenler"
 CREDITS_BACK,"Back","Geri"
 CREDITS_AI_NOTE,"The portraits were generated with AI (Gemini) from the team photos.","Portreler, ekip fotoğraflarından yapay zeka (Gemini) ile üretilmiştir."
 MENU_BACK,"Back","Geri"
+PROLOGUE_SKIP,"Skip","Atla"

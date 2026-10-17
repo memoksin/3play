@@ -39,6 +39,8 @@ func _ready() -> void:
 	%Tag.modulate = Color(Palette.HUD_DIM, 0.0)
 	%Hint.text = tr("PROLOGUE_HINT")
 	%Hint.modulate = Palette.HUD_DIM
+	%SkipButton.text = TextFx.upper(tr("PROLOGUE_SKIP"))
+	%SkipButton.pressed.connect(skip)
 	%GhostR.visible_characters_behavior = TextServer.VC_CHARS_AFTER_SHAPING
 	%GhostB.visible_characters_behavior = TextServer.VC_CHARS_AFTER_SHAPING
 	%Voice.add_theme_color_override("font_color", VOICE_COLOR)
