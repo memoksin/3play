@@ -1,10 +1,11 @@
 extends SceneTree
-## Regenerates res://ui/theme.tres from Palette.
+## Regenerates res://ui/theme.tres and res://ui/space_theme.tres from Palette.
 ## godot --headless --path . -s tools/build_theme.gd
 
 const PX := 4  # 1 logical px = 4 screen px
 const FONT := "res://assets/fonts/VT323-Regular.ttf"
 const OUT := "res://ui/theme.tres"
+const OUT_SPACE := "res://ui/space_theme.tres"
 
 
 func _init() -> void:
@@ -81,7 +82,121 @@ func _init() -> void:
 
 	var err := ResourceSaver.save(t, OUT)
 	print("theme saved: ", OUT, " err=", err)
-	quit(err)
+	var err_space := ResourceSaver.save(_space_theme(regular), OUT_SPACE)
+	print("theme saved: ", OUT_SPACE, " err=", err_space)
+	quit(err if err != OK else err_space)
+
+
+# Space HUD theme for the menu, intro and result screens: the globe's look
+# (dark translucent plates, red accent bar, thin blue edges, spaced capitals).
+# Set as `theme` on those scenes' roots only, so minigames keep ui/theme.tres.
+func _space_theme(regular: FontFile) -> Theme:
+	var t := Theme.new()
+	t.default_font = _spaced(regular, 0)
+	t.default_font_size = 30
+
+	t.set_color("font_color", "Label", Palette.HUD_WHITE)
+	t.set_color("font_shadow_color", "Label", Color(0, 0, 0, 0.55))
+	t.set_constant("shadow_offset_x", "Label", 2)
+	t.set_constant("shadow_offset_y", "Label", 2)
+	t.set_constant("shadow_outline_size", "Label", 0)
+
+	# name, size, colour, letter spacing (em)
+	for v: Array in [
+		["HudTitle", 56, Palette.HUD_WHITE, 0.04],
+		["HudHeader", 44, Palette.HUD_WHITE, 0.05],
+		["HudCaption", 22, Palette.HUD_BLUE, 0.2],
+		["HudData", 26, Palette.HUD_BLUE, 0.06],
+		["HudAlert", 26, Palette.HUD_RED, 0.1],
+		["HudMuted", 26, Palette.HUD_DIM, 0.02],
+		["HudHint", 20, Palette.HUD_DIM, 0.14],
+		["HudScore", 60, Palette.HUD_WHITE, 0.04],
+	]:
+		t.set_type_variation(v[0], "Label")
+		t.set_font("font", v[0], _spaced(regular, roundi(v[1] * v[3])))
+		t.set_font_size("font_size", v[0], v[1])
+		t.set_color("font_color", v[0], v[2])
+
+	var plate := _plate(Palette.HUD_RED)
+	plate.set_content_margin_all(20)
+	plate.content_margin_left = 28
+	t.set_stylebox("panel", "PanelContainer", plate)
+	t.set_stylebox("panel", "Panel", plate)
+
+	# Buttons: plates with a dim bar that lights up on hover.
+	t.set_font("font", "Button", _spaced(regular, 3))
+	t.set_font_size("font_size", "Button", 28)
+	t.set_stylebox("normal", "Button", _plate(Palette.HUD_DIM, Color(Palette.HUD_BLUE, 0.22)))
+	t.set_stylebox("hover", "Button", _plate(Palette.HUD_BLUE, Color(Palette.HUD_BLUE, 0.6), Color(Palette.HUD_BLUE, 0.12)))
+	t.set_stylebox("pressed", "Button", _plate(Palette.HUD_WHITE, Palette.HUD_WHITE, Color(Palette.HUD_BLUE, 0.22)))
+	t.set_stylebox("focus", "Button", _plate(Color(0, 0, 0, 0), Color(Palette.HUD_WHITE, 0.7), Color(0, 0, 0, 0)))
+	t.set_stylebox("disabled", "Button", _plate(Color(Palette.HUD_DIM, 0.4), Color(Palette.HUD_DIM, 0.2)))
+	t.set_color("font_color", "Button", Palette.HUD_WHITE)
+	t.set_color("font_hover_color", "Button", Palette.WHITE)
+	t.set_color("font_pressed_color", "Button", Palette.WHITE)
+	t.set_color("font_focus_color", "Button", Palette.WHITE)
+	t.set_color("font_disabled_color", "Button", Palette.HUD_DIM)
+	_space_role(t, "StateButton", Palette.HUD_BLUE, regular)
+	_space_role(t, "CitizenButton", Palette.HUD_RED, regular)
+
+	var sep := StyleBoxLine.new()
+	sep.color = Color(Palette.HUD_BLUE, 0.22)
+	sep.thickness = 1
+	t.set_stylebox("separator", "HSeparator", sep)
+	t.set_constant("separation", "HSeparator", 12)
+
+	var track := StyleBoxFlat.new()
+	track.bg_color = Color(Palette.HUD_BLUE, 0.06)
+	track.set_content_margin_all(2)
+	t.set_stylebox("scroll", "VScrollBar", track)
+	t.set_stylebox("scroll_focus", "VScrollBar", track)
+	for state in [["grabber", 0.3], ["grabber_highlight", 0.55], ["grabber_pressed", 0.8]]:
+		var g := StyleBoxFlat.new()
+		g.bg_color = Color(Palette.HUD_BLUE, state[1])
+		g.set_content_margin_all(2)
+		t.set_stylebox(state[0], "VScrollBar", g)
+	return t
+
+
+func _space_role(t: Theme, name: StringName, accent: Color, regular: FontFile) -> void:
+	t.set_type_variation(name, "Button")
+	t.set_font("font", name, _spaced(regular, 6))
+	t.set_font_size("font_size", name, 44)
+	# not black: a translucent glass tinted with the role's colour, the sky shows through
+	t.set_stylebox("normal", name, _role_plate(Color(accent, 0.4), Color(accent.darkened(0.55), 0.42)))
+	t.set_stylebox("hover", name, _role_plate(Color(accent, 0.9), Color(accent.darkened(0.4), 0.55)))
+	t.set_stylebox("pressed", name, _role_plate(accent, Color(accent.darkened(0.3), 0.65)))
+	t.set_stylebox("focus", name, _role_plate(Color(accent, 0.9), Color(0, 0, 0, 0)))
+	t.set_color("font_color", name, accent)
+	t.set_color("font_hover_color", name, Palette.WHITE)
+	t.set_color("font_focus_color", name, Palette.WHITE)
+
+
+## Role button plate: like _plate, but the left side is an ordinary edge (same colour and width).
+func _role_plate(edge: Color, bg: Color) -> PlateStyle:
+	var s := _plate(edge, edge, bg)
+	s.bar_width = s.edge_width
+	return s
+
+
+## The globe's place plate: translucent dark, 1 px edge, 3 px accent bar on the left.
+func _plate(bar: Color, edge := Color(Palette.HUD_BLUE, 0.18), bg := Palette.HUD_PLATE) -> PlateStyle:
+	var s := PlateStyle.new()
+	s.bg = bg
+	s.edge = edge
+	s.bar = bar
+	s.content_margin_left = 24
+	s.content_margin_right = 24
+	s.content_margin_top = 12
+	s.content_margin_bottom = 12
+	return s
+
+
+func _spaced(base: Font, px: int) -> FontVariation:
+	var f := FontVariation.new()
+	f.base_font = base
+	f.spacing_glyph = px
+	return f
 
 
 func _box(bg: Color, border: Color, top_pad := 0, border_w := PX) -> StyleBoxFlat:

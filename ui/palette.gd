@@ -29,3 +29,11 @@ const ALL: Array[String] = [
 	"8fd3ff", "45293f", "6b3e75", "905ea9", "a884f3", "eaaded", "753c54", "a24b6f",
 	"cf657f", "ed8099", "831c5d", "c32454", "f04f78", "f68181", "fca790", "fdcbb0",
 ]
+
+## Space HUD: the globe's colours (scenes/globe.gd), used by ui/space_theme.tres
+## for the menu, intro and result screens.
+const HUD_RED := Color("ff5a3c")     # alerts, Citizen, plate accent bar
+const HUD_BLUE := Color("9fd8ff")    # data, captions, State
+const HUD_WHITE := Color("e6e8f0")   # titles, body text
+const HUD_DIM := Color("8a90a6")     # hints, secondary text
+const HUD_PLATE := Color(7 / 255.0, 8 / 255.0, 13 / 255.0, 0.72)  # translucent dark plate

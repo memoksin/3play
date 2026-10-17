@@ -1,0 +1,34 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/place_backdrop.gd" id="1"]
+
+[sub_resource type="Gradient" id="shade_grad"]
+offsets = PackedFloat32Array(0, 0.45, 0.75, 1)
+colors = PackedColorArray(0.02, 0.025, 0.05, 0.72, 0.02, 0.025, 0.05, 0.55, 0.02, 0.025, 0.05, 0.12, 0.02, 0.025, 0.05, 0.05)
+
+[sub_resource type="GradientTexture2D" id="shade_tex"]
+gradient = SubResource("shade_grad")
+width = 256
+height = 4
+
+[node name="PlaceBackdrop" type="Node3D"]
+script = ExtResource("1")
+
+[node name="Camera" type="Camera3D" parent="."]
+fov = 50.0
+far = 600.0
+current = true
+
+[node name="Dim" type="CanvasLayer" parent="."]
+layer = -1
+
+[node name="Shade" type="TextureRect" parent="Dim"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("shade_tex")
+expand_mode = 1
+stretch_mode = 0
