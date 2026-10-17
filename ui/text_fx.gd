@@ -18,14 +18,21 @@ static func fade_in(node: CanvasItem, delay := 0.0, duration := FADE) -> Tween:
 
 
 ## Reveals `label` letter by letter after `delay` seconds. Returns the tween;
-## kill it or call finish() on it to show the full text at once.
-static func type_on(label: Control, delay := 0.0, cps := TYPE_CPS) -> Tween:
+## kill it or call custom_step(9999.0) on it to show the full text at once.
+## `on_start` runs when the first letter appears (after `delay`), `on_finish`
+## when the last one does; custom_step() skipping still runs both, once each.
+## (kill() runs neither.) Audio hook for typing loops, see docs/audio.md.
+static func type_on(label: Control, delay := 0.0, cps := TYPE_CPS, on_start := Callable(), on_finish := Callable()) -> Tween:
 	label.visible_characters_behavior = TextServer.VC_CHARS_AFTER_SHAPING  # keep wrap stable
 	label.visible_ratio = 0.0
 	var chars := maxi(label.get_total_character_count(), 1)
 	var tw := label.create_tween()
 	tw.tween_interval(delay)
+	if on_start.is_valid():
+		tw.tween_callback(on_start)
 	tw.tween_property(label, "visible_ratio", 1.0, chars / cps)
+	if on_finish.is_valid():
+		tw.tween_callback(on_finish)
 	return tw
 
 
