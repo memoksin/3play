@@ -24,6 +24,10 @@ const QUAKE_CROSSFADE := 0.15
 ## The gap is capped at SPILL_OVERLAP x the splash length so the repeats always overlap.
 var spill_repeats := 4
 var spill_gap := 0.25
+## Fire ending timing (s): the opening, when the fade to silence starts (the ending shot lasts 8.5 s), its length.
+var fire_end_open := 1.5
+var fire_end_fade_at := 6.5
+var fire_end_fade := 1.0
 const SPILL_OVERLAP := 0.8
 const SPILL_PITCH_JITTER := 0.06
 ## Fit radio (#107): fade of the static bed and alarm.
@@ -108,16 +112,17 @@ const CUES := {
 	&"FN6": {"path": F_PICK, "bus": &"SFX", "volume_db": -6.0, "notes": "found a family member, same file as F2 (not wired yet)"},
 	&"FN7": {"path": F_GLOCK, "bus": &"SFX", "volume_db": 0.0, "notes": "family at the assembly point, same file as C10 (not wired yet)"},
 	&"FN8": {"path": F_CRACK, "bus": &"SFX", "volume_db": -4.0, "notes": "aftershock, same file as F6 (not wired yet)"},
+	&"FN8a": {"path": "fener/building_crack.ogg", "bus": &"SFX", "volume_db": -4.0, "notes": "building crack: aftershock warning and start (not wired yet)"},
 	&"FN9": {"path": "fener/hurt.ogg", "bus": &"SFX", "volume_db": -2.0, "notes": "player hurt near a building, about 0.2 s (not wired yet)"},
 	# Fire (Black Saturday, scenes/minigames/fire.gd), see _hook_fire.
 	&"FR1": {"path": "fire/wildfire_wind_loop.ogg", "bus": &"SFX", "volume_db": -8.0, "loop": true, "fade_in": 0.5, "notes": "fire and wind ambience, 10 s seamless loop"},
 	&"FR2": {"path": F_FOOT, "bus": &"SFX", "volume_db": 0.0, "loop": true, "notes": "footsteps, same file as FN2"},
 	&"FR3": {"path": "fire/landing.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "jump landing on debris"},
 	&"FR4": {"path": F_PICK, "bus": &"SFX", "volume_db": -6.0, "notes": "pick up the knife, same file as F2"},
-	&"FR5": {"path": "fire/snip.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "wire cutter snips a fence tie (event snip, 6 per fence); NOT CHOSEN YET (stub)"},
-	&"FR5.1": {"path": "fire/panel_land.ogg", "bus": &"SFX", "volume_db": -4.0, "notes": "cut fence panel slams down (event panel_land); NOT CHOSEN YET (stub)"},
-	&"FR13": {"path": "fire/ending.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "ending shot, escaped (event exit); NOT CHOSEN YET (stub)"},
-	&"FR13b": {"path": "fire/ending_dark.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "ending shot, time ran out (event lose), lower and heavier; NOT CHOSEN YET (stub)"},
+	&"FR5": {"path": "fire/sanding_loop.ogg", "bus": &"SFX", "volume_db": -8.0, "loop": true, "notes": "cutting the fence: rubs while the player holds, 2.6 s loop"},
+	&"FR5.1": {"path": "fire/panel_crash.ogg", "bus": &"SFX", "volume_db": -4.0, "notes": "cut fence panel slams down (panel_land index 0), 2 s of Scrap metal crashing"},
+	&"FR5.1b": {"path": "fire/panel_hop.ogg", "bus": &"SFX", "volume_db": -2.0, "notes": "the little hop after the slam (panel_land index 1), quiet piece of the same file"},
+	&"FR5.2": {"path": "fire/scissors_snip.ogg", "bus": &"SFX", "volume_db": -4.0, "notes": "wire cutter snips a fence tie (event snip, 6 per fence), 0.4 s"},
 	&"FR6": {"path": F_GLOCK, "bus": &"SFX", "volume_db": 0.0, "notes": "task done, same file as C10"},
 	&"FR7.1": {"path": "fire/door_lock.ogg", "bus": &"SFX", "volume_db": -2.0, "notes": "hose attached"},
 	&"FR7.2": {"path": "fire/hose_valve_trim.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "valve turn, 5 s of Hose Sounds"},
@@ -161,6 +166,13 @@ const FIRE_STEP_HOLD := 0.55
 const FIRE_GALLOPS := 3
 const FIRE_GALLOP_GAP := 0.3
 const FIRE_FLAME_FADE := 1.0
+## Fire ending (FR13, no file): on `exit` FR1 opens up (louder, low-pass opens) and fades to silence
+## before the result card; on `lose` it turns heavier (low-pass, slower, a little quieter).
+const FIRE_END_BUS := &"FireEnding"
+const FIRE_EXIT_CUTOFF := 1200.0
+const FIRE_LOSE_CUTOFF := 800.0
+const FIRE_LOSE_PITCH := 0.85
+const FIRE_LOSE_DB := -4.0
 const HISTORY_CAP := 256
 
 ## Test/debug log of every call: {op, id, t (Audio clock), played, fade}. Newest last.
@@ -281,6 +293,41 @@ func quake_sequence(owner: Node = null) -> void:
 	play(&"F6")
 	after(QUAKE_COLLAPSE_DELAY, func() -> void: play(&"F7", {"fade": QUAKE_CROSSFADE}), owner)
 	after(QUAKE_RUMBLE_END, func() -> void: stop(&"F6", QUAKE_CROSSFADE), owner)
+
+
+## Fire ending (FR13): re-uses the FR1 player. Win: +6 dB and the low-pass opens over fire_end_open,
+## then silence from fire_end_fade_at (a quiet moment before the card). Lose: low-pass, slower, quieter.
+## Moves the player to the FireEnding bus (created here, with a low-pass effect, on first use).
+func fire_ending(escaped: bool) -> void:
+	var p := loop(&"FR1")
+	if p == null:
+		return
+	var idx := AudioServer.get_bus_index(FIRE_END_BUS)
+	if idx == -1:
+		AudioServer.add_bus()
+		idx = AudioServer.bus_count - 1
+		AudioServer.set_bus_name(idx, FIRE_END_BUS)
+		AudioServer.set_bus_send(idx, &"SFX" if AudioServer.get_bus_index(&"SFX") != -1 else &"Master")
+		AudioServer.add_bus_effect(idx, AudioEffectLowPassFilter.new())
+	var lp := AudioServer.get_bus_effect(idx, 0) as AudioEffectLowPassFilter
+	p.bus = FIRE_END_BUS
+	if p.has_meta(&"tween"):
+		var old: Tween = p.get_meta(&"tween")
+		if old.is_valid():
+			old.kill()
+	var base: float = p.get_meta(&"db")
+	var tw := p.create_tween()
+	p.set_meta(&"tween", tw)
+	if escaped:
+		lp.cutoff_hz = FIRE_EXIT_CUTOFF
+		tw.tween_property(p, "volume_db", base + 6.0, fire_end_open)
+		tw.tween_interval(maxf(fire_end_fade_at - fire_end_open, 0.0))
+		tw.tween_property(p, "volume_db", SILENT_DB, fire_end_fade)
+		p.create_tween().tween_method(func(hz: float) -> void: lp.cutoff_hz = hz, FIRE_EXIT_CUTOFF, 20000.0, fire_end_open)
+	else:
+		lp.cutoff_hz = FIRE_LOSE_CUTOFF
+		p.pitch_scale = FIRE_LOSE_PITCH
+		tw.tween_property(p, "volume_db", base + FIRE_LOSE_DB, 0.5)
 
 
 ## Connect broken line (#95): spill_repeats splashes of C7, each starting before the previous ends.
@@ -674,6 +721,13 @@ func _hook_fire(f) -> void:
 			var fn: Node = instance_from_id(fid) as Node
 			if fn == null or not fn.is_inside_tree():
 				return true
+			# FR5 while the player holds the cut: there is no hold event, so follow the cut progress
+			# (_cut_k > 0 while held; it is 0 again on release and when the fence is done).
+			var cutting: bool = float(fn.get(&"_cut_k")) > 0.0 and fn.get(&"phase") == 1
+			if cutting:
+				loop(&"FR5")
+			elif is_playing(&"FR5"):
+				stop(&"FR5", 0.1)
 			if clock - st.step > FIRE_STEP_HOLD:
 				stop(&"FR2", 0.1)
 			return false)
@@ -687,9 +741,9 @@ func _hook_fire(f) -> void:
 				&"cutters":
 					play(&"FR4")
 				&"snip":
-					play(&"FR5")
+					play(&"FR5.2")
 				&"panel_land":
-					play(&"FR5.1")
+					play(&"FR5.1" if index == 0 else &"FR5.1b")
 				&"success":
 					play(&"FR6")
 				&"attach":
@@ -709,9 +763,9 @@ func _hook_fire(f) -> void:
 							after(k * FIRE_GALLOP_GAP, func() -> void: play(&"FR11a", {"pitch": 1.0 + (k - 1) * 0.04}), f)
 						play(&"FR11b")
 				&"exit":
-					play(&"FR13")
+					fire_ending(true)
 				&"lose":
-					play(&"FR13b")
+					fire_ending(false)
 				# jump, cut, hose, heartbeat, gust: no sound.
 		)
-		_bind_exit(f, [&"FR1", &"FR2", &"FR8", &"FR9", &"FR11a", &"FR11b", &"FR13", &"FR13b"], 0.5))
+		_bind_exit(f, [&"FR1", &"FR2", &"FR5", &"FR8", &"FR9", &"FR11a", &"FR11b"], 0.5))

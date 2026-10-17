@@ -451,12 +451,14 @@ func _run() -> void:
 	# 11. Fire hook, C3/C4 files (#126).
 	for id in [&"C3", &"C4"]:
 		_check("cue %s file exists" % id, ResourceLoader.exists(audio.ROOT + audio.CUES[id].path))
-	_check("FR5 sanding file is gone", not ResourceLoader.exists(audio.ROOT + "fire/sanding_loop.ogg"))
-	for id in [&"FR5", &"FR5.1", &"FR13", &"FR13b"]:
-		_check("stub cue %s exists, silent without a file" % id, audio.CUES.has(id) and audio.play(id) == null)
+	for id in [&"FR5", &"FR5.1", &"FR5.1b", &"FR5.2"]:
+		_check("cue %s file exists" % id, ResourceLoader.exists(audio.ROOT + audio.CUES[id].path))
+	_check("FR5 loops", audio.CUES[&"FR5"].get("loop", false))
+	_check("FR13 has no cue or file of its own", not audio.CUES.has(&"FR13") and not audio.CUES.has(&"FR13b"))
+	_check("cue FN8a file exists", ResourceLoader.exists(audio.ROOT + audio.CUES[&"FN8a"].path))
 	audio.stop_all()
 	audio.clear_injected()
-	for id in [&"FR1", &"FR2", &"FR3", &"FR4", &"FR5", &"FR5.1", &"FR6", &"FR7.1", &"FR7.2", &"FR8", &"FR9", &"FR11a", &"FR11b", &"FR13", &"FR13b"]:
+	for id in [&"FR1", &"FR2", &"FR3", &"FR4", &"FR5", &"FR5.1", &"FR5.1b", &"FR5.2", &"FR6", &"FR7.1", &"FR7.2", &"FR8", &"FR9", &"FR11a", &"FR11b"]:
 		audio.inject_stream(id, _wav(1.0))
 	game.disaster = load("res://data/disasters/black_saturday.tres")
 	var fire: Node3D = load("res://scenes/minigames/fire.tscn").instantiate()
@@ -465,12 +467,47 @@ func _run() -> void:
 	root.add_child(fire)
 	await process_frame
 	_check("fire: ambience FR1 and flame FR9 loop", "loop:FR1" in _log() and "loop:FR9" in _log())
-	var map := {&"land": "play:FR3", &"cutters": "play:FR4", &"snip": "play:FR5", &"panel_land": "play:FR5.1", &"success": "play:FR6",
-			&"attach": "play:FR7.1", &"valve": "play:FR7.2", &"water_on": "loop:FR8", &"exit": "play:FR13", &"lose": "play:FR13b"}
+	var map := {&"land": "play:FR3", &"cutters": "play:FR4", &"snip": "play:FR5.2", &"panel_land": "play:FR5.1", &"success": "play:FR6",
+			&"attach": "play:FR7.1", &"valve": "play:FR7.2", &"water_on": "loop:FR8"}
 	for kind: StringName in map:
 		audio.reset_history()
 		fire.sound_event.emit(kind, 0)
 		_check("fire: %s -> %s" % [kind, map[kind]], _log() == [map[kind]])
+	# Ending (FR13): exit opens FR1 up and fades it out, lose makes it heavier.
+	audio.fire_end_open = 0.2
+	audio.fire_end_fade_at = 0.5
+	audio.fire_end_fade = 0.2
+	var amb: AudioStreamPlayer = audio.loop(&"FR1")
+	await create_timer(0.3).timeout  # the fade-in of FR1 is over
+	var amb_db: float = audio.CUES[&"FR1"].volume_db
+	fire.sound_event.emit(&"exit", 0)
+	_check("fire: exit moves FR1 to the ending bus with a low-pass", amb.bus == audio.FIRE_END_BUS
+			and AudioServer.get_bus_effect(AudioServer.get_bus_index(audio.FIRE_END_BUS), 0) is AudioEffectLowPassFilter)
+	await create_timer(0.35).timeout
+	_check("fire: exit raises FR1 about 6 dB", absf(amb.volume_db - (amb_db + 6.0)) < 1.0)
+	await create_timer(0.5).timeout
+	_check("fire: exit then fades FR1 to silence", amb.volume_db < -60.0)
+	audio.stop(&"FR1")
+	amb = audio.loop(&"FR1", {"fade": 0.0})
+	fire.sound_event.emit(&"lose", 0)
+	await process_frame
+	_check("fire: lose slows FR1", absf(amb.pitch_scale - 0.85) < 0.001 and amb.bus == audio.FIRE_END_BUS)
+	await create_timer(0.7).timeout
+	_check("fire: lose is a little quieter", absf(amb.volume_db - (amb_db + audio.FIRE_LOSE_DB)) < 1.0)
+	audio.stop(&"FR1")
+	audio.loop(&"FR1")
+	audio.reset_history()
+	fire.sound_event.emit(&"panel_land", 1)
+	_check("fire: panel_land index 1 plays the hop FR5.1b", _log() == ["play:FR5.1b"])
+	audio.reset_history()
+	fire.set(&"phase", 1)
+	fire.set(&"_cut_k", 0.3)
+	audio.tick(0.05)
+	_check("fire: holding the cut loops FR5", "loop:FR5" in _log() and audio.is_playing(&"FR5"))
+	fire.set(&"_cut_k", 0.0)
+	audio.tick(0.05)
+	_check("fire: releasing stops FR5", "stop:FR5" in _log())
+	fire.set(&"phase", 0)
 	audio.reset_history()
 	fire.sound_event.emit(&"water_off", 0)
 	_check("fire: water_off stops FR8", _log() == ["stop:FR8"])

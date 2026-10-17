@@ -176,7 +176,7 @@ Dark snowy street, a flashlight with a battery, a whistle that shows the directi
 | FN6 | Found a family member | The player reaches a family member | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | in repo (not wired yet; reuse of F2) | First second of the file. |
 | FN7 | Success | The family reaches the assembly point | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | in repo (not wired yet) | One success sound for FN7, FR6 and BM4. |
 | FN8 | Aftershock | The aftershock hits | Cracking Earthquake | uagadugu | https://freesound.org/people/uagadugu/sounds/222521/ | CC0 | in repo (not wired yet; reuse of F6) | Trim to the shaking. |
-| FN8a | Building creak | Aftershock warning and the start of the aftershock |  |  |  |  | not found | No usable building creak was found. Left empty for now, test the game without it. |
+| FN8a | Building creak | Aftershock warning and the start of the aftershock | breaking_concrete | zatar | https://freesound.org/people/zatar/sounds/755522/ | CC0 (and its 4 source sounds, checked) | in repo (not wired yet) | First crack only (about 1 s). Made from Breaking Ice (Mrthenoronha) and three iwanPlays rock/brick sounds, all CC0. |
 | FN9 | Hurt | The player is hurt near a building | Hurt_C_07 | cabled_mess | https://freesound.org/people/cabled_mess/sounds/350926/ | CC0 | in repo (not wired yet) | Retro-style hurt sound, about 0.2 s. |
 
 ## Fire (Black Saturday, kangaroo farm, first person)
@@ -189,8 +189,9 @@ Spec: `docs/minigames/fire-farm.md`.
 | FR2 | Footsteps | The player walks | Footsteps Dirt Gravel | PotatokingXII | https://freesound.org/people/PotatokingXII/sounds/352870/ | CC0 | in repo | Same as FN2. Trim to a clean stride loop. |
 | FR3 | Jump and landing on debris | The player jumps over the debris | Human Impact on Ground | alegemaate | https://freesound.org/people/alegemaate/sounds/364690/ | CC0 | in repo | Short clip of a person landing after a jump. |
 | FR4 | Pick up the wire cutters | The player picks up the wire cutters (was the knife) | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | in repo (reuse of F2) | First second of the file. A metal clank would fit the cutters better. |
-| FR5 | Snip a fence tie | Each wire tie is cut while the player holds (event `snip`, 6 per fence) | | | | | todo | Now wire cutters (team playtest): a short metal snip / clack per tie. |
-| FR5.1 | Fence panel crashes down | The cut panel slams onto the ground (event `panel_land`, index 0), the little hop after it (index 1) | | | | | todo | Steel mesh panel hitting dirt: a rattling crash, then a small clink. |
+| FR5 | Cut the fence (hold) | The player holds the cut on the fence | Sanding_a_Piece_Of_Wood.wav | CapsLok | https://freesound.org/people/CapsLok/sounds/204948/ | CC0 | in repo | Seconds 16 to 19, short loop. Plays while the player holds the cut. |
+| FR5.1 | Fence panel crashes down | The cut panel slams onto the ground (event `panel_land`, index 0), the little hop after it (index 1) | Scrap metal dropping / crashing | SamsterBirdies | https://freesound.org/people/SamsterBirdies/sounds/587443/ | CC0 | in repo | Steel mesh panel hitting dirt: a rattling crash (seconds 2 to 4), then a small clink (a quiet piece, 3.5 to 3.9 s). |
+| FR5.2 | Snip a fence tie | Each wire tie is cut while the player holds (event `snip`, 6 per fence) | Scissors Cutting Air.wav | RutgerMuller | https://freesound.org/people/RutgerMuller/sounds/51164/ | CC0 | in repo | Only seconds 2.8 to 3.2. A short metal snip per tie. |
 | FR6 | Success | A task is done (fence cut, flame out) | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | in repo (same as FN7) | The same success sound as FN7 and BM4. |
 | FR7.1 | Hose attached | The hose is put on the valve | Door Lock.wav | nebulasnails | https://freesound.org/people/nebulasnails/sounds/405534/ | CC0 | in repo | About 0.75 s door latch. |
 | FR7.2 | Valve turn | The valve is turned | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | in repo | Use 0:58 to 1:03 of the file. |
@@ -199,7 +200,7 @@ Spec: `docs/minigames/fire-farm.md`.
 | FR10 | Flame goes out | The flame is put out | | | | | decided | No separate sound: the flame sound (FR9) fades out. |
 | FR11 | Kangaroos run out | 2 to 3 kangaroos run through the gap | Horse Gallop Loop.wav + Footsteps Dirt 01 | DeadxCreed + aglinder | https://freesound.org/people/DeadxCreed/sounds/322448/ and https://freesound.org/people/aglinder/sounds/264469/ | CC0 (verify both) | in repo (to test) | No kangaroo hop CC0 exists. Layer both and play the pair 2 to 3 times, each starting before the previous ends. Replace if it sounds fake. |
 | FR12 | Smoke (cough, breath) | The smoke thickens | | | | | no sound | Not needed. |
-| FR13 | Ending shot | The camera rises out of first person over the burning farm (event `exit`), or the dark version when time runs out (event `lose`) | | | | | todo | A swell: wind and fire roar opening up, then a held quiet before the result card. The dark one lower and heavier. |
+| FR13 | Ending shot | The camera rises out of first person over the burning farm (event `exit`), or the dark version when time runs out (event `lose`) | | | | | in repo (FR1 reuse) | No file: on `exit` the FR1 wind and fire roar opens up (+6 dB, low-pass opens over 1.5 s), then goes quiet before the result card. On `lose` FR1 turns heavier (low-pass 800 Hz, slower, a little quieter). |
 
 ## Beam network (Isin Agi, solar flare 3026, #124)
 
@@ -212,8 +213,8 @@ Rotate satellites to route the solar beam into collectors, waves, a countdown, "
 | BM3 | Beam | The beam runs through the satellites | Laser Beam Firing | SecureSubset | https://freesound.org/people/SecureSubset/sounds/783986/ | CC0 | in repo | About 0.75 s. Repeat it back to back so it becomes a continuous sound while the beam runs. |
 | BM4 | Collector charged, city saved | A collector is charged | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | in repo (same as FN7) | The same success sound as FN7 and FR6. |
 | BM5 | City lost | A city is lost | power-down-01.wav | newagesoup | https://freesound.org/people/newagesoup/sounds/348249/ | CC0 | in repo | Use the part from 1 s onward. |
-| BM6 | Wave warning | A wave is coming | | | | | later | Empty for now, to search later. |
-| BM7 | Wave hits | The wave hits | | | | | later | Empty for now. |
+| BM6 | Wave warning | A wave is coming | | | | | no sound | Burcu: stay silent, the countdown (BM8) covers the warning. |
+| BM7 | Wave hits | The wave hits | | | | | no sound | Burcu: stay silent, the countdown (BM8) covers the warning. |
 | BM8 | Countdown | The countdown runs | Bomb Countdown Beeps | snakebarney | https://freesound.org/people/snakebarney/sounds/138108/ | CC0 | in repo |  |
 
 ## Pitch film (trailer, about 50 s, silent render, sounds added by the team)
