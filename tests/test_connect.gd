@@ -217,6 +217,39 @@ func _scene() -> void:
 	s.queue_free()
 	await process_frame
 
+	# the result decides the run-up: solved -> the tsunami stops on the beach, the town stays dry;
+	# unsolved -> it floods the town; partial -> the saved communities stay dry
+	for case in ["solved", "unsolved", "partial"]:
+		s = _new_scene()
+		await process_frame
+		s.time_scale = 0.0
+		s.submit = false
+		if case != "unsolved":
+			s.solve()
+		if case == "partial":
+			s.rotate_cell(5, 5)  # line 4 breaks
+		var wd: Node3D = s.get_node("World")
+		var shown := false
+		var wet := [false, false, false, false]
+		var t := 59.0
+		while t < 75.0 and not s._finished:
+			s.seek(t)
+			wd.show_state(s)
+			for mi: MeshInstance3D in wd._flood_meshes:
+				shown = shown or (mi.visible and s._hit)  # before the hit the swell is still at sea
+			for v in 4:
+				var c: Vector2 = wd.VILLAGE_UD[v]
+				wet[v] = wet[v] or wd.flood_depth(c.x, c.y) > 0.0
+			t += 0.1
+		if case == "solved":
+			_check("result: solved -> no flood over the land, every community dry", s.saved_count == 4 and not shown and not wet.has(true))
+		elif case == "unsolved":
+			_check("result: unsolved -> the flood covers the town", s.saved_count < 4 and not s._saved.has(true) and shown and wet.has(true))
+		else:
+			_check("result: partial -> the saved communities stay dry", s._saved == [true, true, true, false] and wet == [false, false, false, false])
+		s.queue_free()
+		await process_frame
+
 	# juice: shake during the hit, none after; hover cursor; turn tween clears
 	s = _new_scene()
 	await process_frame

@@ -29,6 +29,7 @@ const FRONT_START := -14.5  # u of the front when the swell starts (out at sea, 
 const FRONT_HIT := -0.6     # u of the front at the hit: the edge of the reef
 const CREST_HIT := 4.6
 const FLOOD := 3.1         # m the sea stands over its level at the peak (about 2.5 m over the town)
+const HELD_PLAT := 1.4     # m the sea stands at the peak when the run-up is held back (reach): a surge, no flood
 ## Field parameters, same names and defaults as the water.gdshader uniforms (a calm sea).
 const CALM := {
 	"ts_front": -1000.0, "ts_crest": 0.0, "ts_plat": 0.0, "ts_back": 6.0, "ts_face": 2.0,
@@ -40,6 +41,12 @@ var level := -0.6
 var k_skew := 0.40402622
 var u_end := 31.0        # back of the slab (land side)
 var depth := 13.0
+## How far inland the run-up goes (coast u), from the result (connect_world.gd): INF = over the whole town
+## (nothing saved), the beach (everything saved), short of the first saved community (some saved).
+## reach_y: the ground height there. The water stands over the land only on the sea side of it.
+var reach := INF
+var reach_y := 0.35
+var _held := false  # the bore front has stopped at the reach
 var _spray: CPUParticles3D     # torn off the head while it steepens
 var _crash: CPUParticles3D     # the wave breaks on the beach: droplets up and toward the camera
 var _crash_foam: CPUParticles3D
@@ -165,6 +172,7 @@ func _foam(amount: int, size: float) -> CPUParticles3D:
 func update(tau: float, lead: float, drain: float, sea_level: float) -> void:
 	level = sea_level
 	p = CALM.duplicate()
+	_held = false
 	if tau >= -lead:
 		p.ts_draw = DRAWBACK * smoothstep(0.0, 0.7, (tau + lead) / lead)
 	if tau < 0.0:
@@ -203,7 +211,21 @@ func update(tau: float, lead: float, drain: float, sea_level: float) -> void:
 			p.ts_flow = lerpf(p.ts_flow, -4.5, smoothstep(0.0, 0.25, q)) * (1.0 - 0.6 * smoothstep(0.7, 1.0, q))
 			p.ts_churn = lerpf(p.ts_churn, 0.12, q)
 			p.ts_mud = lerpf(1.0, 0.35, smoothstep(0.5, 1.0, q))
+		_hold_back()
 	_show_spray(tau)
+
+
+## A held run-up (reach < u_end): the front stops at the reach, the surge is lower, and the surface over the
+## land tilts down so it meets the ground at the reach and stays under it beyond (the shader drops it there).
+func _hold_back() -> void:
+	_held = reach < u_end and p.ts_front >= reach
+	if reach >= u_end:
+		return
+	p.ts_front = minf(p.ts_front, reach)
+	p.ts_plat *= HELD_PLAT / FLOOD
+	var over: float = level + p.ts_plat + p.ts_crest * 1.16 - reach_y + 0.05  # 1.16: eta()'s crest wobble
+	if over > 0.0:
+		p.ts_inland = maxf(p.ts_inland, over / maxf(reach, 0.5))
 
 
 ## Pushes the field into the water materials.
@@ -248,7 +270,7 @@ func _show_spray(tau: float) -> void:
 	_spray.position = _local(f + p.ts_lean * 0.5 - 0.3, mid, top)
 	_spray.emitting = tau > -2.5 and tau < 0.5 and p.ts_crest > 1.5
 	_bore.position = _local(f - 0.4, mid, level + p.ts_plat * 0.8)
-	_bore.emitting = tau >= 0.0 and f < u_end - 1.5
+	_bore.emitting = tau >= 0.0 and f < u_end - 1.5 and not _held
 	if tau >= 0.0 and not _fired.has(&"crash"):
 		_fired[&"crash"] = true
 		var at := _local(FRONT_HIT + 1.2, mid, level + 1.2)
