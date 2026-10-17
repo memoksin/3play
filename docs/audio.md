@@ -234,13 +234,13 @@ Source: `tools/video/film.html` cue sheet and `tools/video/intro_stack_v2.html` 
 
 | # | Time (s) | What happens | Sound needed | Status |
 |---|---|---|---|---|
-| T1 | 0 to 8 | Intro: the Stack logo in a storm | Rain.wav (idomusics) https://freesound.org/people/idomusics/sounds/518863/ , loop under the whole intro. The first pick (QuietLily) was deleted from Freesound. Check CC0 and loop on the page. | chosen |
+| T1 | 0 to 8 | Intro: the Stack logo in a storm | Rain.wav (idomusics) https://freesound.org/people/idomusics/sounds/518863/ , loop under the whole intro (replaces Seamless Rain Low, deleted from Freesound) | in repo |
 | T2 | about 2.4 | Distant sheet lightning in the clouds | thunder.rumble.ogg (xUMR) https://freesound.org/people/xUMR/sounds/486557/ , use seconds 5 to 10 of the file | in repo |
 | T3 | 2.8 and 3.4 | Two close lightning strikes, the logo flickers | First: Thunderclap (Fission9) https://freesound.org/people/Fission9/sounds/534023/ . Second: Very close lightning strike (Simon Spiers) https://freesound.org/people/Simon%20Spiers/sounds/437243/ | in repo |
-| T4 | 3.9 | Final strike hits the logo (2 frames silhouette, 1 inverted) | Thunder with no rain (shazzakip) https://freesound.org/people/shazzakip/sounds/398013/ (Burcu's pick; it is described as very far away, so check by ear that it is big enough, add Simon Spiers underneath if not) | in repo Burcu: use the plain shazzakip file (trailer/t4_final_strike.ogg), raise its level in the mix and listen. If it feels weak, then layer a sharper crack. |
+| T4 | 3.9 | Final strike hits the logo (2 frames silhouette, 1 inverted) | Thunder with no rain (shazzakip) https://freesound.org/people/shazzakip/sounds/398013/ . Burcu: use the plain file trailer/t4_final_strike.ogg, raise its level in the mix and listen. If it feels weak, layer a sharper crack. | in repo |
 | T5 | 4.45 to 5.3 | "STACK PRESENTS" types on | Keyboard typing (G3), same file as the game | chosen (reuse of G3) |
 | T6 | 5.5 | Last far strike | Same as T2: thunder.rumble.ogg (xUMR), seconds 5 to 10 | in repo |
-| T7 | 6.05 to 7.65 | The camera pushes into the logo's eye | noise riser (reathance) https://freesound.org/people/reathance/sounds/503796/ | in repo | Use the last 1.6 s of the file with a short fade-in (the slot is 1.6 s, the file 4.6 s).
+| T7 | 6.05 to 7.65 | The camera pushes into the logo's eye | noise riser (reathance) https://freesound.org/people/reathance/sounds/503796/ , the last 1.6 s with a short fade-in | in repo |
 | T8 | 7.75 | Pure black | Silence | no sound |
 | T9 | 8.2, 8.5, 9.2, 9.5 | Darkness with a heartbeat glow | SLOW HEARTBEAT (daandraait) https://freesound.org/s/249716/ , use seconds 2 to 3 of the file (lub-dub) | in repo |
 | T10 | 8.8 to 10.0 | A faint voice echoes: "Sesimi duyan var mı?" |  | Burcu: no voice recording. Silent. | | | no sound | Dropped by Burcu. The on-screen text stays. |

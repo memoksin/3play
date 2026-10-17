@@ -106,161 +106,34 @@ func _block(img: Image, x: int, top: int, bw: int) -> void:
 
 # -------------------------------------------------------------- CITIZEN
 
-## Ten everyday civilians in one rank, no backdrop (tallest 20 px, row 30). Each
-## is built from parts by _body: rounded head, neck, sloped shoulders, torso,
-## 2 px arms with a gap, split legs, feet.
 func _citizen() -> Image:
 	var img := Image.create(W, H, false, Image.FORMAT_RGBA8)
 	_r(img, 0, GROUND, W, 2)
 
-	# student with a backpack
-	var L := _layer()
-	var b := _body(L, 8, BASE, 18, {})
-	_r(L, b.lx - 5, b.ty, 3, b.th + 1)
-	_stamp(img, L)
-
-	# parent holding a small child's hand
-	L = _layer()
-	b = _body(L, 22, BASE, 19, {})
-	var kid := _body(L, 32, BASE, 13, {w = 5, hw = 4, hh = 4, child = true})
-	_r(L, b.rx + 2, b.hand_y, kid.lx - 1 - (b.rx + 2) + 1, 2)
-	_stamp(img, L)
-
-	# elder with a cane, bent forward
-	L = _layer()
-	b = _body(L, 44, BASE, 14, {hh = 4, hx = -2, sx = -1})
-	_r(L, b.rx + 3, b.hand_y + 1, 1, BASE - b.hand_y)
-	_stamp(img, L)
-
-	# woman in a headscarf and a long flared skirt
-	L = _layer()
-	_body(L, 57, BASE, 18, {skirt = true, flare = 3, pinch = true, hrows = [5, 7, 7, 7, 5], nw = 5})
-	_stamp(img, L)
-
-	# worker: hard hat, shovel carried upright on the right
-	L = _layer()
-	b = _body(L, 72, BASE, 19, {hh = 6, hrows = [3, 5, 7, 5, 5, 3]})
-	_r(L, b.rx + 3, 30, 3, 3)
-	_r(L, b.rx + 4, 33, 1, b.hand_y + 2 - 33 + 1)
-	_stamp(img, L)
-
-	# shopper with a bag in the left hand
-	L = _layer()
-	b = _body(L, 91, BASE, 17, {})
-	_r(L, b.lx - 6, b.hand_y + 1, 5, 5)
-	_r(L, b.lx - 4, b.hand_y + 2, 1, 1, NONE)
-	_stamp(img, L)
-
-	# long coat with a high collar
-	L = _layer()
-	_body(L, 105, BASE, 19, {w = 7, skirt = true, flare = 1, nw = 5, cut = 3})
-	_stamp(img, L)
-
-	# dog walker: small dog on a leash
-	L = _layer()
-	b = _body(L, 119, BASE, 18, {})
-	var dx: int = b.rx + 7
-	_r(L, b.rx + 4, b.hand_y, dx - (b.rx + 4), 1)
-	_dog(L, dx, BASE)
-	_stamp(img, L)
-
-	# young person waving: clean 2 px arm, one bend
-	L = _layer()
-	_body(L, 147, BASE, 16, {raise = true})
-	_stamp(img, L)
-
-	# tall slim passer-by
-	L = _layer()
-	_body(L, 162, BASE, 20, {})
-	_stamp(img, L)
+	var crowd := [
+		{x = 5, h = 21, w = 6},
+		{x = 15, h = 19, w = 5, hair = true, dress = true},
+		{x = 26, h = 20, w = 4, pack = true},
+		{x = 35, h = 19, w = 6, hold = 41},                              # parent ...
+		{x = 54, h = 18, w = 5, scarf = true, dress = true},
+		{x = 66, h = 22, w = 8, hw = 6},
+		{x = 76, h = 15, w = 5, hh = 4, stoop = true, cane = true},      # elder
+		{x = 87, h = 20, w = 6, raise = true},
+		{x = 101, h = 18, w = 6, pack = true},
+		{x = 111, h = 19, w = 5, hair = true, dress = true},
+		{x = 123, h = 22, w = 6, ag = 1},
+		{x = 134, h = 17, w = 5, scarf = true, dress = true},
+		{x = 145, h = 20, w = 6},
+		{x = 156, h = 16, w = 5, hh = 4, pack = true},
+		{x = 166, h = 21, w = 6},
+	]
+	for p: Dictionary in crowd:
+		var L := _layer()
+		_person(L, p.x, BASE, p.h, p)
+		if p.has("hold"):   # ... holding the small child's hand
+			_person(L, 44, BASE, 12, {w = 4, hw = 4, hh = 4})
+		_stamp(img, L)
 	return img
-
-
-## Small dog facing left; `x` is its head's left column, feet on row `base`.
-func _dog(L: Image, x: int, base: int) -> void:
-	_r(L, x, base - 6, 3, 3)           # head
-	_r(L, x, base - 7, 1, 1)           # ear
-	_r(L, x + 3, base - 4, 7, 3)       # body
-	_r(L, x + 3, base - 1, 2, 2)       # front leg
-	_r(L, x + 8, base - 1, 2, 2)       # rear leg
-	_r(L, x + 10, base - 5, 1, 2)      # tail
-
-
-## One civilian built from parts. Options: w torso width (odd), hw/hh head,
-## hrows custom head row widths, nw neck width, hx head shift, sx shoulder
-## shift (rows 0-1), ll legs, child (1 px arms, no neck), skirt (flare =
-## widening in steps of 2 px, pinch = pinched waist, cut = rows of leg left
-## below), raise (right arm up). Returns anchors for props.
-func _body(L: Image, cx: int, base: int, h: int, o: Dictionary) -> Dictionary:
-	var w: int = o.get("w", 5)
-	var hw: int = o.get("hw", 5)
-	var hh: int = o.get("hh", 5)
-	var child: bool = o.get("child", false)
-	var ll: int = o.get("ll", roundi(h * 0.36))
-	var neck := 0 if child else 1
-	var top := base - h + 1
-	var ty := top + hh + neck
-	var th := h - hh - neck - ll
-	var lx := cx - w / 2
-	var rx := lx + w - 1
-	var hx: int = o.get("hx", 0)
-	var sx: int = o.get("sx", 0)
-
-	# head
-	var rows: Array = o.get("hrows", [])
-	if rows.is_empty():
-		for i in hh:
-			rows.append(hw if (i > 0 and i < hh - 1) else hw - 2)
-	for i in hh:
-		var wd: int = rows[i]
-		_r(L, cx + hx - wd / 2, top + i, wd, 1)
-	if neck == 1:
-		var nw: int = o.get("nw", hw - 2)
-		_r(L, cx + hx / 2 - nw / 2, top + hh, nw, 1)
-
-	# shoulders, torso and arms
-	var skirt: bool = o.get("skirt", false)
-	var pinch: bool = o.get("pinch", false)
-	var raise: bool = o.get("raise", false)
-	for i in th:
-		if child:
-			if i == 0:
-				_r(L, lx, ty, w, 1)
-			else:
-				_r(L, lx - 1, ty + i, w + 2, 1)
-		elif i == 0:
-			_r(L, lx - 2 + sx, ty, w + 4, 1)
-		elif i == 1:
-			_r(L, lx - 3 + sx, ty + 1, w + 6, 1)
-		else:
-			if skirt and pinch and i == th - 1:
-				_r(L, lx + 1, ty + i, w - 2, 1)
-			else:
-				_r(L, lx, ty + i, w, 1)
-			_r(L, lx - 3, ty + i, 2, 1)
-			if not raise:
-				_r(L, rx + 2, ty + i, 2, 1)
-	if raise:   # out from the shoulder, then straight up above the head
-		_r(L, rx + 4, top - 2, 2, ty + 2 - (top - 2))
-
-	# legs, or a skirt / coat that widens toward the hem, then feet
-	var ly := ty + th
-	var legw := (w - 1) / 2
-	if skirt:
-		var cut: int = o.get("cut", 2)
-		var sl := ll - cut
-		var flare: int = o.get("flare", 3)
-		for k in sl:
-			var wd := w + 2 * ((k * flare) / maxi(1, sl - 1))
-			_r(L, cx - wd / 2, ly + k, wd, 1)
-		ly += sl - 1
-	else:
-		_r(L, lx, ly, w, 1)
-	_r(L, lx, ly + 1, legw, base - ly - 1)
-	_r(L, rx - legw + 1, ly + 1, legw, base - ly - 1)
-	_r(L, lx - 1, base, legw + 1, 1)
-	_r(L, rx - legw + 1, base, legw + 1, 1)
-	return {top = top, ty = ty, th = th, lx = lx, rx = rx, hand_y = ty + th - 1}
 
 
 # ---------------------------------------------------------------- shared
