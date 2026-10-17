@@ -1928,8 +1928,7 @@ func _sf() -> void:
 		_box(gantry, "Arm%d" % a, Vector3(5.4, 0.5, 1.2), Vector3(-4.3, 11.0 + a * 6.5, 0), Vector3.ZERO, steel)
 		_box(gantry, "Clamp%d" % a, Vector3(0.8, 1.6, 1.8), Vector3(-6.7, 11.0 + a * 6.5, 0), Vector3.ZERO, dark)
 	_model(gantry, "space-kit/satelliteDish_detailed", Vector3(0, 24.0, 0), 40, 3.0)
-	for i in 2:
-		_cyl(pad, "FuelTank%d" % i, 1.8, 6.0, Vector3(14.5, 3.5, -4 + i * 5), Vector3.ZERO, white)
+	# fuel tanks: built with the detail pass (_sf_tank)
 
 	# bunker: earth mound, concrete portal, two blast doors
 	var bunker := _group("Bunker")
@@ -1969,9 +1968,553 @@ func _sf() -> void:
 	_model(town, "space-kit/rock_largeA", Vector3(-34, 0, 2), 0, 8.0)
 	_model(town, "space-kit/rocks_smallA", Vector3(34, 0, -2), 0, 8.0)
 	_model(town, "space-kit/barrel", Vector3(-5, 0, 15), 0, 8.0)
+	_sf_detail(steel, dark, white)
 
 	var focus := Marker3D.new()
 	focus.name = "Focus"
 	focus.position = Vector3(0, 9.0, 0)
 	_own(focus, root_node)
 	_save("res://scenes/diorama/set_solar_flare.tscn")
+
+
+# ---------- Solar flare: detail pass ----------
+# Small parts are merged per material (unit meshes scaled, exact normals) so the extra detail
+# costs few draw calls. Own RandomNumberGenerator: the other sets' random sequence is unchanged.
+
+var sf_rng := RandomNumberGenerator.new()
+var sf_mats := {}
+var sf_meshes := {}
+var sf_parts := {}
+
+
+func _sf_detail(steel: Material, dark: Material, white: Material) -> void:
+	sf_rng.seed = 3026
+	var m := {
+		"steel": steel, "dark": dark, "white": white,
+		"concrete": _sf_mat(Color(0.62, 0.58, 0.54)), "kerb": _sf_mat(Color(0.76, 0.72, 0.68)),
+		"yellow": _sf_mat(Color(0.95, 0.68, 0.1), 0.6), "orange": _sf_mat(Color(0.88, 0.38, 0.12), 0.6),
+		"red_l": _sf_mat(Color(1.0, 0.18, 0.12), 0.5, true), "green_l": _sf_mat(Color(0.25, 1.0, 0.5), 0.5, true),
+		"cyan_l": _sf_mat(Color(0.45, 0.95, 1.0), 0.5, true), "lamp": _sf_mat(Color(1.0, 0.95, 0.8), 0.5, true),
+		"ember": _sf_mat(Color(1.0, 0.42, 0.08), 0.5, true),
+		"panel": _sf_mat(Color(0.1, 0.14, 0.28), 0.3), "cell": _sf_mat(Color(0.32, 0.4, 0.58), 0.4),
+		"burnt": _sf_mat(Color(0.08, 0.06, 0.05), 0.95), "ash": _sf_mat(Color(0.27, 0.17, 0.13), 0.95),
+		"rock": _sf_mat(Color(0.42, 0.28, 0.21)), "glass": _sf_mat(Color(0.16, 0.18, 0.24), 0.25),
+		"facade": _sf_mat(Color(0.72, 0.68, 0.64), 0.8),
+		"suits": [white, _sf_mat(Color(0.25, 0.55, 0.62), 0.8), _sf_mat(Color(0.25, 0.32, 0.58), 0.8),
+				_sf_mat(Color(0.72, 0.24, 0.2), 0.8), _sf_mat(Color(0.55, 0.56, 0.6), 0.8)],
+		"skin": [_sf_mat(Color(0.86, 0.66, 0.5)), _sf_mat(Color(0.58, 0.4, 0.28))],
+	}
+	var det := _group("Detail")
+	_sf_pad_detail(m)
+	_sf_gantry_detail(m)
+	for i in 2:
+		_sf_tank(m, Vector3(14.5, 0.5, -4 + i * 5), i)
+	_sf_sphere_tank(m, Vector3(14.5, 0.5, -9.6))
+	_sf_water_tower(m, Vector3(-17, 0, -2))
+	_sf_bunker_detail(m, Transform3D(Basis(Vector3.UP, deg_to_rad(35.0)), Vector3(-22, 0, 14)))
+	_sf_solar_farm(m)
+	_sf_town_detail(m)
+	_sf_maglev(m)
+	_sf_flush(det, "Parts")
+	_sf_ground_detail(m)
+	_sf_flush(det, "Ground", false)
+
+
+func _sf_pad_detail(m: Dictionary) -> void:
+	# bevelled kerb around the slab
+	for sd in [-1.0, 1.0]:
+		_sf_box(Vector3(26.6, 0.3, 0.6), Vector3(0, 0.45, 13.0 * sd), Vector3.ZERO, m.kerb)
+		_sf_box(Vector3(0.6, 0.3, 26.6), Vector3(13.0 * sd, 0.45, 0), Vector3.ZERO, m.kerb)
+	# hold-down posts around the shuttle base
+	for k in 4:
+		var a := deg_to_rad(90.0 * k)
+		var b := _sf_xf(Vector3(cos(a) * 4.6, 0.5, sin(a) * 4.6), Vector3(0, -90.0 * k + 90.0, 0))
+		_sf_box(Vector3(1.0, 2.2, 1.0), Vector3(0, 1.1, 0), Vector3.ZERO, m.dark, b)
+		_sf_box(Vector3(0.6, 0.45, 1.3), Vector3(0, 2.0, -0.9), Vector3.ZERO, m.steel, b)
+		_sf_box(Vector3(1.1, 0.2, 1.1), Vector3(0, 2.3, 0), Vector3.ZERO, m.yellow, b)
+	# floodlight masts on three slab corners, heads turned to the shuttle
+	for c in [Vector3(-12.2, 0.5, -12.2), Vector3(12.2, 0.5, -12.2), Vector3(-12.2, 0.5, 12.2)]:
+		var d: Vector3 = -c
+		var b := _sf_xf(c, Vector3(0, rad_to_deg(atan2(-d.x, -d.z)), 0))
+		_sf_box(Vector3(0.9, 0.5, 0.9), Vector3(0, 0.25, 0), Vector3.ZERO, m.concrete, b)
+		_sf_cyl(0.16, 11.0, Vector3(0, 5.5, 0), Vector3.ZERO, m.steel, 8, b, 0.22)
+		_sf_box(Vector3(2.6, 0.18, 0.18), Vector3(0, 10.7, 0), Vector3.ZERO, m.steel, b)
+		for k in 3:
+			var lb := _sf_xf(Vector3(-0.9 + k * 0.9, 11.05, -0.1), Vector3(-25, 0, 0), b)
+			_sf_box(Vector3(0.7, 0.5, 0.3), Vector3.ZERO, Vector3.ZERO, m.dark, lb)
+			_sf_box(Vector3(0.58, 0.38, 0.05), Vector3(0, 0, -0.16), Vector3.ZERO, m.lamp, lb)
+	# canisters and crates by the gantry foot
+	for p in [Vector3(4.0, 0.5, 7.5), Vector3(4.8, 0.5, 8.2), Vector3(4.1, 0.5, 8.9), Vector3(-9.5, 0.5, -9.0), Vector3(-10.3, 0.5, -8.4)]:
+		_sf_cyl(0.38, 1.1, p + Vector3(0, 0.55, 0), Vector3.ZERO, m.white if p.x > 0 else m.yellow, 10)
+		_sf_cyl(0.4, 0.08, p + Vector3(0, 0.85, 0), Vector3.ZERO, m.dark, 10)
+	_sf_box(Vector3(1.6, 1.0, 1.2), Vector3(6.2, 1.0, 8.4), Vector3(0, 12, 0), m.steel)
+	_sf_box(Vector3(1.2, 0.8, 1.2), Vector3(-11.0, 0.9, -10.3), Vector3(0, -20, 0), m.concrete)
+	# soot streaks blown out from the shuttle base
+	for k in 4:
+		var a := deg_to_rad(k * 90.0 + 45.0)
+		_sf_ball(1.0, Vector3.ZERO, m.ash, Vector3(2.2, 0.03, 1.0), 8,
+			_sf_xf(Vector3(cos(a) * 6.2, 0.5, sin(a) * 6.2), Vector3(0, -rad_to_deg(a), 0)))
+
+
+func _sf_gantry_detail(m: Dictionary) -> void:
+	var g := Vector3(8.5, 0.5, 0)
+	# walkways with rails on the camera face, one per level
+	for k in range(1, 6):
+		var y := g.y + k * 4.0
+		_sf_box(Vector3(4.4, 0.14, 1.1), Vector3(g.x, y, 2.6), Vector3.ZERO, m.steel)
+		_sf_box(Vector3(4.4, 0.08, 0.08), Vector3(g.x, y + 1.0, 3.1), Vector3.ZERO, m.yellow)
+		_sf_box(Vector3(4.4, 0.06, 0.06), Vector3(g.x, y + 0.5, 3.1), Vector3.ZERO, m.steel)
+		for j in 5:
+			_sf_box(Vector3(0.08, 1.0, 0.08), Vector3(g.x - 2.1 + j * 1.05, y + 0.5, 3.1), Vector3.ZERO, m.steel)
+	# elevator shaft on the +x face
+	for c in [Vector2(10.7, -0.75), Vector2(11.9, -0.75), Vector2(10.7, 0.75), Vector2(11.9, 0.75)]:
+		_sf_box(Vector3(0.14, 24.0, 0.14), Vector3(c.x, g.y + 12.0, c.y), Vector3.ZERO, m.steel)
+	for k in 7:
+		_sf_box(Vector3(1.34, 0.12, 1.64), Vector3(11.3, g.y + k * 4.0, 0), Vector3.ZERO, m.steel)
+	_sf_box(Vector3(1.0, 1.8, 1.3), Vector3(11.3, g.y + 9.4, 0), Vector3.ZERO, m.yellow)
+	# lightning mast and warning beacons on top
+	_sf_cyl(0.06, 8.0, Vector3(10.3, g.y + 28.0, -1.7), Vector3.ZERO, m.steel, 6, Transform3D.IDENTITY, 0.18)
+	_sf_ball(0.28, Vector3(10.3, g.y + 32.1, -1.7), m.red_l)
+	for c in [Vector2(6.6, -1.9), Vector2(10.4, 1.9), Vector2(6.6, 1.9)]:
+		_sf_ball(0.22, Vector3(c.x, g.y + 24.2, c.y), m.red_l)
+	# umbilical hoses from the swing arms to the shuttle, rails on the arms
+	for a in 2:
+		var y := g.y + 11.0 + a * 6.5
+		for z in [-0.35, 0.35]:
+			_sf_wire(Vector3(6.6, y - 0.4, z), Vector3(2.3, y - 0.5, z), 0.9, 0.16, m.dark)
+		for z in [-0.55, 0.55]:
+			_sf_box(Vector3(4.8, 0.07, 0.07), Vector3(4.4, y + 1.05, z), Vector3.ZERO, m.yellow)
+			for j in 5:
+				_sf_box(Vector3(0.07, 0.8, 0.07), Vector3(2.4 + j * 1.0, y + 0.65, z), Vector3.ZERO, m.steel)
+	# fuel lines climbing the tower corners
+	for z in [-1.85, 1.85]:
+		_sf_pipe(Vector3(10.65, 0.9, z), Vector3(10.65, g.y + 11.0, z), 0.13, m.white)
+		_sf_pipe(Vector3(10.65, g.y + 11.0, z), Vector3(6.6, g.y + 11.0, z), 0.13, m.white)
+		for k in 3:
+			_sf_box(Vector3(0.4, 0.15, 0.4), Vector3(10.65, 2.5 + k * 3.0, z), Vector3.ZERO, m.dark)
+
+
+## Smooth propellant tank with domes, bands, ladder and the feed line to the tower.
+func _sf_tank(m: Dictionary, p: Vector3, i: int) -> void:
+	var b := _sf_xf(p)
+	for c in [Vector2(-1.1, -1.1), Vector2(1.1, -1.1), Vector2(-1.1, 1.1), Vector2(1.1, 1.1)]:
+		_sf_box(Vector3(0.35, 0.8, 0.35), Vector3(c.x, 0.4, c.y), Vector3.ZERO, m.steel, b)
+	_sf_cyl(1.8, 4.8, Vector3(0, 3.2, 0), Vector3.ZERO, m.white, 20, b)
+	_sf_ball(1.0, Vector3(0, 0.8, 0), m.white, Vector3(1.8, 0.45, 1.8), 14, b)
+	_sf_ball(1.0, Vector3(0, 5.6, 0), m.white, Vector3(1.8, 0.75, 1.8), 14, b)
+	_sf_cyl(1.84, 0.6, Vector3(0, 4.3, 0), Vector3.ZERO, m.orange, 20, b)
+	for y in [1.2, 5.4]:
+		_sf_cyl(1.85, 0.14, Vector3(0, y, 0), Vector3.ZERO, m.steel, 20, b)
+	for z in [-0.25, 0.25]:
+		_sf_box(Vector3(0.07, 6.2, 0.07), Vector3(1.95, 3.1, z), Vector3.ZERO, m.steel, b)
+	for k in 10:
+		_sf_box(Vector3(0.05, 0.05, 0.5), Vector3(1.95, 0.6 + k * 0.6, 0), Vector3.ZERO, m.steel, b)
+	_sf_cyl(0.25, 0.6, Vector3(0, 7.0, 0), Vector3.ZERO, m.steel, 8, b)
+	# feed line to the tower foot (y 0.9), valve boxes at the bends
+	var zt := 1.85 if i == 1 else -1.85
+	var pts := [p + Vector3(-1.9, 0.4, 0), p + Vector3(-2.4, 0.4, 0), Vector3(12.1, 0.9, zt), Vector3(10.65, 0.9, zt)]
+	for k in pts.size() - 1:
+		_sf_pipe(pts[k], pts[k + 1], 0.14, m.white)
+	for k in range(1, pts.size() - 1):
+		_sf_box(Vector3(0.4, 0.4, 0.4), pts[k], Vector3.ZERO, m.dark)
+
+
+func _sf_sphere_tank(m: Dictionary, p: Vector3) -> void:
+	_sf_ball(2.1, p + Vector3(0, 3.3, 0), m.white, Vector3.ONE, 14)
+	_sf_cyl(2.14, 0.22, p + Vector3(0, 3.3, 0), Vector3.ZERO, m.orange, 18)
+	for c in [Vector2(-1.5, -1.5), Vector2(1.5, -1.5), Vector2(-1.5, 1.5), Vector2(1.5, 1.5)]:
+		_sf_cyl(0.16, 3.3, p + Vector3(c.x, 1.65, c.y), Vector3.ZERO, m.steel, 8)
+	_sf_pipe(p + Vector3(0, 1.4, 0), p + Vector3(0, 0.4, 0), 0.14, m.white)
+	_sf_pipe(p + Vector3(0, 0.4, 0), p + Vector3(0, 0.4, 3.8), 0.14, m.white)
+
+
+## Sound-suppression water tower: splayed legs with braces, tank with cone roof.
+func _sf_water_tower(m: Dictionary, p: Vector3) -> void:
+	var foot := [Vector3(-2.3, 0, -2.3), Vector3(2.3, 0, -2.3), Vector3(2.3, 0, 2.3), Vector3(-2.3, 0, 2.3)]
+	var head := []
+	for f in foot:
+		head.append(f * 0.62 + Vector3(0, 10.0, 0))
+	for k in 4:
+		_sf_beam(p + foot[k], p + head[k], 0.32, m.steel)
+		_sf_box(Vector3(0.8, 0.4, 0.8), p + foot[k] + Vector3(0, 0.2, 0), Vector3.ZERO, m.concrete)
+	for lv in [0.0, 0.5, 1.0]:
+		for k in 4:
+			var a: Vector3 = foot[k].lerp(head[k], lv)
+			var c: Vector3 = foot[(k + 1) % 4].lerp(head[(k + 1) % 4], lv)
+			_sf_beam(p + a + Vector3(0, 0.3 if lv == 0.0 else 0.0, 0), p + c + Vector3(0, 0.3 if lv == 0.0 else 0.0, 0), 0.16, m.steel)
+			if lv < 1.0:
+				var a2: Vector3 = foot[k].lerp(head[k], lv + 0.5)
+				var c2: Vector3 = foot[(k + 1) % 4].lerp(head[(k + 1) % 4], lv + 0.5)
+				_sf_beam(p + a, p + c2, 0.1, m.steel)
+				_sf_beam(p + c, p + a2, 0.1, m.steel)
+	_sf_cyl(0.35, 10.0, p + Vector3(0, 5.0, 0), Vector3.ZERO, m.white, 8)
+	_sf_cyl(2.8, 1.0, p + Vector3(0, 10.0, 0), Vector3.ZERO, m.white, 16, Transform3D.IDENTITY, 0.9)
+	_sf_cyl(2.8, 3.2, p + Vector3(0, 12.1, 0), Vector3.ZERO, m.white, 16)
+	_sf_cyl(2.84, 0.5, p + Vector3(0, 12.6, 0), Vector3.ZERO, m.orange, 16)
+	_sf_cyl(0.3, 1.2, p + Vector3(0, 14.3, 0), Vector3.ZERO, m.steel, 16, Transform3D.IDENTITY, 2.95)
+	_sf_ball(0.22, p + Vector3(0, 15.1, 0), m.red_l)
+	for k in 14:
+		_sf_box(Vector3(0.5, 0.05, 0.05), p + Vector3(0, 10.6 + k * 0.25, 2.88), Vector3.ZERO, m.steel)
+
+
+func _sf_bunker_detail(m: Dictionary, b: Transform3D) -> void:
+	# pilasters and angled wing walls holding back the mound
+	for sd in [-1.0, 1.0]:
+		_sf_box(Vector3(0.8, 5.6, 0.6), Vector3(5.6 * sd, 2.8, 2.0), Vector3.ZERO, m.concrete, b)
+		_sf_box(Vector3(0.6, 2.4, 4.6), Vector3(6.3 * sd, 1.2, 4.1), Vector3(0, -14.0 * sd, 0), m.concrete, b)
+		_sf_box(Vector3(0.8, 0.22, 4.8), Vector3(6.3 * sd, 2.5, 4.1), Vector3(0, -14.0 * sd, 0), m.kerb, b)
+		# exit sign with an arrow towards the doors, beacon on the lintel
+		_sf_box(Vector3(0.75, 0.5, 0.08), Vector3(5.6 * sd, 3.7, 2.33), Vector3.ZERO, m.green_l, b)
+		_sf_prism(Vector3(0.32, 0.28, 0.04), Vector3(5.6 * sd, 3.7, 2.39), Vector3(0, 0, 90.0 * sd), m.lamp, b)
+		_sf_cyl(0.3, 0.15, Vector3(5.6 * sd, 6.37, 1.6), Vector3.ZERO, m.dark, 8, b)
+		_sf_cyl(0.2, 0.35, Vector3(5.6 * sd, 6.6, 1.6), Vector3.ZERO, m.red_l, 8, b)
+		# ramp guard rails
+		_sf_box(Vector3(0.08, 0.08, 6.6), Vector3(4.3 * sd, 1.3, 5.7), Vector3.ZERO, m.yellow, b)
+		_sf_box(Vector3(0.06, 0.06, 6.6), Vector3(4.3 * sd, 0.8, 5.7), Vector3.ZERO, m.steel, b)
+		for k in 7:
+			_sf_box(Vector3(0.09, 1.05, 0.09), Vector3(4.3 * sd, 0.78, 2.6 + k * 1.05), Vector3.ZERO, m.steel, b)
+	# vents and an antenna on the mound
+	for v in [Vector2(3.0, -8.0), Vector2(-2.6, -9.6)]:
+		var dz: float = v.y + 6.0
+		var y := 4.5 * sqrt(maxf(0.0, 1.0 - (v.x * v.x + dz * dz) / 81.0))
+		_sf_cyl(0.35, 2.2, Vector3(v.x, y + 0.8, v.y), Vector3.ZERO, m.steel, 10, b)
+		_sf_cyl(0.15, 0.4, Vector3(v.x, y + 2.05, v.y), Vector3.ZERO, m.dark, 10, b, 0.7)
+	_sf_cyl(0.06, 6.5, Vector3(-4.0, 6.5, -4.6), Vector3.ZERO, m.steel, 6, b, 0.14)
+	for k in 3:
+		_sf_box(Vector3(1.4 - k * 0.35, 0.06, 0.06), Vector3(-4.0, 6.0 + k * 1.1, -4.6), Vector3.ZERO, m.steel, b)
+	_sf_ball(0.18, Vector3(-4.0, 9.8, -4.6), m.red_l, Vector3.ONE, 8, b)
+	# evacuation queue on the ramp, heading for the doors
+	var suits: Array = m.suits
+	var skins: Array = m.skin
+	for row in 6:
+		for lane in 3:
+			if sf_rng.randf() < 0.22:
+				continue
+			var pos := Vector3(-2.5 + lane * 2.5 + sf_rng.randf_range(-0.5, 0.5), 0.25, 3.4 + row * 0.95 + sf_rng.randf_range(-0.2, 0.2))
+			var suit: Material = suits[sf_rng.randi() % suits.size()]
+			var pose := 3 if sf_rng.randf() < 0.35 else 0
+			_sf_person(b, pos, sf_rng.randf_range(-12, 12), suit, m.dark, skins[sf_rng.randi() % 2], pose)
+			if sf_rng.randf() < 0.18:
+				_sf_person(b, pos + Vector3(0.55, 0, 0.15), 0, suits[sf_rng.randi() % suits.size()], m.dark, skins[0], 0, 0.62)
+	# late arrivals running in, marshals in hi-vis at the ramp foot
+	for p in [Vector3(-1.2, 0, 10.6), Vector3(1.6, 0, 11.4), Vector3(0.2, 0, 12.8), Vector3(-2.4, 0, 13.6)]:
+		_sf_person(b, p, sf_rng.randf_range(-15, 15), suits[sf_rng.randi() % suits.size()], m.dark, skins[sf_rng.randi() % 2], 2)
+	_sf_person(b, Vector3(-5.2, 0, 9.6), -150, m.orange, m.dark, skins[0], 1)
+	_sf_person(b, Vector3(5.3, 0, 9.0), 160, m.orange, m.dark, skins[1], 4)
+	# hover bus that brought them, and supply crates by the wing wall
+	_sf_hover_bus(m, b * _sf_xf(Vector3(9.2, 0, 10.0), Vector3(0, 78, 0)))
+	for c in [Vector3(-7.6, 0.45, 6.6), Vector3(-7.5, 0.45, 7.6), Vector3(-7.55, 1.35, 7.1), Vector3(-8.5, 0.45, 7.0)]:
+		_sf_box(Vector3(0.9, 0.9, 0.9), c, Vector3(0, sf_rng.randf_range(-10, 10), 0), m.steel if c.y < 1.0 else m.yellow, b)
+
+
+func _sf_hover_bus(m: Dictionary, b: Transform3D) -> void:
+	_sf_box(Vector3(2.4, 1.5, 6.0), Vector3(0, 1.45, 0), Vector3.ZERO, m.white, b)
+	_sf_ball(1.0, Vector3(0, 1.45, -3.0), m.white, Vector3(1.2, 0.75, 1.3), 12, b)
+	_sf_ball(1.0, Vector3(0, 1.45, 3.0), m.white, Vector3(1.2, 0.75, 0.6), 12, b)
+	_sf_box(Vector3(2.44, 0.45, 5.0), Vector3(0, 1.75, -0.2), Vector3.ZERO, m.glass, b)
+	_sf_ball(1.0, Vector3(0, 1.75, -3.25), m.glass, Vector3(1.0, 0.32, 0.9), 12, b)
+	_sf_box(Vector3(2.46, 0.1, 5.8), Vector3(0, 0.95, 0), Vector3.ZERO, m.cyan_l, b)
+	_sf_box(Vector3(1.6, 0.25, 2.6), Vector3(0, 2.3, 0.6), Vector3.ZERO, m.steel, b)
+	for sd in [-0.8, 0.8]:
+		_sf_box(Vector3(0.5, 0.3, 5.0), Vector3(sd, 0.5, 0), Vector3.ZERO, m.dark, b)
+		_sf_box(Vector3(0.4, 0.04, 4.8), Vector3(sd, 0.33, 0), Vector3.ZERO, m.cyan_l, b)
+
+
+## Low-poly figure facing -z, feet at `pos`. pose: 0 walk, 1 point, 2 run, 3 backpack, 4 wave.
+func _sf_person(base: Transform3D, pos: Vector3, rot_y: float, suit: Material, legs: Material, skin: Material, pose := 0, s := 1.0) -> void:
+	var b := base * Transform3D(Basis(Vector3.UP, deg_to_rad(rot_y)).scaled(Vector3.ONE * s), pos)
+	var swing := 38.0 if pose == 2 else 14.0
+	for sd in [-1.0, 1.0]:
+		var lb := Basis(Vector3.RIGHT, deg_to_rad(swing * sd))
+		_sf_put("box", legs, b * Transform3D(lb * Basis.from_scale(Vector3(0.15, 0.82, 0.17)), Vector3(0.1 * sd, 0.82, 0) + lb * Vector3(0, -0.41, 0)))
+		var ang: float = -swing * sd
+		if pose == 1 and sd > 0.0:
+			ang = 110.0
+		elif pose == 4:
+			ang = 160.0
+		var ab := Basis(Vector3.RIGHT, deg_to_rad(ang)) * Basis(Vector3.BACK, deg_to_rad(-12.0 * sd if pose == 4 else 0.0))
+		_sf_put("box", suit, b * Transform3D(ab * Basis.from_scale(Vector3(0.11, 0.56, 0.12)), Vector3(0.28 * sd, 1.36, 0) + ab * Vector3(0, -0.28, 0)))
+	_sf_box(Vector3(0.44, 0.62, 0.26), Vector3(0, 1.12, 0), Vector3(-10 if pose == 2 else 0, 0, 0), suit, b)
+	_sf_ball(0.13, Vector3(0, 1.56, 0), skin, Vector3.ONE, 6, b)
+	_sf_box(Vector3(0.28, 0.1, 0.3), Vector3(0, 1.68, 0.02), Vector3.ZERO, legs, b)
+	if pose == 3:
+		_sf_box(Vector3(0.36, 0.44, 0.2), Vector3(0, 1.12, 0.23), Vector3.ZERO, legs, b)
+
+
+func _sf_solar_farm(m: Dictionary) -> void:
+	# three rows facing the camera side; the flare has scorched and toppled some of them
+	for row in 3:
+		var z := -1.8 + row * 3.5
+		for k in 5:
+			var x := 18.8 + k * 2.35
+			var burnt := sf_rng.randf() < 0.4
+			var fallen := burnt and sf_rng.randf() < 0.35
+			for sx in [-0.8, 0.8]:
+				_sf_box(Vector3(0.1, 1.3, 0.1), Vector3(x + sx, 0.65, z - 0.45), Vector3.ZERO, m.steel)
+				_sf_box(Vector3(0.1, 0.75, 0.1), Vector3(x + sx, 0.37, z + 0.45), Vector3.ZERO, m.steel)
+			var rot := Vector3(22, 0, 0)
+			var c := Vector3(x, 1.05, z)
+			if fallen:
+				rot = Vector3(48, sf_rng.randf_range(-15, 15), sf_rng.randf_range(-14, 14))
+				c = Vector3(x, 0.7, z + 0.5)
+			var b := _sf_xf(c, rot)
+			_sf_box(Vector3(2.15, 0.08, 1.4), Vector3.ZERO, Vector3.ZERO, m.burnt if burnt else m.panel, b)
+			if burnt:
+				_sf_box(Vector3(sf_rng.randf_range(0.6, 1.8), 0.1, 0.07), Vector3(sf_rng.randf_range(-0.3, 0.3), 0.02, 0.64), Vector3.ZERO, m.ember, b)
+			else:
+				for j in 2:
+					_sf_box(Vector3(0.05, 0.1, 1.4), Vector3(-0.36 + j * 0.72, 0.0, 0), Vector3.ZERO, m.cell, b)
+		_sf_box(Vector3(0.8, 1.2, 0.6), Vector3(17.0, 0.6, z), Vector3.ZERO, m.dark)
+		_sf_box(Vector3(0.3, 0.2, 0.05), Vector3(17.0, 0.95, z + 0.32), Vector3.ZERO, m.green_l if row != 1 else m.red_l)
+	# broken panel shards on the ground
+	for k in 6:
+		_sf_box(Vector3(sf_rng.randf_range(0.4, 0.9), 0.05, sf_rng.randf_range(0.3, 0.7)),
+			Vector3(sf_rng.randf_range(18.0, 29.0), 0.1, sf_rng.randf_range(-3.5, 7.0)),
+			Vector3(sf_rng.randf_range(-12, 12), sf_rng.randf_range(0, 180), 0), m.burnt)
+
+
+func _sf_town_detail(m: Dictionary) -> void:
+	# footpath with kerbs from the pad to the bunker ramp, lamps alongside, people running
+	var a := Vector3(-12.2, 0, 13.6)
+	var c := Vector3(-16.4, 0, 21.0)
+	var d := (c - a)
+	var yaw := rad_to_deg(atan2(d.x, d.z))
+	var b := _sf_xf((a + c) * 0.5, Vector3(0, yaw, 0))
+	_sf_box(Vector3(2.6, 0.2, d.length() + 1.0), Vector3(0, 0.06, 0), Vector3.ZERO, m.concrete, b)
+	for sd in [-1.0, 1.0]:
+		_sf_box(Vector3(0.25, 0.3, d.length() + 1.0), Vector3(1.4 * sd, 0.1, 0), Vector3.ZERO, m.kerb, b)
+	for p in [Vector3(-2.0, 0, -2.0), Vector3(2.0, 0, 3.0)]:
+		var lb := _sf_xf(p, Vector3(0, 90 if p.x > 0 else -90, 0), b)
+		_sf_cyl(0.09, 4.6, Vector3(0, 2.3, 0), Vector3.ZERO, m.steel, 6, lb, 0.12)
+		_sf_box(Vector3(0.1, 0.1, 1.0), Vector3(0, 4.55, -0.45), Vector3.ZERO, m.steel, lb)
+		_sf_box(Vector3(0.36, 0.18, 0.6), Vector3(0, 4.5, -0.95), Vector3.ZERO, m.dark, lb)
+		_sf_box(Vector3(0.28, 0.04, 0.5), Vector3(0, 4.4, -0.95), Vector3.ZERO, m.lamp, lb)
+	var suits: Array = m.suits
+	for k in 3:
+		_sf_person(b, Vector3(sf_rng.randf_range(-0.7, 0.7), 0.16, 2.0 - k * 1.6), 180 + sf_rng.randf_range(-10, 10), suits[(k * 2 + 1) % suits.size()], m.dark, m.skin[k % 2], 2)
+	# comm masts between the hangars
+	for mp in [[Vector3(3.5, 0, -32.0), 15.0], [Vector3(-19.0, 0, -24.0), 11.0]]:
+		var p: Vector3 = mp[0]
+		var h: float = mp[1]
+		_sf_box(Vector3(1.0, 0.5, 1.0), p + Vector3(0, 0.25, 0), Vector3.ZERO, m.concrete)
+		_sf_cyl(0.08, h, p + Vector3(0, h * 0.5, 0), Vector3.ZERO, m.steel, 6, Transform3D.IDENTITY, 0.22)
+		for k in 3:
+			_sf_box(Vector3(1.6 - k * 0.4, 0.07, 0.07), p + Vector3(0, h * (0.55 + k * 0.13), 0), Vector3(0, k * 50, 0), m.steel)
+		_sf_ball(0.2, p + Vector3(0, h + 0.1, 0), m.red_l)
+	# drones: one over the queue, one by the shuttle, one over the solar field
+	for dp in [Vector3(-14.5, 7.5, 21.0), Vector3(-4.5, 15.0, 5.0), Vector3(22.0, 6.0, 1.0), Vector3(-19.0, 10.0, 6.0)]:
+		_sf_drone(m, _sf_xf(dp, Vector3(sf_rng.randf_range(-8, 8), sf_rng.randf_range(0, 90), 0)))
+
+
+func _sf_drone(m: Dictionary, b: Transform3D) -> void:
+	_sf_box(Vector3(0.9, 0.3, 0.9), Vector3.ZERO, Vector3.ZERO, m.white, b)
+	_sf_box(Vector3(2.0, 0.1, 0.12), Vector3.ZERO, Vector3(0, 45, 0), m.dark, b)
+	_sf_box(Vector3(2.0, 0.1, 0.12), Vector3.ZERO, Vector3(0, -45, 0), m.dark, b)
+	for k in 4:
+		var a := deg_to_rad(45.0 + k * 90.0)
+		_sf_cyl(0.42, 0.04, Vector3(cos(a) * 0.7, 0.1, sin(a) * 0.7), Vector3.ZERO, m.dark, 10, b)
+	_sf_ball(0.12, Vector3(0, -0.2, 0), m.red_l, Vector3.ONE, 6, b)
+
+
+## Elevated maglev arc behind the city, with a train crossing in front of the Sun.
+func _sf_maglev(m: Dictionary) -> void:
+	var r := 38.0
+	var y := 9.5
+	var step := 7.5
+	var a0 := 195.0
+	for k in 21:
+		var t := deg_to_rad(a0 + k * step)
+		var p := Vector3(cos(t) * r, 0, sin(t) * r)
+		var yaw := rad_to_deg(atan2(-sin(t), cos(t)))  # beam along the tangent
+		if k < 20:
+			var t2 := deg_to_rad(a0 + (k + 0.5) * step)
+			var mid := Vector3(cos(t2) * r, y, sin(t2) * r)
+			var seg_b := _sf_xf(mid, Vector3(0, rad_to_deg(atan2(-sin(t2), cos(t2))), 0))
+			var ln := 2.0 * r * sin(deg_to_rad(step * 0.5)) + 0.08
+			_sf_box(Vector3(1.7, 0.8, ln), Vector3.ZERO, Vector3.ZERO, m.kerb, seg_b)
+			_sf_box(Vector3(0.7, 0.22, ln), Vector3(0, 0.5, 0), Vector3.ZERO, m.steel, seg_b)
+			_sf_box(Vector3(0.06, 0.1, ln), Vector3(0.86, -0.15, 0), Vector3.ZERO, m.cyan_l, seg_b)
+		if k % 2 == 0 and k != 12:
+			var pb := _sf_xf(p, Vector3(0, yaw, 0))
+			_sf_box(Vector3(1.0, y - 0.4, 1.0), Vector3(0, (y - 0.4) * 0.5, 0), Vector3.ZERO, m.kerb, pb)
+			_sf_box(Vector3(2.6, 0.6, 1.3), Vector3(0, y - 0.6, 0), Vector3.ZERO, m.concrete, pb)
+			_sf_box(Vector3(1.6, 0.4, 1.6), Vector3(0, 0.2, 0), Vector3.ZERO, m.concrete, pb)
+	# three cars, lead car heading towards higher angles
+	var arc := rad_to_deg(6.7 / r)
+	for k in 3:
+		var t := deg_to_rad(244.0 + k * arc)
+		var cb := _sf_xf(Vector3(cos(t) * r, y + 1.65, sin(t) * r), Vector3(0, rad_to_deg(atan2(-sin(t), cos(t))) + 180.0, 0))
+		_sf_box(Vector3(2.0, 1.2, 6.4), Vector3.ZERO, Vector3.ZERO, m.white, cb)
+		_sf_cyl(1.0, 6.4, Vector3(0, 0.6, 0), Vector3(90, 0, 0), m.white, 12, cb)
+		_sf_box(Vector3(2.04, 0.4, 5.6), Vector3(0, 0.5, 0), Vector3.ZERO, m.glass, cb)
+		_sf_box(Vector3(2.06, 0.08, 6.2), Vector3(0, -0.4, 0), Vector3.ZERO, m.cyan_l, cb)
+		if k == 2:
+			_sf_ball(1.0, Vector3(0, 0.3, -3.2), m.white, Vector3(1.0, 1.25, 2.2), 12, cb)
+			_sf_ball(1.0, Vector3(0, 0.55, -3.6), m.glass, Vector3(0.8, 0.7, 1.4), 12, cb)
+		if k == 0:
+			_sf_ball(1.0, Vector3(0, 0.3, 3.2), m.white, Vector3(1.0, 1.25, 1.2), 12, cb)
+
+
+## Heat-damaged ground: ash scorch patches with glowing cracks, scattered rocks (no shadows).
+func _sf_ground_detail(m: Dictionary) -> void:
+	var patches := [Vector3(-14, 0, 3), Vector3(2, 0, -16.5), Vector3(19, 0, 10), Vector3(-20, 0, -20),
+		Vector3(20, 0, -20), Vector3(-15, 0, -15), Vector3(7, 0, 17), Vector3(-17, 0, 9)]
+	for p in patches:
+		var rad := sf_rng.randf_range(2.2, 4.2)
+		_sf_ball(1.0, Vector3.ZERO, m.ash, Vector3(rad, 0.14, rad * sf_rng.randf_range(0.6, 0.9)), 8, _sf_xf(p, Vector3(0, sf_rng.randf_range(0, 180), 0)))
+		if sf_rng.randf() < 0.6:
+			var q: Vector3 = p
+			var ang := sf_rng.randf_range(0, TAU)
+			for k in 4:
+				ang += sf_rng.randf_range(-0.9, 0.9)
+				var n := q + Vector3(cos(ang), 0, sin(ang)) * sf_rng.randf_range(0.8, 1.6)
+				_sf_beam(q + Vector3(0, 0.13, 0), n + Vector3(0, 0.13, 0), 0.1, m.ember)
+				q = n
+	var avoid := [[Vector2.ZERO, 15.0], [Vector2(-25.4, 9.1), 10.0], [Vector2(-20, 19), 5.0], [Vector2(-8, -24), 10.5], [Vector2(12, -26), 10.5],
+		[Vector2(-26, -12), 8.5], [Vector2(26, -10), 7.0], [Vector2(30, 14), 7.5], [Vector2(-4, 26), 6.0], [Vector2(23, 2), 6.5],
+		[Vector2(10, 22), 6.0], [Vector2(-17, -2), 3.5], [Vector2(18, 20), 4.0], [Vector2(-9, 18), 4.0]]
+	var placed := 0
+	while placed < 26:
+		var t := sf_rng.randf_range(0, TAU)
+		var rr := sf_rng.randf_range(12.0, 28.0)
+		var p := Vector2(cos(t), sin(t)) * rr
+		var ok := true
+		for av in avoid:
+			if p.distance_to(av[0]) < av[1]:
+				ok = false
+				break
+		if not ok:
+			continue
+		var s := sf_rng.randf_range(0.25, 0.75)
+		_sf_ball(1.0, Vector3.ZERO, m.rock, Vector3(s * sf_rng.randf_range(0.8, 1.4), s * 0.7, s), 6,
+			_sf_xf(Vector3(p.x, 0.0, p.y), Vector3(0, sf_rng.randf_range(0, 180), 0)))
+		placed += 1
+
+
+# --- Solar flare batching ---
+
+func _sf_mat(c: Color, rough := 0.8, unshaded := false) -> StandardMaterial3D:
+	var k := "%s/%s/%s" % [c.to_html(), rough, unshaded]
+	if not sf_mats.has(k):
+		sf_mats[k] = _mat(c, rough, unshaded)
+	return sf_mats[k]
+
+
+func _sf_xf(pos: Vector3, rot_deg := Vector3.ZERO, base := Transform3D.IDENTITY) -> Transform3D:
+	return base * Transform3D(Basis.from_euler(rot_deg * (PI / 180.0)), pos)
+
+
+func _sf_put(key: String, mat: Material, xf: Transform3D) -> void:
+	if not sf_meshes.has(key):
+		var p := key.split(":")
+		var mesh: PrimitiveMesh
+		if p[0] == "box":
+			mesh = BoxMesh.new()
+		elif p[0] == "prism":
+			mesh = PrismMesh.new()
+		elif p[0] == "cyl":
+			var cm := CylinderMesh.new()
+			cm.top_radius = float(p[1])
+			cm.bottom_radius = float(p[2])
+			cm.height = 1.0
+			cm.radial_segments = int(p[3])
+			cm.rings = 0
+			mesh = cm
+		else:
+			var sm := SphereMesh.new()
+			sm.radius = 1.0
+			sm.height = 2.0
+			sm.radial_segments = int(p[1])
+			sm.rings = int(p[2])
+			mesh = sm
+		sf_meshes[key] = mesh
+	if not sf_parts.has(mat):
+		sf_parts[mat] = []
+	sf_parts[mat].append([sf_meshes[key], xf])
+
+
+func _sf_box(size: Vector3, pos: Vector3, rot_deg: Vector3, mat: Material, base := Transform3D.IDENTITY) -> void:
+	_sf_put("box", mat, _sf_xf(pos, rot_deg, base) * Transform3D(Basis.from_scale(size), Vector3.ZERO))
+
+
+func _sf_prism(size: Vector3, pos: Vector3, rot_deg: Vector3, mat: Material, base := Transform3D.IDENTITY) -> void:
+	_sf_put("prism", mat, _sf_xf(pos, rot_deg, base) * Transform3D(Basis.from_scale(size), Vector3.ZERO))
+
+
+## Cylinder (cone/taper with `r_bottom`) of `segs` sides: a unit mesh scaled (r, h, r).
+func _sf_cyl(r: float, h: float, pos: Vector3, rot_deg: Vector3, mat: Material, segs := 12,
+		base := Transform3D.IDENTITY, r_bottom := -1.0) -> void:
+	var rb := r if r_bottom < 0.0 else r_bottom
+	var rm := maxf(r, rb)
+	var key := "cyl:%.3f:%.3f:%d" % [r / rm, rb / rm, segs]
+	_sf_put(key, mat, _sf_xf(pos, rot_deg, base) * Transform3D(Basis.from_scale(Vector3(rm, h, rm)), Vector3.ZERO))
+
+
+func _sf_ball(r: float, pos: Vector3, mat: Material, stretch := Vector3.ONE, segs := 6, base := Transform3D.IDENTITY) -> void:
+	_sf_put("ball:%d:%d" % [segs, maxi(3, segs / 2)], mat, _sf_xf(pos, Vector3.ZERO, base) * Transform3D(Basis.from_scale(stretch * r), Vector3.ZERO))
+
+
+## Square bar of `thick` cross-section from `a` to `c`.
+func _sf_beam(a: Vector3, c: Vector3, thick: float, mat: Material, base := Transform3D.IDENTITY) -> void:
+	var d := c - a
+	var up := Vector3.UP if absf(d.normalized().y) < 0.98 else Vector3.FORWARD
+	_sf_put("box", mat, base * Transform3D(Basis.looking_at(d, up) * Basis.from_scale(Vector3(thick, thick, d.length())), (a + c) * 0.5))
+
+
+## Round pipe of radius `r` from `a` to `c`.
+func _sf_pipe(a: Vector3, c: Vector3, r: float, mat: Material, segs := 8) -> void:
+	var y := (c - a).normalized()
+	var x := y.cross(Vector3.UP if absf(y.y) < 0.98 else Vector3.RIGHT).normalized()
+	var z := x.cross(y)
+	var key := "cyl:1.000:1.000:%d" % segs
+	_sf_put(key, mat, Transform3D(Basis(x, y, z) * Basis.from_scale(Vector3(r, a.distance_to(c), r)), (a + c) * 0.5))
+
+
+## Sagging hose/wire in four straight pieces.
+func _sf_wire(a: Vector3, c: Vector3, sag: float, thick: float, mat: Material) -> void:
+	var prev := a
+	for k in range(1, 5):
+		var t := k / 4.0
+		var p := a.lerp(c, t) + Vector3(0, -sag * 4.0 * t * (1.0 - t), 0)
+		_sf_beam(prev, p, thick, mat)
+		prev = p
+
+
+## Bakes the pending parts into one compressed ArrayMesh per material under `parent/name`.
+func _sf_flush(parent: Node, name: String, shadow := true) -> Node3D:
+	var g := _group(name, parent)
+	var i := 0
+	for mat in sf_parts:
+		var verts := PackedVector3Array()
+		var norms := PackedVector3Array()
+		var idx := PackedInt32Array()
+		for e in sf_parts[mat]:
+			var src: Array = (e[0] as PrimitiveMesh).get_mesh_arrays()
+			var sv: PackedVector3Array = src[Mesh.ARRAY_VERTEX]
+			var sn: PackedVector3Array = src[Mesh.ARRAY_NORMAL]
+			var si: PackedInt32Array = src[Mesh.ARRAY_INDEX]
+			var xf: Transform3D = e[1]
+			var nb := xf.basis.inverse().transposed()
+			var o := verts.size()
+			for j in sv.size():
+				verts.append(xf * sv[j])
+				norms.append((nb * sn[j]).normalized())
+			for j in si:
+				idx.append(o + j)
+		var arr := []
+		arr.resize(Mesh.ARRAY_MAX)
+		arr[Mesh.ARRAY_VERTEX] = verts
+		arr[Mesh.ARRAY_NORMAL] = norms
+		arr[Mesh.ARRAY_INDEX] = idx
+		var am := ArrayMesh.new()
+		am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr, [], {}, Mesh.ARRAY_FLAG_COMPRESS_ATTRIBUTES)
+		var mi := MeshInstance3D.new()
+		mi.name = "Part%d" % i
+		mi.mesh = am
+		mi.material_override = mat
+		if not shadow:
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_own(mi, g)
+		i += 1
+	sf_parts.clear()
+	return g
