@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="FireSkin" format=3]
+
+[ext_resource type="Script" path="res://scripts/fire_skin.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+timer_seconds = 90.0
+clear_seconds = 10.0
+dense_seconds = 10.0
+kangaroos = 3

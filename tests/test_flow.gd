@@ -112,12 +112,17 @@ func _leave_globe(role: StringName, space: bool) -> void:
 func _run() -> void:
 	_check_sun_glued()
 	var game := root.get_node("Game")
-	game.store_path = ""  # never touch the real play counts
+	# a temp play-count file (never the real one): the two runs per role take both of its scenarios
+	var tmp := OS.get_cache_dir().path_join("3play_test_flow_%d.cfg" % OS.get_process_id())
+	DirAccess.remove_absolute(tmp)
+	game.store_path = tmp
+	var played := {}
 	game.settings_path = ""  # the menu must not redirect to the language scene
 	for role in [&"citizen", &"state"]:
 		for win in [true, false]:
 			game.start(role)
 			_check("%s disaster is from its pool" % role, game.disaster.role == role)
+			played[game.disaster.id] = true
 			await _at(&"globe", role)
 			await _leave_globe(role, win)
 			await _at(&"diorama", role)
@@ -129,4 +134,10 @@ func _run() -> void:
 			await _at(&"result", role)
 			game.next()
 			await _at(&"main", role)
+	DirAccess.remove_absolute(tmp)
+	game.store_path = ""
+	for list: Array in game.POOL.values():
+		for path: String in list:
+			var id := path.get_file().get_basename()
+			_check("%s went through the flow" % id, played.has(StringName(id)))
 	quit(0 if ok else 1)
