@@ -1,8 +1,19 @@
 ; Beam minigame waves, ported 1:1 from the "Işın Ağı" prototype (#124). Rules: scripts/beam_logic.gd.
-[gd_resource type="Resource" script_class="BeamSkin" load_steps=7 format=3]
+; Look: the 3D art (scenes/minigames/beam/sf/, assets/3d/solar_flare/); effects layer = the 2D placeholder fx.
+[gd_resource type="Resource" script_class="BeamSkin" load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://scripts/beam_skin.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/beam_wave.gd" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/beam/sf/board.tscn" id="board"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/beam/sf/backdrop.tscn" id="backdrop"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/beam/sf/grid.tscn" id="grid"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/beam/sf/satellite.tscn" id="satellite"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/beam/satellite.tscn" id="satellite_2d"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/beam/sf/collector.tscn" id="collector"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/beam/sf/habitat.tscn" id="habitat"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/beam/sf/city.tscn" id="city"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/beam/sf/station.tscn" id="station"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/beam/sf/beams.tscn" id="beams"]
 
 [sub_resource type="Resource" id="wave_1"]
 script = ExtResource("2")
@@ -75,3 +86,13 @@ solution = "303112?103"
 [resource]
 script = ExtResource("1")
 waves = Array[ExtResource("2")]([SubResource("wave_1"), SubResource("wave_2"), SubResource("wave_3"), SubResource("wave_4")])
+board_scene = ExtResource("board")
+backdrop_scene = ExtResource("backdrop")
+grid_scene = ExtResource("grid")
+satellite_scene = ExtResource("satellite")
+diagram_satellite_scene = ExtResource("satellite_2d")
+collector_scene = ExtResource("collector")
+habitat_scene = ExtResource("habitat")
+city_scene = ExtResource("city")
+station_scene = ExtResource("station")
+beams_scene = ExtResource("beams")
