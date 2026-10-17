@@ -8,13 +8,14 @@ const SCENES := {
 	&"fit": "res://scenes/minigames/fit.tscn",
 	&"connect": "res://scenes/minigames/connect.tscn",
 	&"beam": "res://scenes/minigames/beam.tscn",
+	&"fire": "res://scenes/minigames/fire.tscn",
 	&"result": "res://scenes/result.tscn",
 }
 const DEFAULT_LOCALE := "tr"  # until the player picks another with the menu's TR / EN switch
 const FLOW: Array[StringName] = [&"globe", &"diorama", &"minigame", &"result", &"main"]
 ## Disasters a role can get; the file name (without .tres) is the id in the play counts.
 const POOL := {
-	&"citizen": ["res://data/disasters/kahramanmaras.tres"],  # Black Saturday later
+	&"citizen": ["res://data/disasters/kahramanmaras.tres", "res://data/disasters/black_saturday.tres"],
 	&"state": ["res://data/disasters/indian_ocean.tres", "res://data/disasters/solar_flare.tres"],
 }
 ## Deterministic default per role, for scenes run alone (F6).
@@ -584,7 +585,8 @@ func _warm_up(gen: int) -> void:
 		await get_tree().process_frame
 		if gen != _warm_gen:
 			return
-	packed_scene(set_path)  # the diorama takes the set from here
+	if ResourceLoader.exists(set_path):
+		packed_scene(set_path)  # the diorama takes the set from here (no set yet: it falls back to another)
 	var diorama := packed_scene(scene_path(&"diorama"))
 	if diorama:
 		# kept: the diorama is built and drawn here, frozen, and taken over by the scene switch

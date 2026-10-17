@@ -12,7 +12,11 @@ DL = sys.argv[1]
 LDL = sys.argv[2] if len(sys.argv) > 2 else None
 SCALE = 2  # JPEG draft decode at 1/2 -> 120 px/deg
 PPD = 240 // SCALE
-TARGETS = {"indian_ocean": (5.55, 95.32), "kahramanmaras": (37.58, 36.94)}
+TARGETS = {"indian_ocean": (5.55, 95.32), "kahramanmaras": (37.58, 36.94), "black_saturday": (-37.53, 145.35)}
+# ONLY=id[,id] rebuilds just those patches (then only their tiles are needed).
+import os
+if os.environ.get("ONLY"):
+    TARGETS = {k: v for k, v in TARGETS.items() if k in os.environ["ONLY"].split(",")}
 LAT_SPAN, OUT = 30.0, 2048
 cache = {}
 
