@@ -9,10 +9,12 @@ extends CanvasLayer
 signal finished
 
 const VOICE_COLOR := Color("f3e6c8")
-const TYPE_CPS := 26.0
+const TYPE_CPS := 15.0        # slow enough to read along (#128 playtest)
 const FADE_IN := 0.4
 const FADE_OUT := 0.6
 const GLITCH_LINE := &"VOICE_SF_LIMITS"
+const GLITCH_HOLD := 6.0
+const BAND_ALPHA := 0.82      # dark band behind the line, so it reads over the bright globe
 
 var _typing := false
 var _speaking := false
@@ -45,12 +47,13 @@ func _ready() -> void:
 	_tag.offset_top = -20.0
 	_tag.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_tag.modulate.a = 0.0
-	root.add_child(_tag)
 	_box = Control.new()
 	_box.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_box.modulate.a = 0.0
 	root.add_child(_box)
+	_box.add_child(_make_band())
+	root.add_child(_tag)  # above the band
 	_ghost_r = _make_label(Color(1.0, 0.2, 0.15, 0.4))
 	_ghost_b = _make_label(Color(0.25, 0.45, 1.0, 0.4))
 	_voice = _make_label(VOICE_COLOR)
@@ -144,7 +147,7 @@ func _on_globe_locked(globe) -> void:
 		return
 	globe.paused = true
 	finished.connect(_release_globe.bind(globe), CONNECT_ONE_SHOT)
-	say(GLITCH_LINE)
+	say(GLITCH_LINE, GLITCH_HOLD)
 
 
 func _release_globe(globe) -> void:
@@ -200,3 +203,26 @@ func _make_label(color: Color) -> Label:
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_box.add_child(l)
 	return l
+
+
+## Dark band across the screen behind the tag and the line, soft at the top and bottom edges.
+func _make_band() -> TextureRect:
+	var g := Gradient.new()
+	g.offsets = PackedFloat32Array([0.0, 0.22, 0.78, 1.0])
+	var dark := Color(0.01, 0.01, 0.03, BAND_ALPHA)
+	g.colors = PackedColorArray([Color(dark, 0.0), dark, dark, Color(dark, 0.0)])
+	var tex := GradientTexture2D.new()
+	tex.gradient = g
+	tex.fill_from = Vector2(0, 0)
+	tex.fill_to = Vector2(0, 1)
+	tex.width = 4
+	tex.height = 64
+	var band := TextureRect.new()
+	band.texture = tex
+	band.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	band.stretch_mode = TextureRect.STRETCH_SCALE
+	band.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	band.anchor_right = 1.0
+	band.anchor_top = 0.64
+	band.anchor_bottom = 0.88
+	return band
