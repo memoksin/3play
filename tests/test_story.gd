@@ -122,6 +122,16 @@ func _run() -> void:
 	for n in ["Start", "Badges", "Credits", "Quit"]:
 		_check("title has %s" % n, title.find_child(n, true, false) is Button)
 	_check("title shows the version", title.get_node("%Version").text.contains(title.VERSION))
+	# a language switch (Settings panel) updates the code-set texts without reopening the scene
+	TranslationServer.set_locale("en")
+	await process_frame
+	_check("title en: Start", title.get_node("%Start").text == "START")
+	_check("title en: Credits", title.get_node("%Credits").text == "CREDITS")
+	_check("title en: version", title.get_node("%Version").text.begins_with("JAM BUILD"))
+	TranslationServer.set_locale("tr")
+	await process_frame
+	_check("title tr: Start", title.get_node("%Start").text == "BAŞLAT")
+	_check("title tr: Credits", title.get_node("%Credits").text == "EMEĞİ GEÇENLER")
 	title.get_node("%Badges").pressed.emit()
 	await _wait_scene(story.BADGES)
 	current_scene.back()
