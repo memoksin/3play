@@ -54,6 +54,10 @@ var _cover: ColorRect
 ## The diorama built and drawn ahead (in its off-screen viewport), taken over by `_go`.
 var _prepared: Node
 var _prepared_vp: SubViewport
+## The minigame built and drawn ahead the same way (full-size viewport, so its layout is the real one).
+var _prepared_mini: Node
+var _prepared_mini_vp: SubViewport
+var _mini_scene_file := ""
 var _warm_keep: Array[SubViewport] = []
 var _textures: Array[Resource] = []
 ## The pool's disasters, loaded at start-up and kept.
@@ -137,6 +141,7 @@ func _begin_run() -> void:
 	_loaded.clear()
 	_textures.clear()
 	_release_prepared()
+	_release_prepared_mini()
 	preload_for(disaster)
 	# the globe's big textures decode on loader threads while the globe warms up
 	if DisplayServer.get_name() != "headless":
@@ -294,6 +299,14 @@ func packed_scene(path: String) -> PackedScene:
 
 ## Switches to the step's scene; uses the preloaded one when it is ready, else loads the file.
 func _go(step: StringName) -> void:
+	if step == &"minigame" and is_instance_valid(_prepared_mini):
+		var mini := _prepared_mini
+		mini.get_parent().remove_child(mini)
+		mini.scene_file_path = _mini_scene_file  # back in the audio hooks' sight (see _warm_up)
+		mini.process_mode = Node.PROCESS_MODE_INHERIT
+		_release_prepared_mini()
+		get_tree().change_scene_to_node.call_deferred(mini)
+		return
 	if step == &"diorama" and is_instance_valid(_prepared):
 		var node := _prepared
 		node.get_parent().remove_child(node)
@@ -361,7 +374,8 @@ func _warm_up(gen: int) -> void:
 		await _warm_globe(globe, gen)
 		if gen != _warm_gen:
 			return
-	var paths := [scene_path(&"diorama"), set_path]
+	var mini_path := scene_path(&"minigame")
+	var paths := [scene_path(&"diorama"), set_path, mini_path]
 	while true:
 		var busy := false
 		for path: String in paths:
@@ -385,6 +399,30 @@ func _warm_up(gen: int) -> void:
 		await _draw_once(_prepared_vp, gen, false)
 		_prepared.warm_view(false)
 		_prepared_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	await _warm_minigame(mini_path, gen)
+
+
+## Builds the minigame (its _ready costs tens of ms: the solar flare backdrop simulates its damage)
+## and draws it off-screen at full size, frozen (no processing), so the switch after the diorama only
+## moves it in. Its scene path is blanked meanwhile: the audio layer hooks scenes by that path as they
+## enter the tree, and must see the minigame once, when it is really played.
+func _warm_minigame(path: String, gen: int) -> void:
+	if not SCENES.has(disaster.minigame):
+		return
+	var mini := packed_scene(path)
+	if mini == null:
+		return
+	_prepared_mini_vp = _warm_viewport(Vector2i(1280, 720))
+	# glyphs are rasterized per font oversampling (the window's scale): draw them at the real one
+	_prepared_mini_vp.oversampling_override = get_tree().root.get_final_transform().get_scale().x
+	_prepared_mini = mini.instantiate()
+	_mini_scene_file = _prepared_mini.scene_file_path
+	_prepared_mini.scene_file_path = ""
+	_prepared_mini.process_mode = Node.PROCESS_MODE_DISABLED
+	_prepared_mini_vp.add_child(_prepared_mini)
+	add_child(_prepared_mini_vp)
+	await _draw_once(_prepared_mini_vp, gen, false)
+	_prepared_mini_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 
 
 ## Runs the globe through its timeline off-screen: the glitch run, the flash and the dive draw things
@@ -411,10 +449,11 @@ func _warm_globe(globe: PackedScene, gen: int) -> void:
 	_warm_keep.append(vp)
 
 
-func _warm_viewport() -> SubViewport:
+func _warm_viewport(size := WARM_SIZE) -> SubViewport:
 	var vp := SubViewport.new()
 	vp.own_world_3d = true
-	vp.size = WARM_SIZE
+	vp.size = size
+	vp.canvas_item_default_texture_filter = get_viewport().canvas_item_default_texture_filter
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	return vp
 
@@ -443,6 +482,14 @@ func _release_prepared() -> void:
 		_prepared_vp.free()
 	_prepared_vp = null
 	_prepared = null
+
+
+## Frees the minigame that was built ahead and not used.
+func _release_prepared_mini() -> void:
+	if _prepared_mini_vp:
+		_prepared_mini_vp.free()
+	_prepared_mini_vp = null
+	_prepared_mini = null
 
 
 ## Fades the full-screen cover (theme background colour, above every scene) to `alpha`. It blocks
