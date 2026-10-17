@@ -254,7 +254,7 @@ func _io_mini() -> void:
 
 func _menu_roles() -> void:
 	var m := await _open("res://scenes/main.tscn")
-	m.get_node("LangPicker").visible = false
+	m.get_node("SettingsButton").visible = false
 	await _begin()
 	await _seconds(2.4)  # logo, prompt typing, roles fade in
 	var citizen: Control = m.get_node("%Citizen")

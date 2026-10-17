@@ -3,25 +3,18 @@
 [ext_resource type="Script" path="res://scenes/ui/lang_picker.gd" id="1"]
 
 [node name="LangPicker" type="Control"]
+custom_minimum_size = Vector2(112, 40)
 layout_mode = 3
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -128.0
-offset_top = 16.0
-offset_right = -16.0
-offset_bottom = 56.0
-grow_horizontal = 0
+anchors_preset = 0
 mouse_filter = 2
 script = ExtResource("1")
 
 [node name="Box" type="HBoxContainer" parent="."]
 layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
+anchors_preset = 15
 anchor_right = 1.0
-offset_left = -112.0
-offset_bottom = 40.0
-grow_horizontal = 0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_constants/separation = 12
 alignment = 2
