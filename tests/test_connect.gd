@@ -211,6 +211,55 @@ func _scene() -> void:
 	s.queue_free()
 	await process_frame
 
+	# rush: the last line locking cuts the clock to 5 s, once; the level ends through the normal flow
+	s = _new_scene()
+	await process_frame
+	s.time_scale = 0.0
+	s.submit = false
+	var done := []
+	s.finished.connect(func(a: int, b: int) -> void: done.append([a, b]))
+	s.solve()
+	s.seek(10.0)
+	var solved_r := L.solved_rotations(skin)
+	var first := true
+	for li in 4:
+		var cell: Vector2i = L.traces(skin, solved_r)[li].cells[1]
+		var ci := skin.index(cell.x, cell.y)
+		s.rots[ci] = (solved_r[ci] + 3) % 4
+		var guard := 0
+		while not s.is_cell_locked(cell.x, cell.y) and guard < 4:
+			s.rotate_cell(cell.x, cell.y)
+			guard += 1
+		if li < 3:
+			_check("rush: not before the last line (%d)" % li, not s.rushed and s.skin.timer_seconds == 60.0)
+	_check("rush: all locked -> rushed", s._lines_locked.size() == 4 and s.rushed)
+	_check("rush: clock now 5 s", is_equal_approx(s.skin.timer_seconds - s.elapsed, 5.0) and s.get_node("Hud/Box/Row/Timer").text == "5")
+	s.advance(0.1)
+	_check("rush: warning shows (TR/EN text)", s._rush.visible and s._rush.text != "IO_CONNECT_RUSH" and s._rush.text != "")
+	_check("rush: screen shakes", s.position != Vector2.ZERO)
+	s._rush_clock()
+	_check("rush: never extends again", is_equal_approx(s.skin.timer_seconds, 15.0))
+	s.seek(14.0)
+	_check("rush: still playable before the 5 s are up", not s.locked and not s._hit)
+	s.seek(15.5)
+	_check("rush: wave hits when the 5 s end", s.locked and s._hit and not s._rush.visible)
+	s.seek(200.0)
+	_check("rush: level ends with the normal result 4/4", done == [[4, 4]] and s.saved_count == 4)
+	_check("rush: the shared skin is untouched", (load(SKIN_PATH) as ConnectSkin).timer_seconds == 60.0)
+	s.queue_free()
+	await process_frame
+
+	# rush: no cut when 5 s or less is left
+	s = _new_scene()
+	await process_frame
+	s.time_scale = 0.0
+	s.submit = false
+	s.seek(57.0)
+	s._rush_clock()
+	_check("rush: under 5 s left -> untouched", not s.rushed and s.skin.timer_seconds == 60.0)
+	s.queue_free()
+	await process_frame
+
 	# one broken line -> 3/4
 	s = _new_scene()
 	await process_frame
