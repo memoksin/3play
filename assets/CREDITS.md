@@ -106,5 +106,6 @@ One block per category: visual, audio, code, text, other. Write "None" if not us
 | Text | Claude | Drafts of design specs, intro and result card text; facts checked against sources | `docs/minigames/**`, `docs/ui.md`, `locale/strings.csv` |
 | Other | Claude Code | Repo workflow, issue and PR handling | repo-wide |
 | Other | Claude Code | Globe look prototypes (three.js web pages, not shipped) used to pick the globe style | Design decision for issue #6 |
+| Other | Claude Code | "Işın Ağı" solar flare web prototype (not shipped): its rules, waves and texts were ported to Godot | `scenes/minigames/beam*`, `scripts/beam_*.gd`, `data/skins/solar_flare_beam.tres`, SF_BEAM_* in `locale/strings.csv` (#124) |
 
 Update this table when a new tool or use appears (image generator, music tool, anything).
