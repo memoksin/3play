@@ -732,7 +732,7 @@ func _draw_hud() -> void:
 	var gap := maxf(ring_r, m * 0.07) + 8
 	var line := RED * Color(1, 1, 1, 0.85)
 	var tx := x + maxf(ring_r, m * 0.07) + 18
-	var place := _disaster.text("PLACE").to_upper()
+	var place := _upper(_disaster.text("PLACE"))
 	var pw := maxf(_text_width(_font_bold, place, FONT_SIZE.place), 190) + 24
 	o.draw_line(Vector2(0, ly), Vector2(maxf(0, x - gap), ly), line, 1.5, true)
 	if lt > 0.45:  # the plate is up: stop the line at it so it never crosses the text
@@ -776,7 +776,7 @@ func _draw_hud() -> void:
 			_text(_font_bold, tr("GLOBE_LOCKED"), tx + dot_r * 2 + FONT_SIZE.locked * 0.3, y + 12, FONT_SIZE.locked, RED)
 		var fade_in := _clamp01((lt - 1.1) / 0.3)
 		_text(_font_bold, place, tx, y + 38, FONT_SIZE.place, WHITE * Color(1, 1, 1, fade_in))
-		_text(_font_mono, _disaster.text("YEAR").to_upper(), tx, y + 60, FONT_SIZE.date, BLUE * Color(1, 1, 1, fade_in))
+		_text(_font_mono, _upper(_disaster.text("YEAR")), tx, y + 60, FONT_SIZE.date, BLUE * Color(1, 1, 1, fade_in))
 
 
 ## Canvas "textBaseline = middle": centre the em box on y.
@@ -809,3 +809,8 @@ static func _out_cubic(x: float) -> float:
 
 static func _in_out(x: float) -> float:
 	return 4 * x * x * x if x < 0.5 else 1 - pow(-2 * x + 2, 3) / 2
+
+
+## Locale-aware upper case: String.to_upper() maps Turkish i to I, not İ.
+func _upper(s: String) -> String:
+	return TextServerManager.get_primary_interface().string_to_upper(s, TranslationServer.get_locale())
