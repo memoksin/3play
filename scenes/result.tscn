@@ -31,16 +31,20 @@ theme_override_constants/separation = 12
 
 [node name="Place" type="Label" parent="Center/Card/Box"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(540, 0)
 layout_mode = 2
 theme_type_variation = &"HudData"
 uppercase = true
 horizontal_alignment = 1
+autowrap_mode = 3
 
 [node name="Score" type="Label" parent="Center/Card/Box"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(540, 0)
 layout_mode = 2
 theme_type_variation = &"HudScore"
 horizontal_alignment = 1
+autowrap_mode = 3
 
 [node name="Numbers" type="Label" parent="Center/Card/Box"]
 unique_name_in_owner = true
