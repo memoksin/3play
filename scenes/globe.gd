@@ -30,9 +30,11 @@ const CLOUD_DRIFT := 0.035
 const CLOUD_FADE_FAR := 3.0
 const CLOUD_FADE_NEAR := 1.8
 ## Before the launch the player turns the globe: rad of spin per px of drag (1280x720 canvas units),
-## inertia decays at FRICTION (1/s) toward a faint IDLE_DRIFT (rad/s). A release at FLICK_MIN rad/s
-## or more launches the timeline; release speed is measured over the last FLICK_WINDOW s of drag.
+## inertia decays at FRICTION (1/s) toward a faint IDLE_DRIFT (rad/s). A drag of LAUNCH_PX or more
+## launches the timeline at the release speed, at least FLICK_MIN rad/s (no real flick needed); release
+## speed is measured over the last FLICK_WINDOW s of drag.
 const DRAG_SENS := 1.0 / 250.0
+const LAUNCH_PX := 24.0
 const FLICK_MIN := 5.0
 const FLICK_MAX := 30.0
 const FRICTION := 1.6
@@ -64,6 +66,7 @@ const FONT_SIZE := {
 	year = 112,
 	year_small = 20,
 	skip = 20,
+	hint = 34,
 	coord = 22,
 	locked = 24,
 	place = 30,
@@ -132,6 +135,7 @@ var _ease_a := 0.0
 var _spin_vel := IDLE_DRIFT
 var _dragging := false
 var _drag_x := 0.0
+var _press_x := 0.0  # _drag_x at the press
 var _drag_t0 := 0
 ## (seconds since press, accumulated drag px)
 var _drag_samples: Array[Vector2] = []
@@ -172,7 +176,7 @@ func _ready() -> void:
 	_setup_labels()
 	_fov = _cam.fov
 	_year_pos = _year.position
-	_hint.label_settings = _label_settings(FONT_SIZE.skip, WHITE, 0.14, false)
+	_hint.label_settings = _label_settings(FONT_SIZE.hint, BLUE, 0.12, true)
 	_overlay.draw.connect(_draw_hud)
 	_setup_fade()
 	_start()
@@ -297,7 +301,7 @@ func _process(delta: float) -> void:
 		t = minf(TOTAL, t + minf(delta, 0.05))
 		_pose()
 	_fade.color.a = _clamp01((t - (TOTAL - FADE)) / FADE)
-	_hint.modulate.a = 1.0 - _clamp01(t / 0.3) if launched else 0.7 + 0.3 * sin(Time.get_ticks_msec() / 400.0)
+	_hint.modulate.a = 1.0 - _clamp01(t / 0.3) if launched else 0.55 + 0.45 * sin(Time.get_ticks_msec() / 300.0)
 	_overlay.queue_redraw()
 	if t >= TOTAL and not paused and not _done:
 		_done = true
@@ -343,12 +347,17 @@ func _unhandled_input(event: InputEvent) -> void:
 			_spin_vel = 0.0
 			spin_started.emit()
 			_drag_t0 = Time.get_ticks_usec()
+			_press_x = _drag_x
 			_drag_samples = [Vector2(0, _drag_x)]
 		elif _dragging:
 			_dragging = false
 			spin_stopped.emit()
 			_drag_sample()
-			_release(_release_speed())
+			var dx := _drag_x - _press_x
+			if absf(dx) >= LAUNCH_PX:
+				_launch(signf(dx) * clampf(absf(_release_speed()), FLICK_MIN, FLICK_MAX))
+			else:
+				_release(_release_speed())
 	elif event is InputEventMouseMotion and _dragging:
 		get_viewport().set_input_as_handled()
 		_drag_x += event.relative.x

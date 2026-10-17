@@ -1,7 +1,6 @@
 extends Control
 ## Boot scene (run/main_scene): straight to the Stack splash, which goes on to the launch notice (once per
-## launch) and the title screen. The language is Turkish unless the player saved another one with the menu's
-## TR / EN switch (Game.load_locale applies it at startup).
+## launch) and the title screen. Every launch starts in Turkish; the menu's TR / EN switch lasts the session.
 ## Kept as the boot scene so project.godot does not change.
 
 const SPLASH := "res://scenes/splash.tscn"
