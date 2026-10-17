@@ -241,6 +241,22 @@ func _scene() -> void:
 				var c: Vector2 = wd.VILLAGE_UD[v]
 				wet[v] = wet[v] or wd.flood_depth(c.x, c.y) > 0.0
 			t += 0.1
+		# the end (after the drain): a lost town is still under water, the sea has settled
+		var land_on := false
+		for mi: MeshInstance3D in wd._flood_meshes:
+			land_on = land_on or mi.visible
+		var depth_end: Array[float] = []
+		for v in 4:
+			depth_end.append(wd.flood_depth(wd.VILLAGE_UD[v].x, wd.VILLAGE_UD[v].y))
+		var sea_still: bool = is_zero_approx(wd._wave.p.ts_plat) and is_zero_approx(wd._wave.p.ts_crest)
+		if case == "solved":
+			_check("result: solved -> dry at the end", depth_end.max() < 0.0 and not land_on)
+		elif case == "unsolved":
+			_check("result: unsolved -> the town is still flooded after the drain, the sea settled (%.2f m)" % depth_end.min(),
+				s._finished and s._hit_t() > s._drain_start() + s.DRAIN and land_on and depth_end.min() > 1.0 and sea_still)
+		else:
+			_check("result: partial -> lost communities keep their water at the end, saved ones dry",
+				(wd._floods[3] as Node3D).visible and depth_end[0] < 0.0 and depth_end[1] < 0.0 and depth_end[2] < 0.0)
 		if case == "solved":
 			_check("result: solved -> no flood over the land, every community dry", s.saved_count == 4 and not shown and not wet.has(true))
 		elif case == "unsolved":
