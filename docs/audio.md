@@ -171,7 +171,7 @@ Dark snowy street, a flashlight with a battery, a whistle that shows the directi
 | FN2 | Footsteps | The player walks | | | | | todo | Another snow footsteps sound; if none is found, normal footsteps. |
 | FN3 | Flashlight on and off | The flashlight is turned on or off | Flashlight Clicking On and Off | deleted_user_7146007 | https://freesound.org/people/deleted_user_7146007/sounds/383659/ | CC0 | chosen | 0 to 1 s = turning on. 2 to 3 s = turning off. |
 | FN4 | Battery low | The flashlight battery is running out | | | | | todo | Needs a search. |
-| FN5 | Whistle | The whistle that shows the direction | | | | | to confirm | First 3 seconds of the chosen whistle. Which whistle file: to confirm. |
+| FN5 | Whistle | The whistle that shows the direction | metal whistle | strongbot | https://freesound.org/people/strongbot/sounds/568995/ | CC0 | chosen | First 3 seconds of the file. |
 | FN6 | Found a family member | The player reaches a family member | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen (reuse of F2) | First second of the file. |
 | FN7 | Success | The family reaches the assembly point | | | | | todo | A success sound, the same one as FR6 and BM4. |
 | FN8 | Aftershock | The aftershock hits | Cracking Earthquake | uagadugu | https://freesound.org/people/uagadugu/sounds/222521/ | CC0 | chosen (reuse of F6) | Trim to the shaking. |
@@ -186,13 +186,13 @@ Spec: `docs/minigames/fire-farm.md`.
 |---|---|---|---|---|---|---|---|---|
 | FR1 | Fire and wind ambience | Whole minigame | | | | | todo | The first candidate was bad and could not even be heard. A louder, better one is needed. |
 | FR2 | Footsteps | The player walks | | | | | todo | The first candidate could not be heard. Another one. |
-| FR3 | Jump and landing on debris | The player jumps over the debris | Public Domain Jump Sound | qubodup | https://freesound.org/people/qubodup/sounds/331381/ | CC0 | proposed | Not confirmed yet. |
+| FR3 | Jump and landing on debris | The player jumps over the debris | | | | | todo | The cartoon jump sound (qubodup) was rejected. A more realistic jump and landing is needed. |
 | FR4 | Pick up the knife | The player picks up the knife | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen (reuse of F2) | First second of the file. |
 | FR5 | Cut the fence | The knife rubs on the fence | | | | | todo | Not a wire cutter: a scraping or sanding sound, playing while the knife rubs the fence. |
 | FR6 | Success | A task is done (fence cut, flame out) | | | | | todo | The same success sound as FN7 and BM4. |
 | FR7.1 | Hose attached | The hose is put on the valve | | | | | todo | A click, the sound of attaching. |
 | FR7.2 | Valve turn | The valve is turned | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | chosen | Use 0:58 to 1:03 of the file. |
-| FR8 | Water spray | The hose sprays | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | chosen | Use about 1:07 to 1:18 of the file (to confirm the exact times). |
+| FR8 | Water spray | The hose sprays | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | chosen | Use 1:07 to 1:18 of the file (confirmed). |
 | FR9 | Small flame | The small flame burns | | | | | todo | A flame sound, not only crackling. |
 | FR10 | Flame goes out | The flame is put out | | | | | decided | No separate sound: the flame sound (FR9) fades out. |
 | FR11 | Kangaroos run out | 2 to 3 kangaroos run through the gap | | | | | todo | A herd running (many footsteps). |
