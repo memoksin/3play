@@ -1,6 +1,9 @@
 extends Control
-## Top-right TR / EN switch for the main menu. Picking reloads the scene so every translated text,
-## including text set in code, updates. The default is Turkish (Game.DEFAULT_LOCALE); the pick is saved.
+## TR / EN switch, shown in the Settings panel. On the main menu picking reloads the scene so every translated text,
+## including text set in code, updates. In a run it does not reload (that would restart the minigame): the menus
+## switch at once and the scene itself on the next screen. The default is Turkish (Game.DEFAULT_LOCALE); the pick is saved.
+
+signal picked(code: String)
 
 const FLAGS := {"tr": preload("res://assets/sprites/ui/flag_tr.png"), "en": preload("res://assets/sprites/ui/flag_en.png")}
 const HOVER_SCALE := 1.12
@@ -29,7 +32,7 @@ func _ready() -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		b.pivot_offset = b.custom_minimum_size / 2
 		b.modulate = Color.WHITE if b.button_pressed else DIM
-		var edge := _make_edge()
+		var edge := make_edge()
 		b.add_child(edge)
 		b.mouse_entered.connect(_hover.bind(code, true))
 		b.mouse_exited.connect(_hover.bind(code, false))
@@ -39,8 +42,8 @@ func _ready() -> void:
 		_edges[code] = edge
 
 
-## Lit frame just outside the flag: a thin light border and a soft glow, hidden until hover.
-func _make_edge() -> Panel:
+## Lit frame just outside a button (also used by the settings gear): a thin light border and a soft glow, hidden until hover.
+static func make_edge() -> Panel:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0, 0, 0, 0)
 	sb.set_border_width_all(EDGE_WIDTH)
@@ -78,4 +81,7 @@ func _pick(code: String) -> void:
 		_buttons[code].button_pressed = true
 		return
 	Game.set_locale(code)
-	get_tree().reload_current_scene()
+	picked.emit(code)
+	var scene := get_tree().current_scene
+	if scene != null and scene.scene_file_path.get_file().get_basename() == "main":
+		get_tree().reload_current_scene()

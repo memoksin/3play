@@ -188,8 +188,9 @@ Spec: `docs/minigames/fire-farm.md`.
 | FR1 | Fire and wind ambience | Whole minigame | digital wildfire mixed with WIND BLOWING.mp3 | vekoN + Podcapocalipsis | https://freesound.org/people/vekoN/sounds/537530/ and https://freesound.org/people/Podcapocalipsis/sounds/521696/ | CC0 (checked by Sude) | chosen | Option B approved by Burcu by ear. Wind seconds 9 to 14, 10 s seamless loop. Option A (craigsmith Large Fire Burning) dropped. |
 | FR2 | Footsteps | The player walks | Footsteps Dirt Gravel | PotatokingXII | https://freesound.org/people/PotatokingXII/sounds/352870/ | CC0 | chosen | Same as FN2. Trim to a clean stride loop. |
 | FR3 | Jump and landing on debris | The player jumps over the debris | Human Impact on Ground | alegemaate | https://freesound.org/people/alegemaate/sounds/364690/ | CC0 | chosen | Short clip of a person landing after a jump. |
-| FR4 | Pick up the knife | The player picks up the knife | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen (reuse of F2) | First second of the file. |
-| FR5 | Cut the fence | The knife rubs on the fence | Sanding_a_Piece_Of_Wood.wav | CapsLok | https://freesound.org/people/CapsLok/sounds/204948/ | CC0 | chosen | Use the part from 16 s to 19 s of the file. Plays while the knife rubs the fence. |
+| FR4 | Pick up the wire cutters | The player picks up the wire cutters (was the knife) | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen (reuse of F2) | First second of the file. A metal clank would fit the cutters better. |
+| FR5 | Snip a fence tie | Each wire tie is cut while the player holds (event `snip`, 6 per fence) | | | | | todo | Now wire cutters (team playtest): a short metal snip / clack per tie. |
+| FR5.1 | Fence panel crashes down | The cut panel slams onto the ground (event `panel_land`, index 0), the little hop after it (index 1) | | | | | todo | Steel mesh panel hitting dirt: a rattling crash, then a small clink. |
 | FR6 | Success | A task is done (fence cut, flame out) | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | chosen (same as FN7) | The same success sound as FN7 and BM4. |
 | FR7.1 | Hose attached | The hose is put on the valve | Door Lock.wav | nebulasnails | https://freesound.org/people/nebulasnails/sounds/405534/ | CC0 | chosen | About 0.75 s door latch. |
 | FR7.2 | Valve turn | The valve is turned | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | chosen | Use 0:58 to 1:03 of the file. |
@@ -198,6 +199,7 @@ Spec: `docs/minigames/fire-farm.md`.
 | FR10 | Flame goes out | The flame is put out | | | | | decided | No separate sound: the flame sound (FR9) fades out. |
 | FR11 | Kangaroos run out | 2 to 3 kangaroos run through the gap | Horse Gallop Loop.wav + Footsteps Dirt 01 | DeadxCreed + aglinder | https://freesound.org/people/DeadxCreed/sounds/322448/ and https://freesound.org/people/aglinder/sounds/264469/ | CC0 (verify both) | chosen (to test) | No kangaroo hop CC0 exists. Layer both and play the pair 2 to 3 times, each starting before the previous ends. Replace if it sounds fake. |
 | FR12 | Smoke (cough, breath) | The smoke thickens | | | | | no sound | Not needed. |
+| FR13 | Ending shot | The camera rises out of first person over the burning farm (event `exit`), or the dark version when time runs out (event `lose`) | | | | | todo | A swell: wind and fire roar opening up, then a held quiet before the result card. The dark one lower and heavier. |
 
 ## Beam network (Isin Agi, solar flare 3026, #124)
 

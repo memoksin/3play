@@ -17,7 +17,7 @@ extends SceneTree
 ## wide) and the frames of a scenario are tiled in proof_<id>_sheet.png.
 
 const DISASTERS := ["res://data/disasters/indian_ocean.tres", "res://data/disasters/kahramanmaras.tres",
-		"res://data/disasters/solar_flare.tres"]
+		"res://data/disasters/solar_flare.tres", "res://data/disasters/black_saturday.tres"]
 ## -1 = idle, waiting for the flick (hint shown); others are timeline seconds after a flick.
 const TIMES := [-1.0, 1.0, 5.5, 7.4, 7.75, 7.95]
 ## Glitch runs (solar flare): before, hiccup, meltdown, swap flash, tearing into 3026, future spin, lock, zoom, dive.

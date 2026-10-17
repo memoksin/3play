@@ -7,7 +7,7 @@ extends SceneTree
 ## never after a fixed sleep (a window that is unfocused or stalls renders fewer frames).
 
 const MAX_SECONDS := 90.0
-const PARK := Vector2(6, 712)  # bottom-left: clear of the menu and the top-right language picker
+const PARK := Vector2(6, 712)  # bottom-left: clear of the menu and the top-right settings gear
 const FRAME_CAP := 240  # frames to wait for a state change before failing
 const SETTLE_CAP := 600  # frames to wait for the tweens to finish
 
