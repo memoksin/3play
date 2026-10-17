@@ -29,7 +29,7 @@ For whoever has the game on their computer (memoksin or sudeimete).
 | G6 | Time counter | Clock or year counter runs while time advances | | | | | no sound | Test it silent first. If it feels empty, add a short digital tick later. |
 | G7 | Glitch and jump to the future | Globe glitches and jumps to year 3000+ (Tier 2) | Glitch Corruption | dotY21 | https://freesound.org/people/dotY21/sounds/348585/ | CC0 | in repo | Tier 2. |
 | G8 | Riser, main menu to globe | The player leaves the menu and the globe appears |  |  |  |  | keep current | No riser for now: the current transition sound (the G1 swell, which plays when the globe appears) stays as it is. |
-| G9 | Globe ambience | While the globe is shown (space or Earth feel) |  |  |  |  | todo | No globe ambience exists in the game yet (G2 plays only while the globe is dragged). A new space or Earth ambience is being searched. No water. |
+| G9 | Globe ambience | While the globe is shown (space or Earth feel) | Quasi Drone | bassimat | https://freesound.org/people/bassimat/sounds/840934/ | CC0 | chosen | About 10 min, calm evolving drone. Loop, quiet, under the G1 swell and G2 spin sound. Expected file: `globe/earth_ambience.ogg`. No water. |
 
 ### Still to do for the globe
 
@@ -122,7 +122,7 @@ Timeline from `scenes/minigames/connect.gd`: a calm bay until about 6 s before t
 | C7 | Broken line spills | The water spills out of a broken line | Big Water Splash | qubodup | https://freesound.org/people/qubodup/sounds/442773/ | CC0 | in repo (to test) | Repeat the same splash several times, each starting before the previous ends, to build an overflow. Try it, replace the sound if it feels fake. Issue #95. |
 | C8 | Village floods | The spilled water floods the village | | | | | no sound (test) | Leave empty and test the game. Add a sound only if it feels empty. |
 | C9 | Water drains | The water drains back (1.5 s) | wavesound.wav | transitking | https://freesound.org/people/transitking/sounds/11505/ | CC0 | in repo | Use only the first 4 s of the file (waves wash over the rock and drain back through a crack). |
-| C10 | Pipeline locks | A pipeline is correct and locks (no more rotation) | | | | | todo | Agreed by memoksin on #157: a small visual and sound cue. Proposal: the shared success sound (FN7, FR6, BM4), or a short lock click. To decide. |
+| C10 | Pipeline locks | A pipeline is correct and locks (no more rotation) | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | chosen (same as FN7) | The shared success sound (FN7, FR6, BM4, C10). Memoksin added a `locked` sound_event kind in audio.gd (#162); Sude adds the cue. |
 
 ## Result card
 
@@ -171,7 +171,7 @@ Dark snowy street, a flashlight with a battery, a whistle that shows the directi
 | FN1 | Snowstorm ambience | Whole minigame | G56-21-Winter Wind.wav | craigsmith | https://freesound.org/people/craigsmith/sounds/438876/ | CC0 | chosen (same as D1) | The same new snowstorm sound as D1. |
 | FN2 | Footsteps | The player walks | Footsteps Dirt Gravel | PotatokingXII | https://freesound.org/people/PotatokingXII/sounds/352870/ | CC0 | chosen | Normal footsteps (not snow). About 35 s, trim to a clean stride loop. |
 | FN3 | Flashlight on and off | The flashlight is turned on or off | Flashlight Clicking On and Off | deleted_user_7146007 | https://freesound.org/people/deleted_user_7146007/sounds/383659/ | CC0 | chosen | 0 to 1 s = turning on. 2 to 3 s = turning off. |
-| FN4 | Battery low | The flashlight battery is running out |  |  |  |  | todo | Another sound: a beeping "bip bip" is enough. The first candidates were not liked. |
+| FN4 | Battery low | The flashlight battery is running out | Electronic Timer Beeping 4X | Rudmer_Rotteveel | https://freesound.org/people/Rudmer_Rotteveel/sounds/536420/ | CC0 | chosen | The file already holds 4 beeps ("bip bip"). Play it when the battery is low. |
 | FN5 | Whistle | The whistle that shows the direction | metal whistle | strongbot | https://freesound.org/people/strongbot/sounds/568995/ | CC0 | chosen | First 3 seconds of the file. |
 | FN6 | Found a family member | The player reaches a family member | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen (reuse of F2) | First second of the file. |
 | FN7 | Success | The family reaches the assembly point | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | chosen | One success sound for FN7, FR6 and BM4. |
@@ -185,18 +185,18 @@ Spec: `docs/minigames/fire-farm.md`.
 
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
-| FR1 | Fire and wind ambience | Whole minigame |  |  |  |  | no sound | The candidates were not liked, so left empty for now. |
+| FR1 | Fire and wind ambience | Whole minigame | Big fire mixed with WIND BLOWING.mp3 | craigsmith or vekoN + Podcapocalipsis | A: https://freesound.org/people/craigsmith/sounds/483318/ (R27-25-Large Fire Burning) or B: https://freesound.org/people/vekoN/sounds/537530/ (digital wildfire); wind: https://freesound.org/people/Podcapocalipsis/sounds/521696/ | CC0 (verify all) | chosen (to test) | Sude makes both mixes (A and B), each with seconds 9 to 14 of the wind sound, looped. Burcu listens and picks one. |
 | FR2 | Footsteps | The player walks | Footsteps Dirt Gravel | PotatokingXII | https://freesound.org/people/PotatokingXII/sounds/352870/ | CC0 | chosen | Same as FN2. Trim to a clean stride loop. |
 | FR3 | Jump and landing on debris | The player jumps over the debris | Human Impact on Ground | alegemaate | https://freesound.org/people/alegemaate/sounds/364690/ | CC0 | chosen | Short clip of a person landing after a jump. |
 | FR4 | Pick up the knife | The player picks up the knife | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen (reuse of F2) | First second of the file. |
 | FR5 | Cut the fence | The knife rubs on the fence | Sanding_a_Piece_Of_Wood.wav | CapsLok | https://freesound.org/people/CapsLok/sounds/204948/ | CC0 | chosen | Use the part from 16 s to 19 s of the file. Plays while the knife rubs the fence. |
 | FR6 | Success | A task is done (fence cut, flame out) | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | chosen (same as FN7) | The same success sound as FN7 and BM4. |
-| FR7.1 | Hose attached | The hose is put on the valve |  |  |  |  | todo | Another click sound for attaching the hose: not a mouse click. |
+| FR7.1 | Hose attached | The hose is put on the valve | Door Lock.wav | nebulasnails | https://freesound.org/people/nebulasnails/sounds/405534/ | CC0 | chosen | About 0.75 s door latch. |
 | FR7.2 | Valve turn | The valve is turned | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | chosen | Use 0:58 to 1:03 of the file. |
 | FR8 | Water spray | The hose sprays | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | chosen | Use 1:07 to 1:18 of the file (confirmed). |
-| FR9 | Small flame | The small flame burns | | | | | todo | A flame sound, not only crackling. |
+| FR9 | Small flame | The small flame burns | fire crackling, fireplace, BBQ, mixed with WIND BLOWING.mp3 | AlexanderChe + Podcapocalipsis | https://freesound.org/people/AlexanderChe/sounds/410404/ and https://freesound.org/people/Podcapocalipsis/sounds/521696/ | CC0 (verify both) | chosen (to test) | Mix with seconds 9 to 14 of the wind sound, same wind as FR1. Fades out when the flame is put out (FR10). The earlier pick ricardoemfield 752028 is CC BY-NC, not allowed. |
 | FR10 | Flame goes out | The flame is put out | | | | | decided | No separate sound: the flame sound (FR9) fades out. |
-| FR11 | Kangaroos run out | 2 to 3 kangaroos run through the gap | | | | | todo | A herd running (many footsteps). |
+| FR11 | Kangaroos run out | 2 to 3 kangaroos run through the gap | Horse Gallop Loop.wav + Footsteps Dirt 01 | DeadxCreed + aglinder | https://freesound.org/people/DeadxCreed/sounds/322448/ and https://freesound.org/people/aglinder/sounds/264469/ | CC0 (verify both) | chosen (to test) | No kangaroo hop CC0 exists. Layer both and play the pair 2 to 3 times, each starting before the previous ends. Replace if it sounds fake. |
 | FR12 | Smoke (cough, breath) | The smoke thickens | | | | | no sound | Not needed. |
 
 ## Beam network (Isin Agi, solar flare 3026, #124)
@@ -213,3 +213,43 @@ Rotate satellites to route the solar beam into collectors, waves, a countdown, "
 | BM6 | Wave warning | A wave is coming | | | | | later | Empty for now, to search later. |
 | BM7 | Wave hits | The wave hits | | | | | later | Empty for now. |
 | BM8 | Countdown | The countdown runs | Bomb Countdown Beeps | snakebarney | https://freesound.org/people/snakebarney/sounds/138108/ | CC0 | chosen |  |
+
+## Pitch film (trailer, about 50 s, silent render, sounds added by the team)
+
+Source: `tools/video/film.html` cue sheet and `tools/video/intro_stack_v2.html` (memoksin, tools/video/README.md). The renders have no audio. Times are final-film seconds (intro 8.0 s first, then the film). Language of the on-screen text is Turkish. Game clips are recorded silent, so game sounds (ambience, clicks, water) are layered from the game files.
+
+| # | Time (s) | What happens | Sound needed | Status |
+|---|---|---|---|---|
+| T1 | 0 to 8 | Intro: the Stack logo in a storm | Rain loop and low wind, under the whole intro | todo |
+| T2 | about 2.4 | Distant sheet lightning in the clouds | Far soft thunder | todo |
+| T3 | 2.8 and 3.4 | Two close lightning strikes, the logo flickers | Two thunder cracks | todo |
+| T4 | 3.9 | Final strike hits the logo (2 frames silhouette, 1 inverted) | Big thunder crack and impact, then silence for a beat | todo |
+| T5 | 4.45 to 5.3 | "STACK PRESENTS" types on | Letter-by-letter type-on blips with a glitch feel | todo |
+| T6 | 5.5 | Last far strike | Far thunder | todo |
+| T7 | 6.05 to 7.65 | The camera pushes into the logo's eye | Riser, low and building, ends in a cut | todo |
+| T8 | 7.75 | Pure black | Silence | no sound |
+| T9 | 8.2, 8.5, 9.2, 9.5 | Darkness with a heartbeat glow | Heartbeat lub-dub (two beats, twice) | todo |
+| T10 | 8.8 to 10.0 | A faint voice echoes: "Sesimi duyan var mı?" | The line spoken by a team member, with echo (if text-to-speech is used it must be declared as AI) | todo |
+| T11 | 10.0 to 12.35 | "Hayatın göremediğimiz boyutları vardır" | Soft sting for a statement | todo |
+| T12 | 12.4 | The darkness tears open into the Kahramanmaras diorama | Rip or whoosh, then the D1 Winter Wind from the game | todo (D1 exists) |
+| T13 | 14.3 to 16.6 | Title card "TAHMİN ET" | Title card hit (glitch plus low boom), the same for all 5 cards | todo |
+| T14 | 16.6, 28.0, 36.3, 43.8 | Four glitch cuts between clips | Short glitch or digital stutter (G7 style) | todo |
+| T15 | 19.2 | Zoom-blur whip to the globe | Whoosh (G5 exists) | reuse G5 |
+| T16 | 20.2 to 22.5 | Title card "KEŞFET" | Title card hit (T13) | todo |
+| T17 | 24.55 | The crosshair locks on the Indian Ocean | Target Lock (G4 exists) | reuse G4 |
+| T18 | 25.75 | Zoom flash into the ocean | Flash whoosh | todo |
+| T19 | 26.1 to 28.0 | Title card "MÜDAHALE ET" | Title card hit (T13) | todo |
+| T20 | 28 to 31 | Indian Ocean minigame clip | Game sounds: wave, water flow (C5, C6) | reuse game files |
+| T21 | 31.0 | Hard cut to black | Cut to silence with two heartbeats (T9) at 31.12 and 31.40 | todo |
+| T22 | 31.7 | The role menu opens | Menu music M1 and hover (M2) | reuse M1, M2 |
+| T23 | 32.25 | "Farkındalık tek taraflı değildir" | Statement sting (T11) | todo |
+| T24 | 34.3 | Title card "TERCİH ET" | Title card hit (T13) | todo |
+| T25 | 36.3 to 40 | The globe spins again, "Dünyanın dört bir yanından", "3 afet senaryosu" | Globe spin G2, statement stings | reuse G2 |
+| T26 | 39.7 | Pixelate into the Easter bunny scene | Pixelate or 8-bit sweep | todo |
+| T27 | 41.5 | The egg bursts and the bunny pops out | 8-bit pop or burst | todo |
+| T28 | 41.6 | "Belki bir de easter egg, kim bilir…" | Statement sting | todo |
+| T29 | 43.8 to 47.4 | Result card, the closing line types on (44.4 to 45.9) | Card swell (R1), typing (G3) | reuse R1, G3 |
+| T30 | 47.4 | Title card "FARK ET" | Title card hit (T13) | todo |
+| T31 | 49.1 | CRT power-off | TV or CRT switch-off sound | todo |
+| T32 | 49.8 to 50.3 | Black | Silence | no sound |
+| T33 | whole film | Music under the film | One music bed. To decide: the menu music M1 (Title.mp3) or a new track. | to decide |
