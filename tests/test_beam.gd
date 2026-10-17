@@ -44,6 +44,7 @@ func _check(name: String, cond: bool) -> void:
 
 
 func _run() -> void:
+	load("res://scripts/story.gd").progress_path = ""  # never touch the real mission progress
 	skin = load(SKIN_PATH)
 	if skin == null or skin.waves.size() != 4:
 		print("FAIL skin loads with 4 waves")

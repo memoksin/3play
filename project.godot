@@ -27,6 +27,7 @@ renderer/rendering_method.mobile="gl_compatibility"
 
 Game="*res://scripts/game.gd"
 Audio="*res://scripts/audio.gd"
+Voice="*res://scripts/voice.gd"
 
 [gui]
 

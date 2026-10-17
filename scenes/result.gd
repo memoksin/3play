@@ -10,6 +10,10 @@ signal closing_typing_started
 signal closing_typing_finished
 
 const MARGIN := 32  # free space above and below the card
+const BADGE_DELAY := 1.8  # seconds after entry: the card and its score have landed
+
+## The open badge moment, null when none.
+var badge_moment: BadgeMoment
 
 
 func _ready() -> void:
@@ -36,6 +40,19 @@ func _ready() -> void:
 	TextFx.fade_in(%Score, 0.3)
 	TextFx.fade_in(%Buttons, 0.6)
 	TextFx.type_on($Center/Card/Box/Closing, 1.0, 24.0, closing_typing_started.emit, closing_typing_finished.emit)
+	# the run counts as done once its card is up; a first badge gets its moment once the card is in
+	if Story.record(d, Game.saved, Game.total) and d.badge:
+		create_tween().tween_callback(show_badge_moment).set_delay(BADGE_DELAY)  # dies with the scene
+
+
+## The badge moment over the card (see BadgeMoment). Called once, BADGE_DELAY after entry.
+func show_badge_moment() -> void:
+	if not is_inside_tree() or is_instance_valid(badge_moment):
+		return
+	badge_moment = BadgeMoment.new()
+	badge_moment.setup(Game.disaster)
+	add_child(badge_moment)
+	badge_moment.play()
 
 
 ## Sizes the scroll area to the body, capped so the whole card fits the screen.

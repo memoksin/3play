@@ -25,6 +25,7 @@ func _process(_delta: float) -> bool:
 
 
 func _run() -> void:
+	load("res://scripts/story.gd").progress_path = ""  # never touch the real mission progress
 	await process_frame
 	if DisplayServer.get_name() == "headless":
 		push_error("ui_shots: needs a renderer; run without --headless")
