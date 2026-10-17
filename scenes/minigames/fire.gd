@@ -755,7 +755,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseMotion:
 		var rel: Vector2 = (event as InputEventMouseMotion).screen_relative
-		look(-rel.x * skin.mouse_sensitivity, -rel.y * skin.mouse_sensitivity)
+		var k: float = skin.mouse_sensitivity * Game.mouse_sensitivity
+		look(-rel.x * k, (rel.y if Game.invert_y else -rel.y) * k)
 	elif event.is_action_pressed(&"fire_interact") and not event.is_echo():
 		_interact_pressed = true
 	elif event.is_action_pressed(&"fire_jump") and not event.is_echo():
