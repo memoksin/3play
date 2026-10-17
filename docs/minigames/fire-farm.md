@@ -20,9 +20,13 @@ First person. You are on a fenced farm with a kangaroo pen while a bushfire come
 5. **Task B, the hose and the fire:**
    - Run to it. A **hose** lies free on the ground, a **valve** is on the wall.
    - Attach the hose to the valve, turn the valve: water flows.
-   - Look to the other side: a **small flame** has started. Put it out with the hose.
+   - Look to the other side: a **small flame** has started **on the path to the exit**. Put it out with the hose so the way out stays open.
    - Success sound when it is out.
 6. **Exit.** When all exclamation marks are done, the **exit gate** shows. The gate is broken, with a **pile of debris** in front. The player **jumps over the pile** (jump key) and leaves. End of the minigame.
+
+## Lesson link (decided with memoksin, from sudeimete's note)
+
+Black Saturday's main lesson is "leave early", not "stay and defend". So the tasks are about **opening ways out**, not about defending the farm: the fence opens a way out for the kangaroos, and the flame is put out only because it blocks the player's own way out. The card says: leave early, do not fight a fire you can leave.
 
 ## Controls (first person)
 
