@@ -25,6 +25,8 @@ const WAVE_SEA_U := -2.8     # where it stands at the hit
 const WAVE_BEACH_U := 2.5    # where it breaks
 const SURGE_REACH_U := 9.0   # run-up stops at the coastal path, short of the villages
 const HOVER_LIFT := 0.32
+const LOCK_COLOR := Color(1.0, 0.82, 0.35)  # warm gold: the frame glint of a line that just locked
+const DENY_TILT := 0.14  # rad, peak of the "locked" wiggle
 const TILE_SCENES := {
 	"straight": preload("res://assets/3d/indian_ocean/pipe_straight.glb"),
 	"corner": preload("res://assets/3d/indian_ocean/pipe_corner.glb"),
@@ -94,6 +96,8 @@ var _splashes: Array[CPUParticles3D] = []
 var _spills: Array[CPUParticles3D] = []
 var _pools: Array[MeshInstance3D] = []
 var _hover_frame: MeshInstance3D
+var _frame_mesh: ArrayMesh
+var _lock_frames := {}  # cell index -> MeshInstance3D: the glint frame, made when the cell first locks
 var _amb: Array[Node3D] = []     # swaying / bobbing things: palms, boats
 var _amb_base: Array[Transform3D] = []
 var _setup := false
@@ -470,7 +474,8 @@ func _build_grid(rock_variant: Dictionary) -> void:
 	fm.emission_energy_multiplier = 1.6
 	fm.cull_mode = BaseMaterial3D.CULL_DISABLED
 	fm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_hover_frame = _mesh_node(st.commit(), fm, grid)
+	_frame_mesh = st.commit()
+	_hover_frame = _mesh_node(_frame_mesh, fm, grid)
 	_hover_frame.visible = false
 
 
@@ -876,6 +881,10 @@ func _show_tiles(s: Node, flow: float) -> void:
 		var lift := HOVER_LIFT if (c == hover and not s._hit) else 0.0
 		lift = maxf(lift, HOVER_LIFT * 1.4 * pop)
 		pivot.rotation.z = -turns * PI / 2.0
+		var deny: float = s._deny.get(i, 0.0) / s.DENY_DUR
+		if deny > 0.0:  # clicked while locked: a short wiggle, the pipe does not turn
+			pivot.rotation.z += sin((1.0 - deny) * TAU * 3.0) * DENY_TILT * deny
+		_show_lock_glint(s, i, c)
 		pivot.position.z = lerpf(pivot.position.z, lift, 0.45) if left <= 0.0 else lift
 		pivot.scale = Vector3.ONE * (1.0 + s.POP * pop + (0.04 if lift > 0.0 and left <= 0.0 else 0.0))
 	if hover.x >= 0 and not s._hit:
@@ -889,6 +898,31 @@ func _show_tiles(s: Node, flow: float) -> void:
 	else:
 		_hover_frame.visible = false
 		hover_light.visible = false
+
+
+## Short glint on a pipe whose line just locked: a gold frame that fades over LOCK_FLASH.
+func _show_lock_glint(s: Node, i: int, c: Vector2i) -> void:
+	var age: float = _now - s._lock_at.get(i, -100.0)
+	var on: bool = s._lock_at.has(i) and age >= 0.0 and age < s.LOCK_FLASH
+	if not _lock_frames.has(i):
+		if not on:
+			return
+		var fm := StandardMaterial3D.new()
+		fm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		fm.emission_enabled = true
+		fm.emission = LOCK_COLOR
+		fm.cull_mode = BaseMaterial3D.CULL_DISABLED
+		fm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_lock_frames[i] = _mesh_node(_frame_mesh, fm, $Coast/Grid)
+	var f: MeshInstance3D = _lock_frames[i]
+	f.visible = on
+	if on:
+		var k: float = 1.0 - age / s.LOCK_FLASH
+		f.position = cell_center(c.x, c.y, CUT_Z + 0.05)
+		f.scale = Vector3.ONE * (1.0 + 0.08 * (1.0 - k))
+		var m := f.material_override as StandardMaterial3D
+		m.albedo_color = Color(LOCK_COLOR, k)
+		m.emission_energy_multiplier = 0.5 + 1.8 * k
 
 
 ## Entry side (0-3 NESW) of each wet cell -> which end of the tile's path the water starts from.

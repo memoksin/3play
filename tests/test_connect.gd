@@ -225,6 +225,50 @@ func _scene() -> void:
 	s.queue_free()
 	await process_frame
 
+	# lock: a line completed by a turn locks, the others stay free until the wave
+	s = _new_scene()
+	await process_frame
+	s.time_scale = 0.0
+	s.submit = false
+	var events := []
+	s.sound_event.connect(func(kind: StringName, index: int) -> void: events.append([kind, index]))
+	s.solve()
+	_check("lock: solve() locks nothing", s._lock_at.is_empty() and events.is_empty())
+	var solved := L.solved_rotations(skin)
+	var c1 := skin.index(1, 0)  # corner of line 0
+	s.rots[c1] = (solved[c1] + 1) % 4
+	_check("lock: line 0 is broken first", L.complete_lines(skin, s.rots) == 3)
+	var turns := 0
+	while L.complete_lines(skin, s.rots) < 4 and turns < 4:
+		_check("lock: free until complete", not s.is_cell_locked(1, 0) and s.rotate_cell(1, 0, true))
+		turns += 1
+	_check("lock: 3 turns complete it and lock line 0", turns == 3 and s._lines_locked == [0] and s.is_cell_locked(1, 0))
+	_check("lock: signal `locked` for line 0, once", events == [[&"locked", 0]])
+	_check("lock: all 7 pipes of line 0 locked, no other line",
+		s._lock_at.size() == 7 and s.is_cell_locked(6 - 1, 0) and not s.is_cell_locked(1, 2) and not s.is_cell_locked(1, 3))
+	var kept: int = s.rots[c1]
+	var clicks_before: int = s.clicks
+	_check("lock: a click on a locked pipe does not turn it", not s.rotate_cell(1, 0, true) and s.rots[c1] == kept and s.clicks == clicks_before)
+	_check("lock: it wiggles instead", s._deny.has(c1) and events.size() == 1)
+	var w: Node3D = s.get_node("World")
+	w.show_state(s)
+	var piv: Node3D = w._pivots[c1]
+	s.advance(0.025)
+	w.show_state(s)
+	_check("lock: wiggle moves the pipe off its angle", not is_equal_approx(piv.rotation.z, -float(kept) * PI / 2.0))
+	_check("lock: glint frame on the locked pipes", w._lock_frames.has(c1) and (w._lock_frames[c1] as Node3D).visible)
+	s.advance(1.0)
+	w.show_state(s)
+	_check("lock: glint and wiggle fade", not (w._lock_frames[c1] as Node3D).visible and s._deny.is_empty()
+		and is_equal_approx(piv.rotation.z, -float(kept) * PI / 2.0))
+	_check("lock: other lines still free", s.rotate_cell(1, 2) and s.rotate_cell(1, 3) and s._lines_locked == [0])
+	s.seek(60.5)
+	_check("lock: hit keeps the locked line, no extra lock event", s._lines_locked == [0] and events.filter(func(e: Array) -> bool: return e[0] == &"locked").size() == 1)
+	s.seek(200.0)
+	_check("lock: locked line is saved", s.saved_count >= 1 and s._saved[0])
+	s.queue_free()
+	await process_frame
+
 	# real path: _process drives time, Game gets the score
 	s = _new_scene()
 	await process_frame

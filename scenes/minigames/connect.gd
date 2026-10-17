@@ -7,7 +7,8 @@ extends Control
 
 signal finished(saved: int, total: int)
 ## Audio hooks (docs/audio.md, scripts/audio.gd). sound_event kinds: wave_rising, wave_hit, flow,
-## basin (index = basin), spill (index = line), flood (index = village), drain.
+## basin (index = basin), spill (index = line), flood (index = village), drain, locked (index = line:
+## a turn completed the line and locked it; sent during play, before the hit).
 signal pipe_turned
 signal sound_event(kind: StringName, index: int)
 
@@ -20,6 +21,8 @@ const ROCK_ORDER: Array[int] = [0, 1, 2, 0, 2, 1]
 const AMBIENT_FADE := 6.0
 
 const TURN_DUR := 0.1
+const DENY_DUR := 0.3  # the "locked" wiggle of a pipe that was clicked in a locked line
+const LOCK_FLASH := 0.8  # the glint on a line's pipes when it locks
 ## Seconds before the hit that the wave comes into view.
 const WAVE_LEAD := 15.0
 const WAVE_BREAK_DUR := 1.8  # the wave crosses the bay and breaks on the beach
@@ -54,6 +57,9 @@ var _hit := false
 var _finished := false
 var _hover := Vector2i(-1, -1)
 var _turning := {}  # cell index -> seconds left of the turn animation
+var _lock_at := {}  # cell index -> game time its line locked (a completed line stays as it is)
+var _deny := {}  # cell index -> seconds left of the "locked" wiggle
+var _lines_locked: Array[int] = []  # line (inlet) indices already locked
 var _rock_variant := {}  # cell index -> sheet column
 var _lines: Array[Dictionary] = []
 var _saved: Array[bool] = []
@@ -115,6 +121,10 @@ func advance(dt: float) -> void:
 		_turning[i] -= dt
 		if _turning[i] <= 0.0:
 			_turning.erase(i)
+	for i in _deny.keys():
+		_deny[i] -= dt
+		if _deny[i] <= 0.0:
+			_deny.erase(i)
 	_banner.visible = _hit and _hit_t() < BANNER_DUR
 	_apply_shake()
 	_update_hud()
@@ -138,20 +148,44 @@ func seek(time: float) -> void:
 	advance(maxf(time - elapsed, 0.0))
 
 
-## Debug and click target: turns pipe (c, r) one quarter turn clockwise.
+## True when pipe (c, r) belongs to a line that was completed and locked.
+func is_cell_locked(c: int, r: int) -> bool:
+	return c >= 0 and r >= 0 and c < skin.cols and r < skin.rows and _lock_at.has(skin.index(c, r))
+
+
+## Debug and click target: turns pipe (c, r) one quarter turn clockwise. A pipe in a locked line does
+## not turn: it only wiggles (false).
 func rotate_cell(c: int, r: int, animate := false) -> bool:
 	if locked or c < 0 or r < 0 or c >= skin.cols or r >= skin.rows:
 		return false
 	var i := skin.index(c, r)
 	if not ConnectLogic.rotatable(skin.tiles[i]):
 		return false
+	if _lock_at.has(i):
+		_deny[i] = DENY_DUR
+		return false
 	rots[i] = (rots[i] + 1) % 4
 	clicks += 1
 	pipe_turned.emit()
 	if animate:
 		_turning[i] = TURN_DUR
+	_lock_completed(c, r)
 	queue_redraw()
 	return true
+
+
+## After a turn at (c, r): a line that is now complete and runs through that pipe locks. Other lines
+## stay free until the wave (the rule is unchanged).
+func _lock_completed(c: int, r: int) -> void:
+	var traces := ConnectLogic.traces(skin, rots)
+	for li in traces.size():
+		var t: Dictionary = traces[li]
+		if not t.complete or li in _lines_locked or not t.cells.has(Vector2i(c, r)):
+			continue
+		_lines_locked.append(li)
+		for cell: Vector2i in t.cells:
+			_lock_at[skin.index(cell.x, cell.y)] = elapsed
+		sound_event.emit(&"locked", li)
 
 
 ## Debug: put every pipe in the solved rotation.
@@ -184,6 +218,7 @@ func _start_hit() -> void:
 	_hover = Vector2i(-1, -1)
 	mouse_default_cursor_shape = Control.CURSOR_ARROW
 	_turning.clear()
+	_deny.clear()
 	_lines = ConnectLogic.traces(skin, rots)
 	_saved = ConnectLogic.saved_basins(skin, rots)
 	_flow_total = 0.0
@@ -273,7 +308,7 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseMotion:
 		var c := _cell_at(event.position)
-		var ok := c.x >= 0 and c.y >= 0 and c.x < skin.cols and c.y < skin.rows and ConnectLogic.rotatable(skin.tile(c.x, c.y))
+		var ok := c.x >= 0 and c.y >= 0 and c.x < skin.cols and c.y < skin.rows and ConnectLogic.rotatable(skin.tile(c.x, c.y)) and not _lock_at.has(skin.index(c.x, c.y))
 		if not ok:
 			c = Vector2i(-1, -1)
 		if c != _hover:
