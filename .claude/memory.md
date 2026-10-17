@@ -19,6 +19,7 @@ Shared by every agent. Loaded via CLAUDE.md. Hard cap 40 lines; one line per fac
 - Test scripts (`tests/*.gd`) must `quit(1)` on every failure path and have a frame cap; a missed `quit()` leaves Godot hanging.
 - Window opens maximized: screenshot tools save at window size (not 1280x720). Compare shots by downscaling.
 - The editor rewrites `project.godot` (header, drops default values) and may switch `assets/globe/*` imports to VRAM compression: keep `compress/mode=0`, don't commit that churn.
+- Weather/time of a place = `Disaster.atmosphere` (scripts/atmosphere.gd: sun, ambient, sky, haze/fog, exposure): diorama.gd and the minigame world both apply it (Indian Ocean: diorama + Connect). Change the look there, not in the set or world scenes.
 - Globe sun comes from `Disaster.utc` (real event time): Kahramanmaras locks at night, Sumatra in the morning. Intended.
 - Cloud sessions (claude.ai/code, e.g. Burcu on tablet): `gh` GraphQL commands (`gh issue/pr/repo ...`) get HTTP 403. Use `gh api` REST; the hooks already do.
 - Night shift: memoksin hands tasks to sleeping teammates' sessions on #115. Work in a worktree from origin/dev (never the owner's tree), DRAFT PRs only, report ACK/PROGRESS/QUESTION/DONE there with send.sh.

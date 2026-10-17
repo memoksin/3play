@@ -84,7 +84,7 @@ void fragment() {
 		float flow2 = noise(vec2((x - t * speed * 1.4) * 21.0, UV.y * 9.0 + 3.0));
 		float bubbles = step(0.9, noise(vec2((x - t * speed * 1.1) * 40.0, UV.y * 14.0)));
 		foam = smoothstep(0.62, 0.9, flow * 0.6 + flow2 * 0.5) * 0.5 + bubbles * 0.5;
-		foam = max(foam, (1.0 - tongue) * 0.9 * step(fill, 0.999));
+		foam = max(foam, (1.0 - tongue) * (0.25 + 0.4 * flow) * step(fill, 0.999));  // churned tip, no white cap
 		c = mix(water * 1.15, deep, a * a * 0.7);
 	} else if (mode == 1) {
 		vec3 n = normalize(NORMAL);
@@ -100,7 +100,7 @@ void fragment() {
 		if (v_x > fill) discard;
 		float a = abs(UV.x * 2.0 - 1.0);
 		float s = noise(vec2(UV.x * 5.0, (v_x - t * 3.5) * 8.0));
-		foam = smoothstep(0.5, 0.85, s) * 0.7 + smoothstep(0.85, 1.0, v_x / max(fill, 0.01)) * 0.6;
+		foam = smoothstep(0.5, 0.85, s) * 0.7 + smoothstep(0.85, 1.0, v_x / max(fill, 0.01)) * 0.6 * s;
 		c = mix(water * 1.2, deep, a * 0.5);
 		a_out = (0.9 - a * 0.4);
 	} else if (mode == 3) {
@@ -113,9 +113,8 @@ void fragment() {
 		float s1 = noise(vec2(x * 6.0, y * 5.0 - t * 3.5));
 		float s2 = noise(vec2(x * 13.0, y * 11.0 - t * 5.0));
 		foam = smoothstep(0.5, 0.85, s1 * 0.6 + s2 * 0.5) * 0.75;
-		foam = max(foam, smoothstep(front - 0.1, front, y) * 0.85);   // the running lobe
-		foam = max(foam, (1.0 - smoothstep(0.0, 0.18, y)) * 0.75);     // churn where it bursts out
-		foam = max(foam, smoothstep(0.8, 1.0, ax) * 0.45);
+		foam = max(foam, smoothstep(front - 0.1, front, y) * 0.75 * s1);   // the running lobe
+		foam = max(foam, (1.0 - smoothstep(0.0, 0.18, y)) * 0.75 * s2);     // churn where it bursts out
 		c = mix(water * 1.1, deep, ax * 0.55);
 		a_out = mix(0.97, 0.75, ax * ax);
 	} else {
@@ -131,7 +130,6 @@ void fragment() {
 			float cur = smoothstep(0.6, 0.9, noise(vec2(v_local.x * 1.6 - t * 2.4, v_local.y * 7.0)));
 			c = mix(c, turbid * 1.6, cur * 0.35);
 			c += vec3(0.12, 0.1, 0.06) * step(0.93, noise(vec2(v_local.x * 9.0 + v_local.z * 9.0 - t * 1.5, v_local.y * 9.0)));
-			foam = smoothstep(level - 0.18, level - 0.02, v_local.y) * (0.6 + 0.4 * n2);
 		}
 		a_out = 0.97;
 	}

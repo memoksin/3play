@@ -167,6 +167,26 @@ func _scene() -> void:
 	_check("scene: four clicks come back", s.rots[skin.index(1, 0)] == before)
 	s.clicks = 0
 	s.seek(30.0)
+	# play view: the slab fills the width down to the bottom edge, the board is fully on screen, and the
+	# world is lit like the diorama (Disaster.atmosphere)
+	await process_frame  # the camera follows the game time in show_state()
+	var world: Node3D = s.get_node("World")
+	var vp: Vector2 = world._view_size()
+	var g0: Vector2 = world.screen_of(Vector3(0.0, world.GRID_TOP, world.CUT_Z))
+	var g1: Vector2 = world.screen_of(Vector3(skin.cols * world.T, world.GRID_TOP - skin.rows * world.T, world.CUT_Z))
+	var hud := (s.get_node("Hud") as Control).get_global_rect()
+	_check("frame: grid fully on screen, below the HUD", g0.x > 0.0 and g0.y > 0.0 and g1.x < hud.position.x and g1.y < vp.y)
+	var covered := true
+	for sp in [Vector2(0.0, vp.y - 1.0), Vector2(vp.x - 1.0, vp.y - 1.0), Vector2(0.0, vp.y * 0.45), Vector2(vp.x - 1.0, vp.y * 0.45)]:
+		var xf: Transform3D = world.coast.global_transform.affine_inverse() * world.camera.global_transform
+		var d: Vector3 = xf.basis * world._ray_dir(sp)
+		var x: float = (xf.origin + d * (-xf.origin.z / d.z)).x  # on the front cut (z = 0)
+		covered = covered and x > world.U0 and x < 33.0  # coast_slab.py U1
+	_check("frame: the slab covers both screen edges down to the bottom", covered)
+	var atm: Atmosphere = game.disaster.atmosphere
+	var sun := world.get_node("Sun") as DirectionalLight3D
+	_check("look: sun, ambient and tonemap from the disaster's atmosphere", atm != null and sun.light_color == atm.sun_color
+		and world._env.tonemap_mode == Environment.TONE_MAPPER_FILMIC and is_equal_approx(world._env.tonemap_exposure, atm.exposure))
 	_check("scene: sea level rises", s._sea_level() < 68.0)
 	_check("scene: timer shows 30", s.get_node("Hud/Box/Row/Timer").text == "30")
 	s.seek(46.0)
@@ -208,6 +228,55 @@ func _scene() -> void:
 	_check("juice: shake offsets the scene", s.position != Vector2.ZERO)
 	s.seek(63.0)
 	_check("juice: shake settled", s.position == Vector2.ZERO and s._turning.is_empty())
+	s.queue_free()
+	await process_frame
+
+	# rush: the last line locking cuts the clock to 5 s, once; the level ends through the normal flow
+	s = _new_scene()
+	await process_frame
+	s.time_scale = 0.0
+	s.submit = false
+	var done := []
+	s.finished.connect(func(a: int, b: int) -> void: done.append([a, b]))
+	s.solve()
+	s.seek(10.0)
+	var solved_r := L.solved_rotations(skin)
+	var first := true
+	for li in 4:
+		var cell: Vector2i = L.traces(skin, solved_r)[li].cells[1]
+		var ci := skin.index(cell.x, cell.y)
+		s.rots[ci] = (solved_r[ci] + 3) % 4
+		var guard := 0
+		while not s.is_cell_locked(cell.x, cell.y) and guard < 4:
+			s.rotate_cell(cell.x, cell.y)
+			guard += 1
+		if li < 3:
+			_check("rush: not before the last line (%d)" % li, not s.rushed and s.skin.timer_seconds == 60.0)
+	_check("rush: all locked -> rushed", s._lines_locked.size() == 4 and s.rushed)
+	_check("rush: clock now 5 s", is_equal_approx(s.skin.timer_seconds - s.elapsed, 5.0) and s.get_node("Hud/Box/Row/Timer").text == "5")
+	s.advance(0.1)
+	_check("rush: warning shows (TR/EN text)", s._rush.visible and s._rush.text != "IO_CONNECT_RUSH" and s._rush.text != "")
+	_check("rush: screen shakes", s.position != Vector2.ZERO)
+	s._rush_clock()
+	_check("rush: never extends again", is_equal_approx(s.skin.timer_seconds, 15.0))
+	s.seek(14.0)
+	_check("rush: still playable before the 5 s are up", not s.locked and not s._hit)
+	s.seek(15.5)
+	_check("rush: wave hits when the 5 s end", s.locked and s._hit and not s._rush.visible)
+	s.seek(200.0)
+	_check("rush: level ends with the normal result 4/4", done == [[4, 4]] and s.saved_count == 4)
+	_check("rush: the shared skin is untouched", (load(SKIN_PATH) as ConnectSkin).timer_seconds == 60.0)
+	s.queue_free()
+	await process_frame
+
+	# rush: no cut when 5 s or less is left
+	s = _new_scene()
+	await process_frame
+	s.time_scale = 0.0
+	s.submit = false
+	s.seek(57.0)
+	s._rush_clock()
+	_check("rush: under 5 s left -> untouched", not s.rushed and s.skin.timer_seconds == 60.0)
 	s.queue_free()
 	await process_frame
 

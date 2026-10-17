@@ -5,7 +5,7 @@ shader_type canvas_item;
 uniform sampler2D screen : hint_screen_texture, filter_linear;
 uniform float t = 0.0;
 uniform float dur = 3.2;
-const int DROPS = 30;
+const int DROPS = 18;
 
 float hash(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
 float h2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -26,7 +26,7 @@ void fragment() {
 	float fade = 1.0 - smoothstep(dur * 0.6, dur, t);
 	// the slap: a turbulent wet wobble over everything for the first second
 	float wob = (1.0 - smoothstep(0.0, 1.0, t));
-	vec2 off = (vec2(noise(p * 7.0 + t * 3.0), noise(p * 7.0 - t * 2.6)) - 0.5) * 0.018 * wob;
+	vec2 off = (vec2(noise(p * 7.0 + t * 3.0), noise(p * 7.0 - t * 2.6)) - 0.5) * 0.006 * wob;
 	float light = 0.0;
 	float rim = 0.0;
 	for (int i = 0; i < DROPS; i++) {
@@ -52,13 +52,14 @@ void fragment() {
 			off += vec2(d.x, 0.0) * 0.25;                   // the wet trail above a running drop
 		}
 	}
-	// whitewater sheet: sweeps in from the sea side (left) in 0.25 s, then slides down and tears
-	float sweep = smoothstep(0.0, 0.25, t);
+	// whitewater sheet: sweeps in over the sea side (left third: the town stays readable) in 0.25 s,
+	// then slides down and tears
+	float sweep = smoothstep(0.0, 0.25, t) * 0.45;
 	float drain = smoothstep(0.1, 0.65, t);
 	float front = sweep * 0.9 - uv.x * 1.25 + (noise(p * 4.0 + vec2(0.0, t * 2.0)) - 0.5) * 0.5;
 	float tear = noise(p * vec2(5.0, 3.0) + vec2(0.0, -t * 3.0)) * 0.7 + noise(p * 11.0 + vec2(t, -t * 5.0)) * 0.3;
 	float sheet = smoothstep(0.0, 0.12, front) * smoothstep(drain * 1.1, drain * 1.1 + 0.2, tear + 0.25 * (1.0 - drain));
-	vec2 refr = (vec2(noise(p * 9.0 + t * 4.0), noise(p * 9.0 - t * 3.6)) - 0.5) * 0.09 * sheet;
+	vec2 refr = (vec2(noise(p * 9.0 + t * 4.0), noise(p * 9.0 - t * 3.6)) - 0.5) * 0.05 * sheet;
 	vec3 c = texture(screen, uv + off * fade + refr).rgb;
 	c *= 1.0 - rim * 0.08 * fade;
 	c += vec3(0.9, 0.97, 1.0) * light * 0.35 * fade;
@@ -71,6 +72,6 @@ void fragment() {
 	float glint = smoothstep(0.035, 0.06, length(refr)) * 0.25;
 	c = mix(c, c * vec3(0.82, 0.95, 1.0) + vec3(0.03, 0.06, 0.07), sheet * 0.45);  // seen through water
 	c += vec3(0.85, 0.95, 1.0) * glint * sheet;
-	c = mix(c, vec3(0.93, 0.97, 1.0), sheet * clamp(foam, 0.0, 0.8));
+	c = mix(c, vec3(0.93, 0.97, 1.0), sheet * clamp(foam, 0.0, 0.8) * 0.3);
 	COLOR = vec4(c, 1.0);
 }
