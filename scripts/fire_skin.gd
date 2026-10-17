@@ -67,7 +67,6 @@ extends Resource
 ## tr() keys.
 @export var task_key := "FIRE_TASK"
 @export var controls_key := "FIRE_CONTROLS"
-@export var paused_key := "FIRE_PAUSED"
 @export var fence_done_key := "FIRE_DONE_FENCE"
 @export var flame_done_key := "FIRE_DONE_FLAME"
 @export var lose_key := "FIRE_LOSE"

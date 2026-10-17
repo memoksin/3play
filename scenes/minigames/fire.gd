@@ -86,7 +86,6 @@ var time_scale := 1.0
 var submit := true
 var elapsed := 0.0
 var phase := Phase.OVERVIEW
-var paused := false
 var logic := FireLogic.new()
 var skin: FireSkin
 ## Score handed to Game (-1 until the end).
@@ -171,7 +170,6 @@ var _hint_key := ""
 @onready var _prompt_text: Label = $Hud/Prompt/Row/Text
 @onready var _banner: PanelContainer = $Hud/Banner
 @onready var _controls: Label = $Hud/Controls
-@onready var _pause: ColorRect = $Hud/Pause
 
 
 func _ready() -> void:
@@ -206,7 +204,6 @@ func _ready() -> void:
 	_timer.pause()  # driven from advance(), so seek() and pauses just work
 	_task.text = tr(skin.task_key)
 	_controls.text = tr(skin.controls_key)
-	(_pause.get_node("Label") as Label).text = tr(skin.paused_key)
 	_reticle.draw.connect(_draw_reticle)
 	_update_hint()
 	_apply_smoke(0.0)
@@ -218,9 +215,13 @@ func _exit_tree() -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
+## The shared pause menu (scenes/ui/pause_menu.gd) stops the tree: the mouse is free while it is up and
+## is caught again when the game goes on (or on a click into the scene).
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and phase == Phase.PLAY and not _headless():
-		set_paused(true)
+	if what == NOTIFICATION_PAUSED or what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_release()
+	elif what == NOTIFICATION_UNPAUSED:
+		_capture()
 
 
 ## Adds the fire_* actions (keys, mouse, gamepad) to the InputMap unless they are there already.
@@ -410,10 +411,7 @@ func _build_hose_line() -> void:
 # --- time -----------------------------------------------------------------------
 
 func _process(delta: float) -> void:
-	if paused or _finished:
-		return
-	if phase == Phase.PLAY and not _headless() and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
-		set_paused(true)  # the mouse got away (alt-tab, a dialog): stop the clock until a click
+	if _finished:
 		return
 	_look_keys(delta)
 	advance(delta * time_scale)
@@ -472,23 +470,19 @@ func _begin_play() -> void:
 	_capture()
 
 
-func set_paused(on: bool) -> void:
-	if phase == Phase.END or _finished or paused == on:
-		return
-	paused = on
-	_pause.visible = on
-	_set_spray(false)
-	if on:
-		if not _headless():
-			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	else:
-		_capture()
-	_update_hud(0.0)
-
-
 func _capture() -> void:
-	if not _headless() and phase == Phase.PLAY:
+	if not _headless() and phase == Phase.PLAY and not get_tree().paused:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+
+func _release() -> void:
+	if not _headless():
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+
+## True while the mouse steers the view (always in headless runs, where there is no mouse to catch).
+func mouse_caught() -> bool:
+	return _headless() or Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
 
 
 func _headless() -> bool:
@@ -524,6 +518,12 @@ func _finish() -> void:
 
 # --- input ----------------------------------------------------------------------
 
+## Esc frees the mouse and is left for the shared pause menu (it is not consumed here).
+func _input(event: InputEvent) -> void:
+	if event.is_action_pressed(&"ui_cancel"):
+		_release()
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if _finished:
 		return
@@ -538,20 +538,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if phase != Phase.PLAY:
 		return
-	if paused:
-		var resume: bool = (event is InputEventMouseButton and event.pressed) or event.is_action_pressed(&"ui_accept") \
-				or event.is_action_pressed(&"fire_interact")
-		if resume:
+	if not mouse_caught():
+		# the mouse was let go (Esc, another window): a click into the scene catches it again, without acting
+		if event is InputEventMouseButton and event.pressed:
 			get_viewport().set_input_as_handled()
 			_suppress_interact = true
-			_no_jump_until = Engine.get_physics_frames() + 2
-			set_paused(false)
+			_capture()
 		return
-	if event.is_action_pressed(&"ui_cancel"):
-		get_viewport().set_input_as_handled()
-		set_paused(true)
-		return
-	if event is InputEventMouseMotion and (Input.mouse_mode == Input.MOUSE_MODE_CAPTURED or _headless()):
+	if event is InputEventMouseMotion:
 		var rel: Vector2 = (event as InputEventMouseMotion).screen_relative
 		look(-rel.x * skin.mouse_sensitivity, -rel.y * skin.mouse_sensitivity)
 	elif event.is_action_pressed(&"fire_interact") and not event.is_echo():
@@ -617,7 +611,7 @@ func _look_keys(delta: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if phase != Phase.PLAY or paused or _finished:
+	if phase != Phase.PLAY or _finished:
 		return
 	var input := Input.get_vector(&"fire_left", &"fire_right", &"fire_forward", &"fire_back")
 	if Input.is_action_just_pressed(&"fire_jump") and Engine.get_physics_frames() >= _no_jump_until:
@@ -1177,8 +1171,8 @@ func _update_hud(dt: float) -> void:
 			_banner.modulate.a = 1.0
 	_place_banner()
 	var shown := elapsed if phase == Phase.PLAY else 0.0
-	_controls.visible = phase == Phase.OVERVIEW or paused or shown < CONTROLS_DUR + 1.0
-	_controls.modulate.a = 1.0 if phase == Phase.OVERVIEW or paused else clampf(CONTROLS_DUR + 1.0 - shown, 0.0, 1.0)
+	_controls.visible = phase == Phase.OVERVIEW or shown < CONTROLS_DUR + 1.0
+	_controls.modulate.a = 1.0 if phase == Phase.OVERVIEW else clampf(CONTROLS_DUR + 1.0 - shown, 0.0, 1.0)
 	_update_hint()
 	_update_prompt()
 	_reticle.queue_redraw()
@@ -1192,7 +1186,7 @@ func _update_hint() -> void:
 
 
 func _update_prompt() -> void:
-	var show := phase == Phase.PLAY and not paused and not _target.is_empty()
+	var show := phase == Phase.PLAY and not _target.is_empty()
 	_prompt.visible = show
 	if not show:
 		return
@@ -1241,7 +1235,7 @@ func focus_point() -> Variant:
 ## Crosshair (a ring on a target, filling while a hold action runs) and an edge arrow towards the
 ## current task when it is off screen.
 func _draw_reticle() -> void:
-	if phase != Phase.PLAY or paused:
+	if phase != Phase.PLAY:
 		return
 	var c := _reticle.size / 2.0
 	var gold := Color("f9c22b")

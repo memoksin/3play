@@ -13,7 +13,7 @@ const KEYS := ["FIRE_PLACE", "FIRE_YEAR", "FIRE_INTRO_1", "FIRE_INTRO_2", "FIRE_
 	"FIRE_CARD_NUMBERS", "FIRE_CARD_FACT", "FIRE_CARD_HELP", "FIRE_HINT_KNIFE", "FIRE_HINT_FENCE",
 	"FIRE_DONE_FENCE", "FIRE_HINT_HOSE", "FIRE_HINT_VALVE", "FIRE_HINT_FLAME", "FIRE_DONE_FLAME",
 	"FIRE_HINT_EXIT", "FIRE_LOSE", "FIRE_USE_KNIFE", "FIRE_USE_FENCE", "FIRE_NEED_KNIFE", "FIRE_USE_HOSE",
-	"FIRE_USE_ATTACH", "FIRE_USE_VALVE", "FIRE_NEED_HOSE", "FIRE_USE_SPRAY", "FIRE_CONTROLS", "FIRE_PAUSED"]
+	"FIRE_USE_ATTACH", "FIRE_USE_VALVE", "FIRE_NEED_HOSE", "FIRE_USE_SPRAY", "FIRE_CONTROLS"]
 
 var ok := true
 var frames := 0
@@ -590,32 +590,39 @@ func _pause() -> void:
 	s.set_physics_process(false)
 	s.skip_overview()
 	s.time_scale = 1.0
+	current_scene = s  # a run is up: the shared pause menu may open
+	var menu: CanvasLayer = null
+	for c in game.get_children():
+		if c.get_script() and (c.get_script() as Script).resource_path.ends_with("pause_menu.gd"):
+			menu = c
+	_check("pause: the shared pause menu is mounted", menu != null)
+	_check("pause: no own pause overlay or text", not s.has_node("Hud/Pause") and not ("paused_key" in skin) \
+			and TranslationServer.translate("FIRE_PAUSED") == "FIRE_PAUSED")
 	await process_frame
 	await process_frame
-	var t0: float = s.elapsed
-	_check("pause: clock runs", t0 > 0.0)
-	s.set_paused(true)
-	_check("pause: overlay", s.get_node("Hud/Pause").visible and (s.get_node("Hud/Pause/Label") as Label).text == tr("FIRE_PAUSED"))
+	_check("pause: clock runs", s.elapsed > 0.0)
+	var esc := InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	esc.physical_keycode = KEY_ESCAPE
+	esc.pressed = true
+	root.push_input(esc)
+	await process_frame
+	_check("pause: Esc reaches the shared menu (fire does not eat it)", paused and menu != null and menu.visible)
 	var t1: float = s.elapsed
 	for i in 5:
 		await process_frame
-	_check("pause: clock stops", s.elapsed == t1)
-	var ev := InputEventKey.new()
-	ev.keycode = KEY_ESCAPE
-	ev.physical_keycode = KEY_ESCAPE
-	ev.pressed = true
-	s.set_paused(false)
+	_check("pause: clock stops while the tree is paused", s.elapsed == t1)
+	root.push_input(esc)
 	await process_frame
-	_check("pause: resumes", not s.paused and not s.get_node("Hud/Pause").visible)
-	root.push_input(ev)
 	await process_frame
-	_check("pause: Esc pauses", s.paused)
+	_check("pause: Esc again resumes", not paused and not menu.visible and s.elapsed > t1)
 	var click := InputEventMouseButton.new()
 	click.button_index = MOUSE_BUTTON_LEFT
 	click.pressed = true
 	root.push_input(click)
 	await process_frame
-	_check("pause: a click resumes, without acting", not s.paused and s.logic.score() == 0)
+	_check("pause: a click after resuming does not act", s.logic.score() == 0 and not s.logic.has_knife)
+	current_scene = null
 	_check("input: fire_* actions registered", InputMap.has_action(&"fire_forward") and InputMap.has_action(&"fire_interact") \
 			and InputMap.has_action(&"fire_jump") and InputMap.has_action(&"fire_run"))
 	var has_mouse := false

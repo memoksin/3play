@@ -3426,20 +3426,3 @@ theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
 theme_override_constants/shadow_offset_x = 2
 theme_override_constants/shadow_offset_y = 2
 horizontal_alignment = 1
-
-[node name="Pause" type="ColorRect" parent="Hud" unique_id=1962330590]
-visible = false
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-mouse_filter = 2
-color = Color(0, 0, 0, 0.55)
-
-[node name="Label" type="Label" parent="Hud/Pause" unique_id=1106675227]
-layout_mode = 0
-anchor_right = 1.0
-anchor_bottom = 1.0
-theme_type_variation = &"HeaderLabel"
-horizontal_alignment = 1
-vertical_alignment = 1
-autowrap_mode = 3

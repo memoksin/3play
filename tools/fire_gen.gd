@@ -718,20 +718,3 @@ func _hud() -> void:
 	controls.offset_bottom = -20
 	controls.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_own(controls, hud)
-
-	var pause := ColorRect.new()
-	pause.name = "Pause"
-	pause.color = Color(0, 0, 0, 0.55)
-	pause.set_anchors_preset(Control.PRESET_FULL_RECT)
-	pause.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	pause.visible = false
-	_own(pause, hud)
-	var pl := Label.new()
-	pl.name = "Label"
-	pl.theme_type_variation = &"HeaderLabel"
-	pl.set_anchors_preset(Control.PRESET_FULL_RECT)
-	pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	pl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	pl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_own(pl, pause)
