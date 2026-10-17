@@ -271,5 +271,6 @@ func _run() -> void:
 	await process_frame
 	_check("menu: leaving stops M1", "stop:M1" in _log())
 
+	await create_timer(0.5).timeout  # the audio thread releases the stopped streams; quitting at once leaks them (flaky)
 	print("OK" if ok else "FAILED")
 	quit(0 if ok else 1)
