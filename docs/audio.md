@@ -122,6 +122,7 @@ Timeline from `scenes/minigames/connect.gd`: a calm bay until about 6 s before t
 | C7 | Broken line spills | The water spills out of a broken line | Big Water Splash | qubodup | https://freesound.org/people/qubodup/sounds/442773/ | CC0 | chosen (to test) | Repeat the same splash several times, each starting before the previous ends, to build an overflow. Try it, replace the sound if it feels fake. Issue #95. |
 | C8 | Village floods | The spilled water floods the village | | | | | no sound (test) | Leave empty and test the game. Add a sound only if it feels empty. |
 | C9 | Water drains | The water drains back (1.5 s) | wavesound.wav | transitking | https://freesound.org/people/transitking/sounds/11505/ | CC0 | chosen | Use only the first 4 s of the file (waves wash over the rock and drain back through a crack). |
+| C10 | Pipeline locks | A pipeline is correct and locks (no more rotation) | | | | | todo | Agreed by memoksin on #157: a small visual and sound cue. Proposal: the shared success sound (FN7, FR6, BM4), or a short lock click. To decide. |
 
 ## Result card
 
