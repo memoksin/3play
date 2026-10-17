@@ -122,3 +122,17 @@ What happens on the card (`scenes/result.gd`): the card fades in, the score land
 ### Typed text everywhere (G3, D4, R3)
 
 All text that types on letter by letter uses the same keyboard typing sound, started with the first letter and stopped with the last one, like the globe coordinates. Each typing effect needs start and finish signals: diorama intro text and the result closing line. Tracked in issue #99 (assigned to iremaltunsgt, who owns intro text and the result card; memoksin did the globe in #66).
+
+## Solar flare (Fit minigame, year 3026)
+
+Same code as the Kahramanmaras Fit, with a flare ending instead of the quake. From `data/skins/solar_flare_fit.tres`: 75 s timer, radio messages at 20 s, 42 s and 60 s (`SF_FIT_RADIO_1..3`), the flare hits at the end (white flash, `SF_FIT_IMPACT`, "14:00 - flare impact"), the HUD clock runs from 13:52 to 14:00. No shake and no collapse in this skin.
+
+| # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
+|---|---|---|---|---|---|---|---|---|
+| S1 | Ambience | Whole minigame | Solar Storm.wav | Puniho | https://freesound.org/s/151098/ | CC0 | chosen (reuse of D3) | Same sound as the solar flare diorama. |
+| S2 | Select a person or item | The player clicks a person or item | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen (reuse of F2) | First second of the file only. |
+| S3 | Drop into a zone | The item lands in a zone | Picking up and Putting Down Object | mrh4hn | https://freesound.org/people/mrh4hn/sounds/426631/ | CC0 | chosen (reuse of F3) | Seconds 5 to 6 of the file. |
+| S4 | Wrong item or cannot take | The zone is full, the item snaps back | Buzzer sounds (Wrong answer / Error) | Breviceps | https://freesound.org/people/Breviceps/sounds/493163/ | CC0 | chosen (reuse of F4) | About 2.3 s to 2.7 s of the file. |
+| S5 | Radio warning | Radio messages at about 20 s, 42 s and 60 s | | | | | todo | One sound for all three messages (static or a short radio chirp). Needs a choice. |
+| S6 | Flare hit | The white flash at 14:00 | | | | | later | Decide after seeing the flash in the game. |
+| S7 | Clock | The HUD clock runs (13:52 to 14:00) | | | | | no sound | Test it silent first. |
