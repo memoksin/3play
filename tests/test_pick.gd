@@ -66,7 +66,10 @@ func _run() -> void:
 	_check("counts stored: 1 each", stored.get("indian_ocean", 0) == 1 and stored.get("solar_flare", 0) == 1)
 	var third: String = game.pick_for(&"state")
 	_check("third pick counted", game.load_counts().get(third.get_file().get_basename(), 0) == 2)
-	_check("citizen pool: kahramanmaras", game.pick_for(&"citizen") == "res://data/disasters/kahramanmaras.tres")
+	var c1: String = game.pick_for(&"citizen")
+	var c2: String = game.pick_for(&"citizen")
+	_check("citizen pool: kahramanmaras and black saturday, each once before a repeat",
+		c1 != c2 and [c1, c2].has("res://data/disasters/kahramanmaras.tres") and [c1, c2].has("res://data/disasters/black_saturday.tres"))
 	DirAccess.remove_absolute(tmp)
 	game.store_path = ""
 	_check("real user file untouched by this test", game.store_path == "")

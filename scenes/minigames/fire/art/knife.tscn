@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/3d/fire/knife.glb" id="1_kn"]
+
+[node name="Knife" type="Node3D"]
+
+[node name="Lying" parent="." instance=ExtResource("1_kn")]
+transform = Transform3D(1.4, 0, 0, 0, 1.4, 0, 0, 0, 1.4, 0, 0, 0)

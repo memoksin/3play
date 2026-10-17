@@ -17,8 +17,12 @@ uniform vec2 wind = vec2(0.25, 0.0);      // tip lean (x in screen right, in UV 
 uniform float fade = 1.0;                 // 0..1, put out / grow (scales height and brightness)
 uniform float haze = 0.0;                 // 0..1, smoke between camera and flame (fire_fx.gd sets it from the smoke clock)
 uniform float haze_dist = 22.0;           // metres at which dense smoke hides ~63% of the flame
+uniform float base_soft = 0.07;           // fade-in at the quad bottom (UV units): ~0.35 for flames in mid-air (crowns)
+uniform float core = 1.0;                 // how much of the body runs white-hot (crowns of many quads: ~0.55)
+uniform float top_view = 0.55;            // seen from above, the quads stack up: dim by this much at a 90 deg look-down
 
 varying float vseed;
+varying float vlook;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p) {
@@ -39,6 +43,8 @@ void vertex() {
 	float sx = length(MODEL_MATRIX[0].xyz);
 	float sy = length(MODEL_MATRIX[1].xyz);
 	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(vec4(right * sx, 0.0), vec4(up * sy, 0.0), vec4(fwd, 0.0), vec4(o, 1.0));
+	vec3 to = cam - o;
+	vlook = clamp(to.y / max(length(to), 1e-4), 0.0, 1.0);   // sine of the look-down angle
 }
 
 void fragment() {
@@ -55,13 +61,16 @@ void fragment() {
 	float w = width * (1.0 - pow(clamp(y, 0.0, 1.0), 1.25)) * (0.8 + 0.2 * sin(y * 4.0 - t * 2.0));
 	float body = 1.0 - smoothstep(w * 0.45, w + 0.02, abs(x));
 	float top = smoothstep(0.0, 0.3, (1.0 - y) - (n - 0.45) * 0.7);
-	float base = smoothstep(0.0, 0.07, y);
-	float f = clamp(body * top * base, 0.0, 1.0);
-	float heat = f * (1.0 - y * 0.75) * (1.0 - abs(x) * 1.6);
+	float base = smoothstep(0.0, base_soft, y);
+	// soft window inside the quad: the flame never reaches the quad's sides or top, so no straight cut shows
+	float win = smoothstep(0.5, 0.36, abs(UV.x - 0.5)) * smoothstep(0.0, 0.1, UV.y);
+	float f = clamp(body * top * base * win, 0.0, 1.0);
+	float heat = f * (1.0 - y * 0.75) * (1.0 - abs(x) * 1.6) * core;
 	vec3 c = mix(cool, mid, smoothstep(0.04, 0.35, heat));
 	c = mix(c, hot, smoothstep(0.42, 0.8, heat));
 	float flick = 0.85 + 0.15 * sin(t * 9.0 + vseed);
 	float att = mix(1.0, exp(-length(VERTEX) / haze_dist), haze);
 	c = mix(c, cool * 0.8, haze * (1.0 - att) * 0.6);
-	ALBEDO = c * f * intensity * flick * fade * att;
+	float stack = 1.0 - top_view * smoothstep(0.25, 0.9, vlook);
+	ALBEDO = c * f * intensity * flick * fade * att * stack;
 }

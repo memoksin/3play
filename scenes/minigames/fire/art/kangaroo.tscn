@@ -1,0 +1,17 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/minigames/fire/art/kangaroo.gd" id="1_k"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/kangaroo_stand.glb" id="2_k"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/kangaroo_graze.glb" id="3_k"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/kangaroo_hop.glb" id="4_k"]
+
+[node name="Kangaroo" type="Node3D"]
+script = ExtResource("1_k")
+
+[node name="Stand" parent="." instance=ExtResource("2_k")]
+
+[node name="Graze" parent="." instance=ExtResource("3_k")]
+visible = false
+
+[node name="Hop" parent="." instance=ExtResource("4_k")]
+visible = false

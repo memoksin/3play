@@ -1,0 +1,399 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/minigames/fire/art/farm.gd" id="1_r"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/chop_block.glb" id="40_r"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/farm_slab.glb" id="5_r"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/farmhouse.glb" id="6_r"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/rain_tank.glb" id="7_r"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/shed.glb" id="8_r"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/windmill.glb" id="12_r"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/windmill_rotor.glb" id="13_r"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/fire_sign.glb" id="16_r"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/hay_round.glb" id="17_r"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/fence_wire.glb" id="18_r"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/fence_strainer.glb" id="19_r"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/pen_fence.glb" id="20_r"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/pen_post.glb" id="23_r"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/gum_tree_a.glb" id="24_r"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/gum_tree_b.glb" id="25_r"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/gum_tree_c.glb" id="26_r"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/earth_chunk_bush.glb" id="27_r"]
+[ext_resource type="PackedScene" path="res://scenes/art_pilot/fire_fx/fire_front.tscn" id="31_r"]
+[ext_resource type="PackedScene" path="res://scenes/art_pilot/fire_fx/burning_tree.tscn" id="32_r"]
+[ext_resource type="PackedScene" path="res://scenes/art_pilot/fire_fx/spot_fire.tscn" id="33_r"]
+[ext_resource type="PackedScene" path="res://scenes/art_pilot/fire_fx/smoke_column.tscn" id="36_r"]
+[ext_resource type="PackedScene" path="res://scenes/art_pilot/fire_fx/embers_wind.tscn" id="37_r"]
+[ext_resource type="PackedScene" path="res://scenes/art_pilot/fire_fx/ash_fall.tscn" id="38_r"]
+[ext_resource type="PackedScene" path="res://scenes/art_pilot/fire_fx/smoke_drift.tscn" id="39_r"]
+
+[node name="Farm" type="Node3D"]
+script = ExtResource("1_r")
+
+[node name="World" type="Node3D" parent="."]
+
+[node name="Slab" parent="World" instance=ExtResource("5_r")]
+
+[node name="Farmhouse" parent="World" instance=ExtResource("6_r")]
+position = Vector3(-9.000, 0.000, -6.500)
+
+[node name="HouseTank" parent="World" instance=ExtResource("7_r")]
+position = Vector3(-1.900, 0.000, -9.200)
+rotation_degrees = Vector3(0, 100, 0)
+
+[node name="Shed" parent="World" instance=ExtResource("8_r")]
+position = Vector3(8.000, 0.000, -6.000)
+
+[node name="Windmill" parent="World" instance=ExtResource("12_r")]
+position = Vector3(1.000, 0.000, -10.600)
+
+[node name="WindmillRotor" parent="World" instance=ExtResource("13_r")]
+position = Vector3(1.000, 9.300, -10.050)
+
+[node name="FireSign" parent="World" instance=ExtResource("16_r")]
+position = Vector3(10.500, 0.000, 15.200)
+rotation_degrees = Vector3(0, 160, 0)
+
+[node name="Bale0" parent="World" instance=ExtResource("17_r")]
+position = Vector3(-20.000, 0.000, 9.000)
+rotation_degrees = Vector3(0, 30, 0)
+
+[node name="Bale1" parent="World" instance=ExtResource("17_r")]
+position = Vector3(19.500, 0.000, 11.000)
+rotation_degrees = Vector3(0, -20, 0)
+
+[node name="Bale2" parent="World" instance=ExtResource("17_r")]
+position = Vector3(21.000, 0.000, -8.000)
+rotation_degrees = Vector3(0, 70, 0)
+
+[node name="Bale3" parent="World" instance=ExtResource("17_r")]
+position = Vector3(-6.500, 0.000, -14.200)
+rotation_degrees = Vector3(0, 10, 0)
+
+[node name="Fences" type="Node3D" parent="World"]
+
+[node name="pen_fence_0" parent="World/Fences" instance=ExtResource("20_r")]
+position = Vector3(-16.500, 0.000, 12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="fence_wire_1" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(-16.500, 0.000, -12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="pen_fence_2" parent="World/Fences" instance=ExtResource("20_r")]
+position = Vector3(-13.500, 0.000, 12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="fence_wire_3" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(-13.500, 0.000, -12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="pen_fence_4" parent="World/Fences" instance=ExtResource("20_r")]
+position = Vector3(-10.500, 0.000, 12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="fence_wire_5" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(-10.500, 0.000, -12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="fence_wire_6" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(-7.500, 0.000, 12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="fence_wire_7" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(-7.500, 0.000, -12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="fence_wire_8" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(-4.500, 0.000, 12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="fence_wire_9" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(-4.500, 0.000, -12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="fence_wire_10" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(-1.500, 0.000, 12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="fence_wire_11" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(-1.500, 0.000, -12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="fence_wire_12" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(1.500, 0.000, 12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="fence_wire_13" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(1.500, 0.000, -12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="fence_wire_14" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(7.500, 0.000, 12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="fence_wire_back_gap" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(4.500, 0.000, -12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="fence_wire_15" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(7.500, 0.000, -12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="fence_wire_16" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(10.500, 0.000, 12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="fence_wire_17" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(10.500, 0.000, -12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="fence_wire_18" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(13.500, 0.000, 12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="fence_wire_19" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(13.500, 0.000, -12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="pen_fence_20" parent="World/Fences" instance=ExtResource("20_r")]
+position = Vector3(-16.460, 0.000, 12.000)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="fence_wire_21" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(16.500, 0.000, 12.000)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="pen_fence_22" parent="World/Fences" instance=ExtResource("20_r")]
+position = Vector3(-16.460, 0.000, 9.000)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="fence_wire_23" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(16.500, 0.000, 9.000)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="pen_fence_24" parent="World/Fences" instance=ExtResource("20_r")]
+position = Vector3(-16.460, 0.000, 6.000)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="fence_wire_25" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(16.500, 0.000, 6.000)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="fence_wire_26" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(-16.460, 0.000, 3.000)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="fence_wire_27" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(16.500, 0.000, 3.000)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="fence_wire_28" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(-16.460, 0.000, 0.000)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="fence_wire_29" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(16.500, 0.000, 0.000)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="fence_wire_30" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(-16.460, 0.000, -3.000)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="fence_wire_31" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(16.500, 0.000, -3.000)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="fence_wire_32" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(-16.460, 0.000, -6.000)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="fence_wire_33" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(16.500, 0.000, -6.000)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="fence_wire_34" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(-16.460, 0.000, -9.000)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="fence_wire_35" parent="World/Fences" instance=ExtResource("18_r")]
+position = Vector3(16.500, 0.000, -9.000)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="pen_fence_36" parent="World/Fences" instance=ExtResource("20_r")]
+position = Vector3(-7.500, 0.000, 12.000)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="pen_fence_37" parent="World/Fences" instance=ExtResource("20_r")]
+position = Vector3(-7.500, 0.000, 6.000)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="pen_fence_40" parent="World/Fences" instance=ExtResource("20_r")]
+position = Vector3(-16.500, 0.000, 3.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="pen_fence_41" parent="World/Fences" instance=ExtResource("20_r")]
+position = Vector3(-13.500, 0.000, 3.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="pen_fence_42" parent="World/Fences" instance=ExtResource("20_r")]
+position = Vector3(-10.500, 0.000, 3.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="pen_post_43" parent="World/Fences" instance=ExtResource("23_r")]
+position = Vector3(-7.500, 0.000, 3.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="fence_strainer_44" parent="World/Fences" instance=ExtResource("19_r")]
+position = Vector3(16.500, 0.000, 12.000)
+rotation_degrees = Vector3(0, 180, 0)
+
+[node name="fence_strainer_45" parent="World/Fences" instance=ExtResource("19_r")]
+position = Vector3(16.500, 0.000, -12.000)
+rotation_degrees = Vector3(0, 180, 0)
+
+[node name="fence_strainer_46" parent="World/Fences" instance=ExtResource("19_r")]
+position = Vector3(-16.500, 0.000, -12.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="ChopBlock" parent="World" instance=ExtResource("40_r")]
+position = Vector3(-5.400, 0.000, 4.400)
+rotation_degrees = Vector3(0, 35, 0)
+
+[node name="Trees" type="Node3D" parent="World"]
+
+[node name="Gum0" parent="World/Trees" instance=ExtResource("24_r")]
+position = Vector3(3.500, 0.000, -15.200)
+rotation_degrees = Vector3(0, 20, 0)
+
+[node name="Gum1" parent="World/Trees" instance=ExtResource("25_r")]
+position = Vector3(13.000, 0.000, -16.000)
+rotation_degrees = Vector3(0, 140, 0)
+
+[node name="Gum2" parent="World/Trees" instance=ExtResource("24_r")]
+position = Vector3(21.000, 0.000, -12.000)
+rotation_degrees = Vector3(0, 250, 0)
+
+[node name="Gum3" parent="World/Trees" instance=ExtResource("25_r")]
+position = Vector3(-22.000, 0.000, 9.500)
+rotation_degrees = Vector3(0, 80, 0)
+
+[node name="Gum4" parent="World/Trees" instance=ExtResource("26_r")]
+position = Vector3(-20.500, 0.000, -4.000)
+rotation_degrees = Vector3(0, 10, 0)
+
+[node name="Gum5" parent="World/Trees" instance=ExtResource("24_r")]
+position = Vector3(21.000, 0.000, 6.000)
+rotation_degrees = Vector3(0, 190, 0)
+
+[node name="Gum6" parent="World/Trees" instance=ExtResource("26_r")]
+position = Vector3(20.500, 0.000, -3.000)
+rotation_degrees = Vector3(0, 300, 0)
+
+[node name="Gum7" parent="World/Trees" instance=ExtResource("25_r")]
+position = Vector3(-19.500, 0.000, 15.000)
+rotation_degrees = Vector3(0, 330, 0)
+
+[node name="Gum8" parent="World/Trees" instance=ExtResource("26_r")]
+position = Vector3(16.000, 0.000, 15.500)
+rotation_degrees = Vector3(0, 60, 0)
+
+[node name="Gum9" parent="World/Trees" instance=ExtResource("26_r")]
+position = Vector3(-4.000, 0.000, 15.500)
+rotation_degrees = Vector3(0, 200, 0)
+
+[node name="Gum10" parent="World/Trees" instance=ExtResource("24_r")]
+position = Vector3(-2.200, 0.000, -5.000)
+rotation_degrees = Vector3(0, 110, 0)
+
+[node name="Grass" type="Node3D" parent="World"]
+
+[node name="Chunks" type="Node3D" parent="World"]
+
+[node name="Chunk0" parent="World/Chunks" instance=ExtResource("27_r")]
+position = Vector3(-31.000, -3.000, 8.000)
+rotation_degrees = Vector3(4.000, 20.000, -6.000)
+scale = Vector3(1.400, 1.400, 1.400)
+
+[node name="Chunk1" parent="World/Chunks" instance=ExtResource("27_r")]
+position = Vector3(-29.000, -9.000, 20.000)
+rotation_degrees = Vector3(-8.000, 75.000, 5.000)
+scale = Vector3(0.700, 0.700, 0.700)
+
+[node name="Chunk2" parent="World/Chunks" instance=ExtResource("27_r")]
+position = Vector3(12.000, -12.000, 22.500)
+rotation_degrees = Vector3(7.000, 140.000, 3.000)
+scale = Vector3(0.900, 0.900, 0.900)
+
+[node name="Chunk3" parent="World/Chunks" instance=ExtResource("27_r")]
+position = Vector3(29.000, -2.000, 10.000)
+rotation_degrees = Vector3(-5.000, 200.000, 8.000)
+scale = Vector3(0.800, 0.800, 0.800)
+
+[node name="Chunk4" parent="World/Chunks" instance=ExtResource("27_r")]
+position = Vector3(-7.000, -14.000, 22.500)
+rotation_degrees = Vector3(10.000, 300.000, -4.000)
+scale = Vector3(0.500, 0.500, 0.500)
+
+[node name="Fire" type="Node3D" parent="."]
+
+[node name="Front0" parent="Fire" instance=ExtResource("31_r")]
+position = Vector3(-18.000, 0.000, -15.600)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="Front1" parent="Fire" instance=ExtResource("31_r")]
+position = Vector3(-6.000, 0.000, -15.600)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="Front2" parent="Fire" instance=ExtResource("31_r")]
+position = Vector3(-22.000, 0.000, -12.000)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="Front3" parent="Fire" instance=ExtResource("31_r")]
+position = Vector3(-21.800, 0.000, 1.000)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="Front4" parent="Fire" instance=ExtResource("31_r")]
+position = Vector3(9.000, 0.000, -16.200)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="Trees" type="Node3D" parent="Fire"]
+
+[node name="Burning0" parent="Fire/Trees" instance=ExtResource("32_r")]
+position = Vector3(-20.000, 0.000, -15.000)
+rotation_degrees = Vector3(0, 0, 0)
+
+[node name="Burning1" parent="Fire/Trees" instance=ExtResource("32_r")]
+position = Vector3(-9.500, 0.000, -15.800)
+rotation_degrees = Vector3(0, 120, 0)
+
+[node name="Burning2" parent="Fire/Trees" instance=ExtResource("32_r")]
+position = Vector3(-21.500, 0.000, -9.000)
+rotation_degrees = Vector3(0, 240, 0)
+
+[node name="SpotFire0" parent="Fire" instance=ExtResource("33_r")]
+position = Vector3(8.500, 0.000, -15.600)
+
+[node name="SpotFire1" parent="Fire" instance=ExtResource("33_r")]
+position = Vector3(-21.000, 0.000, 3.500)
+
+[node name="Plume0" parent="Fire" instance=ExtResource("36_r")]
+position = Vector3(-16.000, 0.000, -21.000)
+scale = Vector3(1.000, 1.000, 1.000)
+
+[node name="Plume1" parent="Fire" instance=ExtResource("36_r")]
+position = Vector3(-27.000, 0.000, -8.000)
+scale = Vector3(1.000, 1.000, 1.000)
+
+[node name="Plume2" parent="Fire" instance=ExtResource("36_r")]
+position = Vector3(-46.000, 0.000, -46.000)
+scale = Vector3(1.800, 1.800, 1.800)
+
+[node name="Fx" type="Node3D" parent="."]
+
+[node name="Embers" parent="Fx" instance=ExtResource("37_r")]
+position = Vector3(-4.000, 0.000, -12.000)
+
+[node name="AshFall" parent="Fx" instance=ExtResource("38_r")]
+
+[node name="SmokeDrift" parent="Fx" instance=ExtResource("39_r")]
+

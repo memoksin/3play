@@ -4,6 +4,9 @@ connector. A small red plate marks it. Front = Blender -Y (Godot +Z). Origin = w
 Variants:
   valve        body, pipework, saddle clips, plate. HOSE_AT = hose connector tip (local).
   valve_wheel  the red handwheel only, origin = its hub; spins about local Y (Godot Z). Place it at WHEEL_AT.
+  valve_stand  a standpipe for the valve away from the shed: a timber post with the same backing board, the
+               black poly pipe coming up out of the ground (buried from the tank), a clip, wet dirt. Same origin
+               as valve: put valve.glb on it at the same transform (the game's yard tap by the exit gate).
 Godot positions (x, y, z): HOSE_AT = (0.36, 0.64, 0.12), WHEEL_AT = (0.2, 0.92, 0.26).
 """
 import math
@@ -51,6 +54,19 @@ def valve():
     L.lump("wet", (0.4, 0.3, 0.02), (HOSE_AT[0], -0.15, 0.0), mat="soil_dark", lumpy=0.25)
 
 
+def stand():
+    L.tube("post", [(0.0, 0.07, -0.1), (0.005, 0.07, 0.8), (0.0, 0.07, 1.55)], 0.075, mat="timber_grey", verts=8, r2=0.068)
+    L.cyl("ptop", 0.068, 0.03, (0.0, 0.07, 1.54), mat="timber_dark", verts=8, bevel=0.01)
+    L.box("vboard", (0.5, 0.04, 0.9), (0.0, -0.04, 0.55), mat="timber_grey", base=True, bevel=0.012, segs=1)
+    for z in (0.7, 1.3):
+        L.cyl("bolt", 0.012, 0.02, (0.0, -0.065, z), mat="metal_dark", rot=(90, 0, 0), verts=6, bevel=0.003, base=False)
+    L.tube("riser0", [(0.0, Y, -0.06), (0.0, Y, 0.3), (0.0, Y, 0.57)], 0.03, mat="poly_pipe", verts=8)
+    L.box("clip", (0.1, 0.03, 0.05), (0.0, Y + 0.04, 0.32), mat="metal", bevel=0.005, segs=1)
+    L.lump("mound", (0.7, 0.6, 0.1), (0.0, 0.0, 0.0), mat="dirt", lumpy=0.3)
+    L.lump("wet0", (0.8, 0.55, 0.025), (0.2, -0.3, 0.0), mat="soil_dark", lumpy=0.3)
+    L.cyl("peg", 0.05, 0.1, (0.0, Y, 0.0), mat="concrete", verts=8, bevel=0.01)
+
+
 def wheel():
     R = 0.095
     pts = [(R * math.cos(2 * math.pi * i / 20), 0.0, R * math.sin(2 * math.pi * i / 20)) for i in range(21)]
@@ -66,7 +82,7 @@ def wheel():
 
 out = L.out_dir_arg("assets/3d/fire")
 only = L.variants_arg()
-for name, fn in (("valve", valve), ("valve_wheel", wheel)):
+for name, fn in (("valve", valve), ("valve_wheel", wheel), ("valve_stand", stand)):
     if only and name not in only:
         continue
     L.reset(seed=101)
@@ -74,5 +90,5 @@ for name, fn in (("valve", valve), ("valve_wheel", wheel)):
     L.palette_bush()
     L.set_dust("ash")
     fn()
-    L.finish(name, out, tex=256, ground=(name == "valve"), snow=0.1, ao=0.6, ao_dist=0.08, edge=0.4, edge_r=0.004,
+    L.finish(name, out, tex=256, ground=(name != "valve_wheel"), snow=0.1, ao=0.6, ao_dist=0.08, edge=0.4, edge_r=0.004,
              tone=0.05, tone_scale=8.0, margin=0.004)

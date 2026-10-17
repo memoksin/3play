@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="Disaster" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/disaster.gd" id="1"]
+[ext_resource type="Resource" path="res://data/skins/black_saturday_fire.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"black_saturday"
+role = &"citizen"
+key_prefix = "FIRE"
+lat = -37.53
+lon = 145.35
+year = 2009
+utc = "2009-02-07T04:00:00"
+minigame = &"fire"
+skin = ExtResource("2")
