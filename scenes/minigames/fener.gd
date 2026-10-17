@@ -31,6 +31,8 @@ const PLAYER_R := 0.35
 const TRAIL_STEP := 0.45
 const TRAIL_GAP := 3  # trail points between two followers
 const REACH := 2.2  # treat / pick up distance
+## A spare battery is handed out only to a torch that is below this charge (no wasting it at the start).
+const BAT_TAKE := 65.0
 ## The light finds a person this much beyond their body (metres): a lit shoulder is enough.
 const FIND_PAD := 1.3
 ## Assembly area counts this far outside its edge.
@@ -94,6 +96,8 @@ class Item:
 	var pos := Vector2.ZERO
 	var taken := false
 	var seen := false
+	## Handed out at a rescue crew; the blanket is not there until someone who needs it is found.
+	var active := true
 
 
 class Call:
@@ -324,14 +328,62 @@ func _place_people() -> void:
 func _place_items() -> void:
 	items.clear()
 	for k: StringName in ITEM_KINDS:
-		var cand: Array = (FenerMap.ITEMS[k] as Array).duplicate()
-		_shuffle(cand)
+		var cand: Array = FenerMap.ITEMS[k]
 		for i in mini(int(FenerMap.ITEM_COUNT[k]), cand.size()):
 			var it := Item.new()
 			it.idx = items.size()
 			it.kind = k
 			it.pos = cand[i]
+			it.active = k != &"blanket"
+			it.seen = it.active  # the mark glows from the start: easy to spot in the dark
 			items.append(it)
+
+
+## A person who needs a blanket was found: one appears by the rescue crew that is the shorter detour
+## (you -> crew -> person).
+func _offer_blanket(p: Person) -> void:
+	for it in items:
+		if it.kind != &"blanket" or it.active or it.taken:
+			continue
+		var best := INF
+		for s: Vector2 in FenerMap.ITEMS[&"blanket"]:
+			var d := ppos.distance_to(s) + s.distance_to(p.pos)
+			if d < best:
+				best = d
+				it.pos = s
+		it.active = true
+		it.seen = true
+		return
+
+
+## What to fetch next and where: [position, text key] or [] when there is nothing to fetch.
+func goal() -> Array:
+	var kit: Item = null
+	var blanket: Item = null
+	var battery: Item = null
+	for it in items:
+		if it.taken or not it.active:
+			continue
+		match it.kind:
+			&"kit":
+				kit = it
+			&"blanket":
+				blanket = it
+			&"battery":
+				if battery == null or it.pos.distance_to(ppos) < battery.pos.distance_to(ppos):
+					battery = it
+	for p in people:
+		if p.st != St.WAIT:
+			continue
+		if p.def.kind == FenerPerson.Kind.COLD and blankets == 0 and blanket:
+			return [blanket.pos, "GOAL_BLANKET"]
+		if p.def.kind == FenerPerson.Kind.INJURED and kits == 0 and kit:
+			return [kit.pos, "GOAL_KIT"]
+	if battery and bat < BAT_TAKE:
+		return [battery.pos, "GOAL_BATTERY"]
+	if kit and kits == 0:
+		return [kit.pos, "GOAL_KIT"]
+	return []
 
 
 func _make_hazards() -> void:
@@ -346,6 +398,7 @@ func _make_hazards() -> void:
 			break
 		if people.any(func(q: Person) -> bool: return q.pos.distance_to(p) < 3.0) \
 				or items.any(func(q: Item) -> bool: return q.pos.distance_to(p) < 2.5) \
+				or (FenerMap.ITEMS[&"blanket"] as Array).any(func(q: Vector2) -> bool: return q.distance_to(p) < 2.5) \
 				or p.distance_to(FenerMap.START) < 8.0:
 			continue
 		var h := _add_hazard(&"hole", p, FenerMap.HOLE_R, Rect2())
@@ -792,7 +845,8 @@ func _lamp(dt: float) -> void:
 		bat = maxf(0.0, bat - skin.drain * dt)
 	if bat < skin.low_battery and bat > 0 and not bat_low_warn:
 		bat_low_warn = true
-		_say(_t("BAT_LOW"), "bad", 2.6)
+		var spare := items.any(func(q: Item) -> bool: return q.kind == &"battery" and not q.taken)
+		_say(_t("BAT_LOW_CREW") if spare else _t("BAT_LOW"), "bad", 2.6)
 		_emit(&"battery_low")
 	if bat <= 0 and not bat_warn:
 		bat_warn = true
@@ -987,6 +1041,7 @@ func _found(p: Person) -> void:
 		FenerPerson.Kind.COLD:
 			p.st = St.WAIT
 			p.hinted = true
+			_offer_blanket(p)
 			_say(_t("FOUND_COLD") % nm, "bad", 3.6)
 
 
@@ -994,27 +1049,28 @@ func _items() -> void:
 	for it in items:
 		if it.taken:
 			continue
-		if not it.seen and lit(it.pos, 0.4):
-			it.seen = true
-		if it.pos.distance_to(ppos) < REACH * 0.75:
-			it.taken = true
-			it.seen = true
-			match it.kind:
-				&"battery":
-					bat = minf(100.0, bat + skin.spare)
-					bat_warn = false
-					bat_low_warn = bat < skin.low_battery
-					_say(_t("GOT_BATTERY"), "good", 2.2)
-				&"kit":
-					kits += 1
-					_say(_t("GOT_KIT"), "good", 2.4)
-				&"blanket":
-					blankets += 1
-					_say(_t("GOT_BLANKET"), "good", 2.4)
-			_pop(it.pos, TextFx.upper(_t("ITEM_" + String(it.kind).to_upper())), C_AMBER)
-			_emit(&"pickup", ITEM_KINDS.find(it.kind), it.pos)
-			if world:
-				world.fx(&"pickup", it.pos, it.idx)
+		if not it.active or it.pos.distance_to(ppos) >= REACH:
+			continue
+		if it.kind == &"battery" and bat >= BAT_TAKE:
+			continue
+		it.taken = true
+		it.seen = true
+		match it.kind:
+			&"battery":
+				bat = minf(100.0, bat + skin.spare)
+				bat_warn = false
+				bat_low_warn = bat < skin.low_battery
+				_say(_t("GOT_BATTERY"), "good", 2.2)
+			&"kit":
+				kits += 1
+				_say(_t("GOT_KIT"), "good", 2.4)
+			&"blanket":
+				blankets += 1
+				_say(_t("GOT_BLANKET"), "good", 2.4)
+		_pop(it.pos, TextFx.upper(_t("ITEM_" + String(it.kind).to_upper())), C_AMBER)
+		_emit(&"pickup", ITEM_KINDS.find(it.kind), it.pos)
+		if world:
+			world.fx(&"pickup", it.pos, it.idx)
 
 
 func _save_followers() -> void:
@@ -1219,17 +1275,27 @@ func _draw_overlay() -> void:
 		if vr.grow(-20).has_point(sp):
 			_text(n, font, TextFx.upper(_t("AREA_LABEL")), sp, Color(C_COOL, 0.75 + 0.25 * sin(t * 4.0)), 26)
 	var pending := people.any(func(p: Person) -> bool: return p.st == St.MARKED)
+	var gl := goal()
+	var gcrew := _crew_at(gl[0]) if not gl.is_empty() else -1
 	for i in FenerMap.CREWS.size():
 		var c := FenerMap.CREWS[i]
 		var cp := Vector2(c.x, c.y)
-		if i == 0 and (crew_seen or pending):
+		if i == gcrew:
+			var sp := _sp(cp, 3.2)
+			if vr.grow(-20).has_point(sp):
+				_text(n, font, TextFx.upper(_t("CREW_LABEL")), sp, Color(C_AMBER, 0.9), 22)
+		elif i == 0 and (crew_seen or pending):
 			var sp := _sp(cp, 3.2)
 			if vr.grow(-20).has_point(sp):
 				_text(n, font, TextFx.upper(_t("CREW_LABEL")), sp, Color(C_CREW, 0.8 if pending else 0.5), 22)
 	_edge_arrow(n, FenerMap.AREA.get_center(), C_COOL, ps)
 	if pending:
 		_edge_arrow(n, Vector2(FenerMap.CREWS[0].x, FenerMap.CREWS[0].y), C_CREW, ps)
-	_guide_chip(n, font, ps, pending)
+	if not gl.is_empty():
+		_edge_arrow(n, gl[0], C_AMBER, ps)
+	_guide_chip(n, font, ps, pending, gl)
+	if not gl.is_empty():
+		_goal_banner(n, font, vr, TextFx.upper(_t(gl[1])), t)
 	# found people: names, needs, treatment ring
 	for p in people:
 		if p.st == St.LOST or p.st == St.SAVED or p.st == St.REPORTED:
@@ -1282,9 +1348,30 @@ func _draw_overlay() -> void:
 		n.draw_rect(vr, Color(1.0, 0.2, 0.1, flash * 0.22))
 
 
+## The current errand, big at the bottom centre (above the controls line).
+func _goal_banner(n: CanvasItem, font: Font, vr: Rect2, txt: String, t: float) -> void:
+	var fs := 34
+	var w := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var box := Rect2(Vector2(vr.get_center().x - w * 0.5 - 28.0, vr.end.y - 150.0), Vector2(w + 56.0, 60.0))
+	n.draw_rect(box, Color(0.03, 0.03, 0.06, 0.82))
+	n.draw_rect(box, Color(C_AMBER, 0.6 + 0.4 * sin(t * 4.0)), false, 2.0)
+	n.draw_string(font, box.position + Vector2(28.0, 42.0), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, C_AMBER)
+
+
+## Index of the rescue crew whose post is nearest to `p`.
+func _crew_at(p: Vector2) -> int:
+	var best := 0
+	for k in FenerMap.CREWS.size():
+		var c := FenerMap.CREWS[k]
+		var b := FenerMap.CREWS[best]
+		if Vector2(c.x, c.y).distance_to(p) < Vector2(b.x, b.y).distance_to(p):
+			best = k
+	return best
+
+
 ## Always-on guide under the top-left panel: which way and how far the assembly area (and a waiting
 ## rescue crew) is, and how many people are still to save.
-func _guide_chip(n: CanvasItem, font: Font, ps: Vector2, pending: bool) -> void:
+func _guide_chip(n: CanvasItem, font: Font, ps: Vector2, pending: bool, gl: Array) -> void:
 	var lost := 0
 	var with_me := follow.size()
 	var needy := 0
@@ -1301,6 +1388,8 @@ func _guide_chip(n: CanvasItem, font: Font, ps: Vector2, pending: bool) -> void:
 			if Vector2(cc.x, cc.y).distance_to(ppos) < Vector2(c.x, c.y).distance_to(ppos):
 				c = cc
 		rows.append([Vector2(c.x, c.y), C_CREW, TextFx.upper(_t("CREW_LABEL"))])
+	if not gl.is_empty():
+		rows.append([gl[0], C_AMBER, _t(gl[1])])
 	var h := 70.0 + 38.0 * rows.size()
 	var box := Rect2(Vector2(16, HUD_TOP + 126.0), Vector2(330, h))
 	n.draw_rect(box, Color(0.03, 0.03, 0.06, 0.78))
@@ -1314,7 +1403,10 @@ func _guide_chip(n: CanvasItem, font: Font, ps: Vector2, pending: bool) -> void:
 		n.draw_colored_polygon(PackedVector2Array([Vector2(17, 0), Vector2(-12, -13), Vector2(-5, 0), Vector2(-12, 13)]), col)
 		n.draw_set_transform(Vector2.ZERO, 0.0)
 		var txt := "%s · %d m" % [r[2], roundi(tp.distance_to(ppos))]
-		n.draw_string(font, Vector2(box.position.x + 54, y + 25), txt, HORIZONTAL_ALIGNMENT_LEFT, 266.0, 24, col)
+		if r[2].length() > 20:  # an errand: two small lines
+			n.draw_multiline_string(font, Vector2(box.position.x + 54, y + 17), txt, HORIZONTAL_ALIGNMENT_LEFT, 266.0, 17, 2, col)
+		else:
+			n.draw_string(font, Vector2(box.position.x + 54, y + 25), txt, HORIZONTAL_ALIGNMENT_LEFT, 266.0, 24, col)
 		y += 38.0
 	var left := people.size() - saved_n
 	n.draw_string(font, Vector2(box.position.x + 12, y + 24), _t("HUD_LEFT") % left, HORIZONTAL_ALIGNMENT_LEFT, 306.0, 26, C_TEXT)

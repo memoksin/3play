@@ -78,6 +78,7 @@ func _run() -> void:
 	_shocks()
 	_hazards()
 	_items_and_care()
+	_supplies()
 	_events()
 	_pointer()
 	_cues()
@@ -243,7 +244,7 @@ func _wait(seconds: float) -> void:
 
 func _item(kind: StringName):
 	for it in fener.items:
-		if it.kind == kind and not it.taken:
+		if it.kind == kind and not it.taken and it.active:
 			return it
 	return null
 
@@ -260,21 +261,25 @@ func _playthrough(sd: int) -> void:
 			break
 		todo.sort_custom(func(a, b) -> bool: return a.pos.distance_to(fener.ppos) < b.pos.distance_to(fener.ppos))
 		var p = todo[0]
+		if p.st == fener.St.LOST:
+			_walk_to(p.pos, func() -> bool: return p.st != fener.St.LOST)
+			_check(tag + "%s found by the light" % p.def.id, p.st != fener.St.LOST)
 		var need: StringName = &""
 		if p.def.kind == FenerPerson.Kind.INJURED and fener.kits == 0:
 			need = &"kit"
 		elif p.def.kind == FenerPerson.Kind.COLD and fener.blankets == 0:
 			need = &"blanket"
 		if need != &"":
+			# the HUD names the errand and the crew; the item is handed out there
+			var g: Array = fener.goal()
+			_check(tag + "the HUD points to the %s" % need, not g.is_empty() and String(g[1]) == "GOAL_" + String(need).to_upper())
 			var it = _item(need)
-			_check(tag + "a %s is on the map" % need, it != null)
+			_check(tag + "a %s is at a crew" % need, it != null)
 			if it == null:
 				return
+			_check(tag + "the %s lies by a rescue crew" % need, FenerMap.CREWS.any(func(c: Vector3) -> bool: return Vector2(c.x, c.y).distance_to(it.pos) < 4.0))
 			_walk_to(it.pos, func() -> bool: return it.taken)
 			_check(tag + "picked up the %s" % need, it.taken)
-		if p.st == fener.St.LOST:
-			_walk_to(p.pos, func() -> bool: return p.st != fener.St.LOST)
-			_check(tag + "%s found by the light" % p.def.id, p.st != fener.St.LOST)
 		if p.st == fener.St.WAIT:
 			_walk_to(p.pos, func() -> bool: return p.pos.distance_to(fener.ppos) < 1.2)
 			_wait(fener.TREAT_TIME + 0.3)
@@ -288,7 +293,7 @@ func _playthrough(sd: int) -> void:
 		_walk_to(Vector2(c.x, c.y), func() -> bool: return marked.all(func(p) -> bool: return p.st == fener.St.REPORTED))
 		_check(tag + "trapped person reported to the crew", marked.all(func(p) -> bool: return p.st == fener.St.REPORTED))
 	if not fener.follow.is_empty():
-		var near: bool = fener.follow.all(func(p) -> bool: return p.pos.distance_to(fener.ppos) < 12.0)
+		var near: bool = fener.follow.all(func(p) -> bool: return p.pos.distance_to(fener.ppos) < 20.0)  # errands to a crew leave the slow ones a little behind
 		_check(tag + "followers trail the player", near)
 		_check(tag + "path to the assembly area", _walk_to(FenerMap.AREA.get_center(), func() -> bool: return fener.follow.is_empty()))
 	print("  %sbot time %.1f s, injuries %d" % [tag, fener.t, fener.inj])
@@ -504,6 +509,48 @@ func _items_and_care() -> void:
 	fener.ppos = Vector2(c.x, c.y)
 	fener.step(DT)
 	_check("reporting to a crew counts as saved", trapped.st == fener.St.REPORTED and fener.saved_n == 1)
+
+
+## The rescue crew is where the supplies are: kit and battery out from the start, the blanket only once
+## someone who needs it has been found.
+func _supplies() -> void:
+	_fresh(13)
+	fener.next_shock = 999.0
+	var kit = _item(&"kit")
+	var bat = _item(&"battery")
+	var blanket = null
+	for it in fener.items:
+		if it.kind == &"blanket":
+			blanket = it
+	var near_crew := func(it) -> bool:
+		return FenerMap.CREWS.any(func(c: Vector3) -> bool: return Vector2(c.x, c.y).distance_to(it.pos) < 4.0)
+	_check("kit and batteries lie by a crew from the start", kit != null and near_crew.call(kit) and fener.items.filter(func(it) -> bool: return it.kind == &"battery").all(near_crew))
+	_check("the blanket is not out yet", blanket != null and not blanket.active)
+	_check("the HUD sends you to the kit first", String(fener.goal()[1]) == "GOAL_KIT")
+	var cold = fener.people.filter(func(p) -> bool: return p.def.kind == FenerPerson.Kind.COLD)[0]
+	for s: Vector2 in FenerMap.ITEMS[&"blanket"]:
+		fener.ppos = s
+		fener.step(DT)
+	_check("no blanket to take before the cold one is found", fener.blankets == 0 and not blanket.taken)
+	fener.ppos = bat.pos
+	fener.step(DT)
+	_check("a full torch does not waste the spare battery", not bat.taken)
+	fener.ppos = kit.pos
+	fener.step(DT)
+	_check("the kit is handed out at the crew", kit.taken and fener.kits == 1)
+	fener.ppos = cold.pos + Vector2(1.0, 0)
+	fener.aim = PI
+	fener.step(DT)
+	_check("finding the cold one puts a blanket by a crew", cold.st == fener.St.WAIT and blanket.active and near_crew.call(blanket))
+	var g: Array = fener.goal()
+	_check("the HUD says where the blanket is", not g.is_empty() and String(g[1]) == "GOAL_BLANKET" and g[0] == blanket.pos)
+	fener.ppos = blanket.pos
+	fener.step(DT)
+	_check("the blanket is handed out at the crew", blanket.taken and fener.blankets == 1)
+	_check("the goal clears", fener.goal().is_empty())
+	fener.bat = 20.0
+	g = fener.goal()
+	_check("a low torch sends you to a spare battery", not g.is_empty() and String(g[1]) == "GOAL_BATTERY")
 
 
 func _events() -> void:
