@@ -853,9 +853,12 @@ func _show_wave(s: Node, level: float) -> void:
 	var drain := clampf((s._hit_t() - s._drain_start()) / s.DRAIN, 0.0, 1.0) if s._hit else 0.0
 	_wave.reach = run_up_reach(s)
 	_wave.reach_y = beach_y(_wave.reach) if _wave.reach < U1 else LAND
+	_wave.keep_flood = s._hit and (s._saved as Array).has(false)
+	_wave.hold_level = SEA_REST + s.SEA_RISE * clampf(s.elapsed / s._sea_span, 0.0, 1.0) * LOGICAL_M
+	_wave.beach_w = BEACH_W
 	_wave.update(tau, s.WAVE_LEAD, drain, level)
 	_wave.apply(_sea_mats)
-	var on_land: bool = _wave.p.ts_plat + _wave.p.ts_crest > 0.01 and _wave.front_at(0.0) > BEACH_W - 8.0 and _wave.reach > BEACH_W
+	var on_land: bool = _wave.p.ts_plat + _wave.p.ts_crest + _wave.p.ts_hold > 0.01 and _wave.front_at(0.0) > BEACH_W - 8.0 and _wave.reach > BEACH_W
 	for mi in _flood_meshes:
 		mi.visible = on_land
 	_show_boats(tau)
@@ -1133,8 +1136,8 @@ func _show_flow(s: Node, flow: float) -> void:
 		pom.set_shader_parameter(&"alpha_mul", 0.8 * (1.0 - drain))
 
 
+## A lost community's water stays until the result card: the drain does not lower it.
 func _show_floods(s: Node, flow: float) -> void:
-	var drain := clampf((s._hit_t() - s._drain_start()) / s.DRAIN, 0.0, 1.0) if s._hit else 0.0
 	for v in _floods.size():
 		var f := _floods[v]
 		var at: float = s._flood_at[v] if s._hit and v < s._flood_at.size() else -1.0
@@ -1142,7 +1145,7 @@ func _show_floods(s: Node, flow: float) -> void:
 			f.visible = false
 			continue
 		var k := clampf((flow - at) / 0.6, 0.0, 1.0)
-		var metres := maxf(k * 1.25 * (1.0 - drain), 0.01)
+		var metres := maxf(k * 1.25, 0.01)
 		# while the tsunami's flood stands higher, this water is part of it: show it as the flood drops
 		var c := VILLAGE_UD[v]
 		var under := smoothstep(metres - 0.1, metres + 0.35, flood_depth(c.x, c.y))
@@ -1150,7 +1153,7 @@ func _show_floods(s: Node, flow: float) -> void:
 		var fm := _flood_mats[v]
 		fm.set_shader_parameter(&"level", metres)
 		fm.set_shader_parameter(&"slosh", exp(-(flow - at) * 0.7))
-		fm.set_shader_parameter(&"alpha_mul", (1.0 - drain) * (1.0 - under))
+		fm.set_shader_parameter(&"alpha_mul", 1.0 - under)
 		if not _splashes[v].has_meta(&"done"):
 			_splashes[v].set_meta(&"done", true)
 			_splashes[v].emitting = true

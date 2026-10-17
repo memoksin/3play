@@ -122,12 +122,35 @@ func _run() -> void:
 	for n in ["Start", "Badges", "Credits", "Quit"]:
 		_check("title has %s" % n, title.find_child(n, true, false) is Button)
 	_check("title shows the version", title.get_node("%Version").text.contains(title.VERSION))
+	# a language switch (Settings panel) updates the code-set texts without reopening the scene
+	TranslationServer.set_locale("en")
+	await process_frame
+	_check("title en: Start", title.get_node("%Start").text == "START")
+	_check("title en: Credits", title.get_node("%Credits").text == "CREDITS")
+	_check("title en: version", title.get_node("%Version").text.begins_with("JAM BUILD"))
+	TranslationServer.set_locale("tr")
+	await process_frame
+	_check("title tr: Start", title.get_node("%Start").text == "BAŞLAT")
+	_check("title tr: Credits", title.get_node("%Credits").text == "EMEĞİ GEÇENLER")
 	title.get_node("%Badges").pressed.emit()
 	await _wait_scene(story.BADGES)
 	current_scene.back()
 	await _wait_scene(story.TITLE)
 	_check("badges back returns to the title", current_scene.scene_file_path == story.TITLE)
 	_check("badges return is cleared", story.badges_return == "")
+	# Credits: four team cards, Back returns to the title
+	var credits_btn: Button = current_scene.get_node("%Credits")
+	_check("credits button enabled", not credits_btn.disabled)
+	credits_btn.pressed.emit()
+	await _wait_scene(story.CREDITS)
+	_check("credits shows four cards", current_scene.get_node("%Cards").get_child_count() == 4)
+	var any_photo := false
+	for id in ["mehmet", "sude", "burcu", "irem"]:
+		any_photo = any_photo or ResourceLoader.exists("res://assets/sprites/ui/team/%s.png" % id)
+	_check("AI note shows only with a portrait", current_scene.get_node("%AiNote").visible == any_photo)
+	current_scene.back()
+	await _wait_scene(story.TITLE)
+	_check("credits back returns to the title", current_scene.scene_file_path == story.TITLE)
 	current_scene.get_node("%Start").pressed.emit()
 	await _wait_scene(main_path)
 	_check("title start (prologue seen) -> main", current_scene.scene_file_path == main_path)
