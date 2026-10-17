@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scenes/result.gd" id="1"]
 [ext_resource type="Theme" path="res://ui/space_theme.tres" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/ui/place_backdrop.tscn" id="3"]
+[ext_resource type="Script" path="res://scenes/ui/cta_glow.gd" id="4"]
 
 [node name="Result" type="Control"]
 layout_mode = 3
@@ -54,6 +55,12 @@ theme_override_colors/font_color = Color(0.9764706, 0.7607843, 0.16862746, 1)
 horizontal_alignment = 1
 autowrap_mode = 3
 
+[node name="Info" type="Button" parent="Center/Card/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 24
+
 [node name="Sep" type="HSeparator" parent="Center/Card/Box"]
 layout_mode = 2
 
@@ -68,18 +75,6 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 12
 
-[node name="Fact" type="Label" parent="Center/Card/Box/Scroll/Body"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(540, 0)
-layout_mode = 2
-autowrap_mode = 3
-
-[node name="Help" type="Label" parent="Center/Card/Box/Scroll/Body"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(540, 0)
-layout_mode = 2
-autowrap_mode = 3
-
 [node name="Cold" type="Label" parent="Center/Card/Box/Scroll/Body"]
 unique_name_in_owner = true
 visible = false
@@ -88,31 +83,41 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.3529412, 0.23529412, 1)
 autowrap_mode = 3
 
-[node name="Co" type="Label" parent="Center/Card/Box/Scroll/Body"]
-unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(540, 0)
-layout_mode = 2
-theme_type_variation = &"HudMuted"
-autowrap_mode = 3
-
 [node name="Partner" type="VBoxContainer" parent="Center/Card/Box"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 4
 
 [node name="PartnerText" type="Label" parent="Center/Card/Box/Partner"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(540, 0)
 layout_mode = 2
+theme_type_variation = &"HudHeader"
+theme_override_font_sizes/font_size = 36
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="PartnerPlay" type="Button" parent="Center/Card/Box/Partner"]
+[node name="Cta" type="Control" parent="Center/Card/Box/Partner"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 92)
 layout_mode = 2
 size_flags_horizontal = 4
+script = ExtResource("4")
+
+[node name="PartnerPlay" type="Button" parent="Center/Card/Box/Partner/Cta"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 6.0
+offset_right = -16.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 56
 
 [node name="Buttons" type="HBoxContainer" parent="Center/Card/Box"]
 unique_name_in_owner = true
@@ -136,3 +141,85 @@ theme_type_variation = &"HudCaption"
 theme_override_font_sizes/font_size = 24
 text = "CLOSING_LINE"
 horizontal_alignment = 1
+
+[node name="InfoCard" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Dim" type="ColorRect" parent="InfoCard"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.02, 0.03, 0.06, 0.7)
+
+[node name="Center" type="CenterContainer" parent="InfoCard"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Panel" type="PanelContainer" parent="InfoCard/Center"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(720, 0)
+layout_mode = 2
+
+[node name="Box" type="VBoxContainer" parent="InfoCard/Center/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Heading" type="Label" parent="InfoCard/Center/Panel/Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(660, 0)
+layout_mode = 2
+theme_type_variation = &"HudData"
+horizontal_alignment = 1
+autowrap_mode = 3
+uppercase = true
+
+[node name="Sep" type="HSeparator" parent="InfoCard/Center/Panel/Box"]
+layout_mode = 2
+
+[node name="InfoScroll" type="ScrollContainer" parent="InfoCard/Center/Panel/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="InfoBody" type="VBoxContainer" parent="InfoCard/Center/Panel/Box/InfoScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 16
+
+[node name="Fact" type="Label" parent="InfoCard/Center/Panel/Box/InfoScroll/InfoBody"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(660, 0)
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="Help" type="Label" parent="InfoCard/Center/Panel/Box/InfoScroll/InfoBody"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(660, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62352943, 0.84705883, 1, 1)
+autowrap_mode = 3
+
+[node name="Co" type="Label" parent="InfoCard/Center/Panel/Box/InfoScroll/InfoBody"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(660, 0)
+layout_mode = 2
+theme_type_variation = &"HudMuted"
+autowrap_mode = 3
+
+[node name="Close" type="Button" parent="InfoCard/Center/Panel/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+

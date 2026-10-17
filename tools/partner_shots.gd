@@ -1,6 +1,6 @@
 extends SceneTree
 ## Screenshots of the first-run notice and the result cards with the "play the other perspective" block,
-## saved to res://export/shots/partner_<name>_<locale>_<h>p.png. Run windowed (needs a renderer):
+## saved to res://export/shots/partner_<name>_<locale>_<h>p.png (result cards, info overlay, notice). Run windowed (needs a renderer):
 ##   godot --path . -s res://tools/partner_shots.gd [-- --locale=tr --size=1280x720]
 
 const OUT := "res://export/shots"
@@ -55,16 +55,23 @@ func _run() -> void:
 			game.saved = 3
 			game.total = 8
 			await _shot("res://scenes/result.tscn", "result_" + id, locale, size, 3.0)
+			await _shot("res://scenes/result.tscn", "info_" + id, locale, size, 2.5, true)
+			if id in ["indian_ocean", "black_saturday"]:  # both games played: the clean card
+				game.played_ids[String(load(game.partner_of(d)).id)] = true
+				await _shot("res://scenes/result.tscn", "result_clean_" + id, locale, size, 2.5)
 	game.reset_launch()
 	quit(0)
 
 
-func _shot(path: String, name: String, locale: String, size: Vector2i, wait := 1.5) -> void:
+func _shot(path: String, name: String, locale: String, size: Vector2i, wait := 1.5, open_info := false) -> void:
 	Input.warp_mouse(Vector2(3, size.y - 3))
 	await process_frame
 	var node: Node = load(path).instantiate()
 	root.add_child(node)
 	await create_timer(wait).timeout
+	if open_info:
+		node.open_info()
+		await create_timer(0.4).timeout
 	for i in SETTLE_FRAMES:
 		await process_frame
 	await RenderingServer.frame_post_draw
