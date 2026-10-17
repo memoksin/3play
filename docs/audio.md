@@ -209,7 +209,7 @@ Rotate satellites to route the solar beam into collectors, waves, a countdown, "
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
 | BM1 | Space ambience | Whole minigame | Solar Storm.wav | Puniho | https://freesound.org/s/151098/ | CC0 | chosen (reuse of D3) | |
-| BM2 | Rotate a satellite | The player rotates a satellite | Servo_1_Panera.wav | sinmente0987 | https://freesound.org/people/sinmente0987/sounds/160712/ | CC0 (checked by Sude) | chosen | Burcu picked it instead of Servo motor (Burningmonkey). Sude to trim by ear. |
+| BM2 | Rotate a satellite | The player rotates a satellite | Servo_1_Panera.wav | sinmente0987 | https://freesound.org/people/sinmente0987/sounds/160712/ | CC0 (checked by Sude) | chosen | Burcu picked it instead of Servo motor (Burningmonkey). Use only the first 1 s to 1.5 s of the file. |
 | BM3 | Beam | The beam runs through the satellites | Laser Beam Firing | SecureSubset | https://freesound.org/people/SecureSubset/sounds/783986/ | CC0 | chosen | About 0.75 s. Repeat it back to back so it becomes a continuous sound while the beam runs. |
 | BM4 | Collector charged, city saved | A collector is charged | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | chosen (same as FN7) | The same success sound as FN7 and FR6. |
 | BM5 | City lost | A city is lost | power-down-01.wav | newagesoup | https://freesound.org/people/newagesoup/sounds/348249/ | CC0 | chosen | Use the part from 1 s onward. |
