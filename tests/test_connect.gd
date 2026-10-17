@@ -167,6 +167,26 @@ func _scene() -> void:
 	_check("scene: four clicks come back", s.rots[skin.index(1, 0)] == before)
 	s.clicks = 0
 	s.seek(30.0)
+	# play view: the slab fills the width down to the bottom edge, the board is fully on screen, and the
+	# world is lit like the diorama (Disaster.atmosphere)
+	await process_frame  # the camera follows the game time in show_state()
+	var world: Node3D = s.get_node("World")
+	var vp: Vector2 = world._view_size()
+	var g0: Vector2 = world.screen_of(Vector3(0.0, world.GRID_TOP, world.CUT_Z))
+	var g1: Vector2 = world.screen_of(Vector3(skin.cols * world.T, world.GRID_TOP - skin.rows * world.T, world.CUT_Z))
+	var hud := (s.get_node("Hud") as Control).get_global_rect()
+	_check("frame: grid fully on screen, below the HUD", g0.x > 0.0 and g0.y > 0.0 and g1.x < hud.position.x and g1.y < vp.y)
+	var covered := true
+	for sp in [Vector2(0.0, vp.y - 1.0), Vector2(vp.x - 1.0, vp.y - 1.0), Vector2(0.0, vp.y * 0.45), Vector2(vp.x - 1.0, vp.y * 0.45)]:
+		var xf: Transform3D = world.coast.global_transform.affine_inverse() * world.camera.global_transform
+		var d: Vector3 = xf.basis * world._ray_dir(sp)
+		var x: float = (xf.origin + d * (-xf.origin.z / d.z)).x  # on the front cut (z = 0)
+		covered = covered and x > world.U0 and x < 33.0  # coast_slab.py U1
+	_check("frame: the slab covers both screen edges down to the bottom", covered)
+	var atm: Atmosphere = game.disaster.atmosphere
+	var sun := world.get_node("Sun") as DirectionalLight3D
+	_check("look: sun, ambient and tonemap from the disaster's atmosphere", atm != null and sun.light_color == atm.sun_color
+		and world._env.tonemap_mode == Environment.TONE_MAPPER_FILMIC and is_equal_approx(world._env.tonemap_exposure, atm.exposure))
 	_check("scene: sea level rises", s._sea_level() < 68.0)
 	_check("scene: timer shows 30", s.get_node("Hud/Box/Row/Timer").text == "30")
 	s.seek(46.0)

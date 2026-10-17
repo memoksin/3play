@@ -3,7 +3,9 @@ Left: the Indian Ocean, cut in section down to the seabed (Godot draws the water
 the beach, palms and four kampung communities on top. The front cut shows the coast in section: sand,
 coral limestone, marine sand, rock, and the pipe gallery of the puzzle (a recess the grid tiles sit in),
 plus one dry shaft per community from its basin up to the village. The megathrust that made the wave
-shows as a thrust step in the seabed strata.
+shows as a thrust step in the seabed strata. The body runs on deep down (ZB): the play view never shows
+its bottom, the hero view loses it in the depth haze (connect_world.gd), so the coast reads as part of
+the Earth, not as an island floating in the void.
 
 Frame (shared with scenes/minigames/connect/connect_world.gd, keep in sync):
   Blender X = Godot x (along the front cut), Blender Y = depth d (Godot z = -d), Z = up. 1 unit = 1 m.
@@ -21,16 +23,18 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import lib as L
 
 K = math.tan(math.radians(22))
-U0, U1, D = -11.0, 31.0, 13.0
+U0, U1, D = -11.0, 33.0, 13.0
+U1D = 31.0                       # dressing (bushes, stones, shells) stays inside the old right edge
 LAND = 0.35                      # top of the land
 SEABED = -13.8
-ZB = -15.4                       # bottom of the slab
+ZB = -48.0                       # bottom of the slab: out of every view
+ZB0 = -15.4                      # the old bottom: section details stay above it
 GRID = (0.0, 14.0, -13.0, -1.0)  # x0, x1, z0, z1 of the pipe gallery
 PLATE_T = 0.34
 BEACH_W = 5.0
 SHAFTS = [(14.9, -1.45), (17.9, -5.45), (20.9, -7.45), (23.9, -11.45)]  # x of the shaft, z of the basin outlet
 STRATA = [("sand_cut", -0.5, -1.9), ("sand_wet", -1.9, -3.2), ("limestone_cut", -3.2, -6.6), ("sand_dark", -6.6, -10.4),
-          ("reef_rock", -10.4, ZB)]  # sand_wet: under the water table
+          ("reef_rock", -10.4, -17.5), ("rock", -17.5, -26.0), ("rock_dark", -26.0, ZB)]  # sand_wet: under the water table
 GRASS_EDGE = lambda d: BEACH_W + 0.7 + wob(d, 2.0, 0.45, 0.9)
 WET_EDGE = lambda d: 1.3 + wob(d, 5.0, 0.3, 1.1)
 PATH_U = lambda d: 8.7 + 0.45 * math.sin(d * 0.45 + 1.0)
@@ -143,13 +147,13 @@ def top_surface():
     field("path", "dirt_path", lambda d: PATH_U(d) - 0.65, lambda d: PATH_U(d) + 0.65, 3, lift=0.015)
     # darker grass patches + bushes + a few flowers on the land
     for i in range(30):
-        u, d = rng.uniform(GRASS_EDGE(0) + 1.0, U1 - 0.6), rng.uniform(0.6, D - 0.6)
+        u, d = rng.uniform(GRASS_EDGE(0) + 1.0, U1D - 0.6), rng.uniform(0.6, D - 0.6)
         if abs(u - PATH_U(d)) < 1.2:
             continue
         s = rng.uniform(0.8, 2.2)
         L.blob("patch", (s * 1.4, s, 0.012), P(u, d, LAND + 0.02), mat="grass_dark", lumpy=0.25, rot=(0, 0, rng.uniform(0, 180)), subdiv=1)
     for i in range(46):
-        u, d = rng.uniform(GRASS_EDGE(0) + 0.2, U1 - 0.5), rng.uniform(0.5, D - 0.4)
+        u, d = rng.uniform(GRASS_EDGE(0) + 0.2, U1D - 0.5), rng.uniform(0.5, D - 0.4)
         if abs(u - PATH_U(d)) < 1.0:
             continue
         s = rng.uniform(0.35, 0.8)
@@ -253,8 +257,8 @@ def section_details():
     gx0, gx1, gz0, gz1 = GRID
     placed = 0
     while placed < 90:
-        x = rng.uniform(0.3, U1 - 0.3)
-        z = rng.uniform(ZB + 0.4, LAND - 0.6)
+        x = rng.uniform(0.3, U1D - 0.3)
+        z = rng.uniform(ZB0 + 0.4, LAND - 0.6)
         if gx0 - 0.3 < x < gx1 + 0.4 and gz0 - 0.4 < z < gz1 + 0.4:
             continue
         if x < BEACH_W and z > beach(x) - 0.3:
@@ -280,7 +284,7 @@ def section_details():
     L.cyl("anchor_ring", 0.14, 0.05, (ax + 0.27, -0.05, az + 1.0), rot=(90, 0, 0), mat="rust", verts=10, bevel=0.01, base=False)
     L.cyl("jar", 0.32, 0.6, (29.3, -0.02, -8.6), rot=(0, 70, 0), mat="brick", verts=10, r2=0.18, bevel=0.03, base=False)
     for i in range(24):
-        x, z = rng.uniform(15.0, U1 - 0.5), rng.uniform(-3.0, -0.4)
+        x, z = rng.uniform(15.0, U1D - 0.5), rng.uniform(-3.0, -0.4)
         if any(abs(x - sx) < 0.5 for sx, _ in SHAFTS):
             continue
         L.cyl("shell", 0.06, 0.1, (x, -0.02, z), rot=(rng.uniform(0, 180), 90, 0), mat="coral_pale", verts=6, r2=0.0, bevel=0, base=False)
@@ -386,16 +390,18 @@ def seabed():
             L.blob("sea_rock", (s, s * 0.8, s * 0.4), P(u, d, z), mat="reef_rock", lumpy=0.2)
 
 
-def hanging_rocks():
-    for i in range(70):
-        u, d = rng.uniform(U0 + 0.8, U1 - 0.8), rng.uniform(0.4, D - 0.4)
-        if i < 26:
-            d = rng.uniform(0.3, 2.6)
-        r = rng.uniform(0.9, 2.4)
-        ln = rng.uniform(1.4, 4.2) * (0.6 + r * 0.3)
-        L.cyl("hang", r, ln, P(u, d, ZB + 0.05), mat=rng.choice(["rock", "rock_dark", "reef_rock"]),
-              rot=(180 + rng.uniform(-12, 12), rng.uniform(-12, 12), 0), verts=rng.choice([5, 6, 7]), r2=rng.uniform(0.0, 0.25),
-              bevel=0.04, segs=1)
+def deep_details():
+    """Boulders and veins in the deep rock under the old bottom (front cut), sparser with depth."""
+    placed = 0
+    while placed < 40:
+        x = rng.uniform(U0 + 0.4, U1 - 0.4)
+        z = ZB0 - 0.4 - (ZB0 - ZB) * rng.random() ** 1.6 * 0.75
+        if abs(x + 6.0) < 0.5:
+            continue  # the fault
+        placed += 1
+        r = rng.uniform(0.25, 0.7)
+        L.ball("deep_stone", 0.5, (x, -0.02, z), mat=rng.choice(["rock", "rock_dark", "reef_rock", "basalt"]),
+               scale=(r * 2.2, r * 1.0, r * 1.5), subdiv=1)
 
 
 def build():
@@ -405,7 +411,7 @@ def build():
     shafts()
     left_wall()
     seabed()
-    hanging_rocks()
+    deep_details()
 
 
 def chunk():

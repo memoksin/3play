@@ -1,8 +1,23 @@
-[gd_resource type="Resource" script_class="Disaster" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="Disaster" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/disaster.gd" id="1"]
 [ext_resource type="Resource" path="res://data/skins/indian_ocean_connect.tres" id="2"]
 [ext_resource type="PackedScene" path="res://assets/3d/badges/badge_indian_ocean.glb" id="3"]
+[ext_resource type="Script" path="res://scripts/atmosphere.gd" id="4"]
+
+[sub_resource type="Resource" id="atmosphere"]
+script = ExtResource("4")
+sun_rotation = Vector3(-36, -40, 0)
+sun_color = Color(1, 0.87, 0.7, 1)
+sun_energy = 1.52
+ambient_color = Color(0.62, 0.74, 0.9, 1)
+ambient_energy = 0.45
+sky_top = Color(0.07, 0.16, 0.24, 1)
+sky_bottom = Color(0.07, 0.16, 0.24, 1)
+haze = Color(0.07, 0.16, 0.24, 1)
+fog = Vector2(48, 140)
+fog_ref = 42.0
+exposure = 0.8
 
 [resource]
 script = ExtResource("1")
@@ -13,6 +28,7 @@ lat = 5.55
 lon = 95.32
 year = 2004
 utc = "2004-12-26T00:58:53"
+atmosphere = SubResource("atmosphere")
 minigame = &"connect"
 skin = ExtResource("2")
 badge = ExtResource("3")
