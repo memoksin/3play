@@ -41,6 +41,12 @@ const SHAKE_PX := 10.0
 const SHAKE_CAM := 0.012  # camera shake, fraction of the view
 const GUSH_DUR := 0.3
 const NAME_SIZE := 22
+## Every line locked (the puzzle is solved): the clock drops to RUSH_TIME seconds (only if more is
+## left, once), the scene shakes (RUSH_SHAKE_PX fading to RUSH_TREMOR_PX) and "the wave is coming" shows.
+const RUSH_TIME := 5.0
+const RUSH_SHAKE_PX := 12.0
+const RUSH_TREMOR_PX := 3.0
+const RUSH_SHAKE_DUR := 0.5
 
 ## Debug/test hooks.
 var time_scale := 1.0
@@ -51,6 +57,8 @@ var rots := PackedInt32Array()
 ## false: emit `finished` but do not call Game (tests).
 var submit := true
 var saved_count := -1
+## The puzzle was solved and the clock was cut to RUSH_TIME.
+var rushed := false
 
 var skin: ConnectSkin
 var _hit := false
@@ -70,6 +78,9 @@ var _red := false
 var _wave_cued := false
 var _events: Array[Dictionary] = []  # {t: seconds after the hit, kind, index}, sorted by t
 var _next_event := 0
+var _rush_at := 0.0  # game time of the rush
+var _rush: Label
+var _sea_span := 60.0  # the original timer: the sea rises on this scale
 
 @onready var _timer: Label = $Hud/Box/Row/Timer
 @onready var _bar: Control = $Hud/Box/Bar
@@ -82,6 +93,8 @@ func _ready() -> void:
 	Game.ensure_disaster(&"state")
 	skin = Game.disaster.skin as ConnectSkin
 	assert(skin != null, "Disaster has no ConnectSkin")
+	skin = skin.duplicate()  # the rush shortens timer_seconds (the world reads it too); keep the shared data intact
+	_sea_span = skin.timer_seconds
 	rots = ConnectLogic.start_rotations(skin)
 	var k := 0
 	for i in skin.tiles.size():
@@ -92,6 +105,7 @@ func _ready() -> void:
 	_task.text = tr(skin.prompt_key)
 	_banner.get_node("Label").text = tr(skin.wave_key)
 	_bar.draw.connect(_draw_bar)
+	_make_rush_label()
 	_update_hud()
 	_world.show_state(self)
 
@@ -126,6 +140,9 @@ func advance(dt: float) -> void:
 		if _deny[i] <= 0.0:
 			_deny.erase(i)
 	_banner.visible = _hit and _hit_t() < BANNER_DUR
+	_rush.visible = rushed and not _hit
+	if _rush.visible:
+		_rush.modulate.a = 0.75 + 0.25 * sin(elapsed * 14.0)
 	_apply_shake()
 	_update_hud()
 	queue_redraw()
@@ -141,6 +158,10 @@ func _apply_shake() -> void:
 	else:
 		position = Vector2.ZERO
 		_world.shake(Vector2.ZERO)
+		if rushed and not _hit:
+			var r := elapsed - _rush_at
+			var amp := RUSH_TREMOR_PX + (RUSH_SHAKE_PX - RUSH_TREMOR_PX) * clampf(1.0 - r / RUSH_SHAKE_DUR, 0.0, 1.0)
+			position = Vector2(sin(r * 83.0), cos(r * 71.0)) * amp
 
 
 ## Debug: jump to game time `time` (no going back).
@@ -186,6 +207,19 @@ func _lock_completed(c: int, r: int) -> void:
 		for cell: Vector2i in t.cells:
 			_lock_at[skin.index(cell.x, cell.y)] = elapsed
 		sound_event.emit(&"locked", li)
+	if _lines_locked.size() == traces.size():
+		_rush_clock()
+
+
+## The puzzle is solved: the hit comes in RUSH_TIME seconds (once, and only if more than that is left).
+func _rush_clock() -> void:
+	if _hit or rushed or skin.timer_seconds - elapsed <= RUSH_TIME:
+		return
+	rushed = true
+	_rush_at = elapsed
+	skin.timer_seconds = elapsed + RUSH_TIME
+	_rush.text = tr("IO_CONNECT_RUSH")
+	_update_hud()
 
 
 ## Debug: put every pipe in the solved rotation.
@@ -282,6 +316,22 @@ func _update_hud() -> void:
 	_bar.queue_redraw()
 
 
+func _make_rush_label() -> void:
+	_rush = Label.new()
+	_rush.name = "Rush"
+	_rush.theme_type_variation = &"HudTitle"
+	_rush.add_theme_color_override(&"font_color", Palette.DANGER)
+	_rush.add_theme_color_override(&"font_outline_color", Color(0.1, 0.0, 0.0, 0.9))
+	_rush.add_theme_constant_override(&"outline_size", 8)
+	_rush.add_theme_font_size_override(&"font_size", 44)
+	_rush.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_rush.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_rush.visible = false
+	add_child(_rush)
+	_rush.position = Vector2(340.0, 28.0)
+	_rush.size = Vector2(600.0, 64.0)
+
+
 func _draw_bar() -> void:
 	var s := _bar.size
 	_bar.draw_rect(Rect2(Vector2.ZERO, s), Color(Palette.HUD_BLUE, 0.1))
@@ -324,7 +374,7 @@ func _gui_input(event: InputEvent) -> void:
 
 ## Sea surface row in logical px: rises over the timer, holds through the flow, drains at the end.
 func _sea_level() -> float:
-	var rise := SEA_RISE * clampf(elapsed / skin.timer_seconds, 0.0, 1.0)
+	var rise := SEA_RISE * clampf(elapsed / _sea_span, 0.0, 1.0)
 	if _hit:
 		var d := clampf((_hit_t() - _drain_start()) / DRAIN, 0.0, 1.0)
 		rise *= 1.0 - d * d * (3.0 - 2.0 * d)
