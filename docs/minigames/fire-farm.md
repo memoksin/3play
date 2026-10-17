@@ -13,8 +13,8 @@ First person. You are on a fenced farm with a kangaroo pen while a bushfire come
 1. **Overview (a few seconds):** the farm from above, fenced on all four sides, with the kangaroo pen. Simple, like the earlier minigames' intro. Then the game starts.
 2. **First person.** The player looks around. Two **exclamation marks** show the tasks.
 3. **Task A, the fence:**
-   - Run to the first exclamation mark. There is a **knife** on the ground: pick it up.
-   - A **fence** stands at the side: cut it. A gap opens, so the kangaroos have a way out.
+   - Run to the first exclamation mark. There are **wire cutters** (long-handled bolt cutters) on a chopping block: pick them up. (Was a knife; changed after the team playtest.)
+   - A **fence** stands at the side: cut its wire ties. The panel falls into the yard, a gap opens, so the kangaroos have a way out.
    - Success sound (the player did it).
 4. **Look around again.** Another exclamation mark.
 5. **Task B, the hose and the fire:**
@@ -34,7 +34,7 @@ Move, look with the mouse, an **interact** key (pick up, cut, attach, turn), a *
 
 ## Props (3D, simple)
 
-Farm yard, fences on four sides, kangaroo pen with kangaroos, 2 exclamation markers, knife, cuttable fence section, hose, wall with a valve, a small flame (and no flame afterwards), broken gate with a debris pile, sky and smoke.
+Farm yard, fences on four sides, kangaroo pen with kangaroos, 2 exclamation markers, wire cutters, cuttable fence section, hose, wall with a valve, a small flame (and no flame afterwards), broken gate with a debris pile, sky and smoke.
 
 ## Score and ending (decided by burcubaran22)
 
@@ -46,7 +46,7 @@ Farm yard, fences on four sides, kangaroo pen with kangaroos, 2 exclamation mark
 
 ## Sounds this game needs (to add to `docs/audio.md`)
 
-Footsteps, picking up the knife, cutting the fence, kangaroos hopping out, **success sound** for the fence, hose attach and valve turn, water flow, the flame, putting it out, **success sound** for the fire, fire and wind ambience, jump and landing on debris, the exit. Voice: none.
+Footsteps, picking up the wire cutters, snipping the fence ties, the fence panel crashing down, kangaroos hopping out, **success sound** for the fence, hose attach and valve turn, water flow, the flame, putting it out, **success sound** for the fire, fire and wind ambience, jump and landing on debris, the exit. Voice: none.
 
 ## Art and build notes
 
@@ -57,10 +57,20 @@ Footsteps, picking up the knife, cutting the fence, kangaroos hopping out, **suc
 ## Build (art in the game, #125)
 
 - The world is the look-dev farm `scenes/art_pilot/fire_farm.tscn`: `FireSkin.farm_model` = `scenes/minigames/fire/art/farm.tscn` (same slab, house, shed, windmill, pen, gums, grass, fire front, sky, light, post pass). Every task prop is a skin model from `scenes/minigames/fire/art/`; `tools/fire_gen.gd` builds the scene (colliders, anchors, placeholders) on the same layout.
-- Layout: pen in the south-west corner, its yard-side wall has the cuttable section (`pen_fence_cut` swaps to `pen_fence_cut_open` when cut). Knife on a chopping block by the pen. The flame is a strip of burning grass across the track right inside the broken gate (it closes the gate's mouth; out = `scorch_patch`). The valve moved off the shed wall (13 m from the flame there) to a standpipe by the track, ~5 m from the flame, hose coil next to it.
+- Layout: pen in the south-west corner, its yard-side wall has the cuttable section (post, panel and six flagged wire ties: `scenes/minigames/fire/art/fence_cut.tscn`). Wire cutters on a chopping block by the pen. The flame is a strip of burning grass across the track right inside the broken gate (it closes the gate's mouth; out = `scorch_patch`). The valve moved off the shed wall (13 m from the flame there) to a standpipe by the track, ~5 m from the flame, hose coil next to it.
 - Kangaroos: out through the cut, across the yard, over the low boundary fence (they clear it, people cannot) and away south, from the fire.
 - `smoke` (the 90 s clock) drives fog, sky smoke, sun, ambient, the fire front creeping to the back fence (two more stretches catch later), smoke drift and flame haze.
 - Shots: `godot --path . -s res://tools/fire_shots.gd` (first person through the tasks, `export/shots/fire_*.png`). Frame time: `godot --path . -s res://tools/perf.gd -- --only=fire`.
+
+## Playtest changes (wire cutters, falling panel, ending shot)
+
+- **Wire cutters** instead of the knife: `tools/models/fire/cutters.py` (`cutters` on the block; `cutters_view_r/_l`, the two halves in gloved hands, first person). Texts `FIRE_HINT_CUTTERS`, `FIRE_USE_CUTTERS`, `FIRE_NEED_CUTTERS` (TR "tel kesme makası"), `FIRE_HINT_FENCE` / `FIRE_USE_FENCE` say wire. Code ids: `cutters` (`FireLogic.pick_cutters`, `FireSkin.cutters_model` / `hand_cutters_model`, sound `cutters`).
+- **The cut**: the panel is lashed with six galvanised wire ties flagged with orange tape (`fence.py` `pen_fence_tie`). While the player holds, the ties snip one by one (`set_cut`, sound `snip`) and the cutters' jaws close at each. On the cut the panel goes slack, drops onto its edge, topples into the yard, slams down (dust cloud, sparks off the corner that hits first, sound `panel_land`), hops a little and lies still; the wire mesh rings after the hit (`panel_bow.gdshader`).
+- The fall is a small hand-written rigid-body simulation (`scenes/minigames/fire/art/panel_fall.gd`): one box against the ground and the two posts, sequential impulses, fixed 240 Hz steps on game time (pauses, seeks and runs headless with the game). It sleeps when still (about 1.8 s); at 4 s it eases into the nearest lying-flat pose whatever happened, a broken state does the same, and one call never steps more than the whole fall, so a seek just finishes it. The kangaroos wait in the pen until it is down (`ROO_DELAY` 1.4 s).
+- **Ending shot** (`FireSkin.escape_seconds` 8.5, `lose_seconds` 7.5): out of the gate, the camera leaves the head, rises over the player and pulls back on a curve into the style's hero angle (pitch -40, yaw -22, FOV 26; `fire.gd` `hero_transform()`), the whole floating slab in view. The player is a small figure (`tools/models/fire/farmer.py`, blue shirt and gloves of the first-person hands, wide-brimmed hat; a four-pose run cycle) running down the track the way the kangaroos went, slowing into a held stride while the fire front runs over the farm on the north-westerly (`farm.gd` `set_engulf`: ember edge, char, roofs, hay, pen and gums catching, smoke columns; it stops just behind the runner). A held moment, then a fade into the result card's colour (`Palette.BG`), so the card fades in seamlessly.
+- **Time up**: the darker version. The smoke stays thick, sun and ambient go down, the vignette closes, "The smoke took over." stays up; the figure crouches where the player stood, an arm over the mouth; the fire takes everything, kangaroos still in the pen go under it.
+- Rules and score are unchanged (`finish_minigame` gets the same values, only later). A key after 1 s cuts the ending to its fade.
+- Shots: `fire_shots.gd` also saves `fire_snip`, `fire_cut`, `fire_slam`, `fire_panel_down`, `fire_end_*`, `fire_lose_*`. Perf: `perf.gd -- --only=fire` has `fire ending escape` / `fire ending lose` (about 10 ms a frame on an M4 Max).
 
 ## Open questions
 

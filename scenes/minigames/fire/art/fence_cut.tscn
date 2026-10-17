@@ -1,9 +1,11 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scenes/minigames/fire/art/fence_cut.gd" id="1_f"]
-[ext_resource type="PackedScene" path="res://assets/3d/fire/pen_fence_cut.glb" id="2_f"]
-[ext_resource type="PackedScene" path="res://assets/3d/fire/pen_fence_cut_open.glb" id="3_f"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/pen_fence_cut_post.glb" id="2_f"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/pen_fence_panel.glb" id="3_f"]
 [ext_resource type="Shader" path="res://scenes/style/soft_particle.gdshader" id="4_f"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/pen_fence_tie.glb" id="5_f"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/pen_fence_tie_cut.glb" id="6_f"]
 
 [sub_resource type="ShaderMaterial" id="dust_mat"]
 render_priority = 1
@@ -16,6 +18,28 @@ shader_parameter/hardness = 0.0
 material = SubResource("dust_mat")
 size = Vector2(0.8, 0.8)
 
+[sub_resource type="ShaderMaterial" id="cloud_mat"]
+render_priority = 1
+shader = ExtResource("4_f")
+shader_parameter/tint = Color(0.74, 0.63, 0.5, 0.8)
+shader_parameter/glow = 0.0
+shader_parameter/hardness = 0.0
+
+[sub_resource type="QuadMesh" id="cloud_quad"]
+material = SubResource("cloud_mat")
+size = Vector2(1.7, 1.7)
+
+[sub_resource type="ShaderMaterial" id="spark_mat"]
+render_priority = 3
+shader = ExtResource("4_f")
+shader_parameter/tint = Color(1, 0.62, 0.26, 1)
+shader_parameter/glow = 7.0
+shader_parameter/hardness = 0.75
+
+[sub_resource type="QuadMesh" id="spark_quad"]
+material = SubResource("spark_mat")
+size = Vector2(0.035, 0.035)
+
 [sub_resource type="Curve" id="dust_scale"]
 _data = [Vector2(0, 0.4), 0.0, 1.4, 0, 0, Vector2(1, 1.6), 0.0, 0.0, 0, 0]
 point_count = 2
@@ -24,32 +48,161 @@ point_count = 2
 offsets = PackedFloat32Array(0, 0.15, 1)
 colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0)
 
+[sub_resource type="Curve" id="spark_scale"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0.2), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Gradient" id="spark_ramp"]
+offsets = PackedFloat32Array(0, 0.5, 1)
+colors = PackedColorArray(1, 0.95, 0.75, 1, 1, 0.6, 0.25, 1, 0.8, 0.25, 0.08, 0)
+
 [node name="FenceCut" type="Node3D"]
 script = ExtResource("1_f")
 
-[node name="Intact" parent="." instance=ExtResource("2_f")]
+[node name="Post" parent="." instance=ExtResource("2_f")]
 position = Vector3(-1.5, 0, 0)
 
-[node name="Open" parent="." instance=ExtResource("3_f")]
-position = Vector3(-1.5, 0, 0)
-visible = false
+[node name="Panel" type="Node3D" parent="."]
+position = Vector3(0, 0.06, 0.06)
+
+[node name="Mesh" parent="Panel" instance=ExtResource("3_f")]
+
+[node name="Ties" type="Node3D" parent="."]
+
+[node name="Tie0" parent="Ties" instance=ExtResource("5_f")]
+position = Vector3(-1.5, 0.35, 0)
+
+[node name="Tie1" parent="Ties" instance=ExtResource("5_f")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0.35, 0)
+
+[node name="Tie2" parent="Ties" instance=ExtResource("5_f")]
+position = Vector3(-1.5, 1.0, 0)
+
+[node name="Tie3" parent="Ties" instance=ExtResource("5_f")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 1.0, 0)
+
+[node name="Tie4" parent="Ties" instance=ExtResource("5_f")]
+position = Vector3(-1.5, 1.6, 0)
+
+[node name="Tie5" parent="Ties" instance=ExtResource("5_f")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 1.6, 0)
+
+[node name="TiesCut" type="Node3D" parent="."]
+
+[node name="Stub0" parent="TiesCut" instance=ExtResource("6_f")]
+position = Vector3(-1.5, 0.35, 0)
+
+[node name="Stub1" parent="TiesCut" instance=ExtResource("6_f")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0.35, 0)
+
+[node name="Stub2" parent="TiesCut" instance=ExtResource("6_f")]
+position = Vector3(-1.5, 1.0, 0)
+
+[node name="Stub3" parent="TiesCut" instance=ExtResource("6_f")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 1.0, 0)
+
+[node name="Stub4" parent="TiesCut" instance=ExtResource("6_f")]
+position = Vector3(-1.5, 1.6, 0)
+
+[node name="Stub5" parent="TiesCut" instance=ExtResource("6_f")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 1.6, 0)
 
 [node name="Dust" type="CPUParticles3D" parent="."]
-position = Vector3(0, 0.15, 0.9)
+position = Vector3(0, 0.35, 0.3)
 emitting = false
-amount = 18
-lifetime = 1.6
+amount = 14
+lifetime = 1.4
 one_shot = true
 explosiveness = 0.9
 mesh = SubResource("dust_quad")
 emission_shape = 3
-emission_box_extents = Vector3(1.4, 0.1, 0.5)
+emission_box_extents = Vector3(1.4, 0.05, 0.15)
 direction = Vector3(0, 1, 0.4)
 spread = 40.0
 gravity = Vector3(0.6, 0.2, 0.6)
-initial_velocity_min = 0.4
-initial_velocity_max = 1.2
-scale_amount_min = 0.8
-scale_amount_max = 1.6
+initial_velocity_min = 0.2
+initial_velocity_max = 0.6
+scale_amount_min = 0.5
+scale_amount_max = 1.0
 scale_amount_curve = SubResource("dust_scale")
 color_ramp = SubResource("dust_ramp")
+
+[node name="ImpactDust" type="CPUParticles3D" parent="."]
+emitting = false
+amount = 40
+lifetime = 3.0
+one_shot = true
+explosiveness = 0.95
+mesh = SubResource("cloud_quad")
+emission_shape = 3
+emission_box_extents = Vector3(1.5, 0.05, 0.95)
+direction = Vector3(0, 0.35, 1)
+spread = 75.0
+gravity = Vector3(0.5, 0.15, 0.5)
+initial_velocity_min = 0.8
+initial_velocity_max = 2.2
+damping_min = 1.2
+damping_max = 2.0
+scale_amount_min = 0.7
+scale_amount_max = 1.7
+scale_amount_curve = SubResource("dust_scale")
+color_ramp = SubResource("dust_ramp")
+
+[node name="Puff" type="CPUParticles3D" parent="."]
+emitting = false
+amount = 10
+lifetime = 1.4
+one_shot = true
+explosiveness = 0.95
+mesh = SubResource("dust_quad")
+emission_shape = 3
+emission_box_extents = Vector3(0.6, 0.04, 0.4)
+direction = Vector3(0, 1, 0)
+spread = 70.0
+gravity = Vector3(0.5, 0.15, 0.5)
+initial_velocity_min = 0.3
+initial_velocity_max = 0.9
+damping_min = 1.0
+damping_max = 1.5
+scale_amount_min = 0.5
+scale_amount_max = 1.0
+scale_amount_curve = SubResource("dust_scale")
+color_ramp = SubResource("dust_ramp")
+
+[node name="Sparks" type="CPUParticles3D" parent="."]
+emitting = false
+amount = 28
+lifetime = 0.6
+one_shot = true
+explosiveness = 1.0
+mesh = SubResource("spark_quad")
+emission_shape = 1
+emission_sphere_radius = 0.05
+direction = Vector3(0, 1, 0.3)
+spread = 70.0
+gravity = Vector3(0, -9.8, 0)
+initial_velocity_min = 1.5
+initial_velocity_max = 4.2
+scale_amount_min = 0.6
+scale_amount_max = 1.4
+scale_amount_curve = SubResource("spark_scale")
+color_ramp = SubResource("spark_ramp")
+
+[node name="Snip" type="CPUParticles3D" parent="."]
+emitting = false
+amount = 8
+lifetime = 0.3
+one_shot = true
+explosiveness = 1.0
+mesh = SubResource("spark_quad")
+emission_shape = 1
+emission_sphere_radius = 0.02
+direction = Vector3(0, 0.5, 1)
+spread = 60.0
+gravity = Vector3(0, -6, 0)
+initial_velocity_min = 0.6
+initial_velocity_max = 1.6
+scale_amount_min = 0.4
+scale_amount_max = 0.8
+scale_amount_curve = SubResource("spark_scale")
+color_ramp = SubResource("spark_ramp")

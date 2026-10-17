@@ -62,8 +62,14 @@ func _run() -> void:
 	s.time_scale = 0.0
 	vp.add_child(s)
 	await process_frame
+	# a pad's drifting stick would turn or walk the view during a shot's wait: shots ignore stick axes
+	for action in InputMap.get_actions():
+		if String(action).begins_with("fire_"):
+			for ev in InputMap.action_get_events(action):
+				if ev is InputEventJoypadMotion:
+					InputMap.action_erase_event(action, ev)
 	var props: Node3D = s.get_node("Props")
-	var knife: Node3D = props.get_node("Knife")
+	var cutters: Node3D = props.get_node("Cutters")
 	var fence: Node3D = props.get_node("FenceCut")
 	var valve: Node3D = props.get_node("Valve")
 	var hose: Node3D = props.get_node("Hose")
@@ -75,6 +81,7 @@ func _run() -> void:
 	s.advance(s.skin.overview_seconds * 0.75)
 	await _shot("swoop")
 	s.skip_overview()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE  # a free mouse does not steer the view (a real mouse may be moving)
 	s.advance(1.5)
 	await _shot("start")
 	s.look(PI * 0.5, 0.0)
@@ -82,20 +89,31 @@ func _run() -> void:
 	s.look(PI, 0.0)
 	await _shot("start_right")
 
-	# task A: the knife by the pen, the fence, the kangaroos
+	# task A: the wire cutters by the pen, the fence, the kangaroos
 	var n := _front(fence)
-	_stand(knife.global_position + n * 1.3 + _side(fence) * 0.4, knife.global_position)
+	_stand(cutters.global_position + n * 1.3 + _side(fence) * 0.4, cutters.global_position)
 	s.look(0.0, 0.25)
 	s.advance(2.0)
-	await _shot("knife")
-	s.call("_act", &"knife")
+	await _shot("cutters")
+	s.call("_act", &"cutters")
 	_stand(fence.global_position + n * 2.2, fence.global_position + Vector3(0, 1.0, 0))
 	s.advance(0.5)
 	await _shot("fence")
+	# holding the cutters on it: the ties go one by one
+	s.interact_press()
+	for i in 11:
+		s.advance(0.05)
+	await _shot("snip")
+	s.interact_release()
 	s.logic.cut_fence()
 	s.call("_on_fence_cut")
-	s.advance(0.6)
+	_stand(fence.global_position + n * 4.2 + _side(fence) * 2.4, fence.global_position + Vector3(0, 0.5, 0) + n * 0.8)
+	s.advance(0.7)
 	await _shot("cut")
+	s.advance(0.62)
+	await _shot("slam")
+	s.advance(1.2)
+	await _shot("panel_down")
 	_stand(fence.global_position + n * 5.0 + _side(fence) * 3.0, fence.global_position + Vector3(0, 1.0, 0) + n * 2.0)
 	s.advance(0.7)
 	await _shot("roos")
@@ -139,6 +157,33 @@ func _run() -> void:
 	s.seek(84.0)
 	_stand(gate.global_position + Vector3(0, 0, -4.5), gate.global_position + Vector3(0, 0.8, 0))
 	await _shot("smoke84")
+
+	# out of the gate: the ending shot
+	s.place_player(gate.global_position + Vector3(0, 0, 1.5))
+	s.aim_at(gate.global_position + Vector3(0.3, 1.2, 12.0))
+	s.advance(0.05)
+	for t in [0.5, 1.5, 2.6, 3.8, 5.2, 7.2]:
+		s.advance(t - float(s.get("_end_t")))
+		await _shot("end_%s" % str(t).replace(".", "_"))
+	s.queue_free()
+	await process_frame
+
+	# out of time: the dark ending
+	s = (load(SCENE) as PackedScene).instantiate()
+	s.submit = false
+	s.time_scale = 0.0
+	vp.add_child(s)
+	await process_frame
+	s.skip_overview()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	s.logic.pick_cutters()
+	s.call("_act", &"fence")
+	s.seek(89.9)
+	_stand(Vector3(2.0, 0, 3.0), Vector3(-9.0, 2.0, -6.0))
+	s.seek(90.0)
+	for t in [0.6, 1.8, 3.2, 4.6, 6.4]:
+		s.advance(t - float(s.get("_end_t")))
+		await _shot("lose_%s" % str(t).replace(".", "_"))
 	print("fire_shots done")
 	quit(0)
 

@@ -8,7 +8,10 @@ extends Resource
 ## of that name) for "taken", "cut", "held", "attached", "down" (hose put back), "open", "out", "free"
 ## (kangaroo let out); the valve's `set_turn(0..1)`; the flame's `set_strength(0..1)`; the kangaroo's
 ## `set_hop(0..1)` (0 = on the ground); the farm's `set_smoke(0..1)` (the smoke clock; a farm model that
-## has it brings its own fire front, so the placeholder ring of flames is not built). Without them the
+## has it brings its own fire front, so the placeholder ring of flames is not built) and `set_engulf(0..1, dark)`
+## (the ending shot: the fire takes the whole farm; dark = time ran out); the fence's `set_cut(0..1)` (hold
+## progress), `tick(dt)` (game time, for its fall) and signals `snipped(index)` / `impact(strength)`; the hand
+## cutters' `set_snip(0..1)` (0 open, 1 closed); the farmer's `set_run(phase)` / `set_pose(&"crouch")`. Without them the
 ## scene animates the placeholder way. The art set: scenes/minigames/fire/art/ (the farm of
 ## scenes/art_pilot/fire_farm.tscn, models from tools/models/fire/).
 
@@ -82,7 +85,8 @@ extends Resource
 @export_group("Models")
 ## Yard, house, shed, hay, fences and scrub (replaces Farm/Model; the colliders stay).
 @export var farm_model: PackedScene
-@export var knife_model: PackedScene
+## The wire cutters lying on the chopping block (state "taken" when picked up).
+@export var cutters_model: PackedScene
 ## The cuttable fence section (state "cut" when it falls).
 @export var fence_model: PackedScene
 ## The broken exit gate (state "open" when the exit marker shows).
@@ -97,6 +101,14 @@ extends Resource
 @export var marker_model: PackedScene
 ## An ember spot fire catching in the yard (unset: flame quads); scaled up from nothing as it grows.
 @export var spot_model: PackedScene
-## In-hand models (first person), shown at the bottom right.
-@export var hand_knife_model: PackedScene
+## In-hand models (first person): the wire cutters held in both hands, the hose nozzle at the bottom right.
+@export var hand_cutters_model: PackedScene
 @export var hand_nozzle_model: PackedScene
+## The player as a small figure for the ending shots (runs out along the track, or crouches in the smoke).
+@export var farmer_model: PackedScene
+
+@export_group("Ending")
+## Seconds of the ending shot after getting out (camera rises to the hero view, holds, fades to the result card)
+## and after the time runs out (the darker version).
+@export var escape_seconds := 8.5
+@export var lose_seconds := 7.5

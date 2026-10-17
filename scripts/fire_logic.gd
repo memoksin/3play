@@ -4,14 +4,14 @@ extends RefCounted
 ## No nodes: the scene (scenes/minigames/fire.gd) asks and draws. Every action returns false when it
 ## is not allowed now (nothing changes), true when it happened.
 ##
-## Task A: pick up the knife, cut the fence (the kangaroos get out).
+## Task A: pick up the wire cutters, cut the fence (the kangaroos get out).
 ## Task B: pick up the hose, attach it to the valve, turn the valve, spray the flame on the way out.
 ## Exit: the flame blocks the way to the gate; once it is out the player can jump the debris and leave.
 ## Score: fence cut + flame out + got out in time, of 3.
 
 const TOTAL := 3
 
-var has_knife := false
+var has_cutters := false
 var fence_cut := false
 var hose_held := false
 var hose_attached := false
@@ -24,15 +24,15 @@ var escaped := false
 var over := false
 
 
-func pick_knife() -> bool:
-	if over or has_knife or fence_cut:
+func pick_cutters() -> bool:
+	if over or has_cutters or fence_cut:
 		return false
-	has_knife = true
+	has_cutters = true
 	return true
 
 
 func cut_fence() -> bool:
-	if over or fence_cut or not has_knife:
+	if over or fence_cut or not has_cutters:
 		return false
 	fence_cut = true
 	return true
@@ -113,28 +113,28 @@ func score() -> int:
 
 
 ## The prop the player should go to now (the hint and the on-screen pointer follow it):
-## &"knife", &"fence", &"hose", &"valve", &"flame", &"gate", or &"" when it is over.
+## &"cutters", &"fence", &"hose", &"valve", &"flame", &"gate", or &"" when it is over.
 ## Task A comes first, unless the player has started task B (holds the hose).
 func focus() -> StringName:
 	if over:
 		return &""
 	var on_b := (hose_held or hose_attached) and not flame_out
 	if not fence_cut and not on_b:
-		return &"fence" if has_knife else &"knife"
+		return &"fence" if has_cutters else &"cutters"
 	if not flame_out:
 		if not hose_held and not hose_attached:
 			return &"hose"
 		if not hose_attached:
 			return &"valve"
 		return &"flame" if valve_open else &"valve"
-	return &"gate" if fence_cut else (&"fence" if has_knife else &"knife")
+	return &"gate" if fence_cut else (&"fence" if has_cutters else &"cutters")
 
 
 ## tr() key of the hint for the current focus ("" when over).
 func hint_key() -> String:
 	match focus():
-		&"knife":
-			return "FIRE_HINT_KNIFE"
+		&"cutters":
+			return "FIRE_HINT_CUTTERS"
 		&"fence":
 			return "FIRE_HINT_FENCE"
 		&"hose":

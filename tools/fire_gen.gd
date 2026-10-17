@@ -28,7 +28,7 @@ const WALL_H := 2.4
 ## Prop places (Godot x, y, z), shared with tests through the scene only.
 const START := Vector3(-1.2, 0, 7.4)
 const START_YAW := 72.0
-const KNIFE := Vector3(-5.4, 0.52, 4.4)
+const CUTTERS := Vector3(-5.4, 0.52, 4.4)
 const FENCE_CUT := Vector3(-7.5, 0, 7.5)
 const VALVE := Vector3(10.6, 0, 7.6)
 const HOSE := Vector3(10.0, 0, 5.6)
@@ -370,11 +370,11 @@ func _farm() -> void:
 		_cyl_shape(body, "MillLeg%d" % i, 0.22, WALL_H, Vector3(1, WALL_H / 2.0, -10.6) + c)
 	_cyl(mill, "Trough", 1.05, 0.55, Vector3(0, 0.275, 2.2), "9d9a94")
 	_cyl_shape(body, "Trough", 1.05, 0.55, Vector3(1, 0.275, -8.4))
-	# the yard gum and the chopping block the knife lies on, by the pen
+	# the yard gum and the chopping block the wire cutters lie on, by the pen
 	_gum_tree(m, "YardGum", Vector3(-2.2, 0, -5), 12.0)
 	_cyl_shape(body, "YardGum", 0.5, WALL_H, Vector3(-2.2, WALL_H / 2.0, -5))
-	_cyl(m, "ChopBlock", 0.3, KNIFE.y, Vector3(KNIFE.x, KNIFE.y / 2.0, KNIFE.z), "5b4f43")
-	_cyl_shape(body, "ChopBlock", 0.32, KNIFE.y, Vector3(KNIFE.x, KNIFE.y / 2.0, KNIFE.z))
+	_cyl(m, "ChopBlock", 0.3, CUTTERS.y, Vector3(CUTTERS.x, CUTTERS.y / 2.0, CUTTERS.z), "5b4f43")
+	_cyl_shape(body, "ChopBlock", 0.32, CUTTERS.y, Vector3(CUTTERS.x, CUTTERS.y / 2.0, CUTTERS.z))
 
 	# outside: gums around the slab, the burnt ones to the north-west where the fire comes from
 	var bush := _node(m, "Bush")
@@ -392,11 +392,12 @@ func _farm() -> void:
 func _props() -> void:
 	var props := _node(root_node, "Props")
 
-	# knife lying on the chopping block next to the pen
-	var knife := _node(props, "Knife", KNIFE, Vector3(0, 35, 0))
-	var km := _node(knife, "Model")
-	_box(km, "Blade", Vector3(0.07, 0.025, 0.34), Vector3(0, 0.03, -0.15), "ffffff")
-	_box(km, "Handle", Vector3(0.08, 0.05, 0.18), Vector3(0, 0.035, 0.11), "d8692a")
+	# wire cutters lying across the chopping block next to the pen
+	var cutters := _node(props, "Cutters", CUTTERS, Vector3(0, 35, 0))
+	var km := _node(cutters, "Model")
+	_box(km, "Head", Vector3(0.09, 0.04, 0.16), Vector3(0, 0.025, -0.3), "8d959e")
+	for sx in [-1.0, 1.0]:
+		_box(km, "Arm%s" % ("L" if sx < 0 else "R"), Vector3(0.03, 0.03, 0.6), Vector3(sx * 0.04, 0.02, 0.08), "b52a22", Vector3(0, sx * 4.0, 0))
 
 	# the cuttable section of the pen's east wall (yard side +Z = world +X): opens the pen to the yard
 	var fence := _node(props, "FenceCut", FENCE_CUT, Vector3(0, 90, 0))
@@ -496,6 +497,15 @@ func _props() -> void:
 	var db := _body(debris)
 	_shape(db, "Shape", Vector3(2.9, 0.75, 1.4), Vector3(0, 0.375, -0.7))
 	_own(_marker("Top", Vector3(0, 0.75, -0.7)), debris)
+
+	# the player as a small figure, only for the ending shot (fire.gd shows it where the player is)
+	var farmer := _node(props, "Farmer", START)
+	farmer.visible = false
+	var fmm := _node(farmer, "Model")
+	_box(fmm, "Legs", Vector3(0.3, 0.85, 0.22), Vector3(0, 0.43, 0), "8f7d5c")
+	_box(fmm, "Shirt", Vector3(0.46, 0.6, 0.3), Vector3(0, 1.15, 0), "4a6383")
+	_ball(fmm, "Head", 0.14, Vector3(0, 1.6, 0), "c48d6c")
+	_cyl(fmm, "Hat", 0.25, 0.04, Vector3(0, 1.72, 0), "6e5038")
 
 	# kangaroos in the pen
 	var roos := _node(props, "Kangaroos")
@@ -622,10 +632,11 @@ func _player() -> void:
 	cam.far = 300.0
 	_own(cam, head)
 	var hand := _node(cam, "Hand", Vector3(0.3, -0.27, -0.5))
-	var hk := _node(hand, "Knife")
-	var hkm := _node(hk, "Model", Vector3.ZERO, Vector3(-10, -12, 0))
-	_box(hkm, "Blade", Vector3(0.025, 0.05, 0.22), Vector3(0, 0, -0.14), "c7dcd0")
-	_box(hkm, "Handle", Vector3(0.04, 0.05, 0.12), Vector3(0, 0, 0.03), "d8692a")
+	var hk := _node(hand, "Cutters")
+	var hkm := _node(hk, "Model", Vector3(-0.3, -0.02, -0.42), Vector3(-10, 0, 0))
+	_box(hkm, "Head", Vector3(0.08, 0.03, 0.14), Vector3(0, 0, -0.5), "8d959e")
+	for sx in [-1.0, 1.0]:
+		_box(hkm, "Arm%s" % ("L" if sx < 0 else "R"), Vector3(0.03, 0.03, 0.55), Vector3(sx * 0.06, 0, -0.15), "b52a22", Vector3(0, -sx * 6.0, 0))
 	var hn := _node(hand, "Nozzle")
 	var hnm := _node(hn, "Model", Vector3.ZERO, Vector3(0, -6, 0))
 	_cyl(hnm, "Grip", 0.035, 0.18, Vector3(0, -0.05, 0.03), "239063", Vector3(15, 0, 0))

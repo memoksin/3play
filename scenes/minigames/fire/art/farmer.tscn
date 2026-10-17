@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/minigames/fire/art/farmer.gd" id="1_fm"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/farmer_run_0.glb" id="2_fm"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/farmer_run_1.glb" id="3_fm"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/farmer_run_2.glb" id="4_fm"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/farmer_run_3.glb" id="5_fm"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/farmer_crouch.glb" id="6_fm"]
+
+[node name="Farmer" type="Node3D"]
+script = ExtResource("1_fm")
+
+[node name="Run0" parent="." instance=ExtResource("2_fm")]
+
+[node name="Run1" parent="." instance=ExtResource("3_fm")]
+
+[node name="Run2" parent="." instance=ExtResource("4_fm")]
+
+[node name="Run3" parent="." instance=ExtResource("5_fm")]
+
+[node name="Crouch" parent="." instance=ExtResource("6_fm")]
+
+[node name="Rim" type="OmniLight3D" parent="."]
+position = Vector3(0, 2.4, 0.9)
+light_color = Color(0.78, 0.86, 1, 1)
+light_energy = 3.0
+omni_range = 4.0
+omni_attenuation = 1.4
+shadow_enabled = false

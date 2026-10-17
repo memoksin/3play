@@ -3,18 +3,22 @@ extends Node3D
 ## Saturday bushfire comes. Rules live in FireLogic, data in Game.disaster.skin (FireSkin); the scene is
 ## built by tools/fire_gen.gd with placeholder art (every prop's `Model` child is swappable, see FireSkin).
 ##
-## Flow: a few seconds of overview from above, then first person. Cut the fence (knife), put out the flame
+## Flow: a few seconds of overview from above, then first person. Cut the fence (wire cutters), put out the flame
 ## on the way out (hose, valve), jump the debris in the broken gate. 90 s; the smoke follows the clock.
-## Ends with Game.finish_minigame(score, 3, {fence, flame, escaped, time}).
+## Out of the gate (or out of time) an ending shot plays (skin.escape_seconds / lose_seconds): the camera leaves the
+## head, rises and pulls back to the 2.5D style's hero view of the floating farm slab while the fire takes the farm;
+## the player is a small figure running down the track (or crouched in the smoke, darker), a held moment, then a fade
+## into the result card's colour. Ends with Game.finish_minigame(score, 3, {fence, flame, escaped, time}).
 ##
 ## Time runs in game seconds (real time * time_scale) in advance(); tests drive it with advance()/seek(),
 ## aim with aim_at() and act with interact_press()/interact_release(). Walking and jumping run in
 ## _physics_process from the fire_* input actions (registered at start-up, see ACTIONS).
 
 signal finished(saved: int, total: int)
-## Audio hooks (docs/audio.md, scripts/audio.gd). sound_event kinds: footstep, jump, land, knife, cut,
-## kangaroo (index = kangaroo), success (index 0 = fence, 1 = flame), hose, attach, valve, water_on,
-## water_off, flame_out, heartbeat, gust, exit, lose.
+## Audio hooks (docs/audio.md, scripts/audio.gd). sound_event kinds: footstep, jump, land, cutters (picked up),
+## snip (a tie cut, index = tie), cut, panel_land (index 0 = the slam, 1 = the little hop after it), kangaroo
+## (index = kangaroo), success (index 0 = fence, 1 = flame), hose, attach, valve, water_on, water_off, flame_out,
+## heartbeat, gust, exit (the ending shot starts), lose (the dark ending starts).
 signal sound_event(kind: StringName, index: int)
 
 enum Phase { OVERVIEW, PLAY, END }
@@ -52,8 +56,27 @@ const TAP_BUFFER := 0.2
 const BANNER_DUR := 2.4
 ## Controls line: shown in the overview and the first seconds of play.
 const CONTROLS_DUR := 12.0
-const END_ESCAPE := 1.4
-const END_LOSE := 2.6
+## Ending shot: the 2.5D hero view it ends on (docs/art/style-2.5d.md: pitch -40, yaw -22, FOV 26, the whole slab
+## and void around it; the art pilot's Camera), the rise from first person (start, end in seconds) for the escape and
+## the lose versions, the fade into the result card at the end, and when a key may cut it short.
+## It looks at HERO_TARGET from HERO_DIST: the whole slab with void around it, a little closer than the art pilot's
+## framing and centred a little south-east, so the runner on the track still reads.
+const HERO_ROT := Vector3(-40.0, -22.0, 0.0)
+const HERO_TARGET := Vector3(2.0, 0.0, 4.5)
+const HERO_DIST := 98.0
+const HERO_FOV := 26.0
+const RISE_ESCAPE := Vector2(0.15, 5.0)
+const RISE_LOSE := Vector2(1.1, 5.6)
+const END_FADE := 1.3
+const END_SKIP_AFTER := 1.0
+## Out of the gate the figure runs down the track to the slab's south edge (the way the kangaroos went), slowing
+## into a held stride: the point it runs to, the time constant of the slow-down (s), metres per run pose.
+const RUN_TO := Vector3(6.3, 0.0, 17.1)
+const RUN_TAU := 1.7
+const STRIDE := 0.55
+## Air in the ending shot: fog density and screen smoke at the hero view (escape, lose).
+const END_FOG := Vector2(0.0042, 0.0105)
+const END_SMOKE := Vector2(0.1, 0.42)
 ## The overview hands over to first person in the last share of its time.
 const SWOOP := 0.42
 ## Last seconds: the heart beats (faster and faster), the edges flush red, the view breathes.
@@ -77,6 +100,8 @@ const BIG_HOP_H := 2.3
 ## away from the fire in the north-west), clear it in one big hop and bound off the slab's south edge.
 const ROO_FENCE := Vector2(-2.6, 12.0)
 const ROO_AWAY := Vector2(-0.4, 19.6)
+## The kangaroos wait in the pen until the cut panel is down (it falls into the yard in ~1.3 s).
+const ROO_DELAY := 1.4
 const HOSE_SEGMENTS := 28
 const HOSE_RADIUS := 0.024
 ## The water jet from the nozzle: a ballistic arc (m/s, segments), thin at the nozzle, spreading out.
@@ -164,19 +189,34 @@ var _hand_rest := Vector3.ZERO
 var _hand_lag := Vector2.ZERO
 var _hand_yaw := 0.0
 var _hand_pitch := 0.0
+## Game time that runs in play and in the ending (the kangaroos and the fence keep moving in the ending shot).
+var _world_t := 0.0
+## Hold progress on the fence (0..1) and the cutters' jaw closure.
+var _cut_k := 0.0
+var _snip_v := 0.0
+var _end_cam_from := Transform3D.IDENTITY
+var _end_fov_from := 75.0
+var _end_feet := Vector3.ZERO
+var _end_run_dir := Vector3.BACK
+var _end_run_len := 4.0
+var _end_fog_from := 0.0
+var _end_smoke_from := 0.0
+## The ending shot now: camera rise 0..1 (first person .. hero view) and how far the fire has taken the farm.
+var _end_e := 0.0
+var _end_engulf := 0.0
 
 @onready var _env: Environment = ($Env as WorldEnvironment).environment
 @onready var _sun: DirectionalLight3D = $Sun
 @onready var _player: CharacterBody3D = $Player
 @onready var _head: Node3D = $Player/Head
 @onready var _camera: Camera3D = $Player/Head/Camera
-@onready var _hand_knife: Node3D = $Player/Head/Camera/Hand/Knife
+@onready var _hand_cutters: Node3D = $Player/Head/Camera/Hand/Cutters
 @onready var _hand_nozzle: Node3D = $Player/Head/Camera/Hand/Nozzle
 @onready var _water: CPUParticles3D = $Player/Head/Camera/Hand/Nozzle/Water
 @onready var _embers: CPUParticles3D = $Player/Embers
 @onready var _puffs: CPUParticles3D = $Player/Puffs
 @onready var _overview: Camera3D = $Overview
-@onready var _knife: Node3D = $Props/Knife
+@onready var _cutters: Node3D = $Props/Cutters
 @onready var _fence: Node3D = $Props/FenceCut
 @onready var _valve: Node3D = $Props/Valve
 @onready var _hose: Node3D = $Props/Hose
@@ -199,6 +239,7 @@ var _hand_pitch := 0.0
 @onready var _banner: PanelContainer = $Hud/Banner
 @onready var _controls: Label = $Hud/Controls
 @onready var _hand: Node3D = $Player/Head/Camera/Hand
+@onready var _farmer: Node3D = $Props/Farmer
 @onready var _post := ($Post/Grade as ColorRect).material as ShaderMaterial
 @onready var _haze := ($Haze/Shimmer as ColorRect).material as ShaderMaterial
 
@@ -239,7 +280,13 @@ func _ready() -> void:
 	for m in [_marker_a, _marker_b, _marker_exit]:
 		_collect_marker_mats(m)
 	_marker_exit.visible = false
-	_hand_knife.visible = false
+	_farmer.visible = false
+	var fm := _fence.get_node_or_null("Model")
+	if fm and fm.has_signal(&"snipped"):
+		fm.connect(&"snipped", func(i: int) -> void: sound_event.emit(&"snip", i))
+	if fm and fm.has_signal(&"impact"):
+		fm.connect(&"impact", func(k: float) -> void: sound_event.emit(&"panel_land", 0 if k > 0.4 else 1))
+	_hand_cutters.visible = false
 	_hand_nozzle.visible = false
 	_hose_line.visible = false
 	_overview.current = true
@@ -304,10 +351,10 @@ static func _event(code: Variant) -> InputEvent:
 ## Puts the skin's models in place of the placeholders (each prop's `Model` child).
 func _swap_models() -> void:
 	var map := {
-		"Farm": skin.farm_model, "Props/Knife": skin.knife_model, "Props/FenceCut": skin.fence_model,
+		"Farm": skin.farm_model, "Props/Cutters": skin.cutters_model, "Props/FenceCut": skin.fence_model,
 		"Props/Gate": skin.gate_model, "Props/Debris": skin.debris_model, "Props/Valve": skin.valve_model,
-		"Props/Hose": skin.hose_model, "Props/Flame": skin.flame_model,
-		"Player/Head/Camera/Hand/Knife": skin.hand_knife_model, "Player/Head/Camera/Hand/Nozzle": skin.hand_nozzle_model,
+		"Props/Hose": skin.hose_model, "Props/Flame": skin.flame_model, "Props/Farmer": skin.farmer_model,
+		"Player/Head/Camera/Hand/Cutters": skin.hand_cutters_model, "Player/Head/Camera/Hand/Nozzle": skin.hand_nozzle_model,
 	}
 	for m in $Markers.get_children():
 		map["Markers/" + m.name] = skin.marker_model
@@ -560,6 +607,7 @@ func advance(dt: float) -> void:
 			else:
 				_pose_overview(_intro_t)
 		Phase.PLAY:
+			_world_t += dt
 			elapsed = minf(elapsed + dt, skin.timer_seconds)
 			if elapsed > skin.timer_seconds - 1e-4:
 				elapsed = skin.timer_seconds  # summed steps land a hair short of the end
@@ -568,7 +616,9 @@ func advance(dt: float) -> void:
 			if phase == Phase.PLAY and elapsed >= skin.timer_seconds:
 				_end(false)
 		Phase.END:
-			_end_t += dt
+			_world_t += dt
+			_end_t = minf(_end_t + dt, _end_dur)
+			_pose_ending()
 			if _end_t >= _end_dur:
 				_finish()
 	_update_roos()
@@ -616,7 +666,7 @@ func mouse_caught() -> bool:
 
 
 func _headless() -> bool:
-	return DisplayServer.get_name() == "headless"
+	return DisplayServer.get_name() == "headless" or OS.get_environment("PF_OFFSCREEN") == "1"
 
 
 func _end(escaped: bool) -> void:
@@ -624,15 +674,36 @@ func _end(escaped: bool) -> void:
 	_end_t = 0.0
 	_set_spray(false)
 	_prompt.visible = false
+	_hand_cutters.visible = false
+	_hand_nozzle.visible = false
+	_hose_line.visible = false
+	_end_cam_from = _camera.global_transform
+	_end_fov_from = _camera.fov
+	_end_fog_from = _env.fog_density
+	_end_smoke_from = smoke * 0.92
+	var feet := _player.global_position
+	_end_feet = Vector3(feet.x, 0.0, feet.z)
+	var fm := _farmer.get_node_or_null("Model")
 	if escaped:
 		logic.escape()
-		_end_dur = END_ESCAPE
+		_end_dur = skin.escape_seconds
+		var to := RUN_TO - _end_feet
+		to.y = 0.0
+		_end_run_len = maxf(to.length() - 0.6, 0.5)
+		_end_run_dir = to.normalized() if to.length() > 0.01 else Vector3.BACK
+		_farmer.rotation = Vector3(0.0, atan2(_end_run_dir.x, _end_run_dir.z), 0.0)
 		sound_event.emit(&"exit", 0)
 	else:
 		logic.time_up()
-		_end_dur = END_LOSE
+		_end_dur = skin.lose_seconds
+		_farmer.rotation = Vector3(0.0, _yaw + PI, 0.0)
+		if fm and fm.has_method(&"set_pose"):
+			fm.call(&"set_pose", &"crouch")
 		_show_banner(skin.lose_key)
 		sound_event.emit(&"lose", 0)
+	_farmer.global_position = _end_feet
+	_overview.current = true
+	_pose_ending()
 
 
 func _finish() -> void:
@@ -665,6 +736,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			_suppress_interact = true
 			_no_jump_until = Engine.get_physics_frames() + 2
 			skip_overview()
+		return
+	if phase == Phase.END:
+		var skip_end: bool = event.is_action_pressed(&"fire_interact") or event.is_action_pressed(&"fire_jump") \
+				or event.is_action_pressed(&"ui_accept")
+		if skip_end and _end_t >= END_SKIP_AFTER:
+			get_viewport().set_input_as_handled()
+			skip_ending()
 		return
 	if phase != Phase.PLAY:
 		return
@@ -842,7 +920,7 @@ func _overview_home() -> Transform3D:
 
 ## Head bob, landing dip, run FOV, gusts and the last seconds' breathing.
 func _pose_camera(delta: float) -> void:
-	if phase == Phase.OVERVIEW:
+	if phase != Phase.PLAY:
 		return
 	var hs := Vector2(_player.velocity.x, _player.velocity.z).length()
 	var k := clampf(hs / skin.walk_speed, 0.0, 1.3) if _player.is_on_floor() else 0.0
@@ -879,13 +957,13 @@ func _gust() -> float:
 func _candidates() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var L := logic
-	if not L.has_knife and not L.fence_cut:
-		out.append({"id": &"knife", "pos": _knife.global_position + Vector3(0, 0.06, 0), "r": 0.35,
-				"kind": &"tap", "key": "FIRE_USE_KNIFE", "body": null})
+	if not L.has_cutters and not L.fence_cut:
+		out.append({"id": &"cutters", "pos": _cutters.global_position + Vector3(0, 0.06, 0), "r": 0.4,
+				"kind": &"tap", "key": "FIRE_USE_CUTTERS", "body": null})
 	if not L.fence_cut:
-		var fence_kind := &"hold" if L.has_knife else &"info"
+		var fence_kind := &"hold" if L.has_cutters else &"info"
 		out.append({"id": &"fence", "pos": _fence.global_position + Vector3(0, 0.9, 0), "r": 1.4,
-				"kind": fence_kind, "key": "FIRE_USE_FENCE" if L.has_knife else "FIRE_NEED_KNIFE",
+				"kind": fence_kind, "key": "FIRE_USE_FENCE" if L.has_cutters else "FIRE_NEED_CUTTERS",
 				"secs": skin.cut_seconds, "body": _fence.get_node_or_null("Body")})
 	if not L.hose_held and not L.hose_attached:
 		out.append({"id": &"hose", "pos": _hose.global_position + Vector3(0, 0.15, 0), "r": 0.5,
@@ -962,8 +1040,15 @@ func _update_interact(dt: float) -> void:
 	_set_spray(spraying)
 	if t.is_empty():
 		_hold = 0.0
+		_cut_k = 0.0
 		logic.regrow(skin.regrow_rate * dt)
 		return
+	var cutting: bool = t.get("id", &"") == &"fence" and t.get("kind", &"") == &"hold" and down
+	if cutting:
+		_cut_k = clampf((_hold + dt) / float(t.secs), 0.0, 1.0)
+		_model_call(_fence, &"set_cut", _cut_k)
+	elif t.get("id", &"") != &"fence":
+		_cut_k = 0.0
 	match t.kind:
 		&"tap":
 			if pressed:
@@ -990,12 +1075,12 @@ func _update_interact(dt: float) -> void:
 
 func _act(id: StringName) -> void:
 	match id:
-		&"knife":
-			if logic.pick_knife():
-				if not _model_state(_knife, &"taken"):
-					_knife.visible = false
-				_hand_knife.visible = true
-				sound_event.emit(&"knife", 0)
+		&"cutters":
+			if logic.pick_cutters():
+				if not _model_state(_cutters, &"taken"):
+					_cutters.visible = false
+				_hand_cutters.visible = true
+				sound_event.emit(&"cutters", 0)
 		&"fence":
 			if logic.cut_fence():
 				_on_fence_cut()
@@ -1003,7 +1088,7 @@ func _act(id: StringName) -> void:
 			if logic.pick_hose():
 				if not _model_state(_hose, &"held"):
 					_hose.visible = false
-				_hand_knife.visible = false
+				_hand_cutters.visible = false
 				_hand_nozzle.visible = true
 				sound_event.emit(&"hose", 0)
 		&"valve":
@@ -1024,7 +1109,7 @@ func _act(id: StringName) -> void:
 
 
 func _on_fence_cut() -> void:
-	_hand_knife.visible = false
+	_hand_cutters.visible = false
 	_marker_a.visible = false
 	_disable_body(_fence)
 	if not _model_state(_fence, &"cut"):
@@ -1032,7 +1117,8 @@ func _on_fence_cut() -> void:
 		if m:
 			create_tween().tween_property(m, "rotation:x", deg_to_rad(-84.0), 0.45) \
 					.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	_released_at = elapsed
+	_released_at = _world_t + ROO_DELAY
+	_cut_k = 0.0
 	_plan_roo_escape()
 	_show_banner(skin.fence_done_key)
 	sound_event.emit(&"cut", 0)
@@ -1096,6 +1182,103 @@ func _check_exit() -> void:
 		_end(true)
 
 
+# --- ending shot ------------------------------------------------------------------
+
+## The camera of the ending shot's last frames (the style's hero angle on the slab).
+func hero_transform() -> Transform3D:
+	var b := Basis.from_euler(HERO_ROT * (PI / 180.0))
+	return Transform3D(b, HERO_TARGET + b.z * HERO_DIST)
+
+
+## Cuts the ending shot short (a key after END_SKIP_AFTER): straight to its fade.
+func skip_ending() -> void:
+	if phase == Phase.END and _end_t < _end_dur - END_FADE:
+		_end_t = _end_dur - END_FADE
+		_pose_ending()
+
+
+## The ending at _end_t: the camera leaves the head, rises over the player and pulls back along a curve into the
+## hero view (looking at the figure on the way, then at the slab); the figure runs down the track (or crouches);
+## the fire takes the farm; the kangaroos still in the pen go under it.
+func _pose_ending() -> void:
+	var t := _end_t
+	var esc := logic.escaped
+	var rise := RISE_ESCAPE if esc else RISE_LOSE
+	var k := clampf((t - rise.x) / (rise.y - rise.x), 0.0, 1.0)
+	var e := k * k * k * (k * (k * 6.0 - 15.0) + 10.0)
+	_end_e = e
+	var hero := hero_transform()
+	var hero_fwd := -hero.basis.z
+	var hero_pos := hero.origin
+	var hero_target := HERO_TARGET
+	# the figure
+	var fig := _end_feet
+	if esc:
+		var run := _end_run_len * (1.0 - exp(-t / RUN_TAU)) / (1.0 - exp(-_end_dur / RUN_TAU))
+		fig = _end_feet + _end_run_dir * (0.6 + run)
+		var m := _farmer.get_node_or_null("Model")
+		if m and m.has_method(&"set_run"):
+			m.call(&"set_run", run / STRIDE)
+	_farmer.global_position = fig
+	# the camera: a cubic curve from the head, up and back over the player, down the hero view's line
+	var p0 := _end_cam_from.origin
+	var f0 := -_end_cam_from.basis.z
+	var back := Vector3(-f0.x, 0.0, -f0.z).normalized() if Vector2(f0.x, f0.z).length() > 0.05 else Vector3.BACK
+	var p1 := p0 + Vector3(0.0, 7.0, 0.0) + back * 3.0
+	var p2 := hero_pos + hero_fwd * 42.0
+	var u := 1.0 - e
+	var pos := u * u * u * p0 + 3.0 * u * u * e * p1 + 3.0 * u * e * e * p2 + e * e * e * hero_pos
+	var look0 := p0 + f0 * 6.0
+	var tgt := look0.lerp(fig + Vector3(0.0, 0.9, 0.0), smoothstep(0.0, 0.3, e)).lerp(hero_target, smoothstep(0.3, 1.0, e))
+	var dir := tgt - pos
+	if dir.length() > 0.01:
+		_overview.global_transform = Transform3D(Basis.looking_at(dir, Vector3.UP), pos)
+	_overview.fov = lerpf(_end_fov_from, HERO_FOV, smoothstep(0.0, 1.0, e))
+	_overview.near = lerpf(0.05, 1.0, e)
+	# the figure shows once the camera is out of it
+	_farmer.visible = pos.distance_to(fig + Vector3(0.0, 1.2, 0.0)) > 1.6
+	# the fire takes the farm (the escape ends with the front just behind the runner; the lose takes it all)
+	_end_engulf = smoothstep(0.0, 1.0, t / maxf(_end_dur - 0.8, 0.1))
+	var farm := get_node_or_null(^"Farm/Model")
+	if farm and farm.has_method(&"set_engulf"):
+		farm.call(&"set_engulf", _end_engulf, not esc)
+		if farm.has_method(&"engulf_at"):
+			for r in _roos:
+				var rn := r as Node3D
+				if rn.visible and _released_at < 0.0 and float(farm.call(&"engulf_at", rn.global_position)) > 0.65:
+					rn.visible = false
+
+
+## Air, light and image of the ending shot; returns the fade (0..1) into the result card's colour.
+func _ending_look(smoke_col: Color, sm: ShaderMaterial) -> float:
+	var e := _end_e
+	var esc := logic.escaped
+	var fog_to: float = END_FOG.x if esc else END_FOG.y
+	_env.fog_density = exp(lerpf(log(maxf(_end_fog_from, 1e-4)), log(fog_to), e))
+	var dark := Color(0.13, 0.06, 0.04)
+	if not esc:
+		_env.fog_light_color = smoke_col.lerp(dark, 0.55 * e)
+		_sun.light_energy = lerpf(_sun.light_energy, 0.12, e)
+		_env.ambient_light_energy = lerpf(_env.ambient_light_energy, 0.22, e)
+	else:
+		_sun.light_energy = lerpf(_sun.light_energy, skin.sun_energy * 0.8, e)
+		_env.fog_sky_affect = lerpf(_env.fog_sky_affect, 0.75, e)
+	sm.set_shader_parameter(&"smoke", lerpf(_end_smoke_from, END_SMOKE.x if esc else END_SMOKE.y, e))
+	if not esc:
+		sm.set_shader_parameter(&"smoke_color", smoke_col.lerp(dark, 0.5 * e))
+	sm.set_shader_parameter(&"danger", 0.0 if esc else (1.0 - e) * 0.9)
+	if _post:
+		for key: String in POST_FP:
+			_post.set_shader_parameter(key, lerpf(POST_FP[key], POST_OV[key], e))
+		if not esc:
+			_post.set_shader_parameter(&"vignette", lerpf(0.62, 0.9, e))
+	if _haze:
+		_haze.set_shader_parameter(&"strength", lerpf(HAZE_FP, HAZE_OV, e))
+	sm.set_shader_parameter(&"fade_color", Palette.BG)
+	var f := clampf((_end_t - (_end_dur - END_FADE)) / END_FADE, 0.0, 1.0)
+	return f * f * (3.0 - 2.0 * f)
+
+
 # --- kangaroos ------------------------------------------------------------------
 
 ## After the cut, each kangaroo hops to the gap and out through it (the fence's local +Z is the open side),
@@ -1148,9 +1331,10 @@ func _update_roos() -> void:
 	for i in _roos.size():
 		var k := _roos[i] as Node3D
 		var hop := 0.0
-		if _released_at >= 0.0 and i < _roo_hops.size() and not (_roo_hops[i] as Array).is_empty():
+		if _released_at >= 0.0 and _world_t >= _released_at and i < _roo_hops.size() \
+				and not (_roo_hops[i] as Array).is_empty():
 			var hops: Array = _roo_hops[i]
-			var t := elapsed - _released_at
+			var t := _world_t - _released_at
 			var last: Dictionary = hops[hops.size() - 1]
 			if t >= float(last.t) + float(last.dur):
 				k.visible = false  # gone into the bush
@@ -1191,6 +1375,14 @@ func _update_roos() -> void:
 # --- per-frame look ---------------------------------------------------------------
 
 func _update_props(dt: float) -> void:
+	_model_call(_fence, &"tick", dt)
+	# the cutters close on a tie at every snip of the hold (set_cut on the fence snips them in step)
+	var want := 0.0
+	if phase == Phase.PLAY and _target.get("id", &"") == &"fence" and _hold > 0.0 and _cut_k > 0.0:
+		want = 0.5 + 0.5 * cos(TAU * _cut_k * 7.0)
+	_snip_v = lerpf(_snip_v, want, 1.0 - exp(-28.0 * dt))
+	if _hand_cutters.visible:
+		_model_call(_hand_cutters, &"set_snip", _snip_v)
 	var f := logic.flame
 	if not logic.flame_out:
 		if not _model_call(_flame, &"set_strength", f):
@@ -1211,7 +1403,7 @@ func _update_props(dt: float) -> void:
 		_pose_hose_line()
 	# the fire front closes in: far and faint at first, a wall of flame all around at the end
 	var p := clampf(elapsed / skin.timer_seconds, 0.0, 1.0)
-	var r := lerpf(FRONT_FAR, FRONT_NEAR, p * p * (3.0 - 2.0 * p))
+	var r := lerpf(FRONT_FAR, FRONT_NEAR, p * p * (3.0 - 2.0 * p)) * (1.0 - 0.8 * _end_engulf)
 	for i in _front.size():
 		var a := _front_angle[i]
 		var lean := 1.0 - WIND_LEAN * cos(a - WIND_FROM)
@@ -1305,9 +1497,7 @@ func _apply_smoke(_dt: float) -> void:
 	sm.set_shader_parameter(&"pulse", _pulse())
 	var fade := 0.0
 	if phase == Phase.END:
-		var e := clampf(_end_t / _end_dur, 0.0, 1.0)
-		fade = e * e
-		sm.set_shader_parameter(&"fade_color", Color.BLACK if logic.escaped else smoke_col * 0.5)
+		fade = _ending_look(smoke_col, sm)
 	sm.set_shader_parameter(&"fade", fade)
 
 
@@ -1359,12 +1549,16 @@ func _update_hud(dt: float) -> void:
 		_banner_t += dt
 		var a := clampf(minf(_banner_t / 0.2, (BANNER_DUR - _banner_t) / 0.4), 0.0, 1.0)
 		_banner.modulate.a = a
-		_banner.visible = _banner_t < BANNER_DUR or phase == Phase.END
-		if phase == Phase.END:
-			_banner.modulate.a = 1.0
+		var lose_end := phase == Phase.END and not logic.escaped
+		_banner.visible = (_banner_t < BANNER_DUR and phase != Phase.END) or lose_end
+		if lose_end:
+			_banner.modulate.a = clampf((_end_dur - END_FADE * 0.6 - _end_t) / 0.5, 0.0, 1.0)
 	_place_banner()
 	var shown := elapsed if phase == Phase.PLAY else 0.0
-	_controls.visible = phase == Phase.OVERVIEW or shown < CONTROLS_DUR + 1.0
+	var hud_a := 1.0 - clampf(_end_t / 0.5, 0.0, 1.0) if phase == Phase.END else 1.0
+	_timer.modulate.a = hud_a
+	(_hint.get_parent() as Control).modulate.a = hud_a
+	_controls.visible = (phase == Phase.OVERVIEW or shown < CONTROLS_DUR + 1.0) and phase != Phase.END
 	_controls.modulate.a = 1.0 if phase == Phase.OVERVIEW else clampf(CONTROLS_DUR + 1.0 - shown, 0.0, 1.0)
 	_update_hint()
 	_update_prompt()
@@ -1410,8 +1604,8 @@ func _place_banner() -> void:
 ## World point of the current focus (what the hint asks for), for the on-screen pointer.
 func focus_point() -> Variant:
 	match logic.focus():
-		&"knife":
-			return _knife.global_position
+		&"cutters":
+			return _cutters.global_position
 		&"fence":
 			return _fence.global_position + Vector3(0, 1.0, 0)
 		&"hose":

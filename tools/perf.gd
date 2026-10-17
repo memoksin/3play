@@ -82,6 +82,8 @@ func _run() -> void:
 		await _fire(game, "fire fp start", 2.0)
 		await _fire(game, "fire fp 60 s", 60.0)
 		await _fire(game, "fire fp 85 s", 85.0)
+		await _fire(game, "fire ending escape", -2.0)
+		await _fire(game, "fire ending lose", -3.0)
 	_print_table()
 	quit(0)
 
@@ -236,7 +238,8 @@ func _beam(game: Node, name: String, what: String) -> void:
 
 
 ## Fire minigame (#125): the overview, or first person at game time `at` (smoke follows the clock), looking
-## from the start spot over the pen, the burning house and the fire front (the heaviest view).
+## from the start spot over the pen, the burning house and the fire front (the heaviest view); at -2 / -3 the
+## held hero view of the ending shot (escape / out of time: the whole farm burning).
 func _fire(game: Node, name: String, at: float) -> void:
 	if not _wanted(name):
 		return
@@ -248,6 +251,20 @@ func _fire(game: Node, name: String, at: float) -> void:
 	await process_frame
 	if at >= 0.0:
 		s.seek(at)
+	elif at == -2.0:
+		s.skip_overview()
+		s.logic.pick_hose()
+		s.logic.attach_hose()
+		s.logic.open_valve()
+		s.logic.douse(1.0)
+		s.call("_on_flame_out")
+		s.seek(40.0)
+		s.place_player((s.get_node("Props/Gate") as Node3D).global_position + Vector3(0, 0, 1.5))
+		s.advance(0.05)
+		s.advance(6.0)
+	elif at == -3.0:
+		s.seek(90.0)
+		s.advance(5.8)
 	await _measure(name)
 	s.queue_free()
 	await process_frame

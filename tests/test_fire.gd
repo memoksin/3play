@@ -10,9 +10,9 @@ const SCENE := "res://scenes/minigames/fire.tscn"
 const DT := 1.0 / 60.0
 ## Every tr() key the game shows (prefix FIRE_).
 const KEYS := ["FIRE_PLACE", "FIRE_YEAR", "FIRE_INTRO_1", "FIRE_INTRO_2", "FIRE_TASK", "FIRE_CARD_SCORE",
-	"FIRE_CARD_NUMBERS", "FIRE_CARD_FACT", "FIRE_CARD_HELP", "FIRE_HINT_KNIFE", "FIRE_HINT_FENCE",
+	"FIRE_CARD_NUMBERS", "FIRE_CARD_FACT", "FIRE_CARD_HELP", "FIRE_HINT_CUTTERS", "FIRE_HINT_FENCE",
 	"FIRE_DONE_FENCE", "FIRE_HINT_HOSE", "FIRE_HINT_VALVE", "FIRE_HINT_FLAME", "FIRE_DONE_FLAME",
-	"FIRE_HINT_EXIT", "FIRE_LOSE", "FIRE_USE_KNIFE", "FIRE_USE_FENCE", "FIRE_NEED_KNIFE", "FIRE_USE_HOSE",
+	"FIRE_HINT_EXIT", "FIRE_LOSE", "FIRE_USE_CUTTERS", "FIRE_USE_FENCE", "FIRE_NEED_CUTTERS", "FIRE_USE_HOSE",
 	"FIRE_USE_ATTACH", "FIRE_USE_VALVE", "FIRE_NEED_HOSE", "FIRE_USE_SPRAY", "FIRE_CONTROLS"]
 
 var ok := true
@@ -58,6 +58,7 @@ func _run() -> void:
 	_texts()
 	_logic()
 	_smoke_curve()
+	_panel_sim()
 	await _walkthrough()
 	await _lose()
 	await _physics()
@@ -112,13 +113,13 @@ func _texts() -> void:
 
 func _logic() -> void:
 	var L := FireLogic.new()
-	_check("logic: starts on the knife", L.focus() == &"knife" and L.hint_key() == "FIRE_HINT_KNIFE")
-	_check("logic: no cut without the knife", not L.cut_fence() and not L.fence_cut)
+	_check("logic: starts on the cutters", L.focus() == &"cutters" and L.hint_key() == "FIRE_HINT_CUTTERS")
+	_check("logic: no cut without the cutters", not L.cut_fence() and not L.fence_cut)
 	_check("logic: no attach without the hose", not L.attach_hose())
 	_check("logic: no valve before the hose is on", not L.open_valve())
 	_check("logic: no spray before the valve", not L.can_spray() and not L.douse(1.0))
 	_check("logic: cannot escape while the flame burns", not L.escape() and not L.escaped)
-	_check("logic: knife", L.pick_knife() and L.has_knife and not L.pick_knife())
+	_check("logic: cutters", L.pick_cutters() and L.has_cutters and not L.pick_cutters())
 	_check("logic: hint fence", L.focus() == &"fence" and L.hint_key() == "FIRE_HINT_FENCE")
 	_check("logic: cut", L.cut_fence() and L.fence_cut and not L.cut_fence() and L.tasks_done() == 1)
 	_check("logic: hint hose", L.focus() == &"hose" and L.hint_key() == "FIRE_HINT_HOSE")
@@ -146,12 +147,12 @@ func _logic() -> void:
 	B.attach_hose()
 	B.open_valve()
 	B.douse(1.0)
-	_check("logic: then back to A", B.focus() == &"knife")
+	_check("logic: then back to A", B.focus() == &"cutters")
 	_check("logic: leaving without the fence = 2/3", B.escape() and B.score() == 2)
 
 	# time up: what was done still counts
 	var T := FireLogic.new()
-	T.pick_knife()
+	T.pick_cutters()
 	T.cut_fence()
 	T.time_up()
 	_check("logic: time up keeps the fence (1/3)", T.score() == 1 and T.over and not T.pick_hose())
@@ -176,6 +177,28 @@ func _smoke_curve() -> void:
 	var see0 := log(10.0) / S.fog_density(0.0, skin)
 	var see_end := log(10.0) / S.fog_density(1.0, skin)
 	_check("fog: clear view %.0f m at start, %.1f m at the end" % [see0, see_end], see0 > 200.0 and see_end < 7.0)
+
+
+## The cut panel's rigid-body simulation alone: it settles in time, never sinks, ends with any step size, and a
+## broken state still ends lying flat.
+func _panel_sim() -> void:
+	for dt in [1.0 / 60.0, 1.0 / 20.0, 30.0]:
+		var f := PanelFall.new()
+		f.posts.assign([Vector3(-1.5, 0.0, 0.1), Vector3(1.5, 0.0, 0.1)])
+		f.start(Transform3D(Basis.IDENTITY, Vector3(0, 0.06, 0.06)), Vector3(0, 0, 0.12), Vector3(0.5, 0.05, 0.3))
+		var t := 0.0
+		var hits := 0
+		while t < 10.0 and not f.done:
+			hits += f.step(dt).size()
+			t += dt
+		var xf := f.transform()
+		_check("panel sim dt %.3f: at rest by %.2f s, flat, hit the ground %d x" % [dt, f.time, hits],
+				f.done and f.time < PanelFall.MAX_TIME + PanelFall.SETTLE + 0.01 and absf(xf.basis.z.y) > 0.98 and hits >= 1)
+	var b := PanelFall.new()
+	b.start(Transform3D(Basis.IDENTITY, Vector3(0, 0.06, 0.06)), Vector3(NAN, 0, 0), Vector3.ZERO)
+	b.step(PanelFall.MAX_TIME + 1.0)
+	_check("panel sim: a broken state still ends lying flat", b.done and absf(b.transform().basis.z.y) > 0.98 \
+			and b.transform().origin.is_finite())
 
 
 # --- scene helpers ------------------------------------------------------------------
@@ -239,7 +262,7 @@ func _walkthrough() -> void:
 	_check("scene: starts in the overview", s.phase == s.Phase.OVERVIEW and (s.get_node("Overview") as Camera3D).current)
 	_check("scene: two task markers, exit hidden", s.get_node("Markers/MarkerA").visible and s.get_node("Markers/MarkerB").visible \
 			and not s.get_node("Markers/MarkerExit").visible)
-	_check("scene: hint asks for the knife", (s.get_node("Hud/Info/Hint") as Label).text == tr("FIRE_HINT_KNIFE"))
+	_check("scene: hint asks for the cutters", (s.get_node("Hud/Info/Hint") as Label).text == tr("FIRE_HINT_CUTTERS"))
 	_check("scene: task line", (s.get_node("Hud/Info/Task") as Label).text == tr("FIRE_TASK"))
 	_check("scene: timer shows 1:30", (s.get_node("Hud/Timer/Box/Row/Time") as Label).text == "1:30")
 	_check("scene: every prop has a Model", _all_have_models(s))
@@ -250,59 +273,72 @@ func _walkthrough() -> void:
 	s.advance(4.0)
 	_check("scene: clear air at 4 s", s.smoke == 0.0 and is_equal_approx((s.get_node("Env") as WorldEnvironment).environment.fog_density, skin.fog_clear))
 
-	var knife: Node3D = props.get_node("Knife")
+	var cutters: Node3D = props.get_node("Cutters")
 	var fence: Node3D = props.get_node("FenceCut")
 	var fence_out := _out(fence)  # the yard side of the pen's cuttable section
-	var k_at := _flat(knife.global_position)
-	# the fence without a knife: an info target only
+	var k_at := _flat(cutters.global_position)
+	# the fence without the cutters: an info target only
 	_stand(s, _flat(fence.global_position) + fence_out * 0.6, fence.global_position + Vector3(0, 0.9, 0))
 	s.advance(0.05)
 	var t: Dictionary = s.pick_target()
-	_check("fence without knife: info", t.get("id") == &"fence" and t.get("kind") == &"info" and t.get("key") == "FIRE_NEED_KNIFE")
+	_check("fence without cutters: info", t.get("id") == &"fence" and t.get("kind") == &"info" and t.get("key") == "FIRE_NEED_CUTTERS")
 	_hold(s, 1.5)
-	_check("fence without knife: stays", not s.logic.fence_cut)
+	_check("fence without cutters: stays", not s.logic.fence_cut)
 	# out of reach / looking away: no target
-	_stand(s, k_at + Vector3(5.6, 0, 0), knife.global_position)
-	_check("knife from 5.6 m: out of reach", _target_id(s) == &"")
-	_stand(s, k_at + Vector3(1.3, 0, 0), knife.global_position + Vector3(6, 0, 0))
-	_check("knife behind the player: no target", _target_id(s) != &"knife")
-	_stand(s, k_at + Vector3(1.3, 0, 0), knife.global_position)
-	_check("knife in reach: target", _target_id(s) == &"knife")
+	_stand(s, k_at + Vector3(5.6, 0, 0), cutters.global_position)
+	_check("cutters from 5.6 m: out of reach", _target_id(s) == &"")
+	_stand(s, k_at + Vector3(1.3, 0, 0), cutters.global_position + Vector3(6, 0, 0))
+	_check("cutters behind the player: no target", _target_id(s) != &"cutters")
+	_stand(s, k_at + Vector3(1.3, 0, 0), cutters.global_position)
+	_check("cutters in reach: target", _target_id(s) == &"cutters")
 	s.interact_press()
 	s.advance(0.05)
 	s.interact_release()
-	_check("knife: picked up", s.logic.has_knife and not knife.visible and s.get_node("Player/Head/Camera/Hand/Knife").visible)
-	_check("knife: sound", sounds.has(&"knife"))
-	_check("knife: hint now the fence", (s.get_node("Hud/Info/Hint") as Label).text == tr("FIRE_HINT_FENCE"))
+	_check("cutters: picked up", s.logic.has_cutters and not cutters.visible and s.get_node("Player/Head/Camera/Hand/Cutters").visible)
+	_check("cutters: sound", sounds.has(&"cutters"))
+	_check("cutters: hint now the fence", (s.get_node("Hud/Info/Hint") as Label).text == tr("FIRE_HINT_FENCE"))
 	_stand(s, _flat(fence.global_position) + fence_out * 0.8, fence.global_position + Vector3(0, 0.9, 0))
 	t = s.pick_target()
-	_check("fence with knife: hold target", t.get("id") == &"fence" and t.get("kind") == &"hold")
+	_check("fence with cutters: hold target", t.get("id") == &"fence" and t.get("kind") == &"hold")
 	s.advance(0.05)
 	_check("fence: prompt shows", s.get_node("Hud/Prompt").visible and (s.get_node("Hud/Prompt/Row/Text") as Label).text == tr("FIRE_USE_FENCE"))
 	_hold(s, skin.cut_seconds * 0.5)
 	_check("fence: half a hold does not cut", not s.logic.fence_cut)
+	_check("fence: half a hold snips some ties (%d)" % sounds.count(&"snip"), sounds.count(&"snip") >= 2 and sounds.count(&"snip") < 6)
 	_hold(s, skin.cut_seconds + 0.1)
 	_check("fence: cut after a full hold", s.logic.fence_cut)
 	_check("fence: success sounds", sounds.has(&"cut") and sounds.has(&"success"))
 	_check("fence: banner", s.get_node("Hud/Banner").visible and (s.get_node("Hud/Banner/Label") as Label).text == tr("FIRE_DONE_FENCE"))
-	_check("fence: marker A gone, knife put away", not s.get_node("Markers/MarkerA").visible and not s.get_node("Player/Head/Camera/Hand/Knife").visible)
+	_check("fence: marker A gone, cutters put away", not s.get_node("Markers/MarkerA").visible and not s.get_node("Player/Head/Camera/Hand/Cutters").visible)
 	await physics_frame
 	_check("fence: collider off", _body_off(fence))
-
-	# kangaroos: out through the gap, across the yard, over the boundary fence, into the bush
+	var fmodel: Node = fence.get_node("Model")
+	_check("fence: every tie snipped, stubs left", fmodel.get_node("Ties").get_children().all(func(n: Node3D) -> bool: return not n.visible) \
+			and fmodel.get_node("TiesCut").get_children().all(func(n: Node3D) -> bool: return n.visible))
+	var roo0: Node3D = props.get_node("Kangaroos/Kangaroo1")
+	var roo_at := roo0.global_position
+	var panel: Node3D = fmodel.get_node("Panel")
+	var low := INF
 	var roos: Array = props.get_node("Kangaroos").get_children()
 	var max_out := [0.0, 0.0, 0.0]  # how far past the boundary fence (m)
 	var through := [false, false, false]
+	var waited := true
+	for i in 46:
+		s.advance(0.05)
+		low = minf(low, _lowest(panel))
+		if float(s.get("_world_t")) < float(s.get("_released_at")):
+			waited = waited and Vector2(roo0.global_position.x - roo_at.x, roo0.global_position.z - roo_at.z).length() < 0.6
+		_track_roos(roos, fence, max_out, through)
+	_check("panel: falls into the yard and lies flat (normal %s, z %.2f)" % [panel.global_basis.z.snapped(Vector3.ONE * 0.01), panel.position.z],
+			absf(panel.global_basis.z.y) > 0.98 and fmodel.call("settled") and panel.position.z > 0.08)
+	_check("panel: never below the ground (%.3f)" % low, low > -0.02)
+	_check("panel: lands with a sound", sounds.has(&"panel_land"))
+	_check("kangaroos: wait in the pen while the panel falls", waited)
+
+	# kangaroos: out through the gap, across the yard, over the boundary fence, into the bush
 	for i in 240:
 		s.advance(0.05)
-		for k in roos.size():
-			var r: Node3D = roos[k]
-			if r.visible:
-				var p := r.global_position
-				max_out[k] = maxf(max_out[k], maxf(absf(p.x) - 16.5, absf(p.z) - 12.0))
-				var l := fence.to_local(p)
-				if absf(l.z) < 0.3 and absf(l.x) < 1.4:
-					through[k] = true
+		_track_roos(roos, fence, max_out, through)
 	var out := true
 	for k in roos.size():
 		out = out and max_out[k] > 5.0 and through[k] and not roos[k].visible
@@ -371,17 +407,54 @@ func _walkthrough() -> void:
 	s.place_player(_flat(props.get_node("Gate").global_position) + Vector3(0, 0, 3.9))
 	s.advance(0.05)
 	_check("exit: escaped", s.phase == s.Phase.END and s.logic.escaped and sounds.has(&"exit"))
-	s.advance(2.0)
+	var farmer: Node3D = props.get_node("Farmer")
+	var ov: Camera3D = s.get_node("Overview")
+	var f0 := farmer.global_position
+	s.advance(1.5)
+	_check("ending: not over yet, the figure runs out", got.is_empty() and ov.current and farmer.visible)
+	s.advance(skin.escape_seconds * 0.6 - 1.5)
+	var run_to: Vector3 = s.RUN_TO
+	_check("ending: the figure ran down the track (%.2f m)" % farmer.global_position.distance_to(f0),
+			farmer.global_position.distance_to(run_to) < f0.distance_to(run_to) - 0.3 and farmer.global_position.z < 18.0)
+	_check("ending: hero view (rot %s, fov %.1f)" % [ov.global_rotation_degrees.snapped(Vector3.ONE * 0.1), ov.fov],
+			ov.global_position.distance_to(s.hero_transform().origin) < 0.05 and absf(ov.fov - 26.0) < 0.05 \
+			and ov.global_rotation_degrees.distance_to(Vector3(-40, -22, 0)) < 0.2)
+	_check("ending: the fire takes the farm", float(s.get("_end_engulf")) > 0.5)
+	s.advance(skin.escape_seconds)
+	var ovl := (s.get_node("Hud/Smoke") as ColorRect).material as ShaderMaterial
+	_check("ending: faded into the result card colour", float(ovl.get_shader_parameter(&"fade")) > 0.99 \
+			and ovl.get_shader_parameter(&"fade_color") == Palette.BG)
 	_check("exit: finished 3/3 (at %.1f s)" % at, got == [[3, 3]] and s.saved_count == 3)
 	s.advance(5.0)
 	_check("exit: finishes once", got.size() == 1)
 	await _free(s)
 
 
+func _track_roos(roos: Array, fence: Node3D, max_out: Array, through: Array) -> void:
+	for k in roos.size():
+		var r: Node3D = roos[k]
+		if r.visible:
+			var p := r.global_position
+			max_out[k] = maxf(max_out[k], maxf(absf(p.x) - 16.5, absf(p.z) - 12.0))
+			var l := fence.to_local(p)
+			if absf(l.z) < 0.3 and absf(l.x) < 1.4:
+				through[k] = true
+
+
+## Lowest corner of the cut panel (its box) above the ground.
+func _lowest(panel: Node3D) -> float:
+	var low := INF
+	for x in [-1.4, 1.4]:
+		for y in [-0.02, 1.76]:
+			for z in [-0.024, 0.024]:
+				low = minf(low, (panel.global_transform * Vector3(x, y, z)).y)
+	return low
+
+
 func _all_have_models(s: Node) -> bool:
-	for path in ["Farm", "Props/Knife", "Props/FenceCut", "Props/Gate", "Props/Debris", "Props/Valve", "Props/Hose",
-			"Props/Flame", "Props/Kangaroos/Kangaroo1", "Props/Kangaroos/Kangaroo2", "Props/Kangaroos/Kangaroo3",
-			"Markers/MarkerA", "Markers/MarkerB", "Markers/MarkerExit", "Player/Head/Camera/Hand/Knife",
+	for path in ["Farm", "Props/Cutters", "Props/FenceCut", "Props/Gate", "Props/Debris", "Props/Valve", "Props/Hose",
+			"Props/Flame", "Props/Farmer", "Props/Kangaroos/Kangaroo1", "Props/Kangaroos/Kangaroo2", "Props/Kangaroos/Kangaroo3",
+			"Markers/MarkerA", "Markers/MarkerB", "Markers/MarkerExit", "Player/Head/Camera/Hand/Cutters",
 			"Player/Head/Camera/Hand/Nozzle"]:
 		if s.get_node_or_null(path + "/Model") == null:
 			print("  no Model under ", path)
@@ -404,7 +477,7 @@ func _lose() -> void:
 	var env: Environment = (s.get_node("Env") as WorldEnvironment).environment
 	var overlay := (s.get_node("Hud/Smoke") as ColorRect).material as ShaderMaterial
 	s.skip_overview()
-	s.logic.pick_knife()
+	s.logic.pick_cutters()
 	s.call("_act", &"fence")
 	_check("lose run: fence cut", s.logic.fence_cut)
 	s.seek(50.0)
@@ -429,7 +502,13 @@ func _lose() -> void:
 	_check("lose run: over at 90 s, banner", s.phase == s.Phase.END and s.get_node("Hud/Banner").visible \
 			and (s.get_node("Hud/Banner/Label") as Label).text == tr("FIRE_LOSE") and sounds.has(&"lose"))
 	_check("lose run: no acting after the end", not s.logic.pick_hose())
-	s.advance(5.0)
+	s.advance(skin.lose_seconds * 0.5)
+	var fig: Node = s.get_node("Props/Farmer/Model")
+	_check("lose run: dark ending, the figure crouched in the smoke", got.is_empty() and fig.get_node("Crouch").visible \
+			and not fig.get_node("Run0").visible and float(env.ambient_light_energy) < skin.ambient_energy_smoke)
+	s.skip_ending()
+	_check("lose run: a key cuts the ending to its fade", s.get("_end_t") >= s.get("_end_dur") - s.END_FADE - 1e-4)
+	s.advance(skin.lose_seconds)
 	_check("lose run: score 1/3 (the fence still counts)", got == [[1, 3]] and s.saved_count == 1)
 	await _free(s)
 
@@ -596,7 +675,7 @@ func _swap() -> void:
 	s.skip_overview()
 	s.advance(0.1)
 	_check("swap: kangaroo model gets set_hop", int(s.get_node("Props/Kangaroos/Kangaroo1/Model").get("hops")) > 0)
-	s.logic.pick_knife()
+	s.logic.pick_cutters()
 	s.call("_act", &"fence")
 	_check("swap: model gets set_state(cut)", fm.get("states") == [&"cut"])
 	await _free(s)
@@ -640,7 +719,7 @@ func _pause() -> void:
 	click.pressed = true
 	root.push_input(click)
 	await process_frame
-	_check("pause: a click after resuming does not act", s.logic.score() == 0 and not s.logic.has_knife)
+	_check("pause: a click after resuming does not act", s.logic.score() == 0 and not s.logic.has_cutters)
 	current_scene = null
 	_check("input: fire_* actions registered", InputMap.has_action(&"fire_forward") and InputMap.has_action(&"fire_interact") \
 			and InputMap.has_action(&"fire_jump") and InputMap.has_action(&"fire_run"))
@@ -670,16 +749,16 @@ func _pause() -> void:
 	_check("skip: Space ends the overview", s.phase == s.Phase.PLAY)
 	_check("skip: the same Space does not jump (%.2f m)" % top, top < 0.1)
 	s.set_physics_process(false)
-	var knife: Node3D = s.get_node("Props/Knife")
-	var k_at := _flat(knife.global_position)
-	_stand(s, k_at + Vector3(1.3, 0, 0), knife.global_position + Vector3(0, 0, 4))
+	var cutters: Node3D = s.get_node("Props/Cutters")
+	var k_at := _flat(cutters.global_position)
+	_stand(s, k_at + Vector3(1.3, 0, 0), cutters.global_position + Vector3(0, 0, 4))
 	s.interact_press()
 	s.interact_release()
 	s.advance(0.05)
-	_check("tap buffer: a press while aiming off does nothing yet", not s.logic.has_knife)
-	s.aim_at(knife.global_position)
+	_check("tap buffer: a press while aiming off does nothing yet", not s.logic.has_cutters)
+	s.aim_at(cutters.global_position)
 	s.advance(0.05)
-	_check("tap buffer: aiming within 0.2 s still picks up", s.logic.has_knife)
+	_check("tap buffer: aiming within 0.2 s still picks up", s.logic.has_cutters)
 	_stand(s, _flat(s.get_node("Props/Hose").global_position) + Vector3(1.4, 0, 0), Vector3(30, 1.6, 30))
 	s.interact_press()
 	s.interact_release()
@@ -700,7 +779,7 @@ func _game_flow() -> void:
 	game.set("_step", game.FLOW.find(&"minigame"))
 	_check("flow: Game picks the fire scene for this disaster", game.scene_path(&"minigame") == SCENE)
 	s.skip_overview()
-	s.logic.pick_knife()
+	s.logic.pick_cutters()
 	s.call("_act", &"fence")
 	s.seek(200.0)
 	_check("flow: Game.finish_minigame got 1/3 and the extra", game.saved == 1 and game.total == 3 \
