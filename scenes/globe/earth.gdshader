@@ -106,7 +106,9 @@ void fragment() {
 	float ndl = dot(N, L);
 	// Soft terminator: light wraps a little past ndl = 0 (twilight band)
 	float diff = clamp((ndl + 0.08) / 1.08, 0.0, 1.0);
-	float night = 1.0 - smoothstep(-0.16, 0.04, ndl);
+	// The night side (city lights, moonlight) follows the sphere's own normal: relief must not light a
+	// town on the day side or darken one at night.
+	float night = 1.0 - smoothstep(-0.16, 0.04, dot(normalize(v_n), L));
 	float water = smoothstep(0.005, 0.035, c.b - c.r) * (1.0 - smoothstep(1.2, 1.8, c.r + c.g + c.b));
 	vec3 tint = mix(vec3(1.0, 0.42, 0.18), vec3(1.0, 0.97, 0.92), smoothstep(-0.02, 0.32, ndl));
 	vec3 sun = tint * 1.8;

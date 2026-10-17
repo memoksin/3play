@@ -62,15 +62,16 @@ Dimensions: globe = 4D, diorama = 3D, minigame = 2D.
 | Wildfire | Black Saturday, Victoria, Australia, 7 Feb 2009 | Citizen | Reaction | Adult tone, played during the fire. Player defends the house. Near the end an escape chance appears. Escape = win. Miss it = card says the right move was to leave hours earlier ("stay or go" lesson). |
 | Earthquake | Kahramanmaras, Turkey, 6 Feb 2023 | Citizen | Fit | Played after the 04:17 quake. Looks like harmless tidying; really prep for the 13:24 Elbistan quake, which the player does not expect. Prep is scored when it hits. |
 | Tsunami | Indian Ocean, Indonesia, 26 Dec 2004 | State | Connect | Head of state routes the incoming wave into underground pipelines (rotate tiles so each ocean inlet reaches its safe basin). At 60 s the wave hits; each complete line saves one community (X/4). Spec: `docs/minigames/connect-indian-ocean.md`. Counterfactual: InaTEWS was built after 2004; result card says so. |
-| Solar flare | Year 3000+ | State | Fit (skin) | News: flare hits Earth in 8 min (fast countdown). Pick a crew for limited seats to save humanity. |
+| Solar flare | Year 3026 | State | Beam | The flare comes down as one beam. Turn satellites (45 degree steps) so every part of it ends in a collector; every city it touches goes dark. 4 waves (mirrors, splitters, thermal satellites), X/44 cities. Spec: `docs/minigames/beam-solar-flare.md` (#124, replaced the Fit skin). |
 
 ## Scope rule: 3 mechanics, skins are data + art
 
 | Mechanic | Verb | Skins |
 |---|---|---|
-| Fit | drag items into limited space/budget before timer ends | Kahramanmaras, solar flare |
+| Fit | drag items into limited space/budget before timer ends | Kahramanmaras |
 | Reaction | click/act on appearing targets in time | Black Saturday |
 | Connect | rotate pipe tiles to link source to targets before timer ends | Indian Ocean |
+| Beam | turn satellites so a beam ends in collectors before it fires | Solar flare 3026 (#124) |
 
 One scene per mechanic. A new disaster = new data + art, not new code.
 
@@ -91,6 +92,7 @@ Prototype: claude.ai artifact "3play Globe Akışı" v2. Port it as is.
 - Data: `Disaster.lat`, `lon`, new `year`; place and date via `tr()` (`<PREFIX>_PLACE`, `<PREFIX>_YEAR`).
 - Glitch (Tier 2): `glitch_to(year)` stub now, it only jumps the counter. Effect later.
 - Tier 2 polish: clouds, day/night terminator, city lights, bump (#32).
+- Sun (#156): the real subsolar point of `Disaster.utc`, fixed in the Earth's own frame, so the terminator and the midnight meridian are glued to the surface and turn with it (drag, flick, timeline). Every continent keeps its real day / night for that moment; the target ends at its real local time (Kahramanmaras night, Sumatra morning). City lights burn on the night side only. Both roles share this look: the resting globe is turned so the real sun meets the camera with the prototype light, only the disaster (its UTC) differs. Proof: `tools/globe/shots.gd` (drag, spin and lock frames checked against the real sun, `proof_*` images).
 
 ## Decisions
 

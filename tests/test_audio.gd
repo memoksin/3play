@@ -163,8 +163,11 @@ func _run() -> void:
 	await process_frame
 	_check("fit: leaving the scene stops the ambience", "stop:F1" in _log())
 
-	# 6. Fit hooks, solar flare (#107).
-	game.disaster = load("res://data/disasters/solar_flare.tres")
+	# 6. Fit hooks, solar flare (#107). The flare plays Beam now (#124): its old Fit skin on a copy.
+	var sf: Disaster = (load("res://data/disasters/solar_flare.tres") as Disaster).duplicate()
+	sf.minigame = &"fit"
+	sf.skin = load("res://data/skins/solar_flare_fit.tres")
+	game.disaster = sf
 	fit = load("res://scenes/minigames/fit.tscn").instantiate()
 	root.add_child(fit)
 	await process_frame
@@ -221,7 +224,8 @@ func _run() -> void:
 	_check("globe: G1 appear", "play:G1" in _log())
 	g.spin_started.emit()
 	g.spin_stopped.emit()
-	_check("globe: G2 while turning", _log().slice(-2) == ["loop:G2", "stop:G2"])
+	_check("globe: G2 starts with the spin (it then follows it, see the G2 test)", _log().slice(-1) == ["loop:G2"])
+	audio.stop(&"G2")
 	g.coords_typing_started.emit()
 	g.coords_typing_finished.emit()
 	_check("globe: G3 typing", _log().slice(-2) == ["loop:G3", "stop:G3"])
@@ -270,6 +274,116 @@ func _run() -> void:
 	menu.queue_free()
 	await process_frame
 	_check("menu: leaving stops M1", "stop:M1" in _log())
+
+	# 9. Cues of the listening-check fixes (#126).
+	for id in [&"LS1", &"LS2", &"D6", &"M4", &"G9"]:
+		_check("cue %s exists" % id, audio.CUES.has(id))
+	var ex := {&"LS1": &"M2", &"LS2": &"M3", &"D6": &"M2", &"M4": &"G3"}
+	for id: StringName in ex:
+		_check("cue %s reuses the %s file" % [id, ex[id]], audio.CUES[id].path == audio.CUES[ex[id]].path
+				and ResourceLoader.exists(audio.ROOT + audio.CUES[id].path))
+	_check("D6 is about 4 dB louder than M2", absf(audio.CUES[&"D6"].volume_db - audio.CUES[&"M2"].volume_db - 4.0) < 0.01)
+
+	audio.clear_injected()
+	for id in [&"LS1", &"LS2", &"D6", &"M4", &"M1", &"M2", &"G2", &"G1", &"D2"]:
+		audio.inject_stream(id, _wav(1.0))
+	audio.reset_history()
+	var pick: Node = load("res://scenes/ui/lang_picker.tscn").instantiate()
+	root.add_child(pick)
+	await process_frame
+	pick.get_node("Box/EN").mouse_entered.emit()
+	current_scene = pick  # the pick reloads the current scene
+	pick.get_node("Box/EN").pressed.emit()
+	_check("lang picker: LS1 hover, LS2 click, no music", _log() == ["play:LS1", "play:LS2"])
+	await process_frame
+	await process_frame
+	if current_scene:
+		current_scene.queue_free()
+	if is_instance_valid(pick):
+		pick.queue_free()
+	await process_frame
+
+	game.disaster = load("res://data/disasters/indian_ocean.tres")
+	audio.reset_history()
+	var intro2: Node = load("res://scenes/ui/intro_text.tscn").instantiate()
+	root.add_child(intro2)
+	await process_frame
+	intro2.get_node("%Next").mouse_entered.emit()
+	_check("intro text: Continue hover D6", _log() == ["play:D6"])
+	intro2.queue_free()
+	await process_frame
+
+	audio.reset_history()
+	menu = load("res://scenes/main.tscn").instantiate()
+	root.add_child(menu)
+	await process_frame
+	var prompt: Label = menu.get_node("Center/Box/Prompt")
+	prompt.visible_ratio = 0.0
+	audio.tick(0.1)
+	_check("menu: M4 not before typing", not "loop:M4" in _log())
+	prompt.visible_ratio = 0.4
+	audio.tick(0.1)
+	_check("menu: M4 while the prompt types", "loop:M4" in _log())
+	prompt.visible_ratio = 1.0
+	audio.tick(0.1)
+	_check("menu: M4 stops when typing ends", _log().slice(-1) == ["stop:M4"])
+	menu.queue_free()
+	await process_frame
+
+	# Scenes built in a SubViewport (game.gd warm-up) stay silent until they enter the real tree.
+	audio.stop_all()
+	audio.reset_history()
+	var vp := SubViewport.new()
+	root.add_child(vp)
+	var warm: Control = load("res://scenes/minigames/connect.tscn").instantiate()
+	warm.submit = false
+	vp.add_child(warm)
+	var warm_menu: Node = load("res://scenes/main.tscn").instantiate()
+	vp.add_child(warm_menu)
+	await process_frame
+	_check("viewport: no hook fires inside a SubViewport", _log().is_empty())
+	vp.remove_child(warm)
+	root.add_child(warm)
+	await process_frame
+	_check("viewport: hook fires once in the real tree", _log().filter(func(e: String) -> bool: return e == "loop:D2").size() == 1)
+	warm.queue_free()
+	vp.queue_free()
+	await process_frame
+	audio.stop_all()
+
+	# G2 follows the globe's spin and stops when it is still (item 5).
+	audio.reset_history()
+	g = load("res://scenes/globe.tscn").instantiate()
+	root.add_child(g)
+	await process_frame
+	var earth: Node3D = g.get("_earth")
+	g.set("_dragging", true)
+	g.spin_started.emit()
+	var gp: AudioStreamPlayer = audio.loop(&"G2")
+	_check("G2: starts with the spin", gp != null and audio.is_playing(&"G2"))
+	g.set("_dragging", false)  # released with a fast spin
+	for i in 30:
+		earth.rotation.y += 10.0 * 0.05
+		audio.tick(0.05)
+	var fast_db := gp.volume_db
+	_check("G2: loud while the spin is fast", fast_db > audio.CUES[&"G2"].volume_db - 3.0 and audio.is_playing(&"G2"))
+	var speed := 10.0
+	var prev := fast_db
+	var mono := true
+	for i in 60:
+		speed *= 0.93
+		earth.rotation.y += speed * 0.05
+		audio.tick(0.05)
+		if is_instance_valid(gp) and gp.volume_db > prev + 0.01:
+			mono = false
+		if is_instance_valid(gp):
+			prev = gp.volume_db
+	_check("G2: fades smoothly as the spin slows", mono and prev < fast_db - 6.0)
+	for i in 40:
+		audio.tick(0.05)
+	_check("G2: stops when the globe is still", not audio.is_playing(&"G2"))
+	g.queue_free()
+	await process_frame
 
 	await create_timer(0.5).timeout  # the audio thread releases the stopped streams; quitting at once leaks them (flaky)
 	print("OK" if ok else "FAILED")

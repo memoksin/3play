@@ -1,0 +1,102 @@
+# Spec: Beam minigame, solar flare 3026 (#124)
+
+Mechanic: **Beam**. Skin: solar flare, 14 March 3026. Role: State. Replaces the Fit skin of the solar flare.
+Source: the team's web prototype "Işın Ağı" (Beam Grid). Rules, waves, timings, preview and result are ported 1:1;
+`tests/test_beam.gd` checks the rules against the prototype's own results.
+
+## Story beat
+
+The Sun hurls a giant flare at Earth. It travels like one laser beam. The satellite network between them is the
+only shield: turn the satellites so the beam ends in collectors. Every city it touches loses power.
+
+## Board
+
+A grid of cells. Above it the Sun (the flare comes down one column) and the **Parker base**; left and right the
+**West / East rings**; below it the **Earth** with one city per column. Inside the grid: satellites, collectors
+and habitats (stations that are cities too).
+
+| Piece | Glyph | Rule |
+|---|---|---|
+| Mirror | M | Reflects: diagonal = 90 degree turn, edge-on = passes, face-on = sends it back |
+| Splitter | S | Always splits in two half beams: edge-on = left + right, diagonal = straight + side, face-on = straight + back |
+| Thermal | T | Like a mirror for the first beam of a shot; the second one overheats it: it locks and lets the beam pass straight |
+| Collector | C | Takes the beam (its energy share counts) |
+| Habitat | H | A city inside the grid |
+
+Rotation: 8 steps of 45 degrees, the plate is symmetric (rotation r acts as r mod 4): out = (2m - in) mod 8.
+The beam only ever runs straight (never diagonal), so it leaves the grid through exactly one side.
+Cities per wave: columns + 3 (W, E ring, Parker) + habitats. Waves: 10, 11, 11, 12 cities = **44**.
+
+## Flow
+
+Title card (rules, route preview toggle) > per wave: briefing (class, time, new piece diagrams, tip) > countdown
+(turn satellites; fire early or wait) > the shot (0.58 s charge, the beam travels at 9.5 cells/s, events play on
+time) > result card (saved/total, stars, lost cities, energy, time left; retry or next) > summary (sum of the best
+run per wave, rank, stars, mean energy; play again or **Continue**) > `Game.finish_minigame(saved, 44,
+{stars, energy, rank})` > the game's result card (`SF_CARD_SCORE`, "%d/44").
+
+| Wave | Class | Time | New |
+|---|---|---|---|
+| 1 First Light | M4.2 | 45 s | mirrors |
+| 2 Forking | X1.8 | 55 s | splitter |
+| 3 Heat Wave | X4.7 | 65 s | thermal |
+| 4 Super Flare | X28 | 80 s | everything |
+
+Stars per wave: 3 with no city lost, 2 with one, 1 with two, else 0. Rank by total stars: 12 Sun Warden,
+9 Shield Commander, 5 Grid Operator, else Trainee Engineer.
+
+## Controls
+
+- Mouse: click a satellite = +45 degrees, right-click / Shift+click = back, wheel = either way. Hover shows a ghost
+  of the next position.
+- Keyboard (countdown only): Tab / Shift+Tab or arrows pick a satellite, E / Space / Enter turn it, Q turns back,
+  F fires. Cards: Enter presses the main button.
+
+## Route preview (on by default)
+
+Dashed route, red cross where it reaches a city, warning ring on that city, ring on reached collectors, "!" on a
+thermal satellite that will overheat, forecast in the HUD ("2 AT RISK" / "SAFE"), "ROUTE SAFE" toast and a glowing
+Fire button once the route is perfect. Off ("blind"): none of it.
+
+## Code
+
+| File | What |
+|---|---|
+| `scripts/beam_logic.gd` | Rules, no nodes: `parse`, `simulate`, `city_keys`, `stars`, `rank`, `solve_clicks` |
+| `scripts/beam_wave.gd`, `scripts/beam_skin.gd` | Data: one wave; the skin (waves, timings, text prefix, art scenes) |
+| `data/skins/solar_flare_beam.tres` | The 4 waves |
+| `scenes/minigames/beam.tscn` / `.gd` | Flow, input, countdown, the shot, score, HUD and cards |
+| `scenes/minigames/beam/*` | Board and placeholder pieces (look only) |
+| `tools/beam_shots.gd` | Screenshots: `godot --path . -s res://tools/beam_shots.gd [-- tr]` |
+
+Texts: `SF_BEAM_*` keys in `locale/strings.csv`.
+
+## Art: replacing the placeholders
+
+Every piece is its own scene. Set a `BeamSkin` field (`data/skins/solar_flare_beam.tres`) to a new scene; null keeps
+the placeholder in `scenes/minigames/beam/`. A piece is a `Node2D` placed at its spot on screen; the board sets the
+properties below before adding it and the scene updates them every frame. `tick(dt)` (game time) is called on
+every piece if it has one. Pieces may ignore properties they do not show.
+
+| Field | Placeholder | Properties |
+|---|---|---|
+| `satellite_scene` | `satellite.tscn` | `kind` (&"M", &"S", &"T"), `cell` (px), `turns` (45 degree steps, not wrapped: ease to it), `highlight`, `hover`, `heat` (0-2), `locked`, `overheat_predicted`; methods `bump()`, `flash(color)`. Draw the plate above the beams (`z_index` 2) |
+| `collector_scene` | `collector.tscn` | `cell`, `charge` (0-1), `targeted` |
+| `habitat_scene` | `habitat.tscn` | `cell`, `label`, `font`, `warning`, `dark` |
+| `city_scene` | `city.tscn` | Earth city: `cell`, `code`, `font`, `seed_value`, `warning`, `dark` |
+| `station_scene` | `station.tscn` | `kind` (&"ring_w", &"ring_e", &"parker"), `cell`, `count` (cells long), `gate` (Parker: flare column), `label`, `dark_label`, `font`, `warning`, `dark` |
+| `grid_scene` | `grid.tscn` | `cols`, `rows`, `cell` (position = grid top-left) |
+| `backdrop_scene` | `backdrop.tscn` | `board` (geometry: `sun_center`, `sun_radius`, `earth_center`, `earth_radius`, `sun_emitter()`...), `urgency`, `charge`, `charging`, `arrow` |
+| `beams_scene` | `beams.tscn` | `board`, `sim` (BeamLogic.Result), `mode` (NONE / PREVIEW / FIRE), `fire_t`; `heads()` for sparks |
+| `fx_scene` | `fx.tscn` | `cell`, `font`; `burst(pos, n, color, power)`, `spark(pos, color)`, `float_text(pos, text, color, sub)` |
+| `board_scene` | `board.tscn` | Whole board (e.g. a 3D slab). Keep `board.gd`'s API: `build`, `cell_at`, `cell_center`, `event_pos`, `seg_points`, `sat`, `collector`, `city`, `cities`, `collectors`, `tick`, `cell`, `origin`, layers `beams`, `fx`, `backdrop` |
+
+Layout: the board fills `Beam.AREA` (between the HUD columns), one cell at most 92 px, with room for the Sun and
+Parker above (1.45 cells) and the Earth below (1.85 cells).
+
+## Audio hooks (no sounds yet)
+
+The prototype's synth sounds were not ported. `beam.gd` emits `satellite_turned(index, dir)` and
+`sound_event(kind, index)`: `ready` (route turned safe), `tick` (last 10 s; index 1 = last 3 s), `charge`,
+`fire` (beam leaves the Sun), `reflect` (index = nth reflection), `split`, `overheat`, `collect`, `blackout`,
+`wave_good`, `wave_bad`. Nothing in `scripts/audio.gd` hooks the scene yet.

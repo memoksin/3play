@@ -119,8 +119,12 @@ var _has_patch := false
 var _font_bold: FontVariation
 var _font_mono: Font
 var _prev_msaa := Viewport.MSAA_DISABLED
-## Sun direction in world space, fixed for the whole flow (the Earth spins under a still terminator).
-## From Disaster.utc it is the real sun as seen at the lock pose, so the target ends at its real local time.
+## Sun direction in the Earth's own frame, fixed for the whole flow: the terminator and the midnight meridian
+## are glued to the surface and turn with it, whatever spin, pitch or glitch jolt the Earth is given.
+## From Disaster.utc it is the real subsolar point, so every continent keeps its real day / night for that
+## moment and the target ends at its real local time. Without a utc it is the prototype SUN at the lock pose.
+var _sun_local := SUN.normalized()
+## The same sun in world space (what the shaders take), refreshed on every pose from the Earth's basis.
 var _sun_world := SUN.normalized()
 ## Spin ease 1 - (1 - s)^3 (1 + a s): a = 0 is the classic out-cubic; a flick picks a so the
 ## spin starts at the flick speed.
@@ -208,21 +212,24 @@ func flick(speed: float) -> void:
 
 func _start() -> void:
 	_target_local = surface_point(_disaster.lat, _disaster.lon)
-	_earth.rotation.y = START_SPIN
-	_from_y = _earth.rotation.y
+	_to_pitch = deg_to_rad(_disaster.lat)
+	_pitch.rotation.x = START_PITCH
+	_from_pitch = START_PITCH
+	var lock_y := -atan2(_target_local.x, _target_local.z)
+	if _disaster.utc != "":
+		var s := subsolar_point(_disaster.utc)
+		_sun_local = surface_point(s.x, s.y)
+		_from_y = _lit_start_spin()
+	else:
+		_sun_local = (_axial.global_basis * Basis(Vector3.RIGHT, _to_pitch) * Basis(Vector3.UP, lock_y)).inverse() \
+				* SUN.normalized()
+		_from_y = START_SPIN
+	_earth.rotation.y = _from_y
 	# Land exactly on the target after TURNS full turns
-	_to_y = -atan2(_target_local.x, _target_local.z)
+	_to_y = lock_y
 	while _to_y < _from_y:
 		_to_y += TAU
 	_to_y += TURNS * TAU
-	_pitch.rotation.x = START_PITCH
-	_from_pitch = _pitch.rotation.x
-	_to_pitch = deg_to_rad(_disaster.lat)
-	_sun_world = SUN.normalized()
-	if _disaster.utc != "":
-		var s := subsolar_point(_disaster.utc)
-		var lock := _axial.global_basis * Basis(Vector3.RIGHT, _to_pitch) * Basis(Vector3.UP, _to_y)
-		_sun_world = (lock * surface_point(s.x, s.y)).normalized()
 	t = 0.0
 	launched = false
 	_typing_started = false
@@ -233,6 +240,24 @@ func _start() -> void:
 	if _disaster.glitch:
 		glitch_to(_disaster.year)
 	_pose()
+
+
+## Spin at which the resting Earth meets the camera with the prototype's light: the real sun (fixed to the
+## Earth) lands as near as the axial tilt allows to SUN, whatever the scenario's hour. Every run opens
+## with the same look (day side lit from the left, the terminator on screen), and only the continents
+## under it, the real ones for that UTC, differ.
+func _lit_start_spin() -> float:
+	var rest := _axial.global_basis * Basis(Vector3.RIGHT, START_PITCH)
+	var want := SUN.normalized()
+	var best := 0.0
+	var best_dot := -2.0
+	for i in 720:
+		var y := TAU * i / 720.0
+		var d := (rest * Basis(Vector3.UP, y) * _sun_local).dot(want)
+		if d > best_dot:
+			best_dot = d
+			best = y
+	return best
 
 
 ## Start the timeline from the current rotation. speed != 0: land on the target turn whose distance
@@ -376,8 +401,9 @@ func _pose() -> void:
 	_update_sun()
 
 
-## One world-space sun for every layer; constant over the flow.
+## One world-space sun for every layer: the Earth-fixed sun carried by the Earth's current basis.
 func _update_sun() -> void:
+	_sun_world = (_earth.global_basis * _sun_local).normalized()
 	var sun := _sun_world
 	(_earth.get_surface_override_material(0) as ShaderMaterial).set_shader_parameter(&"sun_dir", sun)
 	(_atmo.get_surface_override_material(0) as ShaderMaterial).set_shader_parameter(&"sun_dir", sun)

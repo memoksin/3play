@@ -7,6 +7,7 @@ const SCENES := {
 	&"diorama": "res://scenes/diorama.tscn",
 	&"fit": "res://scenes/minigames/fit.tscn",
 	&"connect": "res://scenes/minigames/connect.tscn",
+	&"beam": "res://scenes/minigames/beam.tscn",
 	&"result": "res://scenes/result.tscn",
 }
 const DEFAULT_LOCALE := "tr"  # until the player picks another with the menu's TR / EN switch
@@ -76,6 +77,7 @@ func _ready() -> void:
 	_make_cover()
 	_cache_scripts()
 	_draw_cover_once()
+	add_child(preload("res://scenes/ui/pause_menu.tscn").instantiate())  # Esc during a run
 
 
 ## Requested scenes nobody took (e.g. the game quits on the globe) are collected, so none leaks.
@@ -522,6 +524,20 @@ func _free_warm_keep() -> void:
 	for vp in _warm_keep:
 		vp.free()
 	_warm_keep.clear()
+
+
+## True while a scene change is fading in or out.
+func is_busy() -> bool:
+	return _cover != null and _cover.visible
+
+
+## Leaves the run (pause menu): drops what was built ahead and goes back to the main menu.
+func quit_to_menu() -> void:
+	_warm_gen += 1  # stops a warm-up that is still running
+	_release_prepared()
+	_release_prepared_mini()
+	_step = FLOW.size() - 1
+	_go(&"main")
 
 
 ## Frees the diorama that was built ahead and not used.

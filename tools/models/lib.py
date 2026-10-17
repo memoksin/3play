@@ -120,6 +120,87 @@ PAL = {
     "phone_glow":  {"c": "bfe0ff", "r": 1.0, "snow": 0, "emit": ("a8d4ff", 2.0)},
     "tail_light":  {"c": "c0201a", "r": 0.3, "snow": 0, "emit": ("ff2a1a", 1.2)},
     "head_light":  {"c": "fff3d8", "r": 0.2, "snow": 0, "emit": ("fff1d0", 2.5)},
+    # --- solar flare 3026 (#124): orbital hardware, Earth section, city ---
+    "hull_white":   {"c": "d9dad4", "r": 0.45, "snow": 0},
+    "hull_grey":    {"c": "8a9099", "r": 0.4, "snow": 0},
+    "hull_dark":    {"c": "2c3039", "r": 0.5, "snow": 0},
+    "foil_gold":    {"c": "c99a3e", "r": 0.28, "snow": 0},
+    "foil_silver":  {"c": "aab0b8", "r": 0.3, "snow": 0},
+    "solar_cell":   {"c": "1b2846", "r": 0.18, "snow": 0},
+    "trim_blue":    {"c": "3a72b8", "r": 0.45, "snow": 0},
+    "trim_violet":  {"c": "6a46a6", "r": 0.45, "snow": 0},
+    "trim_orange":  {"c": "c8622a", "r": 0.45, "snow": 0},
+    "trim_teal":    {"c": "2a8c80", "r": 0.45, "snow": 0},
+    "copper":       {"c": "a95f36", "r": 0.35, "snow": 0},
+    "scorch":       {"c": "3a2a26", "r": 0.8, "snow": 0},
+    "ocean":        {"c": "1c3c62", "r": 0.12, "snow": 0, "raw": True},
+    "ocean_shallow": {"c": "2d7487", "r": 0.15, "snow": 0, "raw": True},
+    "land_green":   {"c": "5c7a46", "r": 0.9, "snow": 0},
+    "land_dry":     {"c": "a3864f", "r": 0.9, "snow": 0},
+    "sf_sand":      {"c": "cdb688", "r": 0.9, "snow": 0},
+    "crust_a":      {"c": "a8805a", "r": 0.95, "snow": 0},
+    "crust_b":      {"c": "9a5a40", "r": 0.95, "snow": 0},
+    "crust_c":      {"c": "6e625e", "r": 0.95, "snow": 0},
+    "basalt":       {"c": "3e3846", "r": 0.9, "snow": 0},
+    "cloud":        {"c": "e6eaee", "r": 1.0, "snow": 0},
+    "city_white":   {"c": "d5d8d6", "r": 0.5, "snow": 0},
+    "city_glass":   {"c": "263750", "r": 0.1, "snow": 0},
+    "city_green":   {"c": "4f8a5a", "r": 0.85, "snow": 0},
+    # unbaked metal ("raw": own material, kept out of the bake; "m" = metallic)
+    "mirror":       {"c": "dfe8f2", "r": 0.04, "snow": 0, "raw": True, "m": 1.0},
+    "mirror_gold":  {"c": "e8b860", "r": 0.08, "snow": 0, "raw": True, "m": 1.0},
+    # glowing
+    "magma":        {"c": "ff5a1c", "r": 1.0, "snow": 0, "emit": ("ff4410", 1.5)},
+    "led_blue":     {"c": "9ccfff", "r": 0.3, "snow": 0, "emit": ("6ab8ff", 4.0)},
+    "led_violet":   {"c": "d6b6ff", "r": 0.3, "snow": 0, "emit": ("b07cff", 4.0)},
+    "led_orange":   {"c": "ffc08a", "r": 0.3, "snow": 0, "emit": ("ff8a2a", 4.0)},
+    "led_red":      {"c": "ff8a7a", "r": 0.3, "snow": 0, "emit": ("ff2a1a", 4.0)},
+    "core_green":   {"c": "a8ffd9", "r": 0.2, "snow": 0, "emit": ("4dffb8", 6.0)},
+    "split_glass":  {"c": "c6a6ff", "r": 0.1, "snow": 0, "emit": ("8f5cff", 1.1)},
+    "hot_plate":    {"c": "ff6a3a", "r": 0.4, "snow": 0, "emit": ("ff3a12", 4.0)},
+    "city_neon":    {"c": "bff2ff", "r": 0.3, "snow": 0, "emit": ("6fe3ff", 3.0)},
+    "city_window":  {"c": "ffd9a8", "r": 1.0, "snow": 0, "emit": ("ffb866", 2.2)},
+    # tropical coast (Indian Ocean, Aceh 2004). "snow" = how much weather dust the face takes (finish(dust=...)).
+    "sand":        {"c": "dcc495", "r": 0.95, "snow": 0.3},
+    "sand_wet":    {"c": "a38a62", "r": 0.45, "snow": 0},
+    "sand_dark":   {"c": "8c7550", "r": 1.0, "snow": 0},
+    "sand_cut":    {"c": "bf9a64", "r": 1.0, "snow": 0},
+    "limestone_cut": {"c": "9d8f76", "r": 1.0, "snow": 0},
+    "coral":       {"c": "d98c78", "r": 0.9, "snow": 0},
+    "coral_pale":  {"c": "e0cdb0", "r": 0.9, "snow": 0},
+    "coral_teal":  {"c": "4f9a92", "r": 0.9, "snow": 0},
+    "coral_gold":  {"c": "d6a645", "r": 0.9, "snow": 0},
+    "reef_rock":   {"c": "8a8172", "r": 0.95, "snow": 0},
+    "limestone":   {"c": "b9ac93", "r": 0.95, "snow": 0},
+    "laterite":    {"c": "a55a3c", "r": 1.0, "snow": 0},
+    "topsoil":     {"c": "5b3f2b", "r": 1.0, "snow": 0},
+    "grass":       {"c": "77a24a", "r": 0.95, "snow": 0.2},
+    "grass_dark":  {"c": "557f37", "r": 0.95, "snow": 0.2},
+    "dirt_path":   {"c": "b08d62", "r": 1.0, "snow": 0.4},
+    "palm_trunk":  {"c": "8d7558", "r": 0.9, "snow": 0.2},
+    "palm_leaf":   {"c": "4f913c", "r": 0.8, "snow": 0.1},
+    "palm_leaf_dry": {"c": "b0a04e", "r": 0.85, "snow": 0.1},
+    "coconut":     {"c": "6e5a2c", "r": 0.8, "snow": 0},
+    "thatch":      {"c": "b79c5f", "r": 1.0, "snow": 0.3},
+    "tin_roof":    {"c": "a3abb0", "r": 0.45, "snow": 0.3},
+    "tin_rust":    {"c": "9e5d3b", "r": 0.7, "snow": 0.3},
+    "wood_teal":   {"c": "3f8b86", "r": 0.8, "snow": 0.4},
+    "wood_green":  {"c": "62a05d", "r": 0.8, "snow": 0.4},
+    "wood_cream":  {"c": "e2d4b0", "r": 0.8, "snow": 0.4},
+    "wood_blue":   {"c": "4b7bb0", "r": 0.8, "snow": 0.4},
+    "wood_dark":   {"c": "5c402b", "r": 0.85, "snow": 0.3},
+    "mosque_white": {"c": "e8e4d8", "r": 0.8, "snow": 0.3},
+    "dome_green":  {"c": "3d8f5d", "r": 0.35, "snow": 0.1},
+    "boat_blue":   {"c": "2f70b0", "r": 0.5, "snow": 0.2},
+    "boat_red":    {"c": "c23b2e", "r": 0.5, "snow": 0.2},
+    "boat_yellow": {"c": "e3b43d", "r": 0.5, "snow": 0.2},
+    "batik":       {"c": "9a4a2e", "r": 1.0, "snow": 0},
+    "pipe_paint":  {"c": "e8a634", "r": 0.45, "snow": 0},
+    "pipe_inner":  {"c": "6f4527", "r": 0.8, "snow": 0},
+    "pipe_flange": {"c": "4a4f57", "r": 0.4, "snow": 0},
+    "io_plate":    {"c": "5f656c", "r": 0.85, "snow": 0},
+    "plate_edge":  {"c": "8a9096", "r": 0.85, "snow": 0},
+    "basin_tile":  {"c": "8fb3b4", "r": 0.5, "snow": 0},
 }
 
 SNOW_RGB = PAL["snow"]["c"]
@@ -241,7 +322,7 @@ def _nodes_albedo(m, key: str, opt: dict) -> None:
         mix.data_type = "RGBA"
         L.new(amt.outputs[0], mix.inputs["Factor"])
         L.new(col, mix.inputs["A"])
-        mix.inputs["B"].default_value = (*hexc(SNOW_RGB), 1.0)
+        mix.inputs["B"].default_value = (*hexc(opt.get("dust", SNOW_RGB)), 1.0)
         col = mix.outputs["Result"]
 
     # ground grime: darker, warmer band near z = 0 (splash, wet slush)
@@ -487,6 +568,29 @@ def snowcap(name, size, loc, rot=(0, 0, 0), droop=0.6, seed=None, lumpy=0.08):
     return ob
 
 
+def pal_add(entries: dict) -> None:
+    """Register extra palette entries for one model set (same fields as PAL). Never overrides a key:
+    sets add what they need (interior paints, furniture fabrics) without touching the shared PAL."""
+    for k, v in entries.items():
+        if k in PAL and PAL[k] != v:
+            raise ValueError("pal_add: palette key already taken: " + k)
+        PAL[k] = v
+
+
+def import_stub(glb_path: str, **params) -> str:
+    """Write <glb>.import before Godot first sees the file, so the first import already uses
+    gltf/embedded_image_handling=2 (Basis Universal, no extracted PNGs). Keeps an existing .import."""
+    p = glb_path + ".import"
+    if os.path.exists(p):
+        return p
+    params.setdefault("gltf/embedded_image_handling", 2)
+    with open(p, "w") as f:
+        f.write('[remap]\n\nimporter="scene"\nimporter_version=1\ntype="PackedScene"\n\n[params]\n\n')
+        for k, v in params.items():
+            f.write(f"{k}={v}\n")
+    return p
+
+
 def parent_to(obs, empty_loc=(0, 0, 0), empty_rot=(0, 0, 0)):
     """Move/rotate a group of parts together (bake applies transforms)."""
     M = Matrix.Translation(Vector(empty_loc)) @ (
@@ -599,10 +703,12 @@ def _ground_plane(size=200.0):
 
 def finish(name: str, out_dir: str, tex: int = 1024, ground: bool = True, **opt) -> str:
     """Bevel + join + bake + export <out_dir>/<name>.glb. opt: snow, ao, ao_dist, edge, edge_r, grime,
-    grime_h, tone, tone_scale, margin (uv island margin)."""
+    grime_h, tone, tone_scale, margin (uv island margin), dust (hex colour of the up-face weather dust,
+    default snow; e.g. sand for a dry coast)."""
     sc = bpy.context.scene
-    glow = [o for o in _parts if "emit" in PAL[o["pal"]]]
-    solid = [o for o in _parts if "emit" not in PAL[o["pal"]]]
+    unbaked = lambda o: "emit" in PAL[o["pal"]] or PAL[o["pal"]].get("raw")
+    glow = [o for o in _parts if unbaked(o)]
+    solid = [o for o in _parts if not unbaked(o)]
     _apply_bevels(_parts)
 
     model = _join(solid, name)
@@ -681,9 +787,11 @@ def finish(name: str, out_dir: str, tex: int = 1024, ground: bool = True, **opt)
             b = gm.node_tree.nodes.get("Principled BSDF")
             b.inputs["Base Color"].default_value = (*hexc(p["c"]), 1.0)
             b.inputs["Roughness"].default_value = p["r"]
-            ec, es = p["emit"]
-            b.inputs["Emission Color"].default_value = (*hexc(ec), 1.0)
-            b.inputs["Emission Strength"].default_value = es
+            b.inputs["Metallic"].default_value = p.get("m", 0.0)
+            if "emit" in p:
+                ec, es = p["emit"]
+                b.inputs["Emission Color"].default_value = (*hexc(ec), 1.0)
+                b.inputs["Emission Strength"].default_value = es
             slot.material = gm
 
     os.makedirs(out_dir, exist_ok=True)
@@ -716,3 +824,482 @@ def variants_arg():
     if "--only" in argv:
         return argv[argv.index("--only") + 1].split(",")
     return None
+
+
+# ---------------------------------------------------------------------------------------------
+# street + rescue set (#123 Fener): extra palette and helpers. Added only; nothing above changes.
+# ---------------------------------------------------------------------------------------------
+
+def rescue_palette() -> None:
+    """Add the street + rescue set palette entries to PAL (tents, aid, vehicles, poles, trees).
+    Call once after reset(). Existing keys are never overwritten."""
+    extra = {
+        # canvas, aid, fabric
+        "canvas_white":  {"c": "d9dad2", "r": 0.9, "snow": 1, "snow_bias": 0.25},
+        "canvas_cream":  {"c": "d3c9ae", "r": 0.9, "snow": 1, "snow_bias": 0.25},
+        "canvas_grey":   {"c": "9a9d9c", "r": 0.9, "snow": 1, "snow_bias": 0.25},
+        "afad_blue":     {"c": "1f4f9e", "r": 0.6, "snow": 0.5},
+        "afad_navy":     {"c": "1d2b4f", "r": 0.7, "snow": 0.6},
+        "kizilay_red":   {"c": "c1262d", "r": 0.6, "snow": 0.5},
+        "tarp_blue":     {"c": "2a64a8", "r": 0.55, "snow": 1, "snow_bias": 0.2},
+        "rope":          {"c": "b9a27a", "r": 1.0, "snow": 0.3},
+        "cardboard":     {"c": "b08758", "r": 0.95, "snow": 0.9},
+        "cardboard_dk":  {"c": "8a6640", "r": 0.95, "snow": 0.7},
+        "tape":          {"c": "c9b48a", "r": 0.4, "snow": 0.2},
+        "pallet":        {"c": "a5865c", "r": 0.95, "snow": 0.9},
+        "blanket_grey":  {"c": "7c7e85", "r": 1.0, "snow": 0.6},
+        "blanket_navy":  {"c": "3a4562", "r": 1.0, "snow": 0.6},
+        "blanket_brown": {"c": "7b5a47", "r": 1.0, "snow": 0.6},
+        "pet_clear":     {"c": "8eb2cc", "r": 0.12, "snow": 0.4},
+        "pet_cap":       {"c": "2f62b2", "r": 0.4, "snow": 0.2},
+        "plastic_white": {"c": "dedcd4", "r": 0.45, "snow": 1},
+        "plastic_red":   {"c": "c43a2c", "r": 0.45, "snow": 0.8},
+        "cone_orange":   {"c": "e0602a", "r": 0.5, "snow": 0.6},
+        "pot_steel":     {"c": "a9afb5", "r": 0.25, "snow": 0.3},
+        "enamel_red":    {"c": "b8352c", "r": 0.3, "snow": 0.3},
+        # machines + vehicles
+        "machine_yellow": {"c": "dda42a", "r": 0.45, "snow": 1},
+        "machine_orange": {"c": "cf6a2b", "r": 0.45, "snow": 1},
+        "fire_red":       {"c": "b8251e", "r": 0.3, "snow": 1},
+        "hivis_lime":     {"c": "c5d533", "r": 0.5, "snow": 0.8},
+        "rubber":         {"c": "2b2a2c", "r": 0.85, "snow": 0.4},
+        "alu":            {"c": "b3b8bd", "r": 0.3, "snow": 0.8},
+        "seat":           {"c": "3a3836", "r": 0.9, "snow": 0},
+        "car_blue":       {"c": "3d5d8c", "r": 0.25, "snow": 1},
+        "car_green":      {"c": "5b7656", "r": 0.25, "snow": 1},
+        "car_grey":       {"c": "868c93", "r": 0.25, "snow": 1},
+        # street + nature
+        "asphalt_cut":   {"c": "55575c", "r": 0.85, "snow": 0.3},
+        "ice":           {"c": "9fb7c9", "r": 0.06, "snow": 0},
+        "bark":          {"c": "4f3b2d", "r": 0.95, "snow": 0.9, "snow_bias": 0.1},
+        "pine":          {"c": "2c4a36", "r": 0.9, "snow": 1, "snow_bias": 0.3},
+        "pine_dark":     {"c": "223a2b", "r": 0.9, "snow": 1, "snow_bias": 0.2},
+        "cypress":       {"c": "28402f", "r": 0.9, "snow": 1, "snow_bias": 0.0},
+        "pole_concrete": {"c": "a7a49c", "r": 0.95, "snow": 0.9},
+        "wood_pole":     {"c": "5d4633", "r": 0.95, "snow": 0.8},
+        "ceramic":       {"c": "c7d0d2", "r": 0.2, "snow": 0.3},
+        "iron_green":    {"c": "2f4a3c", "r": 0.5, "snow": 0.9},
+        "sign_red":      {"c": "c02a26", "r": 0.45, "snow": 0.4},
+        "sign_yellow":   {"c": "e0b42c", "r": 0.45, "snow": 0.4},
+        "marker_black":  {"c": "24221f", "r": 0.8, "snow": 0},
+        "flag_red":      {"c": "d0222a", "r": 0.9, "snow": 0.2},
+        # glowing (unbaked, emissive): every light source in the set is one of these
+        "beacon_red":    {"c": "e0281c", "r": 0.3, "snow": 0, "emit": ("ff2414", 7.0)},
+        "beacon_blue":   {"c": "2a52e0", "r": 0.3, "snow": 0, "emit": ("2a5cff", 7.0)},
+        "beacon_amber":  {"c": "ffa21e", "r": 0.3, "snow": 0, "emit": ("ff9a12", 6.0)},
+        "flood_lamp":    {"c": "f4f6ff", "r": 0.2, "snow": 0, "emit": ("eef2ff", 9.0)},
+        "tent_glow":     {"c": "ffc27a", "r": 1.0, "snow": 0, "emit": ("ffad5c", 1.5)},
+        "cabin_glow":    {"c": "ffd49a", "r": 1.0, "snow": 0, "emit": ("ffc988", 1.3)},
+        "bulb_warm":     {"c": "ffe2b0", "r": 0.3, "snow": 0, "emit": ("ffd08a", 7.0)},
+        "spark":         {"c": "eafcff", "r": 1.0, "snow": 0, "emit": ("dff6ff", 14.0)},
+        "gas_flame":     {"c": "6fa4ff", "r": 1.0, "snow": 0, "emit": ("4f86ff", 5.0)},
+        "led_green":     {"c": "6aff8a", "r": 0.3, "snow": 0, "emit": ("4dff74", 4.0)},
+    }
+    for k, v in extra.items():
+        PAL.setdefault(k, v)
+
+
+def catenary(name, p0, p1, sag=0.4, r=0.012, mat="car_trim", n=8, verts=5):
+    """Hanging cable from p0 to p1 that sags `sag` metres at mid-span (chain of short rods)."""
+    a, b = Vector(p0), Vector(p1)
+    pts = []
+    for i in range(n + 1):
+        t = i / n
+        p = a.lerp(b, t)
+        p.z -= sag * 4.0 * t * (1.0 - t)
+        pts.append(p)
+    return [rod(name, tuple(q0), tuple(q1), r, mat=mat, verts=verts) for q0, q1 in zip(pts, pts[1:])]
+
+
+def polyline(name, pts, r=0.012, mat="car_trim", verts=5):
+    """Cable / hose / rope through a list of points (chain of rods with ball joints hidden by overlap)."""
+    out = []
+    for q0, q1 in zip(pts, pts[1:]):
+        a, b = Vector(q0), Vector(q1)
+        d = (b - a)
+        ext = d.normalized() * min(r * 0.8, d.length * 0.2)
+        out.append(rod(name, tuple(a - ext), tuple(b + ext), r, mat=mat, verts=verts))
+    return out
+
+
+def drape(name, size, loc, mat="tarp_blue", rot=(0, 0, 0), droop=1.0, seed=None, lumpy=0.12, cuts=3):
+    """Soft cloth / tarp / blanket pillow lying ON something (like snowcap, any palette key).
+    size = (x, y, thickness); droop pulls the rim down past the bottom (hangs over edges)."""
+    sx, sy, sz = size
+    r = random.Random(seed if seed is not None else _rng.random())
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0)
+    bmesh.ops.subdivide_edges(bm, edges=bm.edges, cuts=cuts, use_grid_fill=True)
+    for v in bm.verts:
+        x, y, z = v.co
+        edge = max(abs(x), abs(y)) * 2.0
+        v.co.x = x * sx
+        v.co.y = y * sy
+        if z > 0:
+            v.co.z = sz * (1.0 + r.uniform(-lumpy, lumpy) * 2.0) * (1.0 - 0.25 * edge ** 2)
+        else:
+            v.co.z = -droop * sz * (edge ** 4) * (1.0 + r.uniform(0, lumpy))
+    ob = _obj(name, bm, mat, loc, rot, 0.0, 1, smooth=80.0)
+    ob["subsurf"] = 1
+    return ob
+
+
+def wheel(name, r, w, loc, tyre="tyre", rim="metal", hub="chrome", verts=16, side=1):
+    """Road wheel with its axle along X. side=+1 / -1: which way the rim face points."""
+    x, y, z = loc
+    out = [cyl(name + "_t", r, w, (x - w * 0.5, y, z), mat=tyre, rot=(0, 90, 0), verts=verts, bevel=min(0.05, r * 0.18))]
+    out.append(cyl(name + "_r", r * 0.6, 0.03, (x + side * (w * 0.5 - 0.005) - 0.015, y, z), mat=rim, rot=(0, 90, 0),
+                   verts=verts, bevel=0.01))
+    out.append(cyl(name + "_h", r * 0.22, 0.04, (x + side * (w * 0.5 + 0.01) - 0.02, y, z), mat=hub, rot=(0, 90, 0),
+                   verts=8, bevel=0.008))
+    return out
+
+
+def crescent_pts(R=1.0, r=0.8, d=0.38, n=24, cx=0.0, cy=0.0, ang=0.0):
+    """Outline (CCW) of a crescent: circle R at origin minus circle r at (d, 0), opening to +u.
+    Used for the Red Crescent mark and the flag. ang rotates it (degrees)."""
+    # intersection of the two circles
+    xi = (R * R - r * r + d * d) / (2 * d)
+    yi = math.sqrt(max(R * R - xi * xi, 0.0))
+    a0 = math.atan2(yi, xi)
+    b0 = math.atan2(yi, xi - d)
+    pts = []
+    for i in range(n + 1):     # outer arc, from +a0 around the back to -a0
+        a = a0 + (2 * math.pi - 2 * a0) * i / n
+        pts.append((R * math.cos(a), R * math.sin(a)))
+    for i in range(1, n):      # inner arc back through its far-left point (the concave side)
+        a = -b0 - (2 * math.pi - 2 * b0) * i / n
+        pts.append((d + r * math.cos(a), r * math.sin(a)))
+    c, s = math.cos(math.radians(ang)), math.sin(math.radians(ang))
+    return [(cx + u * c - v * s, cy + u * s + v * c) for u, v in pts]
+
+
+def star_pts(R=1.0, ri=0.38, n=5, cx=0.0, cy=0.0, ang=90.0):
+    """Outline (CCW) of an n-pointed star, first point at angle ang (degrees)."""
+    out = []
+    for i in range(2 * n):
+        a = math.radians(ang) + math.pi * i / n
+        rr = R if i % 2 == 0 else ri
+        out.append((cx + rr * math.cos(a), cy + rr * math.sin(a)))
+    return out
+
+
+def drift(name, length, depth, height, loc=(0, 0, 0), rot=(0, 0, 0), seed=None, n=8, mat="snow"):
+    """Snow drift banked against a wall: the wall is the local XZ plane at y = 0, the drift runs along X
+    and slopes out toward -Y. Ends taper; the wall side and the bottom are open (they sit against things)."""
+    r = random.Random(seed if seed is not None else _rng.random())
+    prof = [(0.0, 1.0), (0.1, 0.95), (0.3, 0.74), (0.55, 0.42), (0.8, 0.14), (1.0, 0.0)]
+    bm = bmesh.new()
+    rows = []
+    for i in range(n + 1):
+        t = i / n
+        env = math.sin(math.pi * (0.03 + 0.94 * t)) ** 0.55
+        k = 1.0 + r.uniform(-0.18, 0.18)
+        x = (t - 0.5) * length
+        rows.append([bm.verts.new((x, -u * depth * (0.55 + 0.45 * env) * k, v * height * env * k)) for u, v in prof])
+    base = [bm.verts.new((row[0].co.x, 0.0, 0.0)) for row in rows]   # foot of the wall side
+    for i, (a, b) in enumerate(zip(rows, rows[1:])):
+        for j in range(len(prof) - 1):
+            bm.faces.new([a[j], a[j + 1], b[j + 1], b[j]])
+        bm.faces.new([a[0], b[0], base[i + 1], base[i]])                # closed back: stands free too
+    for row, foot, flip in ((rows[0], base[0], False), (rows[-1], base[-1], True)):
+        for j in range(len(prof) - 1):                                    # end caps
+            f = [foot, row[j + 1], row[j]]
+            bm.faces.new(f[::-1] if flip else f)
+    bm.normal_update()
+    ob = _obj(name, bm, mat, loc, rot, 0.0, 1, smooth=80.0)
+    ob["subsurf"] = 1
+    return ob
+
+
+def text_lo(name, s, size, loc=(0, 0, 0), mat="sign_white", rot=(90, 0, 0), depth=0.01, align="CENTER", res=2):
+    """text() with a low curve resolution: same look at game distance for a fraction of the triangles."""
+    cu = bpy.data.curves.new(name, "FONT")
+    cu.body = s
+    cu.size = size
+    cu.extrude = depth
+    cu.align_x = align
+    cu.align_y = "CENTER"
+    cu.resolution_u = res
+    tob = bpy.data.objects.new(name + "_c", cu)
+    bpy.context.scene.collection.objects.link(tob)
+    dg = bpy.context.evaluated_depsgraph_get()
+    me = bpy.data.meshes.new_from_object(tob.evaluated_get(dg))
+    bpy.data.objects.remove(tob)
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    return _obj(name, bm, mat, loc, rot, 0.0, 1, smooth=10.0)
+
+
+def beam(name, p0, p1, w, h, mat="metal", bevel=0.03, taper=1.0):
+    """Box beam from p0 to p1: width w across (world X when the beam lies in a YZ plane), height h.
+    taper < 1 narrows the height toward p1 (booms, arms)."""
+    a, b = Vector(p0), Vector(p1)
+    d = b - a
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0)
+    for v in bm.verts:
+        t = v.co.z + 0.5
+        v.co.x *= w
+        v.co.y *= h * (1.0 + (taper - 1.0) * t)
+        v.co.z = t * d.length
+    ob = _obj(name, bm, mat, tuple(a), (0, 0, 0), bevel, 2)
+    ob.rotation_mode = "QUATERNION"
+    ob.rotation_quaternion = d.normalized().to_track_quat("Z", "Y")
+    ob.rotation_mode = "XYZ"
+    return ob
+
+# Scenario kit: Australian bush (Black Saturday, Victoria, 7 Feb 2009, #125).
+# Added functions only; everything above is unchanged. Call palette_bush() once per script, then
+# set_dust("ash") so the weather dust on up faces is grey ash instead of snow.
+# ---------------------------------------------------------------------------------------------
+
+PAL_BUSH = {
+    # ground: drought-bleached paddock, red-brown Victorian clay, burnt ground
+    "grass_dry":     {"c": "b39056", "r": 1.0, "snow": 0.5},
+    "grass_straw":   {"c": "c4a66a", "r": 1.0, "snow": 0.5},
+    "grass_dead":    {"c": "8e774a", "r": 1.0, "snow": 0.5},
+    "grass_olive":   {"c": "7d7a48", "r": 1.0, "snow": 0.5},
+    "dirt":          {"c": "9c7a56", "r": 1.0, "snow": 0.35},
+    "dirt_red":      {"c": "8c5636", "r": 1.0, "snow": 0.3},
+    "dirt_pale":     {"c": "b89a72", "r": 1.0, "snow": 0.35},
+    "topsoil":       {"c": "4e3a2c", "r": 1.0, "snow": 0},
+    "clay_red":      {"c": "9a4f33", "r": 1.0, "snow": 0},
+    "clay_ochre":    {"c": "b98a4e", "r": 1.0, "snow": 0},
+    "sandstone":     {"c": "8c7860", "r": 0.95, "snow": 0},
+    "mudstone":      {"c": "5f5149", "r": 0.95, "snow": 0},
+    "char":          {"c": "221c19", "r": 1.0, "snow": 0.6},
+    "ash":           {"c": "8a847b", "r": 1.0, "snow": 0.6},
+    "ash_white":     {"c": "c3bcb0", "r": 1.0, "snow": 0},
+    # eucalyptus
+    "bark_white":    {"c": "d6cfc1", "r": 0.8, "snow": 0.3},
+    "bark_grey":     {"c": "9b9488", "r": 0.85, "snow": 0.3},
+    "bark_ribbon":   {"c": "8f6a48", "r": 0.9, "snow": 0.3},
+    "bark_litter":   {"c": "7a5c40", "r": 1.0, "snow": 0.4},
+    "leaf_gum":      {"c": "74805e", "r": 0.8, "snow": 0.25},
+    "leaf_gum_dark": {"c": "566246", "r": 0.8, "snow": 0.25},
+    "leaf_dry":      {"c": "a3874c", "r": 0.9, "snow": 0.25},
+    "leaf_scorch":   {"c": "8a4f26", "r": 0.9, "snow": 0.25},
+    # farm buildings
+    "weatherboard":  {"c": "dccfb0", "r": 0.85, "snow": 0.6},
+    "trim_green":    {"c": "40583c", "r": 0.6, "snow": 0.5},
+    "trim_cream":    {"c": "e3d9c0", "r": 0.6, "snow": 0.5},
+    "roof_red":      {"c": "8f3b2d", "r": 0.45, "snow": 0.6, "snow_bias": 0.1},
+    "zinc":          {"c": "a7acae", "r": 0.35, "snow": 0.6, "snow_bias": 0.1},
+    "zinc_dark":     {"c": "7b8083", "r": 0.4, "snow": 0.6, "snow_bias": 0.1},
+    "timber_grey":   {"c": "8c8273", "r": 0.95, "snow": 0.6},
+    "timber_dark":   {"c": "5b4f43", "r": 0.95, "snow": 0.5},
+    "hay":           {"c": "cfa95a", "r": 1.0, "snow": 0.6},
+    "hay_shade":     {"c": "a8853f", "r": 1.0, "snow": 0.4},
+    "poly_pipe":     {"c": "2b2a2a", "r": 0.5, "snow": 0.3},
+    "brass":         {"c": "b8913f", "r": 0.3, "snow": 0},
+    "valve_red":     {"c": "c1301f", "r": 0.35, "snow": 0},
+    "hose_green":    {"c": "3f9a3b", "r": 0.45, "snow": 0},
+    "danger_red":    {"c": "b52a22", "r": 0.5, "snow": 0.2},
+    "danger_orange": {"c": "d8692a", "r": 0.5, "snow": 0.2},
+    "danger_yellow": {"c": "dfb43a", "r": 0.5, "snow": 0.2},
+    "danger_blue":   {"c": "2f62a8", "r": 0.5, "snow": 0.2},
+    "danger_green":  {"c": "3f8f4a", "r": 0.5, "snow": 0.2},
+    # eastern grey kangaroo
+    "roo_fur":       {"c": "8d7a68", "r": 1.0, "snow": 0.15},
+    "roo_back":      {"c": "6f6156", "r": 1.0, "snow": 0.15},
+    "roo_belly":     {"c": "cbbca4", "r": 1.0, "snow": 0},
+    "roo_dark":      {"c": "352c27", "r": 0.8, "snow": 0},
+    "roo_eye":       {"c": "171312", "r": 0.15, "snow": 0},
+    # glowing (unbaked, emissive)
+    "flame_hot":     {"c": "ffd890", "r": 1.0, "snow": 0, "emit": ("ffc46a", 9.0)},
+    "ember_glow":    {"c": "ff6a20", "r": 1.0, "snow": 0, "emit": ("ff5414", 3.5)},
+    "ember_dim":     {"c": "c23a12", "r": 1.0, "snow": 0, "emit": ("ff3a10", 1.4)},
+}
+
+DUST = {"snow": "e4ebf3", "ash": "b9b2a6", "sand": "d8c08c"}
+
+
+def palette_bush() -> None:
+    """Register the Black Saturday palette entries in PAL (scenario knob: palette subset)."""
+    PAL.update(PAL_BUSH)
+
+
+def set_dust(kind: str = "snow") -> None:
+    """Weather dust colour for the up-face dust pass (scenario knob): snow / ash / sand."""
+    global SNOW_RGB
+    SNOW_RGB = DUST[kind]
+
+
+def tube(name, pts, r, mat="metal", verts=8, r2=None, radii=None, cap=True, smooth=70.0):
+    """Swept round tube along a polyline (hose, branches, tails, wires): one mesh, parallel-transport frames.
+    Radius tapers r -> r2 along the points, or per-point radii."""
+    P = [Vector(p) for p in pts]
+    n = len(P)
+    if radii is None:
+        r2 = r if r2 is None else r2
+        radii = [r + (r2 - r) * i / max(1, n - 1) for i in range(n)]
+    radii = [max(0.002, x) for x in radii]
+    T = []
+    for i in range(n):
+        if i == 0:
+            t = P[1] - P[0]
+        elif i == n - 1:
+            t = P[-1] - P[-2]
+        else:
+            t = (P[i + 1] - P[i]).normalized() + (P[i] - P[i - 1]).normalized()
+        T.append(t.normalized())
+    up = Vector((0, 0, 1)) if abs(T[0].z) < 0.9 else Vector((1, 0, 0))
+    N = T[0].cross(up).normalized()
+    bm = bmesh.new()
+    rings = []
+    for i in range(n):
+        if i > 0:
+            ax = T[i - 1].cross(T[i])
+            if ax.length > 1e-6:
+                N = Matrix.Rotation(T[i - 1].angle(T[i]), 3, ax.normalized()) @ N
+        B = T[i].cross(N)
+        rings.append([bm.verts.new(P[i] + (N * math.cos(2 * math.pi * k / verts) + B * math.sin(2 * math.pi * k / verts)) * radii[i])
+                      for k in range(verts)])
+    for i in range(n - 1):
+        for k in range(verts):
+            k2 = (k + 1) % verts
+            bm.faces.new((rings[i][k], rings[i][k2], rings[i + 1][k2], rings[i + 1][k]))
+    if cap:
+        bm.faces.new(list(reversed(rings[0])))
+        bm.faces.new(rings[-1])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return _obj(name, bm, mat, (0, 0, 0), (0, 0, 0), 0.0, 1, smooth)
+
+
+def lathe(name, prof, loc=(0, 0, 0), mat="metal", rot=(0, 0, 0), verts=12, smooth=50.0, scale=(1, 1, 1)):
+    """Surface of revolution around local Z from an (r, z) profile, bottom to top (tanks, drums, nozzles,
+    flames). r = 0 at an end closes it to a point; otherwise the end gets a flat cap."""
+    bm = bmesh.new()
+    rings = []
+    for r, z in prof:
+        if r <= 1e-4:
+            rings.append([bm.verts.new((0, 0, z))])
+        else:
+            rings.append([bm.verts.new((r * math.cos(2 * math.pi * k / verts), r * math.sin(2 * math.pi * k / verts), z))
+                          for k in range(verts)])
+    for a, b in zip(rings, rings[1:]):
+        for k in range(verts):
+            k2 = (k + 1) % verts
+            if len(a) == 1 and len(b) > 1:
+                bm.faces.new((a[0], b[k2], b[k]))
+            elif len(b) == 1 and len(a) > 1:
+                bm.faces.new((a[k], a[k2], b[0]))
+            elif len(a) > 1:
+                bm.faces.new((a[k], a[k2], b[k2], b[k]))
+    if len(rings[0]) > 1:
+        bm.faces.new(list(reversed(rings[0])))
+    if len(rings[-1]) > 1:
+        bm.faces.new(rings[-1])
+    bmesh.ops.scale(bm, vec=scale, verts=bm.verts)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return _obj(name, bm, mat, loc, rot, 0.0, 1, smooth)
+
+
+def corrugated(name, w, l, loc=(0, 0, 0), rot=(0, 0, 0), mat="zinc", pitch=0.2, amp=0.016, t=0.014,
+               clip=None, profile=None, steps=6):
+    """Corrugated iron sheet. Ribs run along local +Y (length l, from 0), waves across X (width w, centred);
+    the sheet lies in XY with its face up (+Z). clip(u) -> (v0, v1) trims every rib (hip roofs, gables).
+    Keep the wave slope under ~27 deg (2*pi*amp/pitch < 0.5) or smart-UV splits every rib into its own island.
+    profile = [(y, z), ...] bends the sheet along Y instead (bullnose verandah). Exaggerated pitch on purpose."""
+    nu = max(2, int(round(w / pitch * steps)))
+    bm = bmesh.new()
+    if profile is None:
+        profile = [(0.0, 0.0), (l, 0.0)]
+    pn = []   # per profile point: (y, z, ny, nz) with the normal of the bent sheet
+    for i, (y, z) in enumerate(profile):
+        a = profile[max(0, i - 1)]
+        b = profile[min(len(profile) - 1, i + 1)]
+        dy, dz = b[0] - a[0], b[1] - a[1]
+        d = math.hypot(dy, dz) or 1.0
+        pn.append((y, z, -dz / d, dy / d))
+    cols = []
+    for j in range(nu + 1):
+        u = -w / 2 + w * j / nu
+        h = amp * math.sin(2 * math.pi * u / pitch)
+        if clip is not None:
+            v0, v1 = clip(u)
+            v1 = max(v1, v0 + 1e-3)
+            pts = [(v0, 0.0, 0.0, 1.0), (v1, 0.0, 0.0, 1.0)]
+        else:
+            pts = pn
+        top = [bm.verts.new((u, y + ny * h, z + nz * h)) for y, z, ny, nz in pts]
+        bot = [bm.verts.new((u, y + ny * (h - t), z + nz * (h - t))) for y, z, ny, nz in pts]
+        cols.append((top, bot))
+    m = len(cols[0][0])
+    for (ta, ba), (tb, bb) in zip(cols, cols[1:]):
+        for i in range(m - 1):
+            bm.faces.new((ta[i], tb[i], tb[i + 1], ta[i + 1]))
+            bm.faces.new((ba[i + 1], bb[i + 1], bb[i], ba[i]))
+        bm.faces.new((ba[0], bb[0], tb[0], ta[0]))
+        bm.faces.new((ta[-1], tb[-1], bb[-1], ba[-1]))
+    for top, bot in (cols[0], cols[-1]):
+        for i in range(m - 1):
+            bm.faces.new((top[i], top[i + 1], bot[i + 1], bot[i]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return _obj(name, bm, mat, loc, rot, 0.0, 1, smooth=60.0)
+
+
+def tuft(name, loc=(0, 0, 0), n=14, h=0.5, spread=0.12, mat="grass_dry", r=0.02, lean=0.45, seed=None,
+         rot=(0, 0, 0), droop=0.25):
+    """Grass tussock: n thin three-sided blades from one base, leaning out and drooping at the tips. One object."""
+    rr = random.Random(seed if seed is not None else _rng.random())
+    bm = bmesh.new()
+    for i in range(n):
+        a = rr.uniform(0, 2 * math.pi)
+        hh = h * rr.uniform(0.55, 1.0)
+        ln = lean * rr.uniform(0.35, 1.0)
+        d = Vector((math.cos(a), math.sin(a), 0))
+        b0 = d * spread * rr.uniform(0.0, 1.0)
+        mid = b0 + d * ln * hh * 0.35 + Vector((0, 0, hh * 0.6))
+        tip = b0 + d * ln * hh * (1.0 + droop) + Vector((0, 0, hh * (0.95 - droop * 0.6)))
+        side = Vector((-d.y, d.x, 0))
+        rb = r * rr.uniform(0.7, 1.2)
+        ring0 = [bm.verts.new(b0 + side * rb * math.cos(k * 2.094) + d * rb * math.sin(k * 2.094)) for k in range(3)]
+        ring1 = [bm.verts.new(mid + side * rb * 0.6 * math.cos(k * 2.094) + d * rb * 0.6 * math.sin(k * 2.094)) for k in range(3)]
+        tv = bm.verts.new(tip)
+        for k in range(3):
+            k2 = (k + 1) % 3
+            bm.faces.new((ring0[k], ring0[k2], ring1[k2], ring1[k]))
+            bm.faces.new((ring1[k], ring1[k2], tv))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return _obj(name, bm, mat, loc, rot, 0.0, 1, smooth=80.0)
+
+
+def lump(name, size, loc=(0, 0, 0), mat="leaf_gum", rot=(0, 0, 0), lumpy=0.18, subdiv=1, seed=None, droop=0.0):
+    """Noisy rounded mass (eucalyptus foliage clump, boulder): icosphere scaled to size (full extents),
+    vertex noise; droop pulls the lower half down and in (hanging gum leaves)."""
+    rr = random.Random(seed if seed is not None else _rng.random())
+    bm = bmesh.new()
+    bmesh.ops.create_icosphere(bm, subdivisions=subdiv, radius=0.5)
+    for v in bm.verts:
+        v.co *= 1.0 + rr.uniform(-lumpy, lumpy)
+        if v.co.z < 0 and droop > 0:
+            k = -v.co.z * 2.0
+            v.co.z -= droop * k * 0.5
+            v.co.x *= 1.0 - 0.35 * droop * k
+            v.co.y *= 1.0 - 0.35 * droop * k
+        v.co.x *= size[0]
+        v.co.y *= size[1]
+        v.co.z *= size[2]
+    return _obj(name, bm, mat, loc, rot, 0.0, 1, smooth=70.0)
+
+
+def _uv_tight(ob, margin):
+    """Smart UV, then equal texel density and a tight packing (FRACTION margin): many small parts waste far
+    less of the atlas than with the default pack (~30% empty instead of ~70% on the farmhouse)."""
+    _select_only([ob])
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.smart_project(angle_limit=math.radians(55), island_margin=0.0, area_weight=0.0,
+            correct_aspect=True, scale_to_bounds=False)
+    bpy.ops.uv.average_islands_scale()
+    bpy.ops.uv.pack_islands(rotate=True, margin_method="FRACTION", margin=margin)
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+
+def use_tight_uv() -> None:
+    """Opt in to _uv_tight for the rest of this run (finish() picks it up). Pass margin=0.002..0.003."""
+    global _uv
+    _uv = _uv_tight
