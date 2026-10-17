@@ -73,7 +73,7 @@ func _run() -> void:
 	var bl: Array = story.badge_disasters()
 	var bids := bl.map(func(d: Resource) -> String: return String(d.id))
 	bids.sort()
-	_check("badge list is exactly io, km, sf", bids == ["indian_ocean", "kahramanmaras", "solar_flare"])
+	_check("badge list is exactly fire, io, km, sf", bids == ["black_saturday", "indian_ocean", "kahramanmaras", "solar_flare"])
 	for d: Resource in bl:
 		_check("%s has a badge model" % d.id, d.badge is PackedScene)
 
@@ -102,13 +102,12 @@ func _run() -> void:
 	_check("no path: a badge run still reports new", story.record(io, 8, 8))
 	_check("no path: nothing written", not FileAccess.file_exists(abs_path) and not story.progress(&"indian_ocean").done)
 
-	# a fire run (no badge yet) is still saved; the result card shows no badge moment
+	# a fire run: saving 5 of 8 earns the fire badge, the result card shows the badge moment
 	story.progress_path = path
-	story.record(fire, 5, 8)
-	_check("fire run saved as done", story.progress(&"black_saturday").done)
 	var fres: Node = await _open_result(game, fire, 5, 8)
 	await create_timer(fres.BADGE_DELAY + 0.3).timeout
-	_check("fire: no badge moment", fres.badge_moment == null)
+	_check("fire run saved as done with the badge", story.progress(&"black_saturday").done and story.progress(&"black_saturday").badge)
+	_check("fire: badge moment shown", fres.badge_moment != null)
 	DirAccess.remove_absolute(abs_path)
 
 	# result card: the badge moment comes only for a new badge
@@ -157,8 +156,8 @@ func _run() -> void:
 	change_scene_to_file(BADGES)
 	await _wait_scene(BADGES)
 	var scr := current_scene
-	_check("3 cards", scr.cards.size() == 3)
-	_check("no card for black_saturday", not scr.cards.has(&"black_saturday"))
+	_check("4 cards", scr.cards.size() == 4)
+	_check("card for black_saturday", scr.cards.has(&"black_saturday"))
 	var c_km: Dictionary = scr.cards.get(&"kahramanmaras", {})
 	var c_io: Dictionary = scr.cards.get(&"indian_ocean", {})
 	var c_sf: Dictionary = scr.cards.get(&"solar_flare", {})
@@ -169,7 +168,7 @@ func _run() -> void:
 	_check("unplayed card is a silhouette", not c_sf.earned and c_sf.badge.locked and c_sf.badge.material != null)
 	_check("3026 card glitches even locked", c_sf.badge.glitchy and not c_io.badge.glitchy)
 	_check("unplayed card hides the place", not (c_sf.place as Label).text.contains(TextFx.upper(sf.text("PLACE"))))
-	_check("count 1 / 3", (scr.get_node("%Count") as Label).text.contains("1") and (scr.get_node("%Count") as Label).text.contains("3"))
+	_check("count 1 / 4", (scr.get_node("%Count") as Label).text.contains("1") and (scr.get_node("%Count") as Label).text.contains("4"))
 	_check("Esc never opens the pause menu here", not game.get_children().any(func(n: Node) -> bool:
 		return n.has_method("can_open") and n.can_open()))
 	var esc := InputEventAction.new()
