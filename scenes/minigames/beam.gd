@@ -198,8 +198,8 @@ func _show_title() -> void:
 	_open_card()
 	_kick(_t("TITLE_KICK"))
 	_heading(_t("TITLE"), true)
-	for k in ["TITLE_RULE_1", "TITLE_RULE_2", "TITLE_RULE_3", "TITLE_RULE_4"]:
-		_text("[color=#ffb347]◆[/color]  " + _t(k), 17)
+	for i in 4:
+		_rule_card(i + 1, _t("TITLE_RULE_%d" % (i + 1)))
 	var tog := CheckBox.new()
 	tog.name = "Preview"
 	tog.text = _t("PREVIEW_TOGGLE")
@@ -782,6 +782,61 @@ func _text(bbcode: String, size := 18) -> RichTextLabel:
 	r.text = bbcode
 	_box.add_child(r)
 	return r
+
+
+## One briefing rule as its own badge: a rounded, faintly filled and edged card (the HUD plate's look) with a numbered tile.
+func _rule_card(n: int, bbcode: String) -> void:
+	var p := PanelContainer.new()
+	p.name = "Rule%d" % n
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.62, 0.85, 1.0, 0.06)
+	sb.border_color = Color(0.62, 0.85, 1.0, 0.22)
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(12)
+	sb.content_margin_left = 12
+	sb.content_margin_right = 16
+	sb.content_margin_top = 10
+	sb.content_margin_bottom = 10
+	p.add_theme_stylebox_override(&"panel", sb)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override(&"separation", 14)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.add_child(row)
+	var tile := PanelContainer.new()
+	tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tile.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	tile.custom_minimum_size = Vector2(40, 40)
+	var tsb := StyleBoxFlat.new()
+	tsb.bg_color = Color(SUN, 0.18)
+	tsb.border_color = Color(SUN, 0.75)
+	tsb.set_border_width_all(2)
+	tsb.set_corner_radius_all(20)
+	tile.add_theme_stylebox_override(&"panel", tsb)
+	var num := Label.new()
+	num.text = str(n)
+	num.theme_type_variation = &"HudCaption"
+	num.add_theme_font_size_override(&"font_size", 26)
+	num.add_theme_color_override(&"font_color", Color("ffd27a"))
+	num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	num.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	tile.add_child(num)
+	row.add_child(tile)
+	var r := RichTextLabel.new()
+	r.bbcode_enabled = true
+	r.fit_content = true
+	r.scroll_active = false
+	r.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	r.custom_minimum_size.x = 440
+	r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	r.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	r.add_theme_font_size_override(&"normal_font_size", 19)
+	r.add_theme_font_size_override(&"bold_font_size", 19)
+	r.add_theme_color_override(&"default_color", Color("dbe5f7"))
+	r.text = bbcode
+	row.add_child(r)
+	_box.add_child(p)
 
 
 func _chip(text: String, col: Color) -> PanelContainer:
