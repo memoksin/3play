@@ -76,12 +76,16 @@ Timeline from `scenes/minigames/fit.gd`: aftershock hints at about 25 s and 50 s
 |---|---|---|---|---|---|---|---|---|
 | F1 | Ambience | Whole minigame (cold street, snow, wind) | DMP013016 HEAVY SNOW STORM MS.wav | martypinso | https://freesound.org/people/martypinso/sounds/35480/ | CC0 | chosen | Same sound as D1, so the place sounds the same in the diorama and the minigame. |
 | F2 | Select a person or item | The player clicks a person or item | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen | Use only the first second of the file. |
-| F3 | Drop into a zone | The item lands in a zone (slide of 0.18 s) | | | | | todo | Needs a search. |
+| F3 | Drop into a zone | The item lands in a zone (slide of 0.18 s) | Picking up and Putting Down Object | mrh4hn | https://freesound.org/people/mrh4hn/sounds/426631/ | CC0 | chosen | Use only seconds 5 to 6 of the file. |
 | F4 | Wrong item or cannot take | The zone is full, the item snaps back | | | | | todo | Should sound like "you cannot take this item", not a buzzer. Needs a search. |
-| F5 | Building creak and quake start | Aftershock hints (about 25 s and 50 s) and the start of the big quake | | | | | todo | Needs a building or structure creak, not a single wood creak. Idea: mix it with the F6 rumble. |
+| F5 | Building creak and quake start | Aftershock hints (about 25 s and 50 s) and the start of the big quake | | | | | todo | Needs a building or structure cracking sound, not a single wood creak. Plays on top of F6 (see the mix note). |
 | F6 | Big quake | 13:24, 1.6 s of violent shaking | Cracking Earthquake | uagadugu | https://freesound.org/people/uagadugu/sounds/222521/ | CC0 | chosen | About 12 s file, trim to the shaking. Idea: layer the F5 creak on top. |
 | F7 | Building collapse | Right after the quake hit, 1.3 s | building collapse / demolition | greyfeather | https://freesound.org/people/greyfeather/sounds/712918/ | CC0 | chosen | About 3 s. Starts while the F6 rumble is still playing (overlap). See the transition note. |
 | F8 | Clock | The HUD clock runs | | | | | undecided | Test silent first, like G6. |
+
+### Mix note (F5 + F6)
+
+The building creak (F5) plays together with the quake rumble (F6) when the big quake starts: two separate players started at the same moment, the creak on top of the rumble. No need to bake them into one file. At the aftershock hints (about 25 s and 50 s) the creak plays alone. Assigned to memoksin in issue #89.
 
 ### Transition note (F6 to F7)
 
