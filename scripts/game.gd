@@ -226,7 +226,7 @@ func apply_audio_settings() -> void:
 func load_display_settings() -> void:
 	var cfg := _read_settings()
 	fullscreen_saved = cfg.has_section_key("display", "fullscreen")
-	# Never chosen: the project opens fullscreen (window/size/mode), so the toggle shows it as on.
+	# Never chosen: fullscreen (apply_fullscreen), so the toggle shows it as on.
 	fullscreen = cfg.get_value("display", "fullscreen") == true if fullscreen_saved else true
 
 
@@ -238,9 +238,10 @@ func set_fullscreen(on: bool) -> void:
 	_save_settings("display", {"fullscreen": on})
 
 
-## Applies the saved window mode; nothing happens if the player never chose one.
+## Applies the window mode (fullscreen unless the player turned it off). The project itself opens windowed so
+## offscreen runs (~/bin/godot sets PF_OFFSCREEN) stay on the virtual screen: fullscreen opens a new macOS Space.
 func apply_fullscreen() -> void:
-	if not fullscreen_saved or DisplayServer.get_name() == "headless":
+	if DisplayServer.get_name() == "headless" or OS.get_environment("PF_OFFSCREEN") == "1":
 		return
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED)
 
