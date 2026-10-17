@@ -1,5 +1,5 @@
 extends Node3D
-## Globe intro: spin to the disaster, lock on, zoom in, fade, then Game.next().
+## Globe intro: spin to the disaster, lock on, zoom in, dive into the diorama's haze, then Game.next().
 ## Port of the approved three.js prototype (issue #6).
 
 const SPIN := 4.0
@@ -12,6 +12,10 @@ const NOW := 2026
 const AXIAL_TILT := 23.44 * PI / 180.0
 const CAM_FAR := 4.4
 const CAM_NEAR := 1.37
+## Dive into the diorama: DIVE_IN s before the fade the camera starts falling (ease-in) toward
+## CAM_DIVE, while the veil closes into the diorama's haze colour (Diorama.haze()).
+const CAM_DIVE := 1.14
+const DIVE_IN := 0.35
 const START_PITCH := 0.25
 ## Spin at t = 0: the prototype's rest orientation (three.js sphere at y = 0) in SphereMesh's layout.
 const START_SPIN := -PI / 2
@@ -161,6 +165,7 @@ func _ready() -> void:
 	_year_pos = _year.position
 	_hint.label_settings = _label_settings(FONT_SIZE.skip, WHITE, 0.14, false)
 	_overlay.draw.connect(_draw_hud)
+	_setup_fade()
 	_start()
 
 
@@ -334,7 +339,8 @@ func _pose() -> void:
 	_pitch.rotation.x = lerpf(_from_pitch, _to_pitch, _in_out(_clamp01(t / SPIN)))
 	if _glitch_year < 0:
 		_year.text = str(roundi(NOW + (_disaster.year - NOW) * e))
-	_cam.position.z = lerpf(CAM_FAR, CAM_NEAR, _in_out(_clamp01((t - SPIN - LOCK) / ZOOM)))
+	_cam.position.z = lerpf(CAM_FAR, CAM_NEAR, _in_out(_clamp01((t - SPIN - LOCK) / ZOOM))) \
+			- (CAM_NEAR - CAM_DIVE) * pow(_clamp01((t - TOTAL + FADE + DIVE_IN) / (FADE + DIVE_IN)), 2.0)
 	if _glitch_year >= 0:
 		_pose_glitch(e)
 	_pose_clouds()
@@ -498,6 +504,19 @@ func _build_future() -> void:
 	_tear = _full_rect("Tear", "res://scenes/globe/glitch.gdshader")
 	hud.add_child(_tear)
 	hud.move_child(_tear, _year_small.get_index())
+
+
+## The fade closes into the diorama's haze colour through cloud wisps instead of black.
+func _setup_fade() -> void:
+	var mat := ShaderMaterial.new()
+	mat.shader = load("res://scenes/globe/dive.gdshader")
+	_fade.material = mat
+	var dio: GDScript = load("res://scenes/diorama/diorama.gd")
+	_fade.color = Color(dio.haze(_disaster.id), 0.0)
+	var fit := func() -> void:
+		mat.set_shader_parameter(&"aspect", _fade.size.x / maxf(1.0, _fade.size.y))
+	_fade.resized.connect(fit)
+	fit.call()
 
 
 func _full_rect(node_name: String, shader: String) -> ColorRect:
