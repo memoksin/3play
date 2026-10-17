@@ -101,6 +101,15 @@ static func all_disasters() -> Array[Disaster]:
 	return out
 
 
+## The disasters shown on the badges screen: a mission joins it once its Disaster.badge is set.
+static func badge_disasters() -> Array[Disaster]:
+	var out: Array[Disaster] = []
+	for d in all_disasters():
+		if d.badge != null:
+			out.append(d)
+	return out
+
+
 static func _read_progress() -> ConfigFile:
 	var cfg := ConfigFile.new()
 	if progress_path != "":

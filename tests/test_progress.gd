@@ -65,10 +65,16 @@ func _run() -> void:
 	var km: Resource = load("res://data/disasters/kahramanmaras.tres")
 	var sf: Resource = load("res://data/disasters/solar_flare.tres")
 
-	# every disaster has a badge, and the badges screen lists them all
+	var fire: Resource = load("res://data/disasters/black_saturday.tres")
+
+	# all_disasters lists every mission; the badge list only those with a badge
 	var all: Array = story.all_disasters()
-	_check("all_disasters lists the 3 disasters", all.size() == 3)
-	for d: Resource in all:
+	_check("all_disasters lists the 4 disasters", all.size() == 4)
+	var bl: Array = story.badge_disasters()
+	var bids := bl.map(func(d: Resource) -> String: return String(d.id))
+	bids.sort()
+	_check("badge list is exactly io, km, sf", bids == ["indian_ocean", "kahramanmaras", "solar_flare"])
+	for d: Resource in bl:
 		_check("%s has a badge model" % d.id, d.badge is PackedScene)
 
 	# badge rule: at least half saved
@@ -95,6 +101,15 @@ func _run() -> void:
 	story.progress_path = ""
 	_check("no path: a badge run still reports new", story.record(io, 8, 8))
 	_check("no path: nothing written", not FileAccess.file_exists(abs_path) and not story.progress(&"indian_ocean").done)
+
+	# a fire run (no badge yet) is still saved; the result card shows no badge moment
+	story.progress_path = path
+	story.record(fire, 5, 8)
+	_check("fire run saved as done", story.progress(&"black_saturday").done)
+	var fres: Node = await _open_result(game, fire, 5, 8)
+	await create_timer(fres.BADGE_DELAY + 0.3).timeout
+	_check("fire: no badge moment", fres.badge_moment == null)
+	DirAccess.remove_absolute(abs_path)
 
 	# result card: the badge moment comes only for a new badge
 	story.progress_path = path
@@ -143,6 +158,7 @@ func _run() -> void:
 	await _wait_scene(BADGES)
 	var scr := current_scene
 	_check("3 cards", scr.cards.size() == 3)
+	_check("no card for black_saturday", not scr.cards.has(&"black_saturday"))
 	var c_km: Dictionary = scr.cards.get(&"kahramanmaras", {})
 	var c_io: Dictionary = scr.cards.get(&"indian_ocean", {})
 	var c_sf: Dictionary = scr.cards.get(&"solar_flare", {})

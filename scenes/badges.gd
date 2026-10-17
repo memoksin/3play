@@ -1,6 +1,6 @@
 extends Control
-## Badges screen, opened from the main menu's medal button: one card per disaster in the game
-## (Story.all_disasters). Earned = the 2.5D badge (BadgeView), the place and the best score. Played
+## Badges screen, opened from the main menu's medal button: one card per disaster with a badge
+## (Story.badge_disasters). Earned = the 2.5D badge (BadgeView), the place and the best score. Played
 ## without the badge = its silhouette, the place, the best score and how to earn it. Never played = the
 ## silhouette and "unknown mission" (the place would spoil the future glitch). Esc or Back = menu.
 
@@ -15,7 +15,7 @@ func _ready() -> void:
 	%Title.text = TextFx.upper(tr("BADGES_TITLE"))
 	%Back.text = TextFx.upper(tr("BADGES_BACK"))
 	%Back.pressed.connect(back)
-	var all := Story.all_disasters()
+	var all := Story.badge_disasters()
 	var ids := all.map(func(d: Disaster) -> StringName: return d.id)
 	%Count.text = tr("BADGES_COUNT") % [Story.badge_count(ids), all.size()]
 	%Grid.columns = clampi(all.size(), 1, 4)
