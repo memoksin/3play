@@ -9,6 +9,7 @@ const SCENES := {
 	&"connect": "res://scenes/minigames/connect.tscn",
 	&"result": "res://scenes/result.tscn",
 }
+const DEFAULT_LOCALE := "tr"  # until the player picks another with the menu's TR / EN switch
 const FLOW: Array[StringName] = [&"globe", &"diorama", &"minigame", &"result", &"main"]
 ## Disasters a role can get; the file name (without .tres) is the id in the play counts.
 const POOL := {
@@ -102,11 +103,10 @@ func has_locale() -> bool:
 	return saved_locale() != ""
 
 
-## Applies the saved locale, if any.
+## Applies the saved locale; with none saved, Turkish is the default.
 func load_locale() -> void:
 	var code := saved_locale()
-	if code != "":
-		TranslationServer.set_locale(code)
+	TranslationServer.set_locale(code if code != "" else DEFAULT_LOCALE)
 
 
 ## Applies the locale and saves it.

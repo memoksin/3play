@@ -1,5 +1,5 @@
 extends SceneTree
-## Language picker: settings round trip, first-launch redirect, flag pick, menu switch.
+## Language: settings round trip, Turkish default, boot redirect, menu switch.
 
 const MAX_FRAMES := 900
 
@@ -47,17 +47,16 @@ func _run() -> void:
 	_check("removed file: no locale again", not game.has_locale())
 	TranslationServer.set_locale("en")
 
-	# boot scene with no saved locale shows the picker
+	# no saved locale: Turkish by default, nothing saved, boot scene goes straight to the menu
+	game.load_locale()
+	_check("default locale is Turkish", TranslationServer.get_locale().begins_with("tr"))
 	_check("boot scene is the language scene", ProjectSettings.get_setting("application/run/main_scene") == "res://scenes/language.tscn")
 	change_scene_to_file("res://scenes/language.tscn")
-	await _settle()
-	_check("first run shows language scene", current_scene.scene_file_path == "res://scenes/language.tscn")
-	var flag := current_scene.find_child("TR", true, false) as BaseButton
-	_check("flag button exists", flag != null)
-	flag.pressed.emit()
 	await _settle(6)
-	_check("pick lands on main menu", current_scene.scene_file_path == game.scene_path(&"main"))
-	_check("pick saved", game.has_locale() and TranslationServer.get_locale().begins_with("tr"))
+	_check("first run lands on main menu", current_scene.scene_file_path == game.scene_path(&"main"))
+	_check("default is not saved", not game.has_locale())
+	var tr_flag := current_scene.find_child("TR", true, false) as BaseButton
+	_check("TR is selected in the menu", tr_flag != null and tr_flag.button_pressed)
 
 	# menu switch
 	var en := current_scene.find_child("EN", true, false) as BaseButton
@@ -71,7 +70,9 @@ func _run() -> void:
 	# saved locale: boot scene forwards straight to the menu
 	change_scene_to_file("res://scenes/language.tscn")
 	await _settle(6)
-	_check("saved locale skips the picker", current_scene.scene_file_path == game.scene_path(&"main"))
+	_check("boot scene goes to the menu", current_scene.scene_file_path == game.scene_path(&"main"))
+	game.load_locale()
+	_check("saved English wins over the default", TranslationServer.get_locale().begins_with("en"))
 
 	DirAccess.remove_absolute(abs_path)
 	game.settings_path = ""
