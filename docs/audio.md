@@ -209,7 +209,7 @@ Rotate satellites to route the solar beam into collectors, waves, a countdown, "
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
 | BM1 | Space ambience | Whole minigame | Solar Storm.wav | Puniho | https://freesound.org/s/151098/ | CC0 | chosen (reuse of D3) | |
-| BM2 | Rotate a satellite | The player rotates a satellite | Servo motor | Burningmonkey | https://freesound.org/people/Burningmonkey/sounds/322021/ | CC0 | chosen | Use seconds 3 to 4 of the file. |
+| BM2 | Rotate a satellite | The player rotates a satellite | Servo_1_Panera.wav | sinmente0987 | https://freesound.org/people/sinmente0987/sounds/160712/ | CC0 (checked by Sude) | chosen | Burcu picked it instead of Servo motor (Burningmonkey). Sude to trim by ear. |
 | BM3 | Beam | The beam runs through the satellites | Laser Beam Firing | SecureSubset | https://freesound.org/people/SecureSubset/sounds/783986/ | CC0 | chosen | About 0.75 s. Repeat it back to back so it becomes a continuous sound while the beam runs. |
 | BM4 | Collector charged, city saved | A collector is charged | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | chosen (same as FN7) | The same success sound as FN7 and FR6. |
 | BM5 | City lost | A city is lost | power-down-01.wav | newagesoup | https://freesound.org/people/newagesoup/sounds/348249/ | CC0 | chosen | Use the part from 1 s onward. |
@@ -232,7 +232,7 @@ Source: `tools/video/film.html` cue sheet and `tools/video/intro_stack_v2.html` 
 | T7 | 6.05 to 7.65 | The camera pushes into the logo's eye | Riser, low and building, ends in a cut | todo |
 | T8 | 7.75 | Pure black | Silence | no sound |
 | T9 | 8.2, 8.5, 9.2, 9.5 | Darkness with a heartbeat glow | Heartbeat lub-dub (two beats, twice) | todo |
-| T10 | 8.8 to 10.0 | A faint voice echoes: "Sesimi duyan var mı?" | The line spoken by a team member, with echo (if text-to-speech is used it must be declared as AI) | todo |
+| T10 | 8.8 to 10.0 | A faint voice echoes: "Sesimi duyan var mı?" |  | Burcu: no voice recording. Silent. | | | no sound | Dropped by Burcu. The on-screen text stays. |
 | T11 | 10.0 to 12.35 | "Hayatın göremediğimiz boyutları vardır" | Soft sting for a statement | todo |
 | T12 | 12.4 | The darkness tears open into the Kahramanmaras diorama | Rip or whoosh, then the D1 Winter Wind from the game | todo (D1 exists) |
 | T13 | 14.3 to 16.6 | Title card "TAHMİN ET" | Title card hit (glitch plus low boom), the same for all 5 cards | todo |
