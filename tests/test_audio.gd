@@ -51,6 +51,7 @@ func _times(op: StringName, id: StringName) -> Array:
 
 
 func _run() -> void:
+	load("res://scripts/story.gd").progress_path = ""  # never touch the real mission progress
 	audio = root.get_node_or_null("Audio")
 	_check("Audio autoload exists", audio != null)
 	if audio == null:
