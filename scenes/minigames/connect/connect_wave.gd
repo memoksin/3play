@@ -13,8 +13,7 @@ extends Node3D
 ##   .. +PEAK      the town stands in the water
 ##   then BACKWASH the sea settles back to its level (or with the controller's drain, if sooner). If a
 ##                 community was lost (keep_flood) the flood over the land does not go back: it stands
-##                 there, still and muddy, until the result card (ts_hold); the unsaved communities past
-##                 the run-up keep their own water (connect_world.gd floods). Nothing lost: the run-up on
+##                 there, still and muddy, until the result card (ts_hold). Nothing lost: the run-up on
 ##                 the beach runs back with the sea.
 
 signal impact(kind: StringName)  ## &"shore": the wave breaks on the beach
@@ -43,7 +42,7 @@ var k_skew := 0.40402622
 var u_end := 31.0        # back of the slab (land side)
 var depth := 13.0
 ## How far inland the run-up goes (coast u), from the result (connect_world.gd): INF = over the whole town
-## (nothing saved), the beach (everything saved), short of the first saved community (some saved).
+## (a community lost), the beach (everything saved).
 ## reach_y: the ground height there. The water stands over the land only on the sea side of it.
 var reach := INF
 var reach_y := 0.35
@@ -242,15 +241,10 @@ func _hold_back() -> void:
 
 
 ## The flood over the land stands at its peak height (from hold_level, so the controller's drain of the
-## sea does not lower it): eta() never drops under ts_hold - ts_hold_slope * u over the land. Over the
-## whole town (reach past the slab) or, held back, down to the ground at the reach, like the peak.
+## sea does not lower it): eta() never drops under ts_hold - ts_hold_slope * u over the whole town.
 func _hold_flood() -> void:
-	var h := FLOOD if reach >= u_end else HELD_PLAT
-	var slope := 0.025
-	if reach < u_end:
-		slope = maxf(slope, (hold_level + HELD_PLAT + 0.8 * 1.16 - reach_y + 0.05) / maxf(reach, 0.5))  # the peak's crest: 0.8
-	p.ts_hold = h + hold_level - level
-	p.ts_hold_slope = slope
+	p.ts_hold = FLOOD + hold_level - level
+	p.ts_hold_slope = 0.025
 
 
 ## Pushes the field into the water materials.
