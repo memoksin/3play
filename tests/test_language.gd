@@ -54,7 +54,7 @@ func _run() -> void:
 	_check("removed file: no locale again", not game.has_locale())
 	TranslationServer.set_locale("en")
 
-	# no saved locale: Turkish by default, nothing saved, first boot goes splash -> prologue -> menu
+	# no saved locale: Turkish by default, nothing saved, first boot goes splash -> title -> prologue -> menu
 	game.load_locale()
 	_check("default locale is Turkish", TranslationServer.get_locale().begins_with("tr"))
 	_check("boot scene is the language scene", ProjectSettings.get_setting("application/run/main_scene") == "res://scenes/language.tscn")
@@ -62,8 +62,11 @@ func _run() -> void:
 	await _settle(6)
 	_check("boot goes to the splash", current_scene.scene_file_path == "res://scenes/splash.tscn")
 	current_scene.skip()
+	await _wait_scene("res://scenes/title.tscn")
+	_check("splash -> title", current_scene.scene_file_path == "res://scenes/title.tscn")
+	current_scene.get_node("%Start").pressed.emit()
 	await _wait_scene("res://scenes/prologue.tscn")
-	_check("first run: splash -> prologue", current_scene.scene_file_path == "res://scenes/prologue.tscn")
+	_check("first run: title -> prologue", current_scene.scene_file_path == "res://scenes/prologue.tscn")
 	current_scene.skip()
 	await _wait_scene(game.scene_path(&"main"))
 	_check("prologue -> main menu", current_scene.scene_file_path == game.scene_path(&"main"))
@@ -83,13 +86,15 @@ func _run() -> void:
 	_check("menu still shown", current_scene.scene_file_path == game.scene_path(&"main"))
 	game.settings_panel.close()
 
-	# prologue seen: splash -> menu
+	# prologue seen: splash -> title -> menu
 	change_scene_to_file("res://scenes/language.tscn")
 	await _settle(6)
 	_check("second boot goes to the splash", current_scene.scene_file_path == "res://scenes/splash.tscn")
 	current_scene.skip()
+	await _wait_scene("res://scenes/title.tscn")
+	current_scene.get_node("%Start").pressed.emit()
 	await _wait_scene(game.scene_path(&"main"))
-	_check("prologue seen: splash -> menu", current_scene.scene_file_path == game.scene_path(&"main"))
+	_check("prologue seen: splash -> title -> menu", current_scene.scene_file_path == game.scene_path(&"main"))
 	game.load_locale()
 	_check("saved English wins over the default", TranslationServer.get_locale().begins_with("en"))
 

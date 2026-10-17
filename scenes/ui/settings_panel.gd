@@ -1,6 +1,7 @@
 extends CanvasLayer
 ## The Settings panel: language (main menu only), volumes, mouse look (first-person scenes only),
-## fullscreen and, on the main menu, a replay of the prologue. Opened from the main menu's gear and from the pause menu; mounted once by Game
+## fullscreen, Quit (everywhere, hidden on web) and, on the main menu, a replay of the prologue. Opened
+## from the title / main menu gear and from the pause menu; mounted once by Game
 ## (`Game.open_settings()`). Esc closes only this panel.
 
 signal closed
@@ -29,6 +30,7 @@ var _opener: Control
 @onready var _invert: CheckButton = %InvertY
 @onready var _fullscreen: CheckButton = %Fullscreen
 @onready var _replay: Button = %ReplayPrologue
+@onready var _quit: Button = %Quit
 @onready var _back: Button = %Back
 
 
@@ -53,6 +55,7 @@ func _ready() -> void:
 	_invert.toggled.connect(Game.set_invert_y)
 	_fullscreen.toggled.connect(Game.set_fullscreen)
 	_replay.pressed.connect(_replay_prologue)
+	_quit.pressed.connect(get_tree().quit)
 	_back.pressed.connect(close)
 	_langs.picked.connect(func(_code: String) -> void: _refresh())
 
@@ -92,6 +95,8 @@ func _refresh() -> void:
 	_invert.text = tr("PAUSE_INVERT_Y")
 	_fullscreen.text = tr("SET_FULLSCREEN")
 	_replay.text = tr("SET_REPLAY_PROLOGUE")
+	_quit.text = tr("PAUSE_QUIT")
+	_quit.visible = not OS.has_feature("web")  # a web page cannot quit
 	_back.text = tr("SET_BACK")
 	# set without echoing back to Game (and the settings file)
 	_master.set_value_no_signal(roundf(Game.master_volume * 100.0))

@@ -685,6 +685,66 @@ func _run() -> void:
 	audio.stop_all()
 	audio.clear_injected()
 
+	# 13. Fener hook.
+	audio.stop_all()
+	audio.clear_injected()
+	var fn_ids: Array[StringName] = [&"FN1", &"FN2", &"FN3a", &"FN3b", &"FN4", &"FN5", &"FN6", &"FN7", &"FN8", &"FN8a", &"FN9"]
+	for id in fn_ids:
+		_check("cue %s file exists" % id, ResourceLoader.exists(audio.ROOT + audio.CUES[id].path))
+		audio.inject_stream(id, _wav(1.0))
+	game.disaster = load("res://data/disasters/kahramanmaras.tres")
+	var fener: Node = load("res://scenes/minigames/fener.tscn").instantiate()
+	fener.submit = false
+	root.add_child(fener)
+	await process_frame
+	_check("fener: ambience FN1 loops", "loop:FN1" in _log() and audio.is_playing(&"FN1"))
+	var fmap := {&"lamp_on": "play:FN3a", &"lamp_off": "play:FN3b", &"battery_low": "play:FN4", &"battery_dead": "play:FN4",
+			&"found": "play:FN6", &"pickup": "play:FN6", &"saved": "play:FN7", &"aftershock_warn": "play:FN8a", &"creak": "play:FN8a",
+			&"aftershock_hit": "play:FN8", &"collapse": "play:FN8", &"hurt": "play:FN9"}
+	for kind: StringName in fmap:
+		audio.stop_all()
+		audio.loop(&"FN1")
+		audio.reset_history()
+		fener.sound_event.emit(kind, 0, Vector3.ZERO)
+		_check("fener: %s -> %s" % [kind, fmap[kind]], _log().slice(-1) == [fmap[kind]])
+	audio.reset_history()
+	fener.sound_event.emit(&"whistle", 1, Vector3(5, 0, 5))
+	_check("fener: whistle -> FN5", _log() == ["play:FN5"])
+	audio.reset_history()
+	for kind in [&"tap", &"call", &"cry", &"heartbeat", &"treat", &"report", &"spark", &"debris", &"all_saved"]:
+		fener.sound_event.emit(kind, 0, Vector3.ZERO)
+	_check("fener: tap, call, cry, heartbeat, treat, report, spark, debris, all_saved are silent", _log().is_empty())
+	audio.reset_history()
+	fener.sound_event.emit(&"lamp_on", -1, Vector3.ZERO)
+	fener.sound_event.emit(&"lamp_off", -1, Vector3.ZERO)
+	_check("fener: lamp off stops a lamp on still sounding", _log() == ["stop:FN3b", "play:FN3a", "stop:FN3a", "play:FN3b"])
+	audio.stop_all()
+	audio.loop(&"FN1")
+	audio.reset_history()
+	fener.sound_event.emit(&"hurt", 2, Vector3.ZERO)
+	fener.sound_event.emit(&"hurt", 3, Vector3.ZERO)
+	_check("fener: repeated hurt cuts the previous one", _log() == ["play:FN9", "stop:FN9", "play:FN9"])
+	audio.reset_history()
+	fener.sound_event.emit(&"step", -1, Vector3.ZERO)
+	_check("fener: step loops FN2", _log() == ["loop:FN2"])
+	audio.tick(0.3)
+	_check("fener: FN2 keeps going while steps continue", audio.is_playing(&"FN2"))
+	audio.tick(0.5)
+	_check("fener: FN2 stops after the steps stop", "stop:FN2" in _log())
+	audio.loop(&"FN2")
+	audio.reset_history()
+	fener.finished.emit(3, 6, {})
+	_check("fener: finished stops FN1 and FN2", "stop:FN1" in _log() and "stop:FN2" in _log())
+	audio.loop(&"FN1")
+	audio.loop(&"FN2")
+	audio.play(&"FN8")
+	audio.reset_history()
+	fener.queue_free()
+	await process_frame
+	_check("fener: leaving the scene stops everything", ["stop:FN1", "stop:FN2", "stop:FN8"].all(func(e: String) -> bool: return e in _log()))
+	audio.stop_all()
+	audio.clear_injected()
+
 	await create_timer(0.5).timeout  # the audio thread releases the stopped streams; quitting at once leaks them (flaky)
 	print("OK" if ok else "FAILED")
 	quit(0 if ok else 1)
