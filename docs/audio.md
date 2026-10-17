@@ -133,6 +133,12 @@ Same code as the Kahramanmaras Fit, with a flare ending instead of the quake. Fr
 | S2 | Select a person or item | The player clicks a person or item | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen (reuse of F2) | First second of the file only. |
 | S3 | Drop into a zone | The item lands in a zone | Picking up and Putting Down Object | mrh4hn | https://freesound.org/people/mrh4hn/sounds/426631/ | CC0 | chosen (reuse of F3) | Seconds 5 to 6 of the file. |
 | S4 | Wrong item or cannot take | The zone is full, the item snaps back | Buzzer sounds (Wrong answer / Error) | Breviceps | https://freesound.org/people/Breviceps/sounds/493163/ | CC0 | chosen (reuse of F4) | About 2.3 s to 2.7 s of the file. |
-| S5 | Radio warning | Radio messages at about 20 s, 42 s and 60 s | | | | | todo | One sound for all three messages (static or a short radio chirp). Needs a choice. |
+| S5a | Radio call beep | Right before a radio message, and again right after it | Walkie Talkie Beep | SoundBiterSFX | https://freesound.org/people/SoundBiterSFX/sounds/732209/ | CC0 | chosen | Plays at the start and at the end of each of the 3 radio messages (about 20 s, 42 s, 60 s). Issue #107. |
+| S5b | Radio static bed | While a radio message is on screen | Radio Static | JovianSounds | https://freesound.org/people/JovianSounds/sounds/524204/ | CC0 | chosen | Quiet, under the message. Stops when the message ends. Issue #107. |
+| S5c | Last call alarm | The third message ("last call, seal the doors") | Emergency alarm with reverb | Rvgerxini | https://freesound.org/people/Rvgerxini/sounds/463690/ | CC0 | chosen | Looped alarm, only for the third message, with the radio (S5a, S5b) still playing. Issue #107. |
 | S6 | Flare hit | The white flash at 14:00 | | | | | later | Decide after seeing the flash in the game. |
 | S7 | Clock | The HUD clock runs (13:52 to 14:00) | | | | | no sound | Test it silent first. |
+
+### Radio message sequence (S5)
+
+For each of the three radio messages: the call beep (S5a), then the message with the static (S5b) quietly underneath, then the same beep (S5a) again. The third message also plays the alarm (S5c) on top while the radio is still heard. Assigned to memoksin in issue #107.
