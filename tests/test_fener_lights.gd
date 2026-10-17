@@ -141,11 +141,11 @@ func _check_moving_lights(fener: Node) -> void:
 	world.fx(&"report", p, 0)
 	await process_frame
 	var spots := world.find_children("*", "SpotLight3D", true, false)
-	_check("a report adds one rescuer torch", spots.size() == before + 1)
-	var t: SpotLight3D = spots.back()
-	_check("rescuer torch is the one the model counts", is_equal_approx(t.spot_range, FenerLights.REPORT_RANGE) and is_equal_approx(t.spot_angle, FenerLights.REPORT_ANGLE))
-	t.get_parent().queue_free()
-	await process_frame
+	# a report sends an existing crew member running (their own torch moves with them): at most one torch more
+	_check("a report adds at most one torch", spots.size() <= before + 1)
+	if spots.size() == before + 1:
+		var t: SpotLight3D = spots.back()
+		_check("rescuer torch is the one the model counts", is_equal_approx(t.spot_range, FenerLights.REPORT_RANGE) and is_equal_approx(t.spot_angle, FenerLights.REPORT_ANGLE))
 	world.fx(&"found", p, 0)
 	_check("a find lights the face light", world._face_light.visible and world._face_light.omni_range > 0.0)
 	world._face_light.visible = false
