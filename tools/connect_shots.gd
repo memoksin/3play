@@ -34,6 +34,14 @@ func _shot(name: String) -> void:
 	print("saved ", OUT, name, ".png ", img.get_size())
 
 
+## Lets the game run at normal speed until game time t, then stops time for the shot.
+func _run_to(s: Control, t: float) -> void:
+	s.time_scale = 1.0
+	while s.elapsed < t:
+		await process_frame
+	s.time_scale = 0.0
+
+
 func _run() -> void:
 	root.get_node("Game").ensure_disaster(&"state")
 	var s: Control = load("res://scenes/minigames/connect.tscn").instantiate()
@@ -42,9 +50,11 @@ func _run() -> void:
 	await process_frame
 	s.time_scale = 0.0
 	print("start min clicks: ", ConnectLogic.min_clicks(s.skin, s.rots))
-	await _shot("connect_start")
+	await _shot("connect_start")  # opening: hero angle
+	s.seek(1.25)
+	await _shot("connect_glide")  # gliding into the straight play view
 
-	# ambient bay: clouds, palms, smoke, birds, glints, boat at two moments
+	# ambient coast: palms, smoke, gulls, fish, boat at two moments
 	s.seek(14.0)
 	await _shot("connect_amb_a")
 	s.seek(41.0)
@@ -61,18 +71,24 @@ func _run() -> void:
 	await _shot("connect_mid")
 	s._hover = Vector2i(-1, -1)
 	s.locked = false
+	# the top rows fixed too: some lines reach their basin, the others spill
+	for i in s.rots.size():
+		if i / s.skin.cols < 2:
+			s.rots[i] = solved[i]
 
-	s.seek(60.6)
-	await _shot("connect_hit")
-	s.seek(61.5)
-	await _shot("connect_break")
+	# the wave runs in real time from here (particles, splashes and the lens splash need real frames)
+	await _run_to(s, 60.5)
+	await _shot("connect_hit")  # the lip curls over
+	await _run_to(s, 60.95)
+	await _shot("connect_plunge")  # the lip lands: spray and whitewater
+	await _run_to(s, 61.32)
+	await _shot("connect_break")  # the bore hits the beach and the lens
 
-	# flow: line 4 left broken, water running
-	s.solve()
-	s.rotate_cell(5, 5)
-	s.seek(60.0 + 0.6 + 1.5)
+	# flow: water running through the pipes, broken lines spilling
+	await _run_to(s, 60.0 + 0.6 + 1.5)
 	await _shot("connect_flow")
-
-	s.seek(60.0 + 0.6 + 4.4)
+	await _run_to(s, 60.0 + 0.6 + 2.9)
+	await _shot("connect_flood")
+	await _run_to(s, 60.0 + 0.6 + 4.4)
 	await _shot("connect_end")
 	quit(1 if failed else 0)
