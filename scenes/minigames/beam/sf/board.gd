@@ -122,6 +122,8 @@ func build(level: BeamLogic.Level, wave: BeamWave, skin_: BeamSkin, _area: Rect2
 			"C":
 				p = _spawn(skin.collector_scene, COLLECTOR, pieces, false)
 				_collectors[c.i] = p
+				p.set(&"feed", _cities.get("E%d" % c.pos.x))
+				p.set(&"feed_path", _feed_path(c.pos))
 			"H":
 				p = _spawn(skin.habitat_scene, HABITAT, pieces, false)
 				p.label = c.name
@@ -142,6 +144,26 @@ func build(level: BeamLogic.Level, wave: BeamWave, skin_: BeamSkin, _area: Rect2
 	fx = _spawn(skin.fx_scene, FX, _stage)
 	fx.font = font
 	fx.cell = cell
+
+
+## The line a collector's harvest runs down to the Earth city of its column: out from under its deck along the
+## orbital plane to the board's Earth edge, then curving down to the city.
+func _feed_path(c: Vector2i) -> PackedVector3Array:
+	var y := L.GRID_Y + 0.05
+	var a := lay.cell_pos(c.x + 0.5, c.y + 0.5) + Vector3(0, y - L.BEAM_Y, 1.0)
+	var e := lay.cell_pos(c.x + 0.5, rows) + Vector3(0, y - L.BEAM_Y, 0)
+	var city := lay.city_world(c.x) + Vector3(0, 0.9, 0)
+	var out := PackedVector3Array()
+	var steps := maxi(2, ceili((e.z - a.z) / 1.5))
+	for i in steps:
+		out.append(a.lerp(e, float(i) / steps))
+	var c1 := e + Vector3(0, 0, 2.5)
+	var c2 := city + Vector3(0, 2.5, 0)
+	for i in 17:
+		var t := i / 16.0
+		var m := 1.0 - t
+		out.append(e * m * m * m + c1 * 3.0 * m * m * t + c2 * 3.0 * m * t * t + city * t * t * t)
+	return out
 
 
 func _spawn(custom: PackedScene, fallback: PackedScene, parent: Node, add := true) -> Node2D:
