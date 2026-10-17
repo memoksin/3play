@@ -33,6 +33,7 @@ func _run() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
 	TranslationServer.set_locale(OS.get_environment("SHOT_LOCALE") if OS.has_environment("SHOT_LOCALE") else "en")
 	var game := root.get_node("Game")
+	game.settings_path = ""  # the menu must not redirect to the language scene
 	var only := ""
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--only="):
@@ -44,6 +45,8 @@ func _run() -> void:
 			continue
 		win.size = size
 		await process_frame
+		await _shot("res://scenes/language.tscn", "lang_idle", size, {"wait": 0.3, "unfocus": true})
+		await _shot("res://scenes/language.tscn", "lang_hover", size, {"wait": 0.3, "unfocus": true, "hover": "EN"})
 		for role in [&"citizen", &"state"]:
 			game.role = role
 			game.disaster = load(game.PICK[role])
@@ -66,6 +69,11 @@ func _shot(path: String, name: String, size: Vector2i, opt: Dictionary) -> void:
 		node.seek(opt.seek)
 	if opt.has("wait"):
 		await create_timer(opt.wait).timeout
+	if opt.has("unfocus"):
+		root.gui_release_focus()
+	if opt.has("hover"):
+		node.find_child(opt.hover, true, false).mouse_entered.emit()
+		await create_timer(0.3).timeout
 	for i in SETTLE_FRAMES:
 		await process_frame
 	await RenderingServer.frame_post_draw

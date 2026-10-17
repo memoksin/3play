@@ -2,6 +2,7 @@ extends Node
 
 const SCENES := {
 	&"main": "res://scenes/main.tscn",
+	&"language": "res://scenes/language.tscn",
 	&"globe": "res://scenes/globe.tscn",
 	&"diorama": "res://scenes/diorama.tscn",
 	&"fit": "res://scenes/minigames/fit.tscn",
@@ -24,6 +25,8 @@ const STORE_SECTION := "played"
 ## Play counts per disaster id, kept on this machine so every scenario shows up before any repeats.
 ## Tests set it to "" (nothing read or written, picks are random) or a temp path: never the real user file.
 var store_path := "user://played.cfg"
+## Chosen UI language ([ui] locale). Tests set it to "" (nothing read or written) or a temp path.
+var settings_path := "user://settings.cfg"
 var role: StringName
 var disaster: Disaster
 var saved := 0
@@ -31,6 +34,47 @@ var total := 0
 ## Mechanic-specific result data, e.g. {"cold": 2}.
 var extra := {}
 var _step := -1
+
+
+func _ready() -> void:
+	load_locale()
+
+
+## The saved locale code, or "" when none (or unreadable).
+func saved_locale() -> String:
+	if settings_path == "":
+		return ""
+	var cfg := ConfigFile.new()
+	var err := cfg.load(settings_path)
+	if err != OK:
+		if err != ERR_FILE_NOT_FOUND:
+			push_warning("Game: cannot read settings %s (error %d)" % [settings_path, err])
+		return ""
+	return str(cfg.get_value("ui", "locale", ""))
+
+
+func has_locale() -> bool:
+	return saved_locale() != ""
+
+
+## Applies the saved locale, if any.
+func load_locale() -> void:
+	var code := saved_locale()
+	if code != "":
+		TranslationServer.set_locale(code)
+
+
+## Applies the locale and saves it.
+func set_locale(code: String) -> void:
+	TranslationServer.set_locale(code)
+	if settings_path == "":
+		return
+	var cfg := ConfigFile.new()
+	cfg.load(settings_path)  # keep other keys; a missing file is fine
+	cfg.set_value("ui", "locale", code)
+	var err := cfg.save(settings_path)
+	if err != OK:
+		push_warning("Game: cannot save settings to %s (error %d)" % [settings_path, err])
 
 
 func start(new_role: StringName) -> void:
