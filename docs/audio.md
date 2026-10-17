@@ -232,17 +232,17 @@ Source: `tools/video/film.html` cue sheet and `tools/video/intro_stack_v2.html` 
 
 | # | Time (s) | What happens | Sound needed | Status |
 |---|---|---|---|---|
-| T1 | 0 to 8 | Intro: the Stack logo in a storm | Rain loop and low wind, under the whole intro | todo |
-| T2 | about 2.4 | Distant sheet lightning in the clouds | Far soft thunder | todo |
-| T3 | 2.8 and 3.4 | Two close lightning strikes, the logo flickers | Two thunder cracks | todo |
-| T4 | 3.9 | Final strike hits the logo (2 frames silhouette, 1 inverted) | Big thunder crack and impact, then silence for a beat | todo |
-| T5 | 4.45 to 5.3 | "STACK PRESENTS" types on | Letter-by-letter type-on blips with a glitch feel | todo |
-| T6 | 5.5 | Last far strike | Far thunder | todo |
-| T7 | 6.05 to 7.65 | The camera pushes into the logo's eye | Riser, low and building, ends in a cut | todo |
+| T1 | 0 to 8 | Intro: the Stack logo in a storm | Seamless Rain Low (QuietLily) https://freesound.org/people/QuietLily/sounds/584101/ , loop under the whole intro | chosen |
+| T2 | about 2.4 | Distant sheet lightning in the clouds | thunder.rumble.ogg (xUMR) https://freesound.org/people/xUMR/sounds/486557/ , use seconds 5 to 10 of the file | chosen |
+| T3 | 2.8 and 3.4 | Two close lightning strikes, the logo flickers | First: Thunderclap (Fission9) https://freesound.org/people/Fission9/sounds/534023/ . Second: Very close lightning strike (Simon Spiers) https://freesound.org/people/Simon%20Spiers/sounds/437243/ | chosen |
+| T4 | 3.9 | Final strike hits the logo (2 frames silhouette, 1 inverted) | Thunder with no rain (shazzakip) https://freesound.org/people/shazzakip/sounds/398013/ (Burcu's pick; it is described as very far away, so check by ear that it is big enough, add Simon Spiers underneath if not) | chosen |
+| T5 | 4.45 to 5.3 | "STACK PRESENTS" types on | Keyboard typing (G3), same file as the game | chosen (reuse of G3) |
+| T6 | 5.5 | Last far strike | Same as T2: thunder.rumble.ogg (xUMR), seconds 5 to 10 | chosen |
+| T7 | 6.05 to 7.65 | The camera pushes into the logo's eye | noise riser (reathance) https://freesound.org/people/reathance/sounds/503796/ | chosen |
 | T8 | 7.75 | Pure black | Silence | no sound |
-| T9 | 8.2, 8.5, 9.2, 9.5 | Darkness with a heartbeat glow | Heartbeat lub-dub (two beats, twice) | todo |
+| T9 | 8.2, 8.5, 9.2, 9.5 | Darkness with a heartbeat glow | SLOW HEARTBEAT (daandraait) https://freesound.org/s/249716/ , use seconds 2 to 3 of the file (lub-dub) | chosen |
 | T10 | 8.8 to 10.0 | A faint voice echoes: "Sesimi duyan var mı?" |  | Burcu: no voice recording. Silent. | | | no sound | Dropped by Burcu. The on-screen text stays. |
-| T11 | 10.0 to 12.35 | "Hayatın göremediğimiz boyutları vardır" | Soft sting for a statement | todo |
+| T11 | 10.0 to 12.35 | "Hayatın göremediğimiz boyutları vardır" | Cinematic Low Pitch Impact (Jofae) https://freesound.org/people/Jofae/sounds/408141/ , also used for the title cards (T13) | chosen |
 | T12 | 12.4 | The darkness tears open into the Kahramanmaras diorama | Rip or whoosh, then the D1 Winter Wind from the game | todo (D1 exists) |
 | T13 | 14.3 to 16.6 | Title card "TAHMİN ET" | Title card hit (glitch plus low boom), the same for all 5 cards | todo |
 | T14 | 16.6, 28.0, 36.3, 43.8 | Four glitch cuts between clips | Short glitch or digital stutter (G7 style) | todo |
@@ -258,10 +258,16 @@ Source: `tools/video/film.html` cue sheet and `tools/video/intro_stack_v2.html` 
 | T24 | 34.3 | Title card "TERCİH ET" | Title card hit (T13) | todo |
 | T25 | 36.3 to 40 | The globe spins again, "Dünyanın dört bir yanından", "3 afet senaryosu" | Globe spin G2, statement stings | reuse G2 |
 | T26 | 39.7 | Pixelate into the Easter bunny scene | Pixelate or 8-bit sweep | todo |
-| T27 | 41.5 | The egg bursts and the bunny pops out | 8-bit pop or burst | todo |
+| T27 | 41.5 | The egg bursts and the bunny pops out | Another sound, to search. Candidates: egg crack CC0: Egg cracking.wav (FngerSounds) https://freesound.org/s/250133/ | to choose |
 | T28 | 41.6 | "Belki bir de easter egg, kim bilir…" | Statement sting | todo |
 | T29 | 43.8 to 47.4 | Result card, the closing line types on (44.4 to 45.9) | Card swell (R1), typing (G3) | reuse R1, G3 |
 | T30 | 47.4 | Title card "FARK ET" | Title card hit (T13) | todo |
-| T31 | 49.1 | CRT power-off | TV or CRT switch-off sound | todo |
+| T31 | 49.1 | CRT power-off | Another sound, to search. Candidates: https://freesound.org/s/616850/ , https://freesound.org/people/SpliceSound/sounds/188197/ , https://freesound.org/people/Cloud-10/sounds/648174/ (check licence) | to choose |
 | T32 | 49.8 to 50.3 | Black | Silence | no sound |
 | T33 | whole film | Music under the film | One music bed. To decide: the menu music M1 (Title.mp3) or a new track. | to decide |
+
+
+### Notes from Burcu (pitch film and game)
+
+- Possible later use: "8 Bit Sound - 1-Up!" (Breviceps, https://freesound.org/people/Breviceps/sounds/450613/ , CC0) as the sound when a badge (rozet) is earned on the result card. Not decided, not in the game yet.
+- All typed text from the story layer (the Voice lines, prologue, any other typed line) uses the same keyboard typing sound as G3, D4 and R3.
