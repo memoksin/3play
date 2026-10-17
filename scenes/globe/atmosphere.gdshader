@@ -77,17 +77,20 @@ void fragment() {
 		float shadow = smoothstep(rp - 0.004, rp + 0.012, dmin)
 				// Twilight fade by local sun elevation: no lit haze floating past the terminator
 				* smoothstep(-0.12, 0.08, dot(normalize(q), L));
-		float dl = rsi(q, L, ra).y / float(NL);
-		float l_r = 0.0;
-		float l_m = 0.0;
-		for (int j = 0; j < NL; j++) {
-			float hs = length(q + L * (dl * (float(j) + 0.5))) - rp;
-			l_r += exp(-hs / hr) * dl;
-			l_m += exp(-hs / hm) * dl;
+		// In the planet's shadow (or past the terminator) the sample adds nothing: skip its light march
+		if (shadow > 0.0) {
+			float dl = rsi(q, L, ra).y / float(NL);
+			float l_r = 0.0;
+			float l_m = 0.0;
+			for (int j = 0; j < NL; j++) {
+				float hs = length(q + L * (dl * (float(j) + 0.5))) - rp;
+				l_r += exp(-hs / hr) * dl;
+				l_m += exp(-hs / hm) * dl;
+			}
+			vec3 att = exp(-(beta_r * (o_r + l_r) + beta_m * 1.1 * (o_m + l_m))) * shadow;
+			s_r += att * d_r;
+			s_m += att * d_m;
 		}
-		vec3 att = exp(-(beta_r * (o_r + l_r) + beta_m * 1.1 * (o_m + l_m))) * shadow;
-		s_r += att * d_r;
-		s_m += att * d_m;
 	}
 	float mu = dot(rd, L);
 	float p_r = 0.0597 * (1.0 + mu * mu);
@@ -107,12 +110,16 @@ void fragment() {
 			vec3 q = ro + rd * (t0 + da * (float(i) + 0.5));
 			float h = length(q) - rp;
 			float layer = smoothstep(0.004, 0.009, h) * (1.0 - smoothstep(0.016, 0.034, h));
+			if (layer <= 0.0) {
+				continue;  // outside the aurora shell: adds nothing
+			}
 			vec3 qn = normalize(q);
 			vec3 lq = earth_inv * qn;
 			float lon = atan(lq.x, lq.z);
 			float mlat = asin(clamp(dot(qn, pole_dir), -1.0, 1.0));
 			float wob = 0.07 * sin(lon * 4.0 + TIME * 0.35) + 0.03 * sin(lon * 11.0 - TIME * 0.6);
-			float band = exp(-pow((abs(mlat) - 1.0 - wob) / 0.075, 2.0));
+			float bd = (abs(mlat) - 1.0 - wob) / 0.075;
+			float band = exp(-bd * bd);
 			float c = 0.5 + 0.5 * sin(lon * 19.0 + 2.5 * sin(lon * 6.0 + TIME * 0.5) + TIME * 0.9);
 			float rays = 0.55 + 0.45 * sin(lon * 150.0 + 3.0 * sin(lon * 31.0) + TIME * 3.0);
 			float day = 1.0 - 0.8 * smoothstep(-0.1, 0.35, dot(qn, L));

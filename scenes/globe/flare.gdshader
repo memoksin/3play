@@ -64,64 +64,67 @@ void fragment() {
 	float x = dot(p, f);
 	float y = f.x * p.y - f.y * p.x;
 	float r = length(p);
-	float th = atan(y, x);
-	// Half-body: stream function psi = y + b * theta, stagnation point (the nose) at x = -b,
-	// dividing streamline |psi| = b * pi.
-	float b = nose;
-	float psi = y + b * th;
-	float s = abs(psi) - b * 3.14159265;  // > 0 outside the magnetosphere
-	float phi = x + b * log(max(r, 1e-3));  // velocity potential: distance along the flow
-	float ath = abs(th);
-	// Radial distance outside the magnetopause: body radius r_b = b (pi - |th|) / sin |th|
-	float rb = ath > 1e-3 ? b * (3.14159265 - ath) / sin(ath) : 1e3;
-	float d = r - rb;
-	float up = smoothstep(0.2, 1.0, -cos(th));  // 1 at the nose (sunward), 0 on the night side
-	float nose_w = up * up * up;  // brightness falls off fast along the flanks
-
 	vec3 col = vec3(0.0);
-	float surge = 0.7 + 0.4 * flare;
-	float near_sun = clamp(exp((dot(p, -f) - 1.0) * 0.45), 0.0, 3.0);
-	if (s > 0.0) {
-		// Filaments ride the streamlines (|psi|: no seam on the Sun axis; warped so the halves differ),
-		// stretched along the flow (phi), streaming away from the Sun
-		float apsi = abs(psi) + 0.35 * noise(p * 1.7 + 4.0);
-		float fil = fbm(vec2(apsi * 2.4, phi * 0.3 - tm * 1.3));
-		float fil2 = fbm(vec2(apsi * 9.0 + 3.0, phi * 0.7 - tm * 2.6));
-		float streak = pow(smoothstep(0.4, 0.9, fil), 1.5) + 0.6 * pow(smoothstep(0.5, 0.95, fil2), 2.0);
-		// Bow shock: a soft ragged veil standing off the nose, sweeping back along the flanks
-		float rag = fbm(vec2(th * 7.0, tm * 0.5)) - 0.5 + 0.5 * (fbm(vec2(th * 23.0, tm * 1.1)) - 0.5);
-		float ds = 0.2 + 0.4 * (1.0 - up) + 0.12 * rag;
-		float w = 0.05 + 0.08 * (1.0 - up);
-		float front = exp(-pow((d - ds) / w, 2.0)) * (0.12 + 0.95 * nose_w) * (0.4 + 0.9 * fil);
-		// Magnetosheath: turbulent plasma between the shock and the magnetopause
-		float inside = smoothstep(ds + w, ds - 0.5 * w, d);
-		float turb = fbm(vec2(apsi * 5.0, phi * 1.2 - tm * 1.8));
-		float sheath = inside * (0.08 + 0.45 * nose_w) * (0.2 + turb);
-		// Magnetopause: the thin glowing skin of the Earth's shield
-		float edge = exp(-d / 0.02) * (0.15 + 0.6 * nose_w) * smoothstep(0.0, 0.012, d) + 0.0;
-		float plasma = front * 1.1 + sheath * 0.6 + edge * 0.6
-				+ streak * 0.4 * near_sun * smoothstep(0.0, 0.25, d - ds)
-				+ streak * 0.35 * inside;
-		col += heat(plasma * surge);
-	} else {
-		// Inside the shield: the skin's glow bleeds inward and dies off
-		col += heat(exp(d / 0.06) * (0.12 + 0.5 * nose_w) * surge);
+	// The planet disc stays clean (the final smoothstep zeroes it), so skip the costly noise there
+	if (r > 1.0) {
+		float th = atan(y, x);
+		// Half-body: stream function psi = y + b * theta, stagnation point (the nose) at x = -b,
+		// dividing streamline |psi| = b * pi.
+		float b = nose;
+		float psi = y + b * th;
+		float s = abs(psi) - b * 3.14159265;  // > 0 outside the magnetosphere
+		float phi = x + b * log(max(r, 1e-3));  // velocity potential: distance along the flow
+		float ath = abs(th);
+		// Radial distance outside the magnetopause: body radius r_b = b (pi - |th|) / sin |th|
+		float rb = ath > 1e-3 ? b * (3.14159265 - ath) / sin(ath) : 1e3;
+		float d = r - rb;
+		float up = smoothstep(0.2, 1.0, -cos(th));  // 1 at the nose (sunward), 0 on the night side
+		float nose_w = up * up * up;  // brightness falls off fast along the flanks
+
+		float surge = 0.7 + 0.4 * flare;
+		float near_sun = clamp(exp((dot(p, -f) - 1.0) * 0.45), 0.0, 3.0);
+		if (s > 0.0) {
+			// Filaments ride the streamlines (|psi|: no seam on the Sun axis; warped so the halves differ),
+			// stretched along the flow (phi), streaming away from the Sun
+			float apsi = abs(psi) + 0.35 * noise(p * 1.7 + 4.0);
+			float fil = fbm(vec2(apsi * 2.4, phi * 0.3 - tm * 1.3));
+			float fil2 = fbm(vec2(apsi * 9.0 + 3.0, phi * 0.7 - tm * 2.6));
+			float streak = pow(smoothstep(0.4, 0.9, fil), 1.5) + 0.6 * pow(smoothstep(0.5, 0.95, fil2), 2.0);
+			// Bow shock: a soft ragged veil standing off the nose, sweeping back along the flanks
+			float rag = fbm(vec2(th * 7.0, tm * 0.5)) - 0.5 + 0.5 * (fbm(vec2(th * 23.0, tm * 1.1)) - 0.5);
+			float ds = 0.2 + 0.4 * (1.0 - up) + 0.12 * rag;
+			float w = 0.05 + 0.08 * (1.0 - up);
+			float front = exp(-((d - ds) / w) * ((d - ds) / w)) * (0.12 + 0.95 * nose_w) * (0.4 + 0.9 * fil);
+			// Magnetosheath: turbulent plasma between the shock and the magnetopause
+			float inside = smoothstep(ds + w, ds - 0.5 * w, d);
+			float turb = fbm(vec2(apsi * 5.0, phi * 1.2 - tm * 1.8));
+			float sheath = inside * (0.08 + 0.45 * nose_w) * (0.2 + turb);
+			// Magnetopause: the thin glowing skin of the Earth's shield
+			float edge = exp(-d / 0.02) * (0.15 + 0.6 * nose_w) * smoothstep(0.0, 0.012, d) + 0.0;
+			float plasma = front * 1.1 + sheath * 0.6 + edge * 0.6
+					+ streak * 0.4 * near_sun * smoothstep(0.0, 0.25, d - ds)
+					+ streak * 0.35 * inside;
+			col += heat(plasma * surge);
+		} else {
+			// Inside the shield: the skin's glow bleeds inward and dies off
+			col += heat(exp(d / 0.06) * (0.12 + 0.5 * nose_w) * surge);
+		}
+		// Magnetotail: faint red filaments trailing inside the cavity on the night side
+		float tail = (1.0 - up) * smoothstep(0.0, -0.6, s) * smoothstep(1.2, 2.4, x) * smoothstep(1.4, 0.0, abs(y) / max(x * 0.6, 0.6));
+		col += vec3(0.45, 0.06, 0.03) * tail * pow(fbm(vec2(y * 4.0, x * 0.4 - tm * 0.6)), 2.0) * 0.5;
+		// Corona flooding in from the off-screen Sun, plus an anamorphic streak through it
+		vec2 sp = -f * 3.2;  // Sun position in planet radii (screen frame)
+		vec2 q = p - sp;
+		float lq = length(q);
+		float rays = 0.6 + 0.4 * fbm(vec2(atan(q.y, q.x) * 12.0, tm * 0.3 - lq * 0.15));
+		float corona = (exp(-lq * 0.85) * 1.2 + exp(-lq * 2.4) * 2.4) * rays;
+		col += heat(corona * surge * 0.6);
+		col += vec3(0.2, 0.035, 0.0) * exp(-lq * 0.8) * surge;
+		float streak_h = exp(-abs(q.y) * 30.0) * exp(-abs(q.x) * 0.3);
+		col += vec3(1.0, 0.55, 0.25) * streak_h * 0.25 * flare;
+		// The planet disc stays clean: the atmosphere and earth shaders own it
+		col *= smoothstep(1.0, 1.06, r) * fade;
 	}
-	// Magnetotail: faint red filaments trailing inside the cavity on the night side
-	float tail = (1.0 - up) * smoothstep(0.0, -0.6, s) * smoothstep(1.2, 2.4, x) * smoothstep(1.4, 0.0, abs(y) / max(x * 0.6, 0.6));
-	col += vec3(0.45, 0.06, 0.03) * tail * pow(fbm(vec2(y * 4.0, x * 0.4 - tm * 0.6)), 2.0) * 0.5;
-	// Corona flooding in from the off-screen Sun, plus an anamorphic streak through it
-	vec2 sp = -f * 3.2;  // Sun position in planet radii (screen frame)
-	vec2 q = p - sp;
-	float lq = length(q);
-	float rays = 0.6 + 0.4 * fbm(vec2(atan(q.y, q.x) * 12.0, tm * 0.3 - lq * 0.15));
-	float corona = (exp(-lq * 0.85) * 1.2 + exp(-lq * 2.4) * 2.4) * rays;
-	col += heat(corona * surge * 0.6);
-	col += vec3(0.2, 0.035, 0.0) * exp(-lq * 0.8) * surge;
-	float streak_h = exp(-abs(q.y) * 30.0) * exp(-abs(q.x) * 0.3);
-	col += vec3(1.0, 0.55, 0.25) * streak_h * 0.25 * flare;
-	// The planet disc stays clean: the atmosphere and earth shaders own it
-	col *= smoothstep(1.0, 1.06, r) * fade;
 	if (burn > 0.0) {
 		// The zoom: the flare burns in from the Sun's edge of the screen, plasma streaks racing along the
 		// flow, but the middle (the reticle and the ground under it) stays clear and readable.
