@@ -181,11 +181,13 @@ horizontal_alignment = 2
 [node name="InvertY" type="CheckButton" parent="Root/Center/Panel/Box"]
 unique_name_in_owner = true
 layout_mode = 2
+alignment = 1
 text = "PAUSE_INVERT_Y"
 
 [node name="Fullscreen" type="CheckButton" parent="Root/Center/Panel/Box"]
 unique_name_in_owner = true
 layout_mode = 2
+alignment = 1
 text = "SET_FULLSCREEN"
 
 [node name="ReplayPrologue" type="Button" parent="Root/Center/Panel/Box"]
