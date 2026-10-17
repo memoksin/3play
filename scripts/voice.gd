@@ -17,7 +17,7 @@ const TYPE_CPS := 15.0        # slow enough to read along (#128 playtest)
 const FADE_IN := 0.4
 const FADE_OUT := 0.6
 const GLITCH_LINE := &"VOICE_SF_LIMITS"
-const GLITCH_HOLD := 6.0
+const GLITCH_HOLD := 1.5  # after the typing; the globe dives on when the line fades
 const BAND_ALPHA := 0.82      # dark band behind the line, so it reads over the bright globe
 
 var _typing := false
