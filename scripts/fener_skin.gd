@@ -2,7 +2,7 @@ class_name FenerSkin
 extends Resource
 ## Rules and art of the Fener minigame (Kahramanmaras, #123). Rules run in scenes/minigames/fener.gd,
 ## the map in scripts/fener_map.gd, the look in scenes/minigames/fener/. New figures: set a *_scene
-## field or a person's `figure`; null = the art pilot placeholder.
+## field or a person's `figure`; null = a plain box.
 
 @export var people: Array[FenerPerson] = []
 ## Prefix of every tr() key of the minigame: <prefix>START, <prefix>MOM ...
@@ -47,8 +47,12 @@ extends Resource
 @export var shock_tail := 25.0
 
 @export_group("Art")
+## Rigged figures (origin at the feet, front +Z) with the clips of tools/models/meshy/README.md: the player needs
+## idle + run (walk), a rescuer idle, walk, run, dig and wave. *_speeds: ground speed (m/s) of each moving clip.
 @export var player_scene: PackedScene
+@export var player_speeds := {&"walk": 0.86, &"walk_follow": 0.53, &"run": 3.8}
 @export var rescuer_scene: PackedScene
+@export var rescuer_speeds := {&"walk": 0.86, &"run": 3.8}
 
 
 func text(suffix: String) -> String:

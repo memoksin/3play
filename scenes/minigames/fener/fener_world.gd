@@ -7,13 +7,17 @@ extends Node3D
 ## lights) and the player's torch (a shadowed SpotLight + a fake volumetric cone). The camera keeps the
 ## style angle (pitch -40, yaw -22, FOV 26) and slides after the player; buildings that hide the
 ## player fade out.
+## The people are rigged Meshy characters (fener_rig.gd plays their clips by their real ground speed): see
+## _show_person (one clip per state) and the rescue crews (_dispatch: wave, run around the buildings, dig).
 
 const P := "res://assets/3d/kahramanmaras/"
+const Rig := preload("res://scenes/minigames/fener/fener_rig.gd")
 const MARK := preload("res://scenes/minigames/fener/fener_mark.gdshader")
 const BEAM := preload("res://scenes/style/light_beam.gdshader")
 const SOFT := preload("res://scenes/style/soft_particle.gdshader")
-const PLAYER_FIGURE := "citizen_player"
-const RESCUER_FIGURE := "citizen_rescuer"
+## Figures used when the skin names none (the Meshy characters, tools/models/meshy/README.md).
+const PLAYER_FIGURE := "meshy_player"
+const RESCUER_FIGURE := "meshy_rescuer"
 const SLAB := "fener_hood_slab"
 
 const PITCH := -40.0
@@ -36,6 +40,22 @@ const WARM := Color(1.0, 0.52, 0.18)
 const TENT := Color(1.0, 0.62, 0.3)
 const WORK := Color(0.86, 0.9, 1.0)
 const SPARK := Color(0.75, 0.9, 1.0)
+
+## Figures: lying clips (trapped) lie across the screen, as in tools/models/meshy/gif.gd. A figure further than
+## ANIM_RADIUS from the player is not stepped (its clip waits), except in the opening view of the whole slab.
+const LIE_YAW := -112.0
+const ANIM_RADIUS := 46.0
+const SAVED_RUN := 4.6  # m/s a rescued person walks to a place around the fire (at most)
+const RISE_AT := 0.35  # seconds into first aid when a hurt person starts to get up
+const RISE_BLEND := 0.9  # lying -> standing cross-fade
+## Rescue crews: a member waves, runs to the reported person (CREW_RUN m/s), digs; the person gets up.
+const CREW_RUN := 4.2
+const WAVE_T := 2.5  # one loop of `wave`: four waves
+const WORK_T := 4.5
+const RISE_DELAY := 0.6  # the person gets up this long after the crew is there
+const NAV := 0.5
+const PUSH_SPEED := 7.0  # m/s: the player moves faster than he can run only when knocked back
+const START_TURN := 0.3  # m/s: the player turns to where he goes above this
 
 ## Practical lights per model, local to it (from scenes/art_pilot/km_street.tscn):
 ## [name prefix, type (omni|spot), position, rotation deg (spot), colour, energy, range, angle, beam height]
@@ -62,6 +82,33 @@ const LIGHTS := {
 ## Fires get smoke and sparks.
 const SMOKY := ["fire_barrel", "fire_barrel_tea", "fire_barrel_low", "fire_pit"]
 
+
+## One animated figure: `node` (ground position and facing) holds the model `fig` and its clips (`rig`).
+class Actor:
+	var node: Node3D
+	var fig: Node3D
+	var rig: Rig
+	var yaw := 0.0  # ground angle the body faces (radians; node.rotation.y = PI / 2 - yaw)
+	var last := Vector2.ZERO
+	var fresh := true  # first frame: face the target at once
+	# person
+	var rescued := false  # a rescue crew is there: the trapped person gets up
+	var look := Vector2.ZERO  # ground point a person turns to once up
+	# rescue crew member
+	var crew := 0
+	var mode := &"dig"  # dig (waiting) | wave | go | work | done
+	var t := 0.0
+	var home := Vector2.ZERO
+	var home_yaw := 0.0
+	var goal := -1  # index of the person to reach
+	var site := Vector2.ZERO  # where he digs
+	var target := Vector2.ZERO  # where the person is
+	var path := PackedVector2Array()
+	var pi := 0
+	var torch: SpotLight3D
+	var torch0 := false  # carries a torch at his post
+	var extra := false  # called in for a report, not part of the set
+
 var ctrl: Node
 var cam: Camera3D
 var _setup := false
@@ -82,13 +129,15 @@ var _atlas_prev := {}
 
 # per run
 var _dyn: Node3D
-var _people: Array[Node3D] = []
+var _people: Array[Actor] = []
 var _people_glow: Array[MeshInstance3D] = []
 var _items: Array[Node3D] = []
 var _haz: Array[Dictionary] = []  # per hazard index: {node, mark, light, sparks, model}
 var _face_light: OmniLight3D
 var _face_t := 0.0
-var _rescuers: Array[Node3D] = []
+var _crew: Array[Actor] = []
+var _crew_root: Node3D
+var _me: Actor
 var _area_ring: MeshInstance3D
 var _crew_ring: MeshInstance3D
 var _debris: Array[CPUParticles3D] = []
@@ -559,21 +608,74 @@ func _add_fire_fx(n: Node3D) -> void:
 
 
 func _build_crews() -> void:
-	var root := Node3D.new()
-	root.name = "Crews"
-	add_child(root)
-	var fig := _rescuer_scene()
-	# NW crew: chief at the report point with a torch, two digging at the pancaked block
-	var spots := [[Vector2(-30.5, -10.5), -100.0, true], [Vector2(-33.6, -19.0), -90.0, true], [Vector2(-34.0, -13.0), -80.0, false],
-			[Vector2(25.8, 25.6), 90.0, false]]
-	for s in spots:
-		var p: Vector2 = s[0]
-		var n: Node3D = fig.instantiate() if fig else _placeholder("rescuer")
-		n.position = Vector3(p.x, FenerMap.ground_y(p), p.y)
-		n.rotation_degrees.y = s[1]
-		root.add_child(n)
-		if s[2]:
-			n.add_child(_torch(5.5, 10.0, 20.0, false, 0.0))
+	_crew_root = Node3D.new()
+	_crew_root.name = "Crews"
+	add_child(_crew_root)
+	# NW crew: chief at the report point with a torch, two digging at the pancaked block; the camp crew by the AFAD tent
+	var spots := [[Vector2(-30.5, -10.5), -100.0, true, 0], [Vector2(-33.6, -19.0), -90.0, true, 0],
+			[Vector2(-34.0, -13.0), -80.0, false, 0], [Vector2(25.8, 25.6), 90.0, false, 1]]
+	for i in spots.size():
+		var s: Array = spots[i]
+		_crew.append(_make_rescuer(s[0], s[1], s[2], s[3], i * 0.31))
+
+
+## A rescuer at his post, digging.
+func _make_rescuer(at: Vector2, yaw_deg: float, with_torch: bool, crew: int, phase: float, extra := false) -> Actor:
+	var n := Node3D.new()
+	n.position = Vector3(at.x, FenerMap.ground_y(at), at.y)
+	n.rotation_degrees.y = yaw_deg
+	_crew_root.add_child(n)
+	var sk: FenerSkin = ctrl.skin if ctrl else null
+	var a := _actor(_rescuer_scene(), sk.rescuer_speeds if sk else {}, n, "rescuer", &"dig", phase)
+	a.yaw = PI / 2.0 - n.rotation.y
+	a.last = at
+	a.home = at
+	a.home_yaw = a.yaw
+	a.crew = crew
+	a.extra = extra
+	a.torch0 = with_torch
+	if with_torch:
+		_give_torch(a)
+	return a
+
+
+func _give_torch(a: Actor) -> void:
+	if a.torch == null:
+		a.torch = _torch(5.0, 9.0, 22.0, false, 0.0)
+		a.node.add_child(a.torch)
+
+
+## A figure under `node`: the skin's scene (or a box) with its clips, starting in `clip` `phase` into the loop.
+func _actor(scene: PackedScene, speeds: Dictionary, node: Node3D, label: String, clip := &"idle", phase := 0.0) -> Actor:
+	var a := Actor.new()
+	a.node = node
+	a.fig = scene.instantiate() if scene else _placeholder(label)
+	a.fig.name = "Figure"
+	node.add_child(a.fig)
+	a.rig = Rig.new(a.fig, speeds)
+	a.rig.play(clip, 1.0, phase)
+	return a
+
+
+## Every rescuer back at his post for a new run; the ones called in for a report are gone.
+func _reset_crews() -> void:
+	for a in _crew.duplicate():
+		if a.extra:
+			a.node.queue_free()
+			_crew.erase(a)
+			continue
+		a.mode = &"dig"
+		a.t = 0.0
+		a.goal = -1
+		a.path = PackedVector2Array()
+		a.node.position = Vector3(a.home.x, FenerMap.ground_y(a.home), a.home.y)
+		a.yaw = a.home_yaw
+		a.node.rotation.y = PI / 2.0 - a.yaw
+		a.last = a.home
+		if a.torch and not a.torch0:
+			a.torch.queue_free()
+			a.torch = null
+		a.rig.play(&"dig")
 
 
 func _rescuer_scene() -> PackedScene:
@@ -619,11 +721,9 @@ func _build_static_marks() -> void:
 func _build_player() -> void:
 	var sk: FenerSkin = ctrl.skin
 	var s: PackedScene = sk.player_scene if sk.player_scene else _scene(PLAYER_FIGURE)
-	if s:
-		var fig: Node3D = s.instantiate()
-		fig.name = "Figure"
-		player.add_child(fig)
-		player.move_child(fig, 0)
+	_me = _actor(s, sk.player_speeds, player, "player")
+	_me.yaw = ctrl.aim
+	player.move_child(_me.fig, 0)
 	torch.light_energy = 15.0
 	torch.spot_range = sk.lamp_range + 2.5
 	torch.spot_angle = rad_to_deg(sk.lamp_half) * 1.08
@@ -763,20 +863,19 @@ func rebuild(c: Node) -> void:
 	_people_glow.clear()
 	_items.clear()
 	_haz.clear()
-	_rescuers.clear()
+	_reset_crews()
 	for p in ctrl.people:
 		var d: FenerPerson = p.def
 		var root := Node3D.new()
 		root.position = Vector3(p.pos.x, FenerMap.ground_y(p.pos), p.pos.y)
 		_dyn.add_child(root)
-		var fig: Node3D = d.figure.instantiate() if d.figure else _placeholder(String(d.id))
-		fig.name = "Figure"
-		fig.scale = Vector3.ONE * d.figure_scale
-		root.add_child(fig)
+		var a := _actor(d.figure, d.figure_speeds, root, String(d.id), &"idle", fmod(p.idx * 0.37, 1.0))
+		a.fig.scale = Vector3.ONE * d.figure_scale
+		a.last = p.pos
 		var glow := _mark(root, 2, Color(1.0, 0.75, 0.45, 0.5), Vector2.ZERO, Vector2(3.4, 3.4), 0.04)
 		glow.position = Vector3(0, 0.04, 0)
 		glow.visible = false
-		_people.append(root)
+		_people.append(a)
 		_people_glow.append(glow)
 	for it in ctrl.items:
 		var root := Node3D.new()
@@ -980,16 +1079,7 @@ func fx(kind: StringName, p: Vector2, index := -1) -> void:
 			_burst_dust(Vector3(p.x, y + 0.8, p.y), Vector3(3.0, 0.5, 2.0))
 			_burst_debris(Vector3(p.x, y + 3.0, p.y), Vector3(2.0, 0.5, 1.0))
 		&"report":
-			var fig := _rescuer_scene()
-			var n: Node3D = fig.instantiate() if fig else _placeholder("rescuer")
-			var to_player: Vector2 = (ctrl.ppos - p).normalized() * 1.4
-			n.position = Vector3(p.x + to_player.x, y, p.y + to_player.y)
-			n.rotation.y = PI / 2.0 - (p - (p + to_player)).angle()
-			_dyn.add_child(n)
-			n.add_child(_torch(5.0, 9.0, 22.0, false, 0.0))
-			n.scale = Vector3.ONE * 0.01
-			create_tween().tween_property(n, "scale", Vector3.ONE, 0.6).set_trans(Tween.TRANS_BACK)
-			_rescuers.append(n)
+			_dispatch(p, index)
 		&"hurt", &"pickup", &"saved":
 			pass
 
@@ -1062,15 +1152,12 @@ func show_state(c: Node, dt: float) -> void:
 	# player + torch
 	player.position = Vector3(pp.x, py, pp.y)
 	player.rotation.y = PI / 2.0 - ctrl.aim
-	var fig := player.get_node_or_null(^"Figure") as Node3D
-	if fig:
-		var bob: float = absf(sin(_t * 9.0)) * 0.06 if ctrl.moving else 0.0
-		fig.position.y = bob
-		fig.rotation.z = sin(_t * 9.0) * 0.04 if ctrl.moving else 0.0
+	_show_player(dt)
 	torch.visible = ctrl.l_on
 	torch.spot_range = ctrl.l_range + 2.5
 	near_light.light_energy = 0.55 if ctrl.bat > 0 else 0.35
-	# people
+	# people and the rescue crews
+	_update_crews(dt)
 	for i in mini(_people.size(), ctrl.people.size()):
 		_show_person(i, ctrl.people[i], dt)
 	# items
@@ -1154,43 +1241,267 @@ func show_state(c: Node, dt: float) -> void:
 	snow.global_position = Vector3(_cam_target.x, 16.0, _cam_target.z - 4.0)
 
 
+## The player: idle when standing (turned to the torch), run by the real ground speed when moving (turned
+## to where he goes; the torch keeps aiming at the pointer).
+func _show_player(dt: float) -> void:
+	var a := _me
+	var pp: Vector2 = ctrl.ppos
+	var step := pp - a.last
+	var v := step.length() / dt if dt > 0.0 and not a.fresh else 0.0
+	if v > PUSH_SPEED:  # knocked back, not walking
+		v = 0.0
+	a.last = pp
+	var want: float = step.angle() if v > START_TURN else ctrl.aim
+	a.yaw = want if a.fresh else lerp_angle(a.yaw, want, 1.0 - exp(-14.0 * dt))
+	a.fig.rotation.y = ctrl.aim - a.yaw
+	a.rig.loco(v, dt, &"walk", &"run")
+	a.rig.tick(dt)
+	a.fresh = false
+
+
+func _near(p: Vector3) -> bool:
+	return ctrl.intro_k() < 1.0 or Vector2(p.x, p.z).distance_to(ctrl.ppos) < ANIM_RADIUS
+
+
+func _face(a: Actor, ang: float, dt: float, k := 10.0) -> void:
+	a.yaw = ang if a.fresh else lerp_angle(a.yaw, ang, 1.0 - exp(-k * dt))
+	a.node.rotation.y = PI / 2.0 - a.yaw
+
+
+## Ground speed (m/s) of the actor since the last call.
+func _speed(a: Actor, dt: float) -> float:
+	var q := Vector2(a.node.position.x, a.node.position.z)
+	var v := 0.0
+	if dt > 0.0 and not a.fresh:
+		v = minf(q.distance_to(a.last) / dt, 9.0)
+	a.last = q
+	return v
+
+
+## One person by what the rules say: waiting (idle, looking about; cold: shivering; under rubble or hurt: lying
+## and waving), following (idle / walk / run by the real speed; the old and the hurt walk tired), safe (idle).
 func _show_person(i: int, p, dt: float) -> void:
-	var n := _people[i]
-	var fig := n.get_node(^"Figure") as Node3D
-	var gy := FenerMap.ground_y(p.pos)
+	var a := _people[i]
+	var n := a.node
 	var St = ctrl.St
-	var target := Vector3(p.pos.x, gy, p.pos.y)
-	if p.st == St.SAVED:
-		var sp: Vector2 = ctrl.slot_pos(p.slot)
-		var sy := FenerMap.ground_y(sp)
-		target = Vector3(sp.x, sy, sp.y)
-		n.position = n.position.lerp(target, minf(1.0, dt * 2.0))
-		var c: Vector2 = FenerMap.AREA.get_center() + Vector2(-2.0, 1.5)
-		n.rotation.y = PI / 2.0 - (c - sp).angle()
-	else:
-		n.position = target
-		n.rotation.y = PI / 2.0 - p.face
+	var K := FenerPerson.Kind
 	var kind: int = p.def.kind
+	var saved: bool = p.st == St.SAVED
 	var down: bool = p.st == St.LOST or p.st == St.WAIT or p.st == St.MARKED or p.st == St.TREAT or p.st == St.REPORTED
-	fig.position = Vector3.ZERO
-	fig.rotation = Vector3.ZERO
-	if kind == FenerPerson.Kind.TRAPPED:
-		# only the shoulders and head out of the rubble
-		fig.position.y = -0.95 * p.def.figure_scale
-		fig.rotation.x = 0.35
-	elif kind == FenerPerson.Kind.INJURED and down:
-		fig.rotation.x = -1.35
-		fig.position = Vector3(0, 0.25, -0.2)
-	elif kind == FenerPerson.Kind.COLD and down:
-		fig.rotation.x = 0.28
-		fig.position.x = sin(_t * 38.0) * 0.015
-		fig.scale = Vector3(1.0, 0.92, 1.0) * p.def.figure_scale
-	elif p.st == St.FOLLOW:
-		fig.position.y = absf(sin(_t * 8.0 + i)) * 0.05
-		fig.scale = Vector3.ONE * p.def.figure_scale
-	elif p.st == St.LOST:
-		fig.rotation.y = sin(_t * 0.7 + i) * 0.6  # looking around
+	var face: float = p.face
+	if saved:
+		# walks to a place around the fire, then turns to it
+		var sp: Vector2 = ctrl.slot_pos(p.slot)
+		var to := sp - Vector2(n.position.x, n.position.z)
+		var d := to.length()
+		var fire: Vector2 = FenerMap.AREA.get_center() + Vector2(-2.0, 1.5)
+		if d > 0.03:
+			var go := minf(d, clampf(d * 2.0, 0.8, SAVED_RUN) * dt)
+			n.position.x += to.x / d * go
+			n.position.z += to.y / d * go
+			n.position.y = lerpf(n.position.y, FenerMap.ground_y(sp), minf(1.0, dt * 4.0))
+		face = to.angle() if d > 0.25 else (fire - sp).angle()
+	else:
+		n.position = Vector3(p.pos.x, FenerMap.ground_y(p.pos), p.pos.y)
+	var v := _speed(a, dt)
+	var rig := a.rig
+	var lying := false
+	var rising := false
+	if kind == K.TRAPPED and down:
+		lying = not (p.st == St.REPORTED and a.rescued)
+		rising = not lying
+	elif kind == K.INJURED and down:
+		rising = p.st == St.TREAT and p.treat_t >= RISE_AT
+		lying = not rising
+	if lying:
+		rig.play(&"trapped")
+		face = PI / 2.0 - deg_to_rad(LIE_YAW)
+	elif rising:
+		rig.play(&"idle", 1.0, 0.0, RISE_BLEND)
+		if kind == K.TRAPPED:
+			face = (a.look - Vector2(n.position.x, n.position.z)).angle()
+	elif kind == K.COLD and down:
+		rig.play(&"shiver")
+	elif p.st == St.FOLLOW or saved:
+		var tired := kind == K.SLOW or kind == K.INJURED
+		rig.loco(v, dt, &"walk_tired" if tired else &"walk_follow", &"run")
+		if p.st == St.FOLLOW and rig.gait == &"idle" and p.pos.distance_to(ctrl.ppos) < 9.0:
+			face = (ctrl.ppos - p.pos).angle()  # waits for you, looking your way
+	else:
+		rig.play(&"idle")
+		if p.st == St.LOST:
+			face += sin(_t * 0.7 + i) * 0.6  # looking around
+	_face(a, face, dt)
+	if _near(n.position):
+		rig.tick(dt)
+	a.fresh = false
 	_people_glow[i].visible = p.st != St.LOST
+
+
+# ---------- rescue crews ----------
+
+## A trapped person was reported to a crew at `at`: the nearest rescuer of that crew waves, runs there, digs.
+func _dispatch(at: Vector2, idx: int) -> void:
+	var from: Vector2 = ctrl.ppos
+	var ci := 0
+	var best := INF
+	for k in FenerMap.CREWS.size():
+		var c: Vector3 = FenerMap.CREWS[k]
+		var d := Vector2(c.x, c.y).distance_to(from)
+		if d < best:
+			best = d
+			ci = k
+	var m: Actor = null
+	best = INF
+	for a in _crew:
+		if a.crew == ci and a.mode == &"dig":
+			var d := a.home.distance_to(from)
+			if d < best:
+				best = d
+				m = a
+	if m == null:  # all his mates are out: one more comes from the tent
+		var c: Vector3 = FenerMap.CREWS[ci]
+		var cp := Vector2(c.x, c.y)
+		var q := cp + (from - cp).normalized() * 1.4
+		m = _make_rescuer(q, rad_to_deg(PI / 2.0 - (from - q).angle()), false, ci, 0.0, true)
+		m.node.scale = Vector3.ONE * 0.01
+		create_tween().tween_property(m.node, "scale", Vector3.ONE, 0.6).set_trans(Tween.TRANS_BACK)
+		_crew.append(m)
+	m.mode = &"wave"
+	m.t = 0.0
+	m.goal = idx
+	m.look = from
+	m.target = at
+	m.site = _dig_site(at)
+	m.rig.play(&"wave")
+
+
+## Where a rescuer kneels by a person lying across the screen: on the far side, so the person stays in view.
+func _dig_site(person: Vector2) -> Vector2:
+	for off in [Vector2(0.0, -1.0), Vector2(1.0, -0.6), Vector2(-1.0, -0.6), Vector2(0.0, 1.0)]:
+		var q: Vector2 = person + off * 1.0
+		if ctrl.walkable(q):
+			return q
+	return person
+
+
+func _update_crews(dt: float) -> void:
+	for a in _crew:
+		var pos := Vector2(a.node.position.x, a.node.position.z)
+		match a.mode:
+			&"dig":
+				_face(a, a.home_yaw, dt)
+				a.rig.play(&"dig")
+			&"wave":
+				a.t += dt
+				_face(a, (a.look - pos).angle(), dt)
+				a.rig.play(&"wave")
+				if a.t >= WAVE_T:
+					_send(a, pos)
+			&"go":
+				_walk(a, pos, dt)
+			&"work":
+				a.t += dt
+				_face(a, (a.target - pos).angle(), dt)
+				a.rig.play(&"dig")
+				if a.t >= RISE_DELAY and a.goal >= 0 and a.goal < _people.size():
+					var who := _people[a.goal]
+					if not who.rescued:
+						who.rescued = true
+						who.look = pos
+				if a.t >= WORK_T:
+					a.mode = &"done"
+			_:
+				_face(a, (a.target - pos).angle(), dt)
+				a.rig.play(&"idle")
+		if _near(a.node.position):
+			a.rig.tick(dt)
+		a.fresh = false
+
+
+func _send(a: Actor, pos: Vector2) -> void:
+	a.path = _route(pos, a.site)
+	a.pi = 0
+	a.mode = &"go"
+	_give_torch(a)
+
+
+## Runs along a.path at CREW_RUN, turning to where he goes; kneels at the end.
+func _walk(a: Actor, pos: Vector2, dt: float) -> void:
+	var v := 0.0
+	if a.pi < a.path.size():
+		var to := a.path[a.pi] - pos
+		var d := to.length()
+		var go := CREW_RUN * dt
+		if d <= go:
+			pos = a.path[a.pi]
+			a.pi += 1
+		else:
+			pos += to / d * go
+		v = CREW_RUN if dt > 0.0 else 0.0
+		_face(a, to.angle(), dt, 12.0)
+		a.node.position = Vector3(pos.x, FenerMap.ground_y(pos), pos.y)
+	if a.pi >= a.path.size():
+		a.mode = &"work"
+		a.t = 0.0
+		a.rig.play(&"dig")
+		return
+	a.rig.loco(v, dt, &"walk", &"run")
+
+
+## Route around the solids (A* on a NAV grid, then straightened), without the start point.
+func _route(from: Vector2, to: Vector2) -> PackedVector2Array:
+	var b := FenerMap.BOUNDS
+	var nx := int(b.size.x / NAV)
+	var nz := int(b.size.y / NAV)
+	var g := AStarGrid2D.new()
+	g.region = Rect2i(0, 0, nx, nz)
+	g.cell_size = Vector2(NAV, NAV)
+	g.offset = b.position
+	g.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
+	g.update()
+	for r: Rect2 in ctrl.solids:
+		var q := r.grow(0.5)
+		for iz in range(clampi(floori((q.position.y - b.position.y) / NAV), 0, nz - 1), clampi(ceili((q.end.y - b.position.y) / NAV), 0, nz)):
+			for ix in range(clampi(floori((q.position.x - b.position.x) / NAV), 0, nx - 1), clampi(ceili((q.end.x - b.position.x) / NAV), 0, nx)):
+				g.set_point_solid(Vector2i(ix, iz))
+	var c0 := _cell(from)
+	var c1 := _cell(to)
+	for c in [c0, c1]:  # his post and the person's side are never inside the padding
+		for dz in range(-1, 2):
+			for dx in range(-1, 2):
+				var q: Vector2i = c + Vector2i(dx, dz)
+				if g.is_in_boundsv(q):
+					g.set_point_solid(q, false)
+	var pts := g.get_point_path(c0, c1)
+	if pts.size() < 2:
+		return PackedVector2Array([to])
+	for i in pts.size():
+		pts[i] += Vector2(NAV, NAV) * 0.5
+	var out := PackedVector2Array()
+	var i := 0
+	while i < pts.size() - 1:
+		var j := pts.size() - 1
+		while j > i + 1 and not _clear(g, pts[i], pts[j]):
+			j -= 1
+		out.append(pts[j])
+		i = j
+	out[out.size() - 1] = to
+	return out
+
+
+func _cell(p: Vector2) -> Vector2i:
+	var o := p - FenerMap.BOUNDS.position
+	return Vector2i(floori(o.x / NAV), floori(o.y / NAV))
+
+
+func _clear(g: AStarGrid2D, a: Vector2, b: Vector2) -> bool:
+	var k := ceili(a.distance_to(b) / (NAV * 0.5))
+	for s in k + 1:
+		var c := _cell(a.lerp(b, float(s) / maxf(k, 1)))
+		if not g.is_in_boundsv(c) or g.is_point_solid(c):
+			return false
+	return true
 
 
 func _camera(dt: float) -> void:

@@ -2,11 +2,11 @@
 
 [ext_resource type="Script" path="res://scripts/fener_skin.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/fener_person.gd" id="2"]
-[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/citizen_mom.glb" id="3"]
-[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/citizen_child.glb" id="4"]
-[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/citizen_grandpa.glb" id="5"]
-[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/citizen_player.glb" id="6"]
-[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/citizen_rescuer.glb" id="7"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/meshy_mom.glb" id="3"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/meshy_child.glb" id="4"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/meshy_grandpa.glb" id="5"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/meshy_player.glb" id="6"]
+[ext_resource type="PackedScene" path="res://assets/3d/kahramanmaras/meshy_rescuer.glb" id="7"]
 
 [sub_resource type="Resource" id="mom"]
 script = ExtResource("2")
@@ -27,6 +27,11 @@ spot_group = &"lost_b"
 family = true
 color = Color(0.48, 0.85, 0.56, 1)
 figure = ExtResource("4")
+figure_speeds = {
+&"run": 2.6,
+&"walk": 0.57,
+&"walk_follow": 0.35
+}
 
 [sub_resource type="Resource" id="grandpa"]
 script = ExtResource("2")
@@ -64,6 +69,11 @@ kind = 4
 spot_group = &"cold"
 color = Color(0.77, 0.55, 1, 1)
 figure = ExtResource("4")
+figure_speeds = {
+&"run": 2.6,
+&"walk": 0.57,
+&"walk_follow": 0.35
+}
 
 [resource]
 script = ExtResource("1")

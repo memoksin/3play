@@ -83,6 +83,7 @@ func _run() -> void:
 	_cues()
 	_easy()
 	_time_up()
+	_figures()
 	print("test_fener ok" if ok else "test_fener FAIL")
 	quit(0 if ok else 1)
 
@@ -644,6 +645,135 @@ func _easy() -> void:
 	fener.ppos = FenerMap.AREA.position - Vector2(1.5, 1.5)
 	fener.step(DT)
 	_check("easy: the assembly area counts a little beyond its edge", f.st == fener.St.SAVED)
+
+
+## The rigged people (tools/models/meshy/README.md): who plays which clip, and at what rate against their real speed.
+func _sim(seconds: float) -> void:
+	for i in int(seconds / DT):
+		fener.step(DT)
+		fener.world.show_state(fener, DT)
+
+
+func _figures() -> void:
+	var sk: FenerSkin = fener.skin
+	var meshy := func(s: PackedScene) -> bool: return s != null and s.resource_path.contains("/meshy_")
+	_check("skin: player, rescuer and every person are the Meshy characters",
+			meshy.call(sk.player_scene) and meshy.call(sk.rescuer_scene) and sk.people.all(func(d: FenerPerson) -> bool: return meshy.call(d.figure)))
+	_check("skin: figures come in real size", sk.people.all(func(d: FenerPerson) -> bool: return d.figure_scale == 1.0))
+	_check("skin: child clips are slower than the adults'", sk.people[1].figure_speeds[&"run"] < sk.people[0].figure_speeds[&"run"])
+	_fresh(31)
+	fener.next_shock = 999.0
+	fener.l_on = false
+	var w = fener.world
+	fener.ppos = FenerMap.START
+	fener.world.show_state(fener, 0.0)
+	_sim(0.5)
+	_check("everyone has a rig", w._me.rig.ok and w._people.all(func(a) -> bool: return a.rig.ok) and w._crew.all(func(a) -> bool: return a.rig.ok))
+	var clips := {}
+	for i in fener.people.size():
+		clips[fener.people[i].def.id] = w._people[i].rig.clip
+	_check("waiting: mom and sister idle, grandpa idle, Ayse and Hasan lying (trapped), Can shivers",
+			clips[&"mom"] == &"idle" and clips[&"sister"] == &"idle" and clips[&"grandpa"] == &"idle"
+			and clips[&"ayse"] == &"trapped" and clips[&"hasan"] == &"trapped" and clips[&"can"] == &"shiver")
+	_check("standing player idles", w._me.rig.clip == &"idle")
+	_check("rescuers dig while nobody has reported", w._crew.all(func(a) -> bool: return a.rig.clip == &"dig"))
+	# the player runs: the clip rate times its ground speed is the real speed (no sliding feet)
+	fener.ov_move = Vector2.RIGHT
+	_sim(1.0)
+	var run: StringName = w._me.rig.clip
+	var before: Vector2 = fener.ppos
+	_sim(DT)
+	var v: float = fener.ppos.distance_to(before) / DT  # what he really did (rough ground slows him)
+	_check("moving player runs", run == &"run" and v > 3.0)
+	_check("run rate follows the player's speed (feet keep still)",
+			absf(w._me.rig.rate * sk.player_speeds[&"run"] - v) < 0.25)
+	_check("the player turns to where he runs", absf(angle_difference(w._me.yaw, 0.0)) < 0.2)
+	fener.ov_move = Vector2.ZERO
+	_sim(0.8)
+	_check("stopped player idles again", w._me.rig.clip == &"idle")
+	# followers: found, then run by their real speed, the old walk tired when slow
+	var mom = fener.people[0]
+	mom.st = fener.St.FOLLOW
+	fener.follow.append(mom)
+	var gp = fener.people.filter(func(p) -> bool: return p.def.kind == FenerPerson.Kind.SLOW)[0]
+	gp.st = fener.St.FOLLOW
+	fener.follow.append(gp)
+	fener.ov_move = Vector2.RIGHT
+	_sim(2.0)
+	var am = w._people[mom.idx]
+	var ag = w._people[gp.idx]
+	_check("a follower at the player's pace runs", am.rig.clip == &"run" and am.rig.rate > 0.8 and am.rig.rate < 1.6)
+	_check("the slow follower runs at his real speed, rate matches", ag.rig.clip == &"run" and absf(ag.rig.rate * gp.def.figure_speeds[&"run"] - ag.rig.speed) < 0.3)
+	fener.ov_move = Vector2.ZERO
+	_sim(1.5)
+	_check("followers stop and idle", am.rig.clip == &"idle" and ag.rig.clip == &"idle")
+	# the gait by speed, straight on the rig
+	var Rig = load("res://scenes/minigames/fener/fener_rig.gd")
+	var r = Rig.new(w._people[gp.idx].fig, gp.def.figure_speeds)
+	r.loco(0.45, 0.0, &"walk_tired", &"run")
+	_check("slow speed: walk_tired at its own pace", r.clip == &"walk_tired" and absf(r.rate * gp.def.figure_speeds[&"walk_tired"] - 0.45) < 0.01)
+	r.loco(3.8, 0.0, &"walk_tired", &"run")
+	_check("fast: run", r.clip == &"run")
+	r.loco(0.0, 0.0, &"walk_tired", &"run")
+	_check("standing: idle", r.clip == &"idle")
+	var bare := Node3D.new()
+	var rp = Rig.new(bare, {})
+	_check("a figure without clips is left alone", not rp.ok and rp.loco(3.0, 0.1) == &"")
+	bare.free()
+	# first aid: the hurt man lies, gets up, then walks tired
+	var hasan = fener.people.filter(func(p) -> bool: return p.def.kind == FenerPerson.Kind.INJURED)[0]
+	var ah = w._people[hasan.idx]
+	hasan.st = fener.St.TREAT
+	hasan.treat_t = 0.0
+	fener.ppos = hasan.pos + Vector2(1.0, 0.0)
+	w.show_state(fener, DT)
+	_check("hurt man lies while the kit is not yet used", ah.rig.clip == &"trapped")
+	hasan.treat_t = fener.TREAT_TIME * 0.8
+	w.show_state(fener, DT)
+	_check("hurt man gets up during first aid", ah.rig.clip == &"idle")
+	# cold child: blanket, then follows
+	var can = fener.people.filter(func(p) -> bool: return p.def.kind == FenerPerson.Kind.COLD)[0]
+	can.st = fener.St.FOLLOW
+	w.show_state(fener, DT)
+	_check("Can stops shivering after the blanket", w._people[can.idx].rig.clip != &"shiver")
+	# the report: the crew waves, goes, digs; she gets up when they are there
+	_fresh(31)
+	fener.next_shock = 999.0
+	fener.l_on = false
+	var ay = fener.people.filter(func(p) -> bool: return p.def.kind == FenerPerson.Kind.TRAPPED)[0]
+	ay.st = fener.St.MARKED
+	var c: Vector3 = FenerMap.CREWS[0]
+	var best := 0
+	for k in FenerMap.CREWS.size():
+		var ck: Vector3 = FenerMap.CREWS[k]
+		if Vector2(ck.x, ck.y).distance_to(ay.pos) < Vector2(c.x, c.y).distance_to(ay.pos):
+			c = ck
+	fener.ppos = Vector2(c.x, c.y) + Vector2(1.5, 0.5)
+	fener.step(DT)
+	w.show_state(fener, DT)
+	_check("reported", ay.st == fener.St.REPORTED)
+	var m = null
+	for a in w._crew:
+		if a.mode != &"dig":
+			m = a
+	_check("one rescuer of that crew waves", m != null and m.mode == &"wave" and m.rig.clip == &"wave" and m.crew == (0 if c == FenerMap.CREWS[0] else 1))
+	var aa = w._people[ay.idx]
+	_sim(w.WAVE_T + 0.5)
+	_check("then he runs", m.mode == &"go" and m.rig.clip == &"run" and aa.rig.clip == &"trapped")
+	# the way there never crosses a building
+	var clear := true
+	var from := m.home as Vector2
+	for q in m.path:
+		for s in range(1, 9):
+			if not fener.walkable(from.lerp(q, s / 8.0)) and s / 8.0 < 0.9:
+				clear = false
+		from = q
+	_check("the crew's route keeps off the buildings", clear and not m.path.is_empty())
+	_sim(35.0)
+	_check("he kneels to dig at the person", m.mode == &"work" or m.mode == &"done")
+	_check("she gets up when the crew is there", aa.rescued and aa.rig.clip == &"idle")
+	_fresh(32)
+	_check("a new run: every rescuer back at his post digging", w._crew.all(func(a) -> bool: return a.mode == &"dig" and not a.extra and a.node.position.distance_to(Vector3(a.home.x, a.node.position.y, a.home.y)) < 0.01))
 
 
 func _time_up() -> void:

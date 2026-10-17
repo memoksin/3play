@@ -88,14 +88,27 @@ Ambience: FN1 (same as D1) for the whole scene.
 
 ## Art seams
 
-- People: placeholder art pilot citizens. Swap per person (`FenerPerson.figure`, `figure_scale`) or the player /
-  rescuers (`FenerSkin.player_scene`, `rescuer_scene`). Origin at the feet, front +Z, about 1.75 m.
+- People: the rigged Meshy characters (`assets/3d/kahramanmaras/meshy_*.glb`, clips and ground speeds in
+  `tools/models/meshy/README.md`). Swap per person (`FenerPerson.figure`, `figure_scale`, `figure_speeds`) or the
+  player / rescuers (`FenerSkin.player_scene` + `player_speeds`, `rescuer_scene` + `rescuer_speeds`); no code change.
+  Origin at the feet, front +Z, real size (1.3 m child ... 1.8 m rescuer). `figure_speeds` = metres per second each
+  moving clip covers: the clip plays at (real speed / that), so the planted foot keeps still. A clip the new art lacks
+  falls back to a close one (`FenerRig.FALLBACK`); a model without an AnimationPlayer is just placed and turned.
+- Clips by state (`scenes/minigames/fener/fener_rig.gd`, `fener_world.gd`): player `idle` standing, `walk` / `run` by
+  real speed (4.6 m/s = `run` at 1.2x); lost people `idle` (looking about), found followers
+  `idle` / `walk_follow` / `run` by real speed (the old and the hurt: `walk_tired`), Ayse and Hasan `trapped`
+  (lying across the screen) until the crew is there / first aid starts, Can `shiver` until the blanket, saved
+  people walk to their place and `idle`. Rescuers `dig`; on a report the nearest one of that crew `wave`s, runs
+  (A* around the buildings, 4.2 m/s `run`), `dig`s by the person, who gets up. Walk <-> run switch at the geometric
+  mean of the two clips' ground speeds (with hysteresis), idle below 0.12 m/s. Figures further than 46 m from the
+  player are not stepped. Frames: `fener_shots.gd` states `follow`, `trapped`, `cold`, `injured`, `crew*`, `area_live`
+  (and `_close` twins).
 - Set pieces: `FenerMap.PLACES` (model, x, z, yaw); solids from `FenerMap.FOOT`. Practical lights per model:
   `LIGHTS` in `scenes/minigames/fener/fener_world.gd`.
 - Slab body: `tools/models/kahramanmaras/fener_hood_slab.py`; pickups: `fener_items.py`.
 
 ## Tools
 
-- Tests: `godot --headless --path . -s res://tests/test_fener.gd` (bot plays 4 full runs, every mechanic).
+- Tests: `godot --headless --path . -s res://tests/test_fener.gd` (bot plays 4 full runs, every mechanic, the figures' clips and the crew run).
 - Frames: `godot --path . -s res://tools/fener_shots.gd` -> `export/shots/fener_*.png`.
 - Frame cost: `godot --path . -s res://tools/perf.gd -- --only=fener`.
