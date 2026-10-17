@@ -29,7 +29,7 @@ For whoever has the game on their computer (memoksin or sudeimete).
 | G6 | Time counter | Clock or year counter runs while time advances | | | | | no sound | Test it silent first. If it feels empty, add a short digital tick later. |
 | G7 | Glitch and jump to the future | Globe glitches and jumps to year 3000+ (Tier 2) | Glitch Corruption | dotY21 | https://freesound.org/people/dotY21/sounds/348585/ | CC0 | in repo | Tier 2. |
 | G8 | Riser, main menu to globe | The player leaves the menu and the globe appears |  |  |  |  | keep current | No riser for now: the current transition sound (the G1 swell, which plays when the globe appears) stays as it is. |
-| G9 | Globe ambience | While the globe is shown (space or Earth feel) |  |  |  |  | todo | No globe ambience exists in the game yet (G2 plays only while the globe is dragged). A new space or Earth ambience is being searched. No water. |
+| G9 | Globe ambience | While the globe is shown (space or Earth feel) | Quasi Drone | bassimat | https://freesound.org/people/bassimat/sounds/840934/ | CC0 | chosen | About 10 min, calm evolving drone. Loop, quiet, under the G1 swell and G2 spin sound. Expected file: `globe/earth_ambience.ogg`. No water. |
 
 ### Still to do for the globe
 
@@ -171,7 +171,7 @@ Dark snowy street, a flashlight with a battery, a whistle that shows the directi
 | FN1 | Snowstorm ambience | Whole minigame | G56-21-Winter Wind.wav | craigsmith | https://freesound.org/people/craigsmith/sounds/438876/ | CC0 | chosen (same as D1) | The same new snowstorm sound as D1. |
 | FN2 | Footsteps | The player walks | Footsteps Dirt Gravel | PotatokingXII | https://freesound.org/people/PotatokingXII/sounds/352870/ | CC0 | chosen | Normal footsteps (not snow). About 35 s, trim to a clean stride loop. |
 | FN3 | Flashlight on and off | The flashlight is turned on or off | Flashlight Clicking On and Off | deleted_user_7146007 | https://freesound.org/people/deleted_user_7146007/sounds/383659/ | CC0 | chosen | 0 to 1 s = turning on. 2 to 3 s = turning off. |
-| FN4 | Battery low | The flashlight battery is running out |  |  |  |  | todo | Another sound: a beeping "bip bip" is enough. The first candidates were not liked. |
+| FN4 | Battery low | The flashlight battery is running out | Electronic Timer Beeping 4X | Rudmer_Rotteveel | https://freesound.org/people/Rudmer_Rotteveel/sounds/536420/ | CC0 | chosen | The file already holds 4 beeps ("bip bip"). Play it when the battery is low. |
 | FN5 | Whistle | The whistle that shows the direction | metal whistle | strongbot | https://freesound.org/people/strongbot/sounds/568995/ | CC0 | chosen | First 3 seconds of the file. |
 | FN6 | Found a family member | The player reaches a family member | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen (reuse of F2) | First second of the file. |
 | FN7 | Success | The family reaches the assembly point | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | chosen | One success sound for FN7, FR6 and BM4. |
@@ -185,7 +185,7 @@ Spec: `docs/minigames/fire-farm.md`.
 
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
-| FR1 | Fire and wind ambience | Whole minigame |  |  |  |  | no sound | The candidates were not liked, so left empty for now. |
+| FR1 | Fire and wind ambience | Whole minigame | Small flame (FR9) mixed with WIND BLOWING.mp3 | ricardoemfield + Podcapocalipsis | https://freesound.org/people/ricardoemfield/sounds/752028/ and https://freesound.org/people/Podcapocalipsis/sounds/521696/ | CC0 (verify both pages) | chosen (to test) | Burcu: mix the FR9 flame sound with seconds 9 to 14 of the wind sound, loop it. Sude to mix, Burcu approves by ear. |
 | FR2 | Footsteps | The player walks | Footsteps Dirt Gravel | PotatokingXII | https://freesound.org/people/PotatokingXII/sounds/352870/ | CC0 | chosen | Same as FN2. Trim to a clean stride loop. |
 | FR3 | Jump and landing on debris | The player jumps over the debris | Human Impact on Ground | alegemaate | https://freesound.org/people/alegemaate/sounds/364690/ | CC0 | chosen | Short clip of a person landing after a jump. |
 | FR4 | Pick up the knife | The player picks up the knife | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen (reuse of F2) | First second of the file. |
@@ -194,9 +194,9 @@ Spec: `docs/minigames/fire-farm.md`.
 | FR7.1 | Hose attached | The hose is put on the valve |  |  |  |  | todo | Another click sound for attaching the hose: not a mouse click. |
 | FR7.2 | Valve turn | The valve is turned | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | chosen | Use 0:58 to 1:03 of the file. |
 | FR8 | Water spray | The hose sprays | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | chosen | Use 1:07 to 1:18 of the file (confirmed). |
-| FR9 | Small flame | The small flame burns | | | | | todo | A flame sound, not only crackling. |
+| FR9 | Small flame | The small flame burns | Flame sound (title to verify on the page) | ricardoemfield | https://freesound.org/people/ricardoemfield/sounds/752028/ | CC0 (verify) | chosen | Burcu picked it. Fades out when the flame is put out (FR10). Check title and license on the page and put the real title here. |
 | FR10 | Flame goes out | The flame is put out | | | | | decided | No separate sound: the flame sound (FR9) fades out. |
-| FR11 | Kangaroos run out | 2 to 3 kangaroos run through the gap | | | | | todo | A herd running (many footsteps). |
+| FR11 | Kangaroos run out | 2 to 3 kangaroos run through the gap | Horse Gallop Loop.wav + Footsteps Dirt 01 | DeadxCreed + aglinder | https://freesound.org/people/DeadxCreed/sounds/322448/ and https://freesound.org/people/aglinder/sounds/264469/ | CC0 (verify both) | chosen (to test) | No kangaroo hop CC0 exists. Layer both and play the pair 2 to 3 times, each starting before the previous ends. Replace if it sounds fake. |
 | FR12 | Smoke (cough, breath) | The smoke thickens | | | | | no sound | Not needed. |
 
 ## Beam network (Isin Agi, solar flare 3026, #124)
