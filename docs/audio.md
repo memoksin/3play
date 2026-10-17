@@ -51,6 +51,15 @@ For whoever has the game on their computer (memoksin or sudeimete).
 - Download the files and add them to the repo, then to `assets/CREDITS.md`, then set Status to `in repo`.
 - Re-check the license line on each page when downloading.
 
+## All buttons in the whole game
+
+Burcu's rule: every button in every scene uses the same two sounds, no exceptions. Done by one generic hook in `scripts/audio.gd` (any BaseButton in the real tree, once per button). Exceptions that keep their own cue: language flags (LS1, LS2) and the intro Continue hover (D6). Keyboard focus plays nothing (menus grab focus when they open).
+
+| # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
+|---|---|---|---|---|---|---|---|---|
+| UI1 | Button hover | The mouse is over any button: menus, minigame choice and card buttons, the pause menu (4 buttons), settings, result card | UI_Hover | unfa | https://freesound.org/people/unfa/sounds/565131/ | CC0 | in repo (M2) | Same as M2. Also on the pause menu opened inside a minigame. |
+| UI2 | Button click | Any button is pressed, including the pause menu buttons | Soft UI Button Click | Jummit | https://freesound.org/people/Jummit/sounds/528561/ | CC0 | in repo (M3) | Same as M3. |
+
 ## Language screen (flag select)
 
 First screen at the first launch, with the flags. It reuses the main menu sounds.

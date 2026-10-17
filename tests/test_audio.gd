@@ -537,6 +537,81 @@ func _run() -> void:
 	audio.stop_all()
 	audio.clear_injected()
 
+	# 12. Every button plays M2 on hover and M3 on click, once (UI1, UI2).
+	audio.stop_all()
+	audio.clear_injected()
+	for id in [&"M2", &"M3", &"LS1", &"LS2", &"D6"]:
+		audio.inject_stream(id, _wav(1.0))
+	var holder := Control.new()
+	var plain := Button.new()
+	var check := CheckBox.new()
+	holder.add_child(plain)
+	holder.add_child(check)
+	audio.reset_history()
+	root.add_child(holder)
+	await process_frame
+	plain.mouse_entered.emit()
+	plain.pressed.emit()
+	check.mouse_entered.emit()
+	_check("buttons: any button gets hover M2 and click M3 once", _log() == ["play:M2", "play:M3", "play:M2"])
+	audio.reset_history()
+	root.remove_child(holder)
+	root.add_child(holder)  # re-entering the tree must not hook it twice
+	await process_frame
+	plain.pressed.emit()
+	_check("buttons: no double hook after re-entering the tree", _log() == ["play:M3"])
+	plain.disabled = true
+	audio.reset_history()
+	plain.mouse_entered.emit()
+	_check("buttons: a disabled button has no hover sound", _log().is_empty())
+	get_root().get_tree().paused = true
+	audio.reset_history()
+	plain.disabled = false
+	plain.pressed.emit()
+	var pp: AudioStreamPlayer = audio.get_child(audio.get_child_count() - 1)
+	_check("buttons: click sound plays while the tree is paused (pause menu)", _log() == ["play:M3"] and pp.process_mode == Node.PROCESS_MODE_ALWAYS and pp.can_process())
+	get_root().get_tree().paused = false
+	holder.queue_free()
+	await process_frame
+	# A button built in a SubViewport (warm-up) is hooked once, when it reaches the root.
+	var vp2 := SubViewport.new()
+	root.add_child(vp2)
+	var wb := Button.new()
+	vp2.add_child(wb)
+	await process_frame
+	vp2.remove_child(wb)
+	root.add_child(wb)
+	await process_frame
+	audio.reset_history()
+	wb.pressed.emit()
+	wb.mouse_entered.emit()
+	_check("buttons: warm-up SubViewport button sounds once after it moves to the root", _log() == ["play:M3", "play:M2"])
+	wb.queue_free()
+	vp2.queue_free()
+	await process_frame
+	# Language flags keep LS1/LS2 only; the intro Continue keeps D6 for hover and M3 for click.
+	audio.reset_history()
+	var pick2: Node = load("res://scenes/ui/lang_picker.tscn").instantiate()
+	root.add_child(pick2)
+	await process_frame
+	pick2.get_node("Box/EN").mouse_entered.emit()
+	_check("buttons: lang flag hover is LS1 only", _log() == ["play:LS1"])
+	pick2.queue_free()
+	await process_frame
+	game.disaster = load("res://data/disasters/indian_ocean.tres")
+	audio.reset_history()
+	var intro3: Node = load("res://scenes/ui/intro_text.tscn").instantiate()
+	root.add_child(intro3)
+	await process_frame
+	intro3.get_node("%Next").mouse_entered.emit()
+	_check("buttons: intro Continue hover is D6 only", _log() == ["play:D6"])
+	intro3.get_node("%Next").pressed.emit()
+	_check("buttons: intro Continue click is M3", _log().slice(-1) == ["play:M3"])
+	intro3.queue_free()
+	await process_frame
+	audio.stop_all()
+	audio.clear_injected()
+
 	await create_timer(0.5).timeout  # the audio thread releases the stopped streams; quitting at once leaks them (flaky)
 	print("OK" if ok else "FAILED")
 	quit(0 if ok else 1)

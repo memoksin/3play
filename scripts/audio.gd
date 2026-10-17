@@ -152,8 +152,8 @@ const SCENE_HOOKS := {
 	"res://scenes/minigames/fire.tscn": &"_hook_fire",
 	"res://scenes/result.tscn": &"_hook_result",
 }
-## Buttons owned by these scenes get the hover (M2) and click (M3) sounds.
-const BUTTON_SCENES: Array[String] = ["res://scenes/main.tscn", "res://scenes/result.tscn"]
+const LANG_PICKER_SCENE := "res://scenes/ui/lang_picker.tscn"
+const INTRO_TEXT_SCENE := "res://scenes/ui/intro_text.tscn"
 const DIORAMA_AMBIENCE := {&"kahramanmaras": &"D1", &"indian_ocean": &"D2", &"solar_flare": &"D3"}
 ## Globe spin sound (G2): the level follows the spin speed (rad/s) up to G2_FULL_SPEED, smoothed at
 ## G2_SMOOTH (1/s); the loop ends once the globe is slower than G2_STOP_SPEED and not held.
@@ -402,6 +402,8 @@ func _start(id: StringName, opts: Dictionary, force_loop: bool, op: StringName) 
 	p.pitch_scale = opts.get("pitch", 1.0)
 	var db: float = cue.get("volume_db", 0.0) + opts.get("volume_db", 0.0)
 	p.set_meta(&"db", db)
+	if cue.get("bus", &"SFX") == &"UI":
+		p.process_mode = Node.PROCESS_MODE_ALWAYS  # button sounds also play in the pause menu (tree paused)
 	p.set_meta(&"loop", looped)
 	if looped:
 		# ogg and mp3 loop natively; anything else is restarted when it finishes.
@@ -492,10 +494,26 @@ func _on_node_added(node: Node) -> void:
 	if path != "" and SCENE_HOOKS.has(path) and not node.has_meta(&"audio_hooked"):
 		node.set_meta(&"audio_hooked", true)
 		call(SCENE_HOOKS[path], node)
-	if node is BaseButton and node.owner and BUTTON_SCENES.has(node.owner.scene_file_path):
-		var b := node as BaseButton
+	if node is BaseButton and not node.has_meta(&"audio_button"):
+		_hook_button(node as BaseButton)
+
+
+## Every button in the game: hover M2, click M3 (Burcu's rule, UI1/UI2). Done once per button, in the
+## real tree only (the viewport check above), so a button built in a warm-up SubViewport gets it when
+## it moves to the root. The language flags keep LS1/LS2 and the intro Continue keeps D6 as its hover.
+## Keyboard focus plays nothing: menus grab focus when they open, which would sound like a hover.
+func _hook_button(b: BaseButton) -> void:
+	b.set_meta(&"audio_button", true)
+	var scene := ""
+	var up: Node = b  # buttons made in code have no owner: the nearest scene root above decides
+	while up and scene == "":
+		scene = up.scene_file_path
+		up = up.get_parent()
+	if scene == LANG_PICKER_SCENE:
+		return
+	if not (scene == INTRO_TEXT_SCENE and b.name == &"Next"):
 		b.mouse_entered.connect(func() -> void: if not b.disabled: play(&"M2"))
-		b.pressed.connect(func() -> void: play(&"M3"))
+	b.pressed.connect(func() -> void: play(&"M3"))
 
 
 func _hook_main(n: Node) -> void:
