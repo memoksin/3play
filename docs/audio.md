@@ -67,3 +67,22 @@ The diorama is the 3D intro (about 10 s): the camera orbits a small low-poly set
 ## Open question: scene transitions
 
 Do transitions between scenes need a sound? Decide after the game runs end to end (globe to diorama, diorama to minigame, minigame to result card, result card to menu). For now no sound on any transition. Test it silent first.
+
+## Fit minigame (Kahramanmaras; the solar flare skin shares the code)
+
+Timeline from `scenes/minigames/fit.gd`: aftershock hints at about 25 s and 50 s (0.5 s shake plus a creak message), the big quake at 13:24 (1.6 s shake), the collapse starts 0.3 s after the hit and lasts 1.3 s, so the quake rumble and the collapse overlap.
+
+| # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
+|---|---|---|---|---|---|---|---|---|
+| F1 | Ambience | Whole minigame (cold street, snow, wind) | DMP013016 HEAVY SNOW STORM MS.wav | martypinso | https://freesound.org/people/martypinso/sounds/35480/ | CC0 | chosen | Same sound as D1, so the place sounds the same in the diorama and the minigame. |
+| F2 | Select a person or item | The player clicks a person or item | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen | Use only the first second of the file. |
+| F3 | Drop into a zone | The item lands in a zone (slide of 0.18 s) | | | | | todo | Needs a search. |
+| F4 | Wrong item or cannot take | The zone is full, the item snaps back | | | | | todo | Should sound like "you cannot take this item", not a buzzer. Needs a search. |
+| F5 | Building creak and quake start | Aftershock hints (about 25 s and 50 s) and the start of the big quake | | | | | todo | Needs a building or structure creak, not a single wood creak. Idea: mix it with the F6 rumble. |
+| F6 | Big quake | 13:24, 1.6 s of violent shaking | Cracking Earthquake | uagadugu | https://freesound.org/people/uagadugu/sounds/222521/ | CC0 | chosen | About 12 s file, trim to the shaking. Idea: layer the F5 creak on top. |
+| F7 | Building collapse | Right after the quake hit, 1.3 s | building collapse / demolition | greyfeather | https://freesound.org/people/greyfeather/sounds/712918/ | CC0 | chosen | About 3 s. Starts while the F6 rumble is still playing (overlap). See the transition note. |
+| F8 | Clock | The HUD clock runs | | | | | undecided | Test silent first, like G6. |
+
+### Transition note (F6 to F7)
+
+F6 is a low, long rumble and F7 is a short, sharp impact, so they sound different. In the game they overlap on purpose: the collapse starts 0.3 s after the hit while the shake is still going. Keep the rumble under the collapse and fade it out after, instead of cutting one sound and starting the other. Match the loudness and give the join a short (about 100 to 200 ms) crossfade.
