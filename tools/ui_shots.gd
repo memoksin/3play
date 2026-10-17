@@ -53,8 +53,6 @@ func _run() -> void:
 			await _shot("res://scenes/main.tscn", "menu_hover_state", size, {"wait": 1.5, "role_hover": &"state"})
 			await _shot("res://scenes/main.tscn", "menu_hover_citizen", size, {"wait": 1.5, "role_hover": &"citizen"})
 			continue
-		await _shot("res://scenes/language.tscn", "lang_idle", size, {"wait": 0.3, "unfocus": true})
-		await _shot("res://scenes/language.tscn", "lang_hover", size, {"wait": 0.3, "unfocus": true, "hover": "EN"})
 		for role in [&"citizen", &"state"]:
 			game.role = role
 			game.disaster = load(game.PICK[role])
