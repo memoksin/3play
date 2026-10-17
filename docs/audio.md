@@ -55,7 +55,7 @@ The diorama is the 3D intro (about 10 s): the camera orbits a small low-poly set
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
 | D1 | Kahramanmaras ambience | Diorama of Kahramanmaras (snow, wind) | DMP013016 HEAVY SNOW STORM MS.wav | martypinso | https://freesound.org/people/martypinso/sounds/35480/ | CC0 | chosen | Use the part from about 1:47 to 2:43 (about 56 s). Needs a soft fade at the ends if it loops. |
-| D2 | Indian Ocean ambience | Diorama of the Indian Ocean (waves on the shore) | Waves crashing on shore | jamgypsy | https://freesound.org/people/jamgypsy/sounds/795445/ | CC0 | chosen | Only waves (no birds, boats or people per the description). About 2 min. |
+| D2 | Indian Ocean ambience | Diorama of the Indian Ocean (waves on the shore) | Waves crashing on shore | jamgypsy | https://freesound.org/people/jamgypsy/sounds/795445/ | CC0 | chosen | Only waves (no birds, boats or people per the description). About 2 min. Also used as the base layer of C1 (Connect), see issue #95. |
 | D3 | Solar flare 3026 ambience | Diorama of the solar flare scenario | Solar Storm.wav | Puniho | https://freesound.org/s/151098/ | CC0 | chosen | Space ambience. |
 | D4 | Intro text typing | The intro lines type on, one after another | Computer keyboard typing snippet mono [loop] | cabled_mess | https://freesound.org/people/cabled_mess/sounds/361639/ | CC0 | chosen | Same file as G3, so all typed text in the game sounds the same. |
 | D5 | Diorama to minigame transition | The diorama ends and the minigame starts | | | | | no sound | No sound for now. Open question for the whole game: do scene transitions need a sound? See below. |
@@ -90,3 +90,19 @@ The building creak (F5) plays together with the quake rumble (F6) when the big q
 ### Transition note (F6 to F7)
 
 F6 is a low, long rumble and F7 is a short, sharp impact, so they sound different. In the game they overlap on purpose: the collapse starts 0.3 s after the hit while the shake is still going. Keep the rumble under the collapse and fade it out after, instead of cutting one sound and starting the other. Match the loudness and give the join a short (about 100 to 200 ms) crossfade.
+
+## Connect minigame (Indian Ocean)
+
+Timeline from `scenes/minigames/connect.gd`: a calm bay until about 6 s before the hit (the ambient motion slows and fades), the wave comes into view 15 s before the hit, the tile turn lasts 0.1 s, the wave crosses the bay and breaks on the beach (1.8 s) with a 0.6 s shake, then 0.6 s later the water flows tile by tile (0.3 s per tile), basins fill (0.4 s per step), broken lines spill (0.5 s splash, 0.3 s gush), villages flood, the water drains (1.5 s), and the banner shows the score.
+
+| # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
+|---|---|---|---|---|---|---|---|---|
+| C1 | Calm bay ambience | From the start until the wave arrives | Morning Birds in a Quiet Urban Garden | WhisperingEarth | https://freesound.org/people/WhisperingEarth/sounds/798842/ | CC0 | chosen | Layer on top of the D2 wave sound (jamgypsy), which starts first and keeps playing. Two players at once. Issue #95. |
+| C2 | Rotate a pipe | The player clicks a pipe (0.1 s turn) | Clank1.wav | BMacZero | https://freesound.org/people/BMacZero/sounds/94127/ | CC0 | chosen | |
+| C3 | Wave rising | The wave comes into view, 15 s before the hit | | | | | later | Postponed. The first candidates were rejected, needs a new search. |
+| C4 | Wave hits | The wave crosses the bay and breaks on the beach, with the shake | | | | | later | Postponed. The first candidates were rejected, needs a new search. |
+| C5 | Water flows through the pipes | Water flows tile by tile after the hit | Hydrophone underwater stream close pipe gurgle.wav | JavierZumer | https://freesound.org/people/JavierZumer/sounds/422660/ | CC0 | chosen | Use the part from about 0:40 onward. |
+| C6 | Basin fills | The water reaches a basin and it fills | Water Echo.wav | eeriedescence | https://freesound.org/people/eeriedescence/sounds/419741/ | CC0 | chosen | Well-like echo. |
+| C7 | Broken line spills | The water spills out of a broken line | Big Water Splash | qubodup | https://freesound.org/people/qubodup/sounds/442773/ | CC0 | chosen (to test) | Repeat the same splash several times, each starting before the previous ends, to build an overflow. Try it, replace the sound if it feels fake. Issue #95. |
+| C8 | Village floods | The spilled water floods the village | | | | | no sound (test) | Leave empty and test the game. Add a sound only if it feels empty. |
+| C9 | Water drains | The water drains back (1.5 s) | wavesound.wav | transitking | https://freesound.org/people/transitking/sounds/11505/ | CC0 | chosen | Use only the first 4 s of the file (waves wash over the rock and drain back through a crack). |
