@@ -12,6 +12,7 @@ func _initialize() -> void:
 	_kahr()
 	_io()
 	_sf()
+	_bs()
 	quit()
 
 
@@ -2518,3 +2519,474 @@ func _sf_flush(parent: Node, name: String, shadow := true) -> Node3D:
 		i += 1
 	sf_parts.clear()
 	return g
+
+
+# ---------- Black Saturday (Victoria, 7 Feb 2009) ----------
+
+const FLAME_SHADER := """shader_type spatial;
+render_mode unshaded, cull_disabled, blend_mix, depth_draw_never;
+// Flame tongues: crossed quads baked in world space (COLOR.r = phase, COLOR.g = height). The wind leans them to +x.
+uniform float lean = 0.45;
+varying float ph;
+void vertex() {
+	float hh = 1.0 - UV.y;
+	ph = COLOR.r * 6.2832;
+	float s = sin(TIME * 3.1 + ph) * 0.5 + sin(TIME * 7.3 + ph * 2.1) * 0.3;
+	VERTEX.x += (lean * hh * hh + s * hh * 0.22) * COLOR.g;
+	VERTEX.y -= (0.5 + 0.5 * sin(TIME * 9.0 + ph)) * hh * hh * 0.12 * COLOR.g;
+}
+void fragment() {
+	float hh = 1.0 - UV.y;
+	float x = (UV.x - 0.5) * 2.0 + sin(hh * 7.0 - TIME * 6.0 + ph) * 0.16 * hh;
+	float w = (1.0 - hh) * (0.3 + 0.7 * smoothstep(0.0, 0.3, hh)) * (0.92 + 0.08 * sin(TIME * 11.0 + ph));
+	float mask = 1.0 - smoothstep(w * 0.8, w, abs(x));
+	float t = clamp(abs(x) / max(w, 0.01) * 0.8 + hh * 0.7, 0.0, 1.0);
+	vec3 col = t < 0.5 ? mix(vec3(1.0, 0.86, 0.42), vec3(1.0, 0.52, 0.18), t * 2.0) : mix(vec3(1.0, 0.52, 0.18), vec3(0.78, 0.18, 0.04), (t - 0.5) * 2.0);
+	ALBEDO = col * 1.15;
+	ALPHA = mask * (1.0 - smoothstep(0.82, 1.0, hh));
+}
+"""
+
+var bs_rng := RandomNumberGenerator.new()
+
+
+func _bs() -> void:
+	bs_rng.seed = 20090207
+	root_node = Node3D.new()
+	root_node.name = "SetBlackSaturday"
+	var haze := Color(0.85, 0.42, 0.16)
+
+	var env := WorldEnvironment.new()
+	env.name = "Env"
+	var e := Environment.new()
+	var sky := Sky.new()
+	var psm := ProceduralSkyMaterial.new()
+	psm.sky_top_color = Color(0.28, 0.08, 0.05)
+	psm.sky_horizon_color = Color(0.95, 0.48, 0.18)
+	psm.sky_curve = 0.2
+	psm.ground_horizon_color = Color(0.9, 0.45, 0.17)
+	psm.ground_bottom_color = Color(0.7, 0.32, 0.12)
+	psm.sun_angle_max = 0.0
+	sky.sky_material = psm
+	e.background_mode = Environment.BG_SKY
+	e.sky = sky
+	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	e.ambient_light_color = Color(0.95, 0.6, 0.45)
+	e.ambient_light_energy = 0.5
+	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	e.fog_enabled = true
+	e.fog_mode = Environment.FOG_MODE_DEPTH
+	e.fog_light_color = haze
+	e.fog_depth_begin = 45.0
+	e.fog_depth_end = 125.0
+	e.fog_depth_curve = 1.3
+	e.fog_density = 1.0
+	e.fog_sky_affect = 0.0
+	env.environment = e
+	_own(env, root_node)
+
+	var sun := DirectionalLight3D.new()
+	sun.name = "SmokedSun"
+	sun.light_color = Color(1.0, 0.62, 0.34)
+	sun.light_energy = 1.0
+	sun.shadow_enabled = true
+	sun.directional_shadow_max_distance = 90.0
+	sun.rotation_degrees = Vector3(-24, 58, 0)
+	_own(sun, root_node)
+	for l in [["FireGlowL", Vector3(-14, 6, -16)], ["FireGlowR", Vector3(14, 6, -16)]]:
+		var ol := OmniLight3D.new()
+		ol.name = l[0]
+		ol.light_color = Color(1.0, 0.5, 0.18)
+		ol.light_energy = 1.3
+		ol.omni_range = 30.0
+		ol.position = l[1]
+		_own(ol, root_node)
+
+	var ground := MeshInstance3D.new()
+	ground.name = "Ground"
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(100, 100)
+	pm.subdivide_width = 60
+	pm.subdivide_depth = 60
+	ground.mesh = pm
+	ground.material_override = _shader(GROUND, {
+		"base_color": Color(0.6, 0.45, 0.22), "alt_color": Color(0.48, 0.34, 0.17),
+		"void_color": haze, "radius": 46.0, "fade": 12.0, "bump": 0.05})
+	_own(ground, root_node)
+
+	var m := {
+		"wall": _sf_mat(Color(0.88, 0.8, 0.62)), "wall2": _sf_mat(Color(0.7, 0.62, 0.5)),
+		"tin": _sf_mat(Color(0.74, 0.74, 0.72), 0.5), "rust": _sf_mat(Color(0.55, 0.3, 0.2), 0.7),
+		"tin_dk": _sf_mat(Color(0.5, 0.52, 0.52), 0.5), "wood": _sf_mat(Color(0.46, 0.32, 0.2)),
+		"wood_l": _sf_mat(Color(0.7, 0.55, 0.38)), "post": _sf_mat(Color(0.4, 0.3, 0.22)),
+		"glass": _sf_mat(Color(0.14, 0.12, 0.12), 0.3), "white": _sf_mat(Color(0.93, 0.9, 0.82)),
+		"red": _sf_mat(Color(0.6, 0.2, 0.14)), "dirt": _sf_mat(Color(0.62, 0.45, 0.28)),
+		"ash": _sf_mat(Color(0.12, 0.09, 0.08), 0.95), "tuft": _sf_mat(Color(0.86, 0.7, 0.3)),
+		"tuft2": _sf_mat(Color(0.7, 0.5, 0.22)), "tank": _sf_mat(Color(0.5, 0.58, 0.55), 0.5),
+		"trunk": _sf_mat(Color(0.72, 0.64, 0.52)), "char": _sf_mat(Color(0.09, 0.07, 0.06), 0.95),
+		"leaf": _sf_mat(Color(0.36, 0.45, 0.3)), "leaf2": _sf_mat(Color(0.5, 0.52, 0.32)),
+		"roo": _sf_mat(Color(0.7, 0.46, 0.28)), "roo_g": _sf_mat(Color(0.56, 0.52, 0.48)),
+		"roo_d": _sf_mat(Color(0.32, 0.22, 0.17)), "ember": _sf_mat(Color(1.0, 0.52, 0.18), 0.5, true),
+		"ember_dk": _sf_mat(Color(0.75, 0.2, 0.06), 0.5, true),
+	}
+
+	_bs_house(m, Vector3(-8, 0, -4))
+	_bs_shed(m, Vector3(6, 0, -7.5))
+	_bs_tank(m, Vector3(-14.5, 0, -5.5))
+	_model(root_node, "car-kit/truck-flat", Vector3(1.5, 0.0, 3.0), 28, 2.0, "Ute")
+	_bs_yard(m)
+	_bs_gate(m)
+	_bs_pen(m)
+	for t in [Vector3(-22, 0, -3), Vector3(-21, 0, 7), Vector3(21.5, 0, -6), Vector3(25, 0, 4), Vector3(-14, 0, -15), Vector3(14, 0, -15),
+			Vector3(27, 0, -13), Vector3(-26, 0, -12)]:
+		_bs_tree(m, t, bs_rng.randf_range(0, 360), bs_rng.randf_range(0.85, 1.2), false)
+	var flames := []
+	for t in [Vector3(-8, 0, -21), Vector3(2, 0, -24), Vector3(12, 0, -20), Vector3(-20, 0, -19), Vector3(21, 0, -22), Vector3(-30, 0, -22)]:
+		flames.append_array(_bs_tree(m, t, bs_rng.randf_range(0, 360), bs_rng.randf_range(1.0, 1.3), true))
+	# fire front: tongues along an arc behind the farm
+	for i in 46:
+		var u := i / 45.0
+		var x := lerpf(-38.0, 32.0, u) + bs_rng.randf_range(-1.0, 1.0)
+		var z := -22.0 + 5.0 * sin(u * 3.2) - 3.0 * u + bs_rng.randf_range(-3.0, 3.0)
+		flames.append([Vector3(x, 0, z), bs_rng.randf_range(2.2, 3.8), bs_rng.randf_range(2.6, 6.0), bs_rng.randf_range(0, 180), bs_rng.randf()])
+	for i in 8:  # grass fire creeping to the yard corners
+		flames.append([Vector3(bs_rng.randf_range(-26, -17), 0, bs_rng.randf_range(-15, -9)), bs_rng.randf_range(1.4, 2.2), bs_rng.randf_range(1.4, 2.8), bs_rng.randf_range(0, 180), bs_rng.randf()])
+		flames.append([Vector3(bs_rng.randf_range(19, 28), 0, bs_rng.randf_range(-12, -6)), bs_rng.randf_range(1.2, 2.0), bs_rng.randf_range(1.2, 2.4), bs_rng.randf_range(0, 180), bs_rng.randf()])
+	flames.append([Vector3(-4.6, 0, 5.6), 1.1, 1.4, 20.0, 0.3])  # small flame on the path to the gate
+	flames.append([Vector3(-4.2, 0, 5.3), 0.8, 1.0, 110.0, 0.7])
+	var det := _group("Detail")
+	_sf_flush(det, "Parts")
+	var fire := MeshInstance3D.new()
+	fire.name = "Flames"
+	fire.mesh = _bs_flame_mesh(flames)
+	fire.material_override = _shader(FLAME_SHADER)
+	fire.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	fire.extra_cull_margin = 50.0
+	_own(fire, root_node)
+	var pl := OmniLight3D.new()
+	pl.name = "PathFlameLight"
+	pl.light_color = Color(1.0, 0.55, 0.2)
+	pl.light_energy = 1.4
+	pl.omni_range = 6.0
+	pl.position = Vector3(-4.4, 1.0, 5.4)
+	_own(pl, root_node)
+
+	_bs_particles()
+
+	var focus := Marker3D.new()
+	focus.name = "Focus"
+	focus.position = Vector3(0, 3.0, -2.0)
+	_own(focus, root_node)
+	_save("res://scenes/diorama/set_black_saturday.tscn")
+
+
+func _bs_flame_mesh(list: Array) -> ArrayMesh:
+	var verts := PackedVector3Array()
+	var uvs := PackedVector2Array()
+	var cols := PackedColorArray()
+	var idx := PackedInt32Array()
+	var rows := 5
+	for f in list:
+		var p: Vector3 = f[0]
+		for q in 2:
+			var yaw := deg_to_rad(f[3] + q * 90.0 + 8.0 * q)
+			var dir := Vector3(cos(yaw), 0, sin(yaw))
+			var o := verts.size()
+			for r in rows + 1:
+				var v := float(r) / rows
+				var c := p + Vector3(0, f[2] * (1.0 - v), 0)
+				for s in 2:
+					verts.append(c + dir * (f[1] * (s - 0.5)))
+					uvs.append(Vector2(s, v))
+					cols.append(Color(f[4] + q * 0.37, f[2], 0, 1))
+			for r in rows:
+				var a := o + r * 2
+				idx.append_array([a, a + 2, a + 1, a + 1, a + 2, a + 3])
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = verts
+	arr[Mesh.ARRAY_TEX_UV] = uvs
+	arr[Mesh.ARRAY_COLOR] = cols
+	arr[Mesh.ARRAY_INDEX] = idx
+	var am := ArrayMesh.new()
+	am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	return am
+
+
+func _bs_glow_tex(inner: float) -> GradientTexture2D:
+	var t := GradientTexture2D.new()
+	t.fill = GradientTexture2D.FILL_RADIAL
+	t.fill_from = Vector2(0.5, 0.5)
+	t.fill_to = Vector2(1.0, 0.5)
+	t.width = 64
+	t.height = 64
+	var g := Gradient.new()
+	g.offsets = PackedFloat32Array([0.0, inner, 1.0])
+	g.colors = PackedColorArray([Color(1, 1, 1, 1), Color(1, 1, 1, 0.6), Color(1, 1, 1, 0)])
+	t.gradient = g
+	return t
+
+
+func _bs_particles() -> void:
+	var smoke := CPUParticles3D.new()
+	smoke.name = "Smoke"
+	smoke.amount = 110
+	smoke.lifetime = 11.0
+	smoke.preprocess = 11.0
+	smoke.position = Vector3(-2, 4.0, -17)
+	smoke.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	smoke.emission_box_extents = Vector3(32, 1.0, 4)
+	smoke.direction = Vector3(0.45, 1, 0.0)
+	smoke.spread = 14
+	smoke.gravity = Vector3(0.12, 0.25, 0.0)
+	smoke.initial_velocity_min = 1.0
+	smoke.initial_velocity_max = 2.2
+	smoke.scale_amount_min = 0.7
+	smoke.scale_amount_max = 1.3
+	var grow := Curve.new()
+	grow.add_point(Vector2(0, 0.5))
+	grow.add_point(Vector2(1, 1.0))
+	smoke.scale_amount_curve = grow
+	var ramp := Gradient.new()
+	ramp.offsets = PackedFloat32Array([0.0, 0.15, 0.7, 1.0])
+	ramp.colors = PackedColorArray([Color(0.1, 0.06, 0.05, 0.0), Color(0.1, 0.06, 0.05, 0.6), Color(0.16, 0.1, 0.08, 0.45), Color(0.12, 0.08, 0.07, 0.0)])
+	smoke.color_ramp = ramp
+	var sq := QuadMesh.new()
+	sq.size = Vector2(16, 16)
+	var sm := StandardMaterial3D.new()
+	sm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	sm.vertex_color_use_as_albedo = true
+	sm.disable_fog = true
+	sm.albedo_texture = _bs_glow_tex(0.5)
+	sm.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	sq.material = sm
+	smoke.mesh = sq
+	smoke.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_own(smoke, root_node)
+
+	var emb := CPUParticles3D.new()
+	emb.name = "Embers"
+	emb.amount = 140
+	emb.lifetime = 5.0
+	emb.preprocess = 5.0
+	emb.position = Vector3(0, 1.0, -20)
+	emb.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	emb.emission_box_extents = Vector3(32, 1.0, 5)
+	emb.direction = Vector3(0.5, 1, 0.1)
+	emb.spread = 30
+	emb.gravity = Vector3(1.8, 0.3, 0.2)
+	emb.initial_velocity_min = 2.0
+	emb.initial_velocity_max = 5.0
+	emb.scale_amount_min = 0.5
+	emb.scale_amount_max = 1.4
+	var eramp := Gradient.new()
+	eramp.set_color(0, Color(1.0, 0.7, 0.25, 1.0))
+	eramp.set_color(1, Color(0.8, 0.2, 0.05, 0.0))
+	emb.color_ramp = eramp
+	var eq := QuadMesh.new()
+	eq.size = Vector2(0.22, 0.22)
+	var em := StandardMaterial3D.new()
+	em.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	em.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	em.vertex_color_use_as_albedo = true
+	em.albedo_texture = _bs_glow_tex(0.6)
+	em.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	eq.material = em
+	emb.mesh = eq
+	emb.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_own(emb, root_node)
+
+
+func _bs_house(m: Dictionary, p: Vector3) -> void:
+	var b := _sf_xf(p)
+	_sf_box(Vector3(9, 0.4, 5.8), Vector3(0, 0.2, 0), Vector3.ZERO, m.wall2, b)
+	_sf_box(Vector3(9, 3.0, 5.6), Vector3(0, 1.9, 0), Vector3.ZERO, m.wall, b)
+	for k in 8:  # weatherboard lines
+		_sf_box(Vector3(9.04, 0.05, 5.64), Vector3(0, 0.8 + k * 0.36, 0), Vector3.ZERO, m.wall2, b)
+	var sl := rad_to_deg(atan2(1.5, 2.9))
+	var half := Vector2(2.9, 1.5).length() + 0.5
+	for sd in [-1.0, 1.0]:
+		_sf_box(Vector3(9.8, 0.1, half), Vector3(0, 4.55, sd * 1.45), Vector3(-sd * sl, 0, 0), m.tin, b)
+		for k in 12:
+			_sf_box(Vector3(0.06, 0.06, half), Vector3(-4.5 + k * 0.82, 4.62, sd * 1.45), Vector3(-sd * sl, 0, 0), m.tin_dk, b)
+	_sf_box(Vector3(9.9, 0.16, 0.3), Vector3(0, 5.32, 0), Vector3.ZERO, m.tin_dk, b)
+	for sd in [-1.0, 1.0]:
+		_sf_prism(Vector3(5.6, 1.45, 0.2), Vector3(sd * 4.5, 4.12, 0), Vector3(0, 90, 0), m.wall, b)
+	# veranda: deck, skillion roof, posts
+	_sf_box(Vector3(9, 0.2, 2.4), Vector3(0, 0.3, 4.0), Vector3.ZERO, m.wood_l, b)
+	_sf_box(Vector3(9.4, 0.1, 2.8), Vector3(0, 3.55, 4.15), Vector3(9, 0, 0), m.tin, b)
+	for k in 4:
+		_sf_box(Vector3(9.4, 0.05, 0.06), Vector3(0, 3.62, 3.4 + k * 0.6), Vector3(9, 0, 0), m.tin_dk, b)
+	for k in 5:
+		_sf_box(Vector3(0.14, 3.2, 0.14), Vector3(-4.3 + k * 2.15, 1.8, 5.1), Vector3.ZERO, m.white, b)
+	_sf_box(Vector3(9, 0.08, 0.08), Vector3(0, 1.05, 5.1), Vector3.ZERO, m.white, b)
+	_sf_box(Vector3(1.0, 2.1, 0.08), Vector3(-1.0, 1.45, 2.84), Vector3.ZERO, m.red, b)
+	for wx in [-3.2, 1.9, 3.5]:
+		_sf_box(Vector3(1.1, 1.2, 0.06), Vector3(wx, 2.0, 2.83), Vector3.ZERO, m.white, b)
+		_sf_box(Vector3(0.9, 1.0, 0.07), Vector3(wx, 2.0, 2.84), Vector3.ZERO, m.glass, b)
+		_sf_box(Vector3(0.06, 1.0, 0.09), Vector3(wx, 2.0, 2.85), Vector3.ZERO, m.white, b)
+	for wz in [-1.0, 1.2]:
+		_sf_box(Vector3(0.06, 1.0, 0.9), Vector3(4.53, 2.0, wz), Vector3.ZERO, m.glass, b)
+	_sf_box(Vector3(0.8, 1.8, 0.8), Vector3(2.8, 5.0, -1.2), Vector3.ZERO, m.red, b)
+	_sf_box(Vector3(0.95, 0.12, 0.95), Vector3(2.8, 5.95, -1.2), Vector3.ZERO, m.char, b)
+
+
+func _bs_shed(m: Dictionary, p: Vector3) -> void:
+	var b := _sf_xf(p, Vector3(0, -8, 0))
+	_sf_box(Vector3(6.2, 3.2, 4.4), Vector3(0, 1.6, 0), Vector3.ZERO, m.rust, b)
+	for k in 12:
+		_sf_box(Vector3(0.06, 3.22, 4.44), Vector3(-2.75 + k * 0.5, 1.6, 0), Vector3.ZERO, m.tin_dk, b)
+	_sf_box(Vector3(7.0, 0.1, 5.2), Vector3(0, 3.6, 0), Vector3(0, 0, -6), m.tin, b)
+	_sf_box(Vector3(2.6, 2.4, 0.1), Vector3(-0.6, 1.2, 2.24), Vector3.ZERO, m.wood, b)
+	_sf_box(Vector3(2.6, 0.1, 0.12), Vector3(-0.6, 2.35, 2.3), Vector3.ZERO, m.wood_l, b)
+	_sf_beam(Vector3(-1.9, 0.1, 2.3), Vector3(0.7, 2.3, 2.3), 0.1, m.wood_l, b)
+	for q in [Vector3(3.9, 0.45, 1.6), Vector3(3.9, 0.45, 2.7), Vector3(3.9, 1.3, 2.1)]:
+		_sf_box(Vector3(1.0, 0.8, 1.0), q, Vector3(0, 10, 0), m.tuft, b)
+	for q in [Vector3(-3.7, 0.45, 2.7), Vector3(-4.3, 0.45, 2.2)]:
+		_sf_cyl(0.35, 0.9, q, Vector3.ZERO, m.red, 8, b)
+
+
+func _bs_tank(m: Dictionary, p: Vector3) -> void:
+	var b := _sf_xf(p)
+	for c in [Vector2(-0.9, -0.9), Vector2(0.9, -0.9), Vector2(-0.9, 0.9), Vector2(0.9, 0.9)]:
+		_sf_box(Vector3(0.18, 1.0, 0.18), Vector3(c.x, 0.5, c.y), Vector3.ZERO, m.post, b)
+	_sf_cyl(1.6, 3.0, Vector3(0, 2.5, 0), Vector3.ZERO, m.tank, 14, b)
+	for k in 4:
+		_sf_cyl(1.64, 0.1, Vector3(0, 1.4 + k * 0.8, 0), Vector3.ZERO, m.tin_dk, 14, b)
+	_sf_cyl(0.9, 0.4, Vector3(0, 4.2, 0), Vector3.ZERO, m.tin, 14, b, 1.66)
+	_sf_pipe(Vector3(p.x + 1.6, 1.4, p.z), Vector3(p.x + 3.0, 0.6, p.z + 0.6), 0.07, m.tin_dk)
+
+
+func _bs_fence(m: Dictionary, a: Vector3, c: Vector3, rails := 2, h := 1.3) -> void:
+	var n := maxi(1, int(a.distance_to(c) / 2.3))
+	for k in n + 1:
+		var q := a.lerp(c, float(k) / n)
+		var hh := h + bs_rng.randf_range(-0.08, 0.08)
+		_sf_box(Vector3(0.14, hh, 0.14), q + Vector3(0, hh * 0.5, 0), Vector3(bs_rng.randf_range(-3, 3), 0, bs_rng.randf_range(-3, 3)), m.post)
+	for r in rails:
+		var y := h * (0.45 + 0.5 * r / maxf(1.0, rails - 1.0)) if rails > 1 else h * 0.8
+		_sf_beam(a + Vector3(0, y, 0), c + Vector3(0, y, 0), 0.06, m.wood)
+
+
+func _bs_yard(m: Dictionary) -> void:
+	_bs_fence(m, Vector3(-18, 0, -12), Vector3(19, 0, -12))
+	_bs_fence(m, Vector3(-18, 0, -12), Vector3(-18, 0, 10))
+	_bs_fence(m, Vector3(19, 0, -12), Vector3(19, 0, 10))
+	_bs_fence(m, Vector3(-18, 0, 10), Vector3(-5.5, 0, 10))
+	_bs_fence(m, Vector3(-1.5, 0, 10), Vector3(19, 0, 10))
+	_sf_box(Vector3(30, 0.06, 20), Vector3(0, 0.03, -1), Vector3.ZERO, m.dirt)
+	for pt in [[Vector3(-7.4, 0.07, 1.2), 0.0, 3.0], [Vector3(-6.4, 0.07, 3.6), -14.0, 3.0], [Vector3(-5.2, 0.07, 6.2), -20.0, 3.0], [Vector3(-4.2, 0.07, 8.8), -10.0, 3.2]]:
+		_sf_box(Vector3(1.5, 0.05, pt[2]), pt[0], Vector3(0, pt[1], 0), m.wood_l)
+	_sf_ball(1.0, Vector3(-4.5, 0.12, 5.5), m.ash, Vector3(1.6, 0.04, 1.3), 8)
+	for i in 14:
+		var x := lerpf(-38, 32, i / 13.0) + bs_rng.randf_range(-2, 2)
+		var z := -21.0 + bs_rng.randf_range(-5, 3)
+		_sf_ball(1.0, Vector3(x, 0.06, z), m.ash, Vector3(bs_rng.randf_range(3, 5), 0.05, bs_rng.randf_range(2.5, 4)), 8)
+		_sf_ball(1.0, Vector3(x + 0.5, 0.09, z), m.ember_dk, Vector3(bs_rng.randf_range(1.2, 2.4), 0.04, bs_rng.randf_range(0.8, 1.6)), 6)
+	for i in 90:
+		var x := bs_rng.randf_range(-36, 36)
+		var z := bs_rng.randf_range(-20, 24)
+		if absf(x) < 19 and z > -13 and z < 11:
+			continue
+		if z < -17 and bs_rng.randf() < 0.7:
+			continue
+		for k in 2:
+			_sf_prism(Vector3(0.3, 0.7, 0.06), Vector3(x, 0.32, z), Vector3(bs_rng.randf_range(-12, 12), k * 90.0 + bs_rng.randf_range(0, 40), 0), m.tuft if i % 3 else m.tuft2)
+	for i in 10:
+		var x := bs_rng.randf_range(-30, 30)
+		var z := bs_rng.randf_range(-14, 20)
+		if absf(x) < 20 and z > -13 and z < 11:
+			continue
+		_sf_ball(0.55, Vector3(x, 0.3, z), m.tuft2, Vector3(1.2, 0.7, 1.0), 6)
+
+
+func _bs_leaf(m: Dictionary, base: Transform3D) -> void:
+	for y in [0.25, 0.7, 1.15]:
+		_sf_box(Vector3(2.2, 0.08, 0.06), Vector3(1.1, y, 0), Vector3.ZERO, m.wood_l, base)
+	for x in [0.04, 2.16]:
+		_sf_box(Vector3(0.1, 1.3, 0.08), Vector3(x, 0.65, 0), Vector3.ZERO, m.wood, base)
+	_sf_beam(Vector3(0.1, 0.2, 0), Vector3(2.1, 1.15, 0), 0.07, m.wood, base)
+
+
+func _bs_gate(m: Dictionary) -> void:
+	for px in [-5.0, -1.8]:
+		_sf_box(Vector3(0.24, 1.8, 0.24), Vector3(px, 0.9, 10), Vector3.ZERO, m.post)
+	_sf_box(Vector3(0.24, 1.2, 0.24), Vector3(-1.5, 0.4, 10.3), Vector3(0, 0, 38), m.post)  # post pushed over
+	_bs_leaf(m, _sf_xf(Vector3(-4.85, 1.2, 10.05), Vector3(0, 0, -52)))  # hangs off one hinge
+	_bs_leaf(m, _sf_xf(Vector3(-4.0, 0.2, 12.4), Vector3(8, 160, 4)))  # fallen outside
+	var c := Vector3(-3.3, 0, 11.8)
+	for i in 16:
+		var q := c + Vector3(bs_rng.randf_range(-1.8, 1.8), bs_rng.randf_range(0.1, 0.7), bs_rng.randf_range(-0.9, 1.0))
+		_sf_box(Vector3(bs_rng.randf_range(1.0, 2.2), 0.07, 0.2), q, Vector3(bs_rng.randf_range(-25, 25), bs_rng.randf_range(0, 180), bs_rng.randf_range(-25, 25)), m.wood if i % 2 else m.wood_l)
+	for i in 6:
+		_sf_beam(c + Vector3(bs_rng.randf_range(-1.4, 1.4), 0.12, bs_rng.randf_range(-0.8, 0.8)),
+				c + Vector3(bs_rng.randf_range(-1.6, 1.6), bs_rng.randf_range(0.5, 1.1), bs_rng.randf_range(-1, 1)), 0.1, m.post)
+	_sf_box(Vector3(0.8, 0.7, 0.8), c + Vector3(1.6, 0.35, 0.2), Vector3(0, 20, 0), m.wood)
+	_sf_box(Vector3(0.7, 0.5, 0.7), c + Vector3(1.4, 0.95, 0.1), Vector3(5, 50, 0), m.wood_l)
+	_sf_cyl(0.32, 0.8, c + Vector3(-1.9, 0.3, 0.6), Vector3(80, 0, 20), m.rust, 8)
+	_sf_cyl(0.4, 0.1, c + Vector3(-0.2, 0.15, -0.9), Vector3.ZERO, m.tin_dk, 10)
+	_sf_ball(0.4, c + Vector3(0.4, 0.3, 0.6), m.ash, Vector3(1.5, 0.5, 1.2), 6)
+
+
+func _bs_pen(m: Dictionary) -> void:
+	var x0 := 8.0
+	var x1 := 15.5
+	var z0 := 0.0
+	var z1 := 8.5
+	_bs_fence(m, Vector3(x0, 0, z0), Vector3(x1, 0, z0), 3, 1.7)
+	_bs_fence(m, Vector3(x0, 0, z1), Vector3(x1, 0, z1), 3, 1.7)
+	_bs_fence(m, Vector3(x0, 0, z0), Vector3(x0, 0, z1), 3, 1.7)
+	_bs_fence(m, Vector3(x1, 0, z0), Vector3(x1, 0, z1), 3, 1.7)
+	_sf_box(Vector3(x1 - x0, 0.05, z1 - z0), Vector3((x0 + x1) * 0.5, 0.05, (z0 + z1) * 0.5), Vector3.ZERO, m.tuft2)
+	_sf_box(Vector3(1.4, 0.5, 0.5), Vector3(14.2, 0.25, 7.6), Vector3.ZERO, m.wood)  # trough
+	_sf_box(Vector3(1.3, 0.08, 0.4), Vector3(14.2, 0.5, 7.6), Vector3.ZERO, m.tank)
+	var s := 1.8
+	_bs_roo(m, Vector3(10.2, 0, 2.6), 210, 15, s, m.roo)
+	_bs_roo(m, Vector3(13.3, 0, 2.2), 150, 4, s, m.roo_g)
+	_bs_roo(m, Vector3(12.0, 0, 6.2), 250, 62, s * 0.95, m.roo)
+	_bs_roo(m, Vector3(9.5, 0, 6.6), 80, 12, s * 0.8, m.roo_g)
+	_bs_roo(m, Vector3(14.6, 0, 5.0), 300, 6, s, m.roo)
+
+
+## Stylised kangaroo facing +z (yaw about y), lean = body pitch in degrees: tail, ears, no face.
+func _bs_roo(m: Dictionary, pos: Vector3, yaw: float, lean: float, s: float, fur: Material) -> void:
+	var b := Transform3D(Basis(Vector3.UP, deg_to_rad(yaw)).scaled(Vector3.ONE * s), pos)
+	var hip := Vector3(0, 0.62, -0.05)
+	var bt := _sf_xf(hip, Vector3(lean, 0, 0), b)
+	_sf_ball(1.0, Vector3(0, 0.3, 0.03), fur, Vector3(0.29, 0.5, 0.26), 7, bt)
+	_sf_ball(1.0, Vector3(0, 0.68, 0.1), fur, Vector3(0.13, 0.2, 0.13), 6, bt)
+	_sf_ball(1.0, Vector3(0, 0.86, 0.2), fur, Vector3(0.12, 0.13, 0.19), 6, bt)
+	_sf_box(Vector3(0.09, 0.08, 0.16), Vector3(0, 0.82, 0.4), Vector3.ZERO, m.roo_d, bt)
+	for sd in [-1.0, 1.0]:
+		_sf_prism(Vector3(0.1, 0.3, 0.04), Vector3(sd * 0.07, 1.05, 0.12), Vector3(0, 0, -sd * 8), fur, bt)
+		_sf_box(Vector3(0.07, 0.32, 0.07), Vector3(sd * 0.2, 0.46, 0.24), Vector3(35, 0, 0), m.roo_d, bt)
+		var lx: float = 0.2 * sd
+		_sf_beam(hip + Vector3(lx, 0, 0), Vector3(lx * 1.1, 0.38, 0.12), 0.15, fur, b)
+		_sf_beam(Vector3(lx * 1.1, 0.38, 0.12), Vector3(lx, 0.1, -0.27), 0.1, fur, b)
+		_sf_beam(Vector3(lx, 0.05, -0.27), Vector3(lx, 0.05, 0.2), 0.08, m.roo_d, b)
+	_sf_beam(hip + Vector3(0, -0.05, -0.15), Vector3(0, 0.14, -0.95), 0.17, fur, b)
+	_sf_beam(Vector3(0, 0.14, -0.95), Vector3(0, 0.04, -1.45), 0.09, m.roo_d, b)
+
+
+## Eucalyptus: pale trunk, sparse drooping crowns. Burning: charred and bare; returns flame specs for the crown.
+func _bs_tree(m: Dictionary, p: Vector3, yaw: float, s: float, burning: bool) -> Array:
+	var out := []
+	var tb := _sf_xf(p, Vector3(0, yaw, bs_rng.randf_range(-5, 5)))
+	tb = tb * Transform3D(Basis.from_scale(Vector3.ONE * s), Vector3.ZERO)
+	var h := 8.5
+	var trunk: Material = m.char if burning else m.trunk
+	_sf_cyl(0.18, h, Vector3(0, h * 0.5, 0), Vector3.ZERO, trunk, 6, tb, 0.38)
+	var ends := [Vector3(2.2, h - 1.0, 0.6), Vector3(-2.0, h - 0.5, -1.0), Vector3(0.4, h + 1.4, 1.8), Vector3(-0.6, h + 0.6, -2.2)]
+	for e in ends:
+		_sf_beam(Vector3(0, h * 0.7, 0), e, 0.14, trunk, tb)
+		if burning:
+			var w: Vector3 = tb * e
+			out.append([w - Vector3(0, 0.8, 0), 3.6, bs_rng.randf_range(2.6, 4.0), bs_rng.randf_range(0, 180), bs_rng.randf()])
+		else:
+			_sf_ball(1.0, e + Vector3(0, 0.2, 0), m.leaf if bs_rng.randf() < 0.6 else m.leaf2, Vector3(1.9, 0.75, 1.8), 6, tb)
+			_sf_beam(e, e + Vector3(0.2, -1.4, 0.1), 0.05, m.leaf2, tb)
+	if burning:
+		var w0: Vector3 = tb * Vector3(0, 1.0, 0)
+		out.append([w0, 1.8, 2.8, bs_rng.randf_range(0, 180), bs_rng.randf()])
+	return out
