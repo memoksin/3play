@@ -2,14 +2,18 @@ extends SceneTree
 ## Generator: builds scenes/minigames/fire.tscn (Fire minigame, #125) with placeholder art.
 ## Run: godot --headless --path . -s res://tools/fire_gen.gd
 ##
-## Layout (1 unit = 1 m, -Z = north): the farm yard is x -18..18, z -14..14, fenced on four sides.
-## Kangaroo pen in the north-west corner (its back wall is the farm fence, with the cuttable section);
-## house north, shed along the east fence (valve on its west wall), a hay stack and the shed make the
-## lane to the broken exit gate in the south fence (the flame burns in that lane, debris in the gate).
+## Layout (1 unit = 1 m, -Z = north) = the look-dev farm scenes/art_pilot/fire_farm.tscn (the skin's farm_model,
+## scenes/minigames/fire/art/farm.tscn): the yard is x -16.5..16.5, z -12..12 on a 48 x 36 m slab, fenced on four
+## sides. Kangaroo pen in the south-west corner (x -16.5..-7.5, z 3..12); its east wall faces the yard and has the
+## cuttable section (z 6..9). House north-west, shed north-east, windmill north. The farm track runs from the
+## yard to the broken exit gate in the south fence (x 4.5..7.5); a strip of grass burns across it right inside
+## the gate (the flame), debris lies in the gateway. The yard tap (valve) stands by the track east of the flame.
 ##
 ## Art swap: every prop is a root node (place, colliders, anchors) with one `Model` child holding the
 ## placeholder meshes. Replace `Model` in the editor, or set the matching FireSkin.*_model field.
 ## Colliders are taller than the visuals (2.4 m): the player can jump the debris (0.75 m), never a fence.
+## The look (sky, light, fog, image) is the art pilot's: smoke sky shader, AgX, glow, heat haze and the 2.5D
+## post pass on canvas layers 1 and 2 (the HUD is on 3).
 
 const OUT := "res://scenes/minigames/fire.tscn"
 const SCRIPT := "res://scenes/minigames/fire.gd"
@@ -17,7 +21,19 @@ const FLAME := "res://scenes/minigames/fire/flame.gdshader"
 const OVERLAY := "res://scenes/minigames/fire/smoke_overlay.gdshader"
 const HUD_TIMER := "res://scenes/ui/hud_timer.tscn"
 const PARTICLE := "res://scenes/style/soft_particle.gdshader"
+const SKY := "res://scenes/style/smoke_sky.gdshader"
+const POST := "res://scenes/style/post_25d.gdshader"
+const HAZE := "res://scenes/style/heat_haze.gdshader"
 const WALL_H := 2.4
+## Prop places (Godot x, y, z), shared with tests through the scene only.
+const START := Vector3(-1.2, 0, 7.4)
+const START_YAW := 72.0
+const KNIFE := Vector3(-5.4, 0.52, 4.4)
+const FENCE_CUT := Vector3(-7.5, 0, 7.5)
+const VALVE := Vector3(10.6, 0, 7.6)
+const HOSE := Vector3(10.0, 0, 5.6)
+const FLAME_AT := Vector3(5.8, 0, 9.9)
+const GATE := Vector3(6.0, 0, 12.0)
 
 var root_node: Node3D
 var mats := {}
@@ -191,57 +207,114 @@ func _build() -> void:
 	_props()
 	_markers()
 	_player()
+	# the 2.5D style's play framing (scenes/art_pilot/fire_farm.tscn CameraPlay): the slab from the south-east
 	var ov := Camera3D.new()
 	ov.name = "Overview"
-	ov.fov = 50.0
+	ov.fov = 26.0
+	ov.near = 1.0
 	ov.far = 400.0
 	_own(ov, root_node)
-	var eye := Vector3(-4, 34, 34)
-	ov.transform = Transform3D(Basis.looking_at(Vector3(0, 0, -1) - eye, Vector3.UP), eye)
+	ov.position = Vector3(-20.1, 45.0, 49.7)
+	ov.rotation_degrees = Vector3(-40, -22, 0)
+	_post()
 	_hud()
 
 
+## Sky, light and image of the art pilot (scenes/art_pilot/fire_farm.tscn); fire.gd drives the smoke clock.
 func _env() -> void:
 	var env := Environment.new()
-	var sky_mat := ProceduralSkyMaterial.new()
-	sky_mat.sky_top_color = Color(0.55, 0.36, 0.26)
-	sky_mat.sky_horizon_color = Color(0.86, 0.55, 0.3)
-	sky_mat.ground_horizon_color = Color(0.6, 0.4, 0.27)
-	sky_mat.ground_bottom_color = Color(0.25, 0.18, 0.14)
-	sky_mat.sun_angle_max = 20.0
+	var sky_mat := ShaderMaterial.new()
+	sky_mat.shader = load(SKY)
+	sky_mat.set_shader_parameter(&"smoke", 0.0)
+	sky_mat.set_shader_parameter(&"glow_dir", Vector3(0.29, -0.64, -0.71))
 	var sky := Sky.new()
 	sky.sky_material = sky_mat
 	sky.radiance_size = Sky.RADIANCE_SIZE_32
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.78, 0.56, 0.42)
-	env.ambient_light_energy = 0.55
+	env.ambient_light_color = Color(0.78, 0.46, 0.3)
+	env.ambient_light_energy = 0.42
+	env.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
 	env.tonemap_mode = Environment.TONE_MAPPER_AGX
+	env.tonemap_exposure = 0.85
 	env.glow_enabled = true
-	env.glow_hdr_threshold = 0.9
+	env.glow_intensity = 0.9
+	env.glow_strength = 1.0
 	env.glow_bloom = 0.04
+	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SCREEN
+	env.glow_hdr_threshold = 0.9
 	env.adjustment_enabled = true
 	env.adjustment_contrast = 1.08
 	env.adjustment_saturation = 1.1
 	env.fog_enabled = true
 	env.fog_mode = Environment.FOG_MODE_EXPONENTIAL
-	env.fog_light_color = Color(0.46, 0.38, 0.33)
+	env.fog_light_color = Color(0.66, 0.36, 0.19)
 	env.fog_light_energy = 1.0
 	env.fog_density = 0.006
-	env.fog_sky_affect = 0.55
+	env.fog_sky_affect = 0.6
 	var we := WorldEnvironment.new()
 	we.name = "Env"
 	we.environment = env
 	_own(we, root_node)
 	var sun := DirectionalLight3D.new()
 	sun.name = "Sun"
-	sun.light_color = Color(1.0, 0.72, 0.45)
-	sun.light_energy = 1.15
+	sun.light_color = Color(1.0, 0.6, 0.32)
+	sun.light_energy = 1.35
 	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 60.0
+	sun.shadow_blur = 1.5
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
+	sun.directional_shadow_max_distance = 50.0
 	_own(sun, root_node)
-	sun.rotation_degrees = Vector3(-32, -125, 0)
+	sun.rotation_degrees = Vector3(-22, -112, 0)
+	# the cool light from the clear side (south): the way out reads a little colder than the fire side
+	var esc := DirectionalLight3D.new()
+	esc.name = "EscapeLight"
+	esc.light_color = Color(0.5, 0.64, 1.0)
+	esc.light_energy = 0.22
+	esc.shadow_enabled = false
+	esc.sky_mode = DirectionalLight3D.SKY_MODE_LIGHT_ONLY
+	_own(esc, root_node)
+	esc.rotation_degrees = Vector3(-18, 0, 0)
+
+
+## Heat shimmer (layer 1) and the 2.5D post pass (layer 2) over the 3D view; the HUD is on layer 3.
+func _post() -> void:
+	var haze := CanvasLayer.new()
+	haze.name = "Haze"
+	haze.layer = 1
+	_own(haze, root_node)
+	var shimmer := ColorRect.new()
+	shimmer.name = "Shimmer"
+	shimmer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	shimmer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var hm := ShaderMaterial.new()
+	hm.shader = load(HAZE)
+	hm.set_shader_parameter(&"strength", 2.4)
+	shimmer.material = hm
+	_own(shimmer, haze)
+	var post := CanvasLayer.new()
+	post.name = "Post"
+	post.layer = 2
+	_own(post, root_node)
+	var copy := BackBufferCopy.new()
+	copy.name = "Copy"
+	copy.copy_mode = BackBufferCopy.COPY_MODE_VIEWPORT
+	_own(copy, post)
+	var grade := ColorRect.new()
+	grade.name = "Grade"
+	grade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	grade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var pm := ShaderMaterial.new()
+	pm.shader = load(POST)
+	pm.set_shader_parameter(&"vignette", 0.62)
+	pm.set_shader_parameter(&"light_tint", Color(1.08, 0.98, 0.86))
+	pm.set_shader_parameter(&"grain", 0.04)
+	pm.set_shader_parameter(&"blur_px", 1.4)
+	pm.set_shader_parameter(&"focus_band", 0.42)
+	pm.set_shader_parameter(&"focus_y", 0.5)
+	grade.material = pm
+	_own(grade, post)
 
 
 func _farm() -> void:
@@ -249,112 +322,84 @@ func _farm() -> void:
 	var m := _node(farm, "Model")
 	var body := _body(farm, "Collision")
 	var ground := PlaneMesh.new()
-	ground.size = Vector2(160, 160)
-	_mi(m, "Ground", ground, Vector3.ZERO, Vector3.ZERO, _mat("ab947a"))
+	ground.size = Vector2(48, 36)
+	_mi(m, "Ground", ground, Vector3.ZERO, Vector3.ZERO, _mat("b39056"))
 	var yard := PlaneMesh.new()
-	yard.size = Vector2(36, 28)
-	_mi(m, "Yard", yard, Vector3(0, 0.01, 0), Vector3.ZERO, _mat("b2ba90"))
+	yard.size = Vector2(19, 8.4)
+	_mi(m, "Yard", yard, Vector3(0.5, 0.01, -1.5), Vector3.ZERO, _mat("9c7a56"))
 	var track := PlaneMesh.new()
-	track.size = Vector2(3.4, 30)
-	_mi(m, "Track", track, Vector3(13.8, 0.02, 22), Vector3.ZERO, _mat("966c6c"))
-	var lane := PlaneMesh.new()
-	lane.size = Vector2(3.4, 9)
-	_mi(m, "Lane", lane, Vector3(13.8, 0.02, 9.5), Vector3.ZERO, _mat("966c6c"))
+	track.size = Vector2(3.0, 16)
+	_mi(m, "Track", track, Vector3(4.2, 0.02, 6.5), Vector3(0, 22, 0), _mat("8c5636"))
 	_shape(body, "Ground", Vector3(160, 1, 160), Vector3(0, -0.5, 0))
 
-	# fences: north (gap for the cuttable section), south (gap for the gate), west, east
+	# boundary fence on four sides, the broken gate's gap in the south fence (x 4.5 .. 7.5)
 	var fences := _node(m, "Fences")
-	_fence(fences, body, "North1", Vector3(-18, 0, -14), Vector3(-14.5, 0, -14))
-	_fence(fences, body, "North2", Vector3(-11.5, 0, -14), Vector3(18, 0, -14))
-	_fence(fences, body, "South1", Vector3(-18, 0, 14), Vector3(12.2, 0, 14))
-	_fence(fences, body, "South2", Vector3(15.4, 0, 14), Vector3(18, 0, 14))
-	_fence(fences, body, "West", Vector3(-18, 0, -14), Vector3(-18, 0, 14))
-	_fence(fences, body, "East", Vector3(18, 0, -14), Vector3(18, 0, 14))
+	_fence(fences, body, "North", Vector3(-16.5, 0, -12), Vector3(16.5, 0, -12))
+	_fence(fences, body, "South1", Vector3(-16.5, 0, 12), Vector3(4.5, 0, 12))
+	_fence(fences, body, "South2", Vector3(7.5, 0, 12), Vector3(16.5, 0, 12))
+	_fence(fences, body, "West", Vector3(-16.5, 0, -12), Vector3(-16.5, 0, 12))
+	_fence(fences, body, "East", Vector3(16.5, 0, -12), Vector3(16.5, 0, 12))
 
-	# kangaroo pen (NW corner): its own fence east and south, the pen gate stands open
+	# kangaroo pen (south-west corner): its own tall fence north and east, the cuttable section is a prop
 	var pen := _node(m, "Pen")
-	_fence(pen, body, "PenEast1", Vector3(-7, 0, -14), Vector3(-7, 0, -9.6))
-	_fence(pen, body, "PenEast2", Vector3(-7, 0, -7.4), Vector3(-7, 0, -5))
-	_fence(pen, body, "PenSouth", Vector3(-18, 0, -5), Vector3(-7, 0, -5))
-	_box(pen, "PenGate", Vector3(2.1, 1.1, 0.06), Vector3(-6.0, 0.65, -9.6), "9babb2", Vector3(0, 95, 0))
-	_box(pen, "Trough", Vector3(1.8, 0.45, 0.6), Vector3(-16.5, 0.22, -6.0), "625565")
-	_shape(body, "Trough", Vector3(1.8, 0.45, 0.6), Vector3(-16.5, 0.22, -6.0))
+	_fence(pen, body, "PenNorth", Vector3(-16.5, 0, 3), Vector3(-7.5, 0, 3))
+	_fence(pen, body, "PenEast1", Vector3(-7.5, 0, 3), Vector3(-7.5, 0, 6))
+	_fence(pen, body, "PenEast2", Vector3(-7.5, 0, 9), Vector3(-7.5, 0, 12))
 	var straw := PlaneMesh.new()
-	straw.size = Vector2(11, 9)
-	_mi(pen, "Straw", straw, Vector3(-12.5, 0.015, -9.5), Vector3.ZERO, _mat("966c6c"))
+	straw.size = Vector2(9, 9)
+	_mi(pen, "Straw", straw, Vector3(-12.0, 0.015, 7.5), Vector3.ZERO, _mat("966c6c"))
 
-	# house (north), veranda, water tank, ute, yard trees
-	var house := _node(m, "House", Vector3(3.5, 0, -10))
-	_box(house, "Walls", Vector3(9, 3.0, 6), Vector3(0, 1.5, 0), "c7dcd0")
-	_box(house, "RoofL", Vector3(9.6, 0.15, 3.7), Vector3(0, 3.55, -1.55), "374e4a", Vector3(-22, 0, 0))
-	_box(house, "RoofR", Vector3(9.6, 0.15, 3.7), Vector3(0, 3.55, 1.55), "374e4a", Vector3(22, 0, 0))
-	_box(house, "Veranda", Vector3(9.4, 0.12, 2.0), Vector3(0, 2.6, 3.9), "625565", Vector3(8, 0, 0))
-	_box(house, "Door", Vector3(1.0, 2.1, 0.06), Vector3(-1.5, 1.05, 3.02), "694f62")
-	for i in 3:
-		_box(house, "Window%d" % i, Vector3(1.2, 1.0, 0.06), Vector3(0.6 + i * 1.5 - 0.8, 1.6, 3.02), "4d65b4")
-	_shape(body, "House", Vector3(9, 3.0, 6), Vector3(3.5, 1.5, -10))
-	_cyl(m, "Tank", 1.4, 2.4, Vector3(-14, 1.2, 10), "92a984")
-	_cyl_shape(body, "Tank", 1.4, WALL_H, Vector3(-14, WALL_H / 2.0, 10))
-	var ute := _node(m, "Ute", Vector3(9.5, 0, -2.5), Vector3(0, 70, 0))
-	_box(ute, "Body", Vector3(1.9, 0.9, 4.6), Vector3(0, 0.75, 0), "b33831")
-	_box(ute, "Cab", Vector3(1.8, 0.75, 1.8), Vector3(0, 1.55, -0.8), "b33831")
-	_box(ute, "Glass", Vector3(1.7, 0.5, 0.05), Vector3(0, 1.6, -1.72), "4d65b4")
-	for w in [Vector3(-0.95, 0.38, 1.4), Vector3(0.95, 0.38, 1.4), Vector3(-0.95, 0.38, -1.4), Vector3(0.95, 0.38, -1.4)]:
-		_cyl(ute, "Wheel", 0.38, 0.3, w, "313638", Vector3(0, 0, 90))
-	_shape(body, "Ute", Vector3(1.9, 1.9, 4.6), Vector3(9.5, 0.95, -2.5), 70)
-	_gum_tree(m, "YardTree1", Vector3(-11, 0, 8), 9.0)
-	_gum_tree(m, "YardTree2", Vector3(4, 0, 10.5), 8.0)
-	_cyl_shape(body, "YardTree1", 0.35, WALL_H, Vector3(-11, WALL_H / 2.0, 8))
-	_cyl_shape(body, "YardTree2", 0.35, WALL_H, Vector3(4, WALL_H / 2.0, 10.5))
+	# house (north-west, verandah to the yard), its tank, the shed (north-east) and its tank, the windmill
+	var house := _node(m, "House", Vector3(-9, 0, -6.5))
+	_box(house, "Walls", Vector3(11, 3.6, 8), Vector3(0, 1.8, 0), "c7dcd0")
+	_box(house, "Roof", Vector3(11.8, 0.2, 9.0), Vector3(0, 4.0, 0), "8f3b2d")
+	_box(house, "Verandah", Vector3(11, 0.6, 2.4), Vector3(0, 0.3, 5.2), "625565")
+	_shape(body, "House", Vector3(11, 4.2, 10.4), Vector3(-9, 2.1, -5.3))
+	_cyl(m, "HouseTank", 1.3, 2.4, Vector3(-1.9, 1.2, -9.2), "a7acae")
+	_cyl_shape(body, "HouseTank", 1.45, WALL_H, Vector3(-1.9, WALL_H / 2.0, -9.2))
+	var shed := _node(m, "Shed", Vector3(8, 0, -6))
+	_box(shed, "Walls", Vector3(10, 3.4, 7), Vector3(0, 1.7, 0), "9babb2")
+	_box(shed, "Roof", Vector3(10.6, 0.15, 7.6), Vector3(0, 3.6, 0), "7b8083")
+	_shape(body, "Shed", Vector3(10, 4.0, 7), Vector3(8, 2.0, -6))
+	_cyl(m, "ShedTank", 1.3, 2.4, Vector3(14.45, 1.2, -3.7), "a7acae")
+	_cyl_shape(body, "ShedTank", 1.45, WALL_H, Vector3(14.45, WALL_H / 2.0, -3.7))
+	var mill := _node(m, "Windmill", Vector3(1, 0, -10.6))
+	for i in 4:
+		var c := Vector3(1.1 * (1 if i % 2 else -1), 0, 1.1 * (1 if i < 2 else -1))
+		_cyl(mill, "Leg%d" % i, 0.06, 8.6, c + Vector3(0, 4.3, 0), "8d959e")
+		_cyl_shape(body, "MillLeg%d" % i, 0.22, WALL_H, Vector3(1, WALL_H / 2.0, -10.6) + c)
+	_cyl(mill, "Trough", 1.05, 0.55, Vector3(0, 0.275, 2.2), "9d9a94")
+	_cyl_shape(body, "Trough", 1.05, 0.55, Vector3(1, 0.275, -8.4))
+	# the yard gum and the chopping block the knife lies on, by the pen
+	_gum_tree(m, "YardGum", Vector3(-2.2, 0, -5), 12.0)
+	_cyl_shape(body, "YardGum", 0.5, WALL_H, Vector3(-2.2, WALL_H / 2.0, -5))
+	_cyl(m, "ChopBlock", 0.3, KNIFE.y, Vector3(KNIFE.x, KNIFE.y / 2.0, KNIFE.z), "5b4f43")
+	_cyl_shape(body, "ChopBlock", 0.32, KNIFE.y, Vector3(KNIFE.x, KNIFE.y / 2.0, KNIFE.z))
 
-	# shed along the east fence (the valve is on its west wall), hay stack: the lane to the gate between them
-	var shed := _node(m, "Shed", Vector3(16.8, 0, 8))
-	_box(shed, "Walls", Vector3(2.4, 3.2, 12), Vector3(0, 1.6, 0), "9babb2")
-	_box(shed, "Roof", Vector3(3.0, 0.12, 12.6), Vector3(0, 3.35, 0), "625565", Vector3(0, 0, 8))
-	_shape(body, "Shed", Vector3(2.4, 3.4, 12), Vector3(16.8, 1.7, 8))
-	var hay := _node(m, "HayStack", Vector3(11.3, 0, 10))
-	for row in 3:
-		for k in 5:
-			var off := 0.0 if row % 2 == 0 else 0.4
-			_box(hay, "Bale%d_%d" % [row, k], Vector3(1.35, 0.7, 1.55), Vector3(0, 0.36 + row * 0.72, -3.2 + k * 1.6 + off - 0.2), "fbb954" if (row + k) % 2 == 0 else "e6904e")
-	_shape(body, "HayStack", Vector3(1.4, 2.6, 8), Vector3(11.3, 1.3, 10))
-	for i in 3:
-		_box(m, "LooseBale%d" % i, Vector3(1.3, 0.7, 0.9), Vector3(-2 + i * 1.6, 0.35, 11.5), "fbb954", Vector3(0, i * 25, 0))
-	_shape(body, "LooseBales", Vector3(4.6, 0.7, 1.2), Vector3(-0.4, 0.35, 11.5))
-
-	# outside: scrub band behind the cuttable fence (kangaroos clear it, people cannot), bush, trees
-	var scrub := _node(m, "Scrub")
-	for i in 14:
-		var x := -19.0 + i * 0.95
-		_ball(scrub, "Bush%d" % i, 0.9 + 0.25 * sin(i * 1.7), Vector3(x, 0.7, -15.4 + 0.3 * sin(i * 2.3)), "374e4a", Vector3(1.0, 0.85, 1.0))
-	_shape(body, "Scrub", Vector3(13.0, 3.0, 1.95), Vector3(-13.0, 1.5, -15.43))
+	# outside: gums around the slab, the burnt ones to the north-west where the fire comes from
 	var bush := _node(m, "Bush")
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 2009
-	for i in 26:
-		var a := TAU * i / 26.0 + rng.randf_range(-0.1, 0.1)
-		var r := rng.randf_range(27.0, 44.0)
-		var p := Vector3(cos(a) * r * 1.1, 0, sin(a) * r)
-		if p.z > 16.0 and absf(p.x - 13.8) < 5.0:
-			continue  # keep the track clear
-		_gum_tree(bush, "Gum%d" % i, p, rng.randf_range(9.0, 15.0), i % 3 == 0)
-	# outer safety walls (no visuals): nobody leaves the play area except through the gate
-	for w in [[Vector3(52, 6, 1), Vector3(0, 3, -24)], [Vector3(52, 6, 1), Vector3(0, 3, 30)],
-			[Vector3(1, 6, 54), Vector3(-23, 3, 3)], [Vector3(1, 6, 54), Vector3(23, 3, 3)]]:
+	var gums := [Vector3(3.5, 0, -15.2), Vector3(13, 0, -16), Vector3(21, 0, -12), Vector3(-22, 0, 9.5),
+		Vector3(-20.5, 0, -4), Vector3(21, 0, 6), Vector3(20.5, 0, -3), Vector3(-19.5, 0, 15), Vector3(16, 0, 15.5),
+		Vector3(-4, 0, 15.5), Vector3(-20, 0, -15), Vector3(-9.5, 0, -15.8), Vector3(-21.5, 0, -9)]
+	for i in gums.size():
+		_gum_tree(bush, "Gum%d" % i, gums[i], 10.0 + 2.0 * (i % 3), i >= 10)
+	# slab edges (no visuals): nobody walks off the world
+	for w in [[Vector3(48, 6, 1), Vector3(0, 3, -18.2)], [Vector3(48, 6, 1), Vector3(0, 3, 18.2)],
+			[Vector3(1, 6, 36), Vector3(-24.2, 3, 0)], [Vector3(1, 6, 36), Vector3(24.2, 3, 0)]]:
 		_shape(body, "Outer", w[0], w[1])
 
 
 func _props() -> void:
 	var props := _node(root_node, "Props")
 
-	# knife on the ground in the pen, next to the cuttable section
-	var knife := _node(props, "Knife", Vector3(-12.2, 0, -12.1), Vector3(0, 35, 0))
+	# knife lying on the chopping block next to the pen
+	var knife := _node(props, "Knife", KNIFE, Vector3(0, 35, 0))
 	var km := _node(knife, "Model")
 	_box(km, "Blade", Vector3(0.07, 0.025, 0.34), Vector3(0, 0.03, -0.15), "ffffff")
-	_box(km, "Handle", Vector3(0.08, 0.05, 0.18), Vector3(0, 0.035, 0.11), "b33831")
+	_box(km, "Handle", Vector3(0.08, 0.05, 0.18), Vector3(0, 0.035, 0.11), "d8692a")
 
-	# the cuttable section of the north fence (the pen's back wall): falls outward when cut
-	var fence := _node(props, "FenceCut", Vector3(-13, 0, -14))
+	# the cuttable section of the pen's east wall (yard side +Z = world +X): opens the pen to the yard
+	var fence := _node(props, "FenceCut", FENCE_CUT, Vector3(0, 90, 0))
 	var fm := _node(fence, "Model")
 	for k in 2:
 		_box(fm, "Rail%d" % k, Vector3(3.0, 0.08, 0.05), Vector3(0, 0.55 + k * 0.7, 0), "966c6c")
@@ -364,12 +409,12 @@ func _props() -> void:
 	_shape(fb, "Shape", Vector3(3.0, WALL_H, 0.14), Vector3(0, WALL_H / 2.0, 0))
 	_own(_marker("Gap", Vector3(0, 0, 0)), fence)
 
-	# valve on the shed's west wall (front faces the yard, -X), hose coil on the ground next to it
-	var valve := _node(props, "Valve", Vector3(15.6, 0, 4.0), Vector3(0, -90, 0))
+	# the yard tap on a post by the track (front faces the track and the flame, -X), hose coil next to it
+	var valve := _node(props, "Valve", VALVE, Vector3(0, -90, 0))
 	var vm := _node(valve, "Model")
-	_cyl(vm, "Pipe", 0.05, 1.0, Vector3(0, 0.5, 0.07), "625565")
-	_cyl(vm, "Tap", 0.05, 0.2, Vector3(0, 0.75, 0.15), "625565", Vector3(90, 0, 0))
-	var wheel := _node(vm, "Wheel", Vector3(0, 1.0, 0.16), Vector3(90, 0, 0))
+	_cyl(vm, "Pipe", 0.05, 1.0, Vector3(0, 0.5, 0.12), "625565")
+	_cyl(vm, "Tap", 0.05, 0.2, Vector3(0, 0.75, 0.2), "625565", Vector3(90, 0, 0))
+	var wheel := _node(vm, "Wheel", Vector3(0, 0.92, 0.26), Vector3(90, 0, 0))
 	var torus := TorusMesh.new()
 	torus.inner_radius = 0.1
 	torus.outer_radius = 0.14
@@ -378,18 +423,18 @@ func _props() -> void:
 	_mi(wheel, "Rim", torus, Vector3.ZERO, Vector3.ZERO, _mat("b33831"))
 	_box(wheel, "Spoke1", Vector3(0.22, 0.03, 0.03), Vector3.ZERO, "b33831")
 	_box(wheel, "Spoke2", Vector3(0.03, 0.03, 0.22), Vector3.ZERO, "b33831")
-	_box(vm, "Sign", Vector3(0.4, 0.3, 0.02), Vector3(0, 1.5, 0.02), "4d9be6")
-	_own(_marker("Outlet", Vector3(0, 0.75, 0.25)), valve)
-	_own(_marker("Coil", Vector3(-0.15, 0, 0.55)), valve)
+	_box(vm, "Post", Vector3(0.14, 1.55, 0.14), Vector3(0, 0.775, -0.07), "8c8273")
+	_own(_marker("Outlet", Vector3(0.16, 0.64, 0.12)), valve)
+	_own(_marker("Coil", Vector3(0.75, 0, 0.85)), valve)
 
-	var hose := _node(props, "Hose", Vector3(14.3, 0, 5.4))
+	var hose := _node(props, "Hose", HOSE, Vector3(0, 20, 0))
 	var hm := _node(hose, "Model")
 	var coil := TorusMesh.new()
 	coil.inner_radius = 0.28
 	coil.outer_radius = 0.4
 	coil.rings = 20
 	coil.ring_segments = 6
-	_mi(hm, "Coil", coil, Vector3(0, 0.07, 0), Vector3.ZERO, _mat("239063"))
+	_mi(hm, "Coil", coil, Vector3(0, 0.07, 0), Vector3.ZERO, _mat("3f9a3b"))
 	_mi(hm, "Coil2", coil, Vector3(0, 0.17, 0), Vector3(0, 40, 0), _mat("1ebc73"))
 	_cyl(hm, "Nozzle", 0.035, 0.22, Vector3(0.38, 0.12, 0.1), "f9c22b", Vector3(90, 0, 0))
 	var line := MeshInstance3D.new()
@@ -398,28 +443,30 @@ func _props() -> void:
 	line.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_own(line, props)
 
-	# the flame across the lane to the gate (blocks it while it burns)
-	var flame := _node(props, "Flame", Vector3(13.8, 0, 9.5))
+	# the grass fire across the track right inside the gate: it closes the gate's mouth while it burns
+	var flame := _node(props, "Flame", FLAME_AT)
 	var flm := _node(flame, "Model")
 	var scorch := CylinderMesh.new()
 	scorch.top_radius = 1.9
 	scorch.bottom_radius = 1.9
 	scorch.height = 0.02
-	_mi(flm, "Scorch", scorch, Vector3(0, 0.03, 0), Vector3.ZERO, _mat("313638"))
-	var fx := [-1.3, -0.6, 0.05, 0.7, 1.35]
-	var fh := [1.3, 1.9, 2.3, 1.7, 1.2]
+	for i in 3:
+		_mi(flm, "Scorch%d" % i, scorch, Vector3(-1.8 + i * 1.8, 0.03, 0), Vector3.ZERO, _mat("313638"))
+	var fx := [-2.4, -1.4, -0.4, 0.5, 1.4, 2.4]
+	var fh := [1.2, 1.8, 2.3, 2.0, 1.6, 1.1]
 	for i in fx.size():
-		_flame(flm, "Tongue%d" % i, Vector3(fx[i], 0, 0.15 * sin(i * 2.1)), Vector2(1.1, fh[i]))
+		_flame(flm, "Tongue%d" % i, Vector3(fx[i], 0, 0.15 * sin(i * 2.1)), Vector2(1.2, fh[i]))
 	var light := OmniLight3D.new()
 	light.name = "Light"
 	light.light_color = Color(1.0, 0.52, 0.18)
 	light.light_energy = 2.4
-	light.omni_range = 8.0
+	light.omni_range = 9.0
+	light.omni_attenuation = 1.3
 	light.position = Vector3(0, 1.1, 0)
 	_own(light, flame)
 	var flb := _body(flame)
-	_shape(flb, "Shape", Vector3(3.8, 3.0, 1.2), Vector3(0, 1.5, 0))
-	var steam := _particles(flame, "Steam", 40, 1.4, Vector3(1.4, 0.3, 0.4), Color(0.85, 0.85, 0.82, 0.5), 0.9, 2.2, 0.3)
+	_shape(flb, "Shape", Vector3(5.6, 3.0, 2.9), Vector3(0, 1.5, 0.5))
+	var steam := _particles(flame, "Steam", 60, 1.6, Vector3(2.4, 0.3, 0.5), Color(0.85, 0.85, 0.82, 0.5), 0.9, 2.4, 0.3)
 	steam.position = Vector3(0, 0.4, 0)
 	steam.emitting = false
 	steam.one_shot = true
@@ -427,35 +474,33 @@ func _props() -> void:
 	steam.initial_velocity_min = 1.0
 	steam.initial_velocity_max = 2.2
 
-	# the broken gate in the south fence, debris piled in it
-	var gate := _node(props, "Gate", Vector3(13.8, 0, 14))
+	# the broken gate in the south fence, debris piled in the gateway on the yard side
+	var gate := _node(props, "Gate", GATE)
 	var gm := _node(gate, "Model")
 	for sx in [-1.5, 1.5]:
 		_box(gm, "Post%s" % ("L" if sx < 0 else "R"), Vector3(0.24, 2.0, 0.24), Vector3(sx, 1.0, 0), "4c3e24")
 	_box(gm, "LeafHanging", Vector3(1.4, 1.1, 0.05), Vector3(-1.3, 0.85, 0.75), "9babb2", Vector3(10, 70, 18))
-	_box(gm, "LeafFallen", Vector3(1.4, 1.1, 0.05), Vector3(0.7, 0.85, 0.15), "9babb2", Vector3(-62, 8, 6))
 	_box(gm, "Sign", Vector3(0.9, 0.4, 0.04), Vector3(-1.5, 1.75, 0.15), "c7dcd0")
 	var gb := _body(gate)
 	_shape(gb, "PostL", Vector3(0.3, WALL_H, 0.3), Vector3(-1.5, WALL_H / 2.0, 0))
 	_shape(gb, "PostR", Vector3(0.3, WALL_H, 0.3), Vector3(1.5, WALL_H / 2.0, 0))
 
-	var debris := _node(props, "Debris", Vector3(13.8, 0, 14))
+	var debris := _node(props, "Debris", GATE)
 	var dm := _node(debris, "Model")
-	_cyl(dm, "Log1", 0.22, 3.0, Vector3(0, 0.22, -0.35), "4c3e24", Vector3(0, 0, 90))
-	_cyl(dm, "Log2", 0.2, 2.6, Vector3(0.1, 0.22, 0.3), "313638", Vector3(0, 10, 90))
-	_cyl(dm, "Log3", 0.18, 2.4, Vector3(-0.2, 0.58, 0.0), "4c3e24", Vector3(0, -8, 90))
-	_box(dm, "Sheet", Vector3(1.8, 0.04, 1.2), Vector3(0.6, 0.5, 0.1), "7f708a", Vector3(12, 20, -15))
-	_box(dm, "Plank1", Vector3(2.2, 0.06, 0.25), Vector3(-0.3, 0.42, 0.5), "966c6c", Vector3(0, -20, 18))
-	_box(dm, "Plank2", Vector3(1.9, 0.06, 0.25), Vector3(0.4, 0.66, -0.3), "966c6c", Vector3(0, 30, -10))
-	_box(dm, "Branch", Vector3(1.6, 0.1, 0.1), Vector3(-0.8, 0.7, 0.2), "313638", Vector3(0, 50, 30))
+	_cyl(dm, "Log1", 0.22, 3.0, Vector3(0, 0.22, -1.05), "4c3e24", Vector3(0, 0, 90))
+	_cyl(dm, "Log2", 0.2, 2.6, Vector3(0.1, 0.22, -0.4), "313638", Vector3(0, 10, 90))
+	_cyl(dm, "Log3", 0.18, 2.4, Vector3(-0.2, 0.58, -0.7), "4c3e24", Vector3(0, -8, 90))
+	_box(dm, "Sheet", Vector3(1.8, 0.04, 1.2), Vector3(0.6, 0.5, -0.6), "7f708a", Vector3(12, 20, -15))
+	_box(dm, "Plank1", Vector3(2.2, 0.06, 0.25), Vector3(-0.3, 0.42, -0.2), "966c6c", Vector3(0, -20, 18))
+	_box(dm, "Plank2", Vector3(1.9, 0.06, 0.25), Vector3(0.4, 0.66, -1.0), "966c6c", Vector3(0, 30, -10))
 	var db := _body(debris)
-	_shape(db, "Shape", Vector3(2.9, 0.75, 1.4), Vector3(0, 0.375, 0))
-	_own(_marker("Top", Vector3(0, 0.75, 0)), debris)
+	_shape(db, "Shape", Vector3(2.9, 0.75, 1.4), Vector3(0, 0.375, -0.7))
+	_own(_marker("Top", Vector3(0, 0.75, -0.7)), debris)
 
 	# kangaroos in the pen
 	var roos := _node(props, "Kangaroos")
-	var spots := [Vector3(-15.4, 0, -8.6), Vector3(-16.2, 0, -11.3), Vector3(-14.0, 0, -10.4)]
-	var yaws := [150.0, 200.0, 110.0]
+	var spots := [Vector3(-11.0, 0, 6.0), Vector3(-13.5, 0, 9.0), Vector3(-10.0, 0, 10.3)]
+	var yaws := [90.0, 200.0, 60.0]
 	for i in spots.size():
 		var k := _node(roos, "Kangaroo%d" % (i + 1), spots[i], Vector3(0, yaws[i], 0))
 		_kangaroo(_node(k, "Model"))
@@ -484,7 +529,7 @@ func _marker(name: String, pos: Vector3) -> Marker3D:
 
 func _markers() -> void:
 	var markers := _node(root_node, "Markers")
-	var places := {"MarkerA": Vector3(-13, 0, -12.4), "MarkerB": Vector3(14.9, 0, 4.0), "MarkerExit": Vector3(13.8, 0, 13.2)}
+	var places := {"MarkerA": Vector3(-6.0, 0, 5.4), "MarkerB": Vector3(10.1, 0, 6.7), "MarkerExit": Vector3(6.0, 0, 10.6)}
 	var gold := StandardMaterial3D.new()
 	gold.albedo_color = Color("f9c22b")
 	gold.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -557,7 +602,8 @@ func _particles(parent: Node, name: String, amount: int, life: float, box: Vecto
 func _player() -> void:
 	var pl := CharacterBody3D.new()
 	pl.name = "Player"
-	pl.position = Vector3(0, 0, 6)
+	pl.position = START
+	pl.rotation_degrees.y = START_YAW
 	pl.floor_snap_length = 0.3
 	_own(pl, root_node)
 	var cs := CollisionShape3D.new()
@@ -579,18 +625,19 @@ func _player() -> void:
 	var hk := _node(hand, "Knife")
 	var hkm := _node(hk, "Model", Vector3.ZERO, Vector3(-10, -12, 0))
 	_box(hkm, "Blade", Vector3(0.025, 0.05, 0.22), Vector3(0, 0, -0.14), "c7dcd0")
-	_box(hkm, "Handle", Vector3(0.04, 0.05, 0.12), Vector3(0, 0, 0.03), "4c3e24")
+	_box(hkm, "Handle", Vector3(0.04, 0.05, 0.12), Vector3(0, 0, 0.03), "d8692a")
 	var hn := _node(hand, "Nozzle")
 	var hnm := _node(hn, "Model", Vector3.ZERO, Vector3(0, -6, 0))
 	_cyl(hnm, "Grip", 0.035, 0.18, Vector3(0, -0.05, 0.03), "239063", Vector3(15, 0, 0))
-	_cyl(hnm, "Barrel", 0.03, 0.2, Vector3(0, 0.03, -0.1), "f9c22b", Vector3(90, 0, 0), 0.022)
-	_own(_marker("Tip", Vector3(0, 0.03, -0.22)), hn)
-	var water := _particles(hn, "Water", 90, 0.55, Vector3(0.01, 0.01, 0.01), Color(0.7, 0.85, 1.0, 0.75), 0.05, 0.16, 0.25, 0.4)
-	water.position = Vector3(0, 0.03, -0.22)
+	_cyl(hnm, "Barrel", 0.03, 0.2, Vector3(0, 0.06, -0.15), "f9c22b", Vector3(90, 0, 0), 0.022)
+	_own(_marker("Tip", Vector3(0, 0.06, -0.26)), hn)
+	_own(_marker("Inlet", Vector3(0.05, -0.55, 0.05)), hn)  # where the hose hangs from the grip, out of view
+	var water := _particles(hn, "Water", 220, 0.6, Vector3(0.012, 0.012, 0.012), Color(0.78, 0.9, 1.0, 0.8), 0.07, 0.26, 0.35, 0.35)
+	water.position = Vector3(0, 0.06, -0.26)
 	water.emitting = false
 	water.local_coords = false
 	water.direction = Vector3(0, 0.12, -1)
-	water.spread = 4.0
+	water.spread = 3.0
 	water.initial_velocity_min = 13.0
 	water.initial_velocity_max = 15.0
 	water.gravity = Vector3(0, -9.8, 0)
@@ -615,6 +662,7 @@ func _player() -> void:
 func _hud() -> void:
 	var hud := CanvasLayer.new()
 	hud.name = "Hud"
+	hud.layer = 3
 	_own(hud, root_node)
 	var smoke := ColorRect.new()
 	smoke.name = "Smoke"

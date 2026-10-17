@@ -78,6 +78,10 @@ func _run() -> void:
 		await _beam(game, "beam plan", "plan")
 		await _beam(game, "beam fire", "fire")
 		await _beam(game, "beam plan 2D", "plan2d")
+		await _fire(game, "fire overview", -1.0)
+		await _fire(game, "fire fp start", 2.0)
+		await _fire(game, "fire fp 60 s", 60.0)
+		await _fire(game, "fire fp 85 s", 85.0)
 	_print_table()
 	quit(0)
 
@@ -226,6 +230,24 @@ func _beam(game: Node, name: String, what: String) -> void:
 	if what == "fire":
 		s.fire()
 		s.time_scale = 0.2
+	await _measure(name)
+	s.queue_free()
+	await process_frame
+
+
+## Fire minigame (#125): the overview, or first person at game time `at` (smoke follows the clock), looking
+## from the start spot over the pen, the burning house and the fire front (the heaviest view).
+func _fire(game: Node, name: String, at: float) -> void:
+	if not _wanted(name):
+		return
+	game.disaster = load("res://data/disasters/black_saturday.tres")
+	var s: Node3D = load("res://scenes/minigames/fire.tscn").instantiate()
+	s.submit = false
+	s.time_scale = 0.0
+	root.add_child(s)
+	await process_frame
+	if at >= 0.0:
+		s.seek(at)
 	await _measure(name)
 	s.queue_free()
 	await process_frame

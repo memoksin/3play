@@ -6,13 +6,17 @@ Variants:
   hose_nozzle  first-person view model: pistol spray nozzle with a short hose stub, origin = the grip.
                Spray points along Blender -Y (Godot +Z), like every model front; rotate 180 deg for a camera
                that looks down Godot -Z. The water jet / spray is a Godot effect from the tip (NOZZLE_TIP).
+  hose_nozzle_hand  the same nozzle in a leather work glove (finger on the trigger), cuff and shirt sleeve,
+               the hose hanging from the inlet; same origin and front (knife.py glove_fist / cuff_sleeve).
 """
 import math
 import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.dirname(__file__))
 import lib as L
+import knife as K
 
 HR = 0.022   # hose radius (exaggerated a little)
 
@@ -70,14 +74,26 @@ def view_model():
     L.tube("stub", [(0, 0.06, -0.1), (0.0, 0.1, -0.22), (0.04, 0.2, -0.35), (0.1, 0.35, -0.45)], HR, mat="hose_green", verts=8)
 
 
+def view_model_hand():
+    """Right hand (Blender -X = the player's right after the 180 deg turn in Godot)."""
+    nozzle()
+    L.tube("stub", [(0, 0.06, -0.1), (0.0, 0.05, -0.22), (0.03, 0.02, -0.4), (0.05, 0.03, -0.6)], HR, mat="hose_green", verts=8)
+    # fist around the pistol grip (fingers stacked down the grip, knuckles to the right and front)
+    K.glove_fist((-0.004, 0.034, -0.012), (0.066, 0.09, 0.08), rot=(76, 0, 0), knuckle_side=-1)
+    L.tube("index", [(0.004, -0.004, 0.034), (0.008, -0.04, 0.03), (0.006, -0.052, 0.008)], 0.012, mat="glove", verts=10)
+    L.tube("thumb", [(0.032, 0.05, 0.02), (0.028, 0.02, 0.05), (0.012, -0.012, 0.062)], 0.015, mat="glove", verts=10,
+           radii=[0.017, 0.015, 0.013])
+    K.cuff_sleeve((-0.012, 0.05, -0.07), (-0.26, 0.6, -0.76), r=0.04)
+
+
 out = L.out_dir_arg("assets/3d/fire")
 only = L.variants_arg()
-for name, fn, tex in (("hose_coil", coil, 512), ("hose_nozzle", view_model, 256)):
+for name, fn, tex in (("hose_coil", coil, 512), ("hose_nozzle", view_model, 256), ("hose_nozzle_hand", view_model_hand, 512)):
     if only and name not in only:
         continue
     L.reset(seed=111)
     L.use_tight_uv()
-    L.palette_bush()
+    K.palette()
     L.set_dust("ash")
     fn()
     L.finish(name, out, tex=tex, ground=(name == "hose_coil"), snow=0.0, ao=0.6, ao_dist=0.1, edge=0.35, edge_r=0.006,

@@ -1,6 +1,18 @@
 [gd_resource type="Resource" script_class="FireSkin" format=3]
 
 [ext_resource type="Script" path="res://scripts/fire_skin.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/fire/art/farm.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/fire/art/knife.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/fire/art/fence_cut.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/fire/art/gate.tscn" id="5"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/debris_pile.glb" id="6"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/fire/art/valve.tscn" id="7"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/fire/art/hose.tscn" id="8"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/fire/art/flame.tscn" id="9"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/fire/art/kangaroo.tscn" id="10"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/fire/art/hand_knife.tscn" id="11"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/fire/art/hand_nozzle.tscn" id="12"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/fire/art/spot.tscn" id="13"]
 
 [resource]
 script = ExtResource("1")
@@ -8,3 +20,15 @@ timer_seconds = 90.0
 clear_seconds = 10.0
 dense_seconds = 10.0
 kangaroos = 3
+farm_model = ExtResource("2")
+knife_model = ExtResource("3")
+fence_model = ExtResource("4")
+gate_model = ExtResource("5")
+debris_model = ExtResource("6")
+valve_model = ExtResource("7")
+hose_model = ExtResource("8")
+flame_model = ExtResource("9")
+kangaroo_model = ExtResource("10")
+hand_knife_model = ExtResource("11")
+hand_nozzle_model = ExtResource("12")
+spot_model = ExtResource("13")

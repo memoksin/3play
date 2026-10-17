@@ -1,0 +1,55 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/minigames/fire/art/fence_cut.gd" id="1_f"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/pen_fence_cut.glb" id="2_f"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/pen_fence_cut_open.glb" id="3_f"]
+[ext_resource type="Shader" path="res://scenes/style/soft_particle.gdshader" id="4_f"]
+
+[sub_resource type="ShaderMaterial" id="dust_mat"]
+render_priority = 1
+shader = ExtResource("4_f")
+shader_parameter/tint = Color(0.62, 0.5, 0.38, 0.55)
+shader_parameter/glow = 0.0
+shader_parameter/hardness = 0.0
+
+[sub_resource type="QuadMesh" id="dust_quad"]
+material = SubResource("dust_mat")
+size = Vector2(0.8, 0.8)
+
+[sub_resource type="Curve" id="dust_scale"]
+_data = [Vector2(0, 0.4), 0.0, 1.4, 0, 0, Vector2(1, 1.6), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Gradient" id="dust_ramp"]
+offsets = PackedFloat32Array(0, 0.15, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[node name="FenceCut" type="Node3D"]
+script = ExtResource("1_f")
+
+[node name="Intact" parent="." instance=ExtResource("2_f")]
+position = Vector3(-1.5, 0, 0)
+
+[node name="Open" parent="." instance=ExtResource("3_f")]
+position = Vector3(-1.5, 0, 0)
+visible = false
+
+[node name="Dust" type="CPUParticles3D" parent="."]
+position = Vector3(0, 0.15, 0.9)
+emitting = false
+amount = 18
+lifetime = 1.6
+one_shot = true
+explosiveness = 0.9
+mesh = SubResource("dust_quad")
+emission_shape = 3
+emission_box_extents = Vector3(1.4, 0.1, 0.5)
+direction = Vector3(0, 1, 0.4)
+spread = 40.0
+gravity = Vector3(0.6, 0.2, 0.6)
+initial_velocity_min = 0.4
+initial_velocity_max = 1.2
+scale_amount_min = 0.8
+scale_amount_max = 1.6
+scale_amount_curve = SubResource("dust_scale")
+color_ramp = SubResource("dust_ramp")

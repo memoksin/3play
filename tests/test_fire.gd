@@ -205,6 +205,17 @@ func _stand(s: Node3D, feet: Vector3, point: Vector3) -> void:
 	s.aim_at(point)
 
 
+## Ground point under `v`.
+func _flat(v: Vector3) -> Vector3:
+	return Vector3(v.x, 0.0, v.z)
+
+
+## A prop's front (its local +Z, flat): the yard side of the fence, the face of the tap.
+func _out(n: Node3D) -> Vector3:
+	var z := n.global_basis.z
+	return Vector3(z.x, 0.0, z.z).normalized()
+
+
 func _target_id(s: Node3D) -> StringName:
 	return s.pick_target().get("id", &"")
 
@@ -241,19 +252,21 @@ func _walkthrough() -> void:
 
 	var knife: Node3D = props.get_node("Knife")
 	var fence: Node3D = props.get_node("FenceCut")
+	var fence_out := _out(fence)  # the yard side of the pen's cuttable section
+	var k_at := _flat(knife.global_position)
 	# the fence without a knife: an info target only
-	_stand(s, Vector3(-13, 0, -12.6), fence.global_position + Vector3(0, 0.9, 0))
+	_stand(s, _flat(fence.global_position) + fence_out * 0.6, fence.global_position + Vector3(0, 0.9, 0))
 	s.advance(0.05)
 	var t: Dictionary = s.pick_target()
 	_check("fence without knife: info", t.get("id") == &"fence" and t.get("kind") == &"info" and t.get("key") == "FIRE_NEED_KNIFE")
 	_hold(s, 1.5)
 	_check("fence without knife: stays", not s.logic.fence_cut)
 	# out of reach / looking away: no target
-	_stand(s, Vector3(-12.2, 0, -6.5), knife.global_position)
+	_stand(s, k_at + Vector3(5.6, 0, 0), knife.global_position)
 	_check("knife from 5.6 m: out of reach", _target_id(s) == &"")
-	_stand(s, Vector3(-12.2, 0, -10.8), knife.global_position + Vector3(0, 0, 6))
+	_stand(s, k_at + Vector3(1.3, 0, 0), knife.global_position + Vector3(6, 0, 0))
 	_check("knife behind the player: no target", _target_id(s) != &"knife")
-	_stand(s, Vector3(-12.2, 0, -10.8), knife.global_position)
+	_stand(s, k_at + Vector3(1.3, 0, 0), knife.global_position)
 	_check("knife in reach: target", _target_id(s) == &"knife")
 	s.interact_press()
 	s.advance(0.05)
@@ -261,7 +274,7 @@ func _walkthrough() -> void:
 	_check("knife: picked up", s.logic.has_knife and not knife.visible and s.get_node("Player/Head/Camera/Hand/Knife").visible)
 	_check("knife: sound", sounds.has(&"knife"))
 	_check("knife: hint now the fence", (s.get_node("Hud/Info/Hint") as Label).text == tr("FIRE_HINT_FENCE"))
-	_stand(s, Vector3(-13, 0, -12.4), fence.global_position + Vector3(0, 0.9, 0))
+	_stand(s, _flat(fence.global_position) + fence_out * 0.8, fence.global_position + Vector3(0, 0.9, 0))
 	t = s.pick_target()
 	_check("fence with knife: hold target", t.get("id") == &"fence" and t.get("kind") == &"hold")
 	s.advance(0.05)
@@ -276,30 +289,32 @@ func _walkthrough() -> void:
 	await physics_frame
 	_check("fence: collider off", _body_off(fence))
 
-	# kangaroos: out through the gap, over the scrub, into the bush
+	# kangaroos: out through the gap, across the yard, over the boundary fence, into the bush
 	var roos: Array = props.get_node("Kangaroos").get_children()
-	var min_z := [99.0, 99.0, 99.0]
+	var max_out := [0.0, 0.0, 0.0]  # how far past the boundary fence (m)
 	var through := [false, false, false]
-	var gap_x: float = fence.global_position.x
 	for i in 240:
 		s.advance(0.05)
 		for k in roos.size():
 			var r: Node3D = roos[k]
 			if r.visible:
-				min_z[k] = minf(min_z[k], r.global_position.z)
-				if absf(r.global_position.z - fence.global_position.z) < 0.3 and absf(r.global_position.x - gap_x) < 1.4:
+				var p := r.global_position
+				max_out[k] = maxf(max_out[k], maxf(absf(p.x) - 16.5, absf(p.z) - 12.0))
+				var l := fence.to_local(p)
+				if absf(l.z) < 0.3 and absf(l.x) < 1.4:
 					through[k] = true
 	var out := true
 	for k in roos.size():
-		out = out and min_z[k] < -20.0 and through[k] and not roos[k].visible
-	_check("kangaroos: all %d out through the gap and gone %s" % [roos.size(), str(min_z)], out)
+		out = out and max_out[k] > 5.0 and through[k] and not roos[k].visible
+	_check("kangaroos: all %d out through the gap and gone %s" % [roos.size(), str(max_out)], out)
 	_check("kangaroos: hop sounds", sounds.count(&"kangaroo") >= 3)
 
 	# task B
 	var valve: Node3D = props.get_node("Valve")
 	var hose: Node3D = props.get_node("Hose")
 	var valve_pt: Vector3 = valve.to_global(Vector3(0, 1.0, 0.25))
-	_stand(s, Vector3(13.6, 0, 4.0), valve_pt)
+	var valve_stand := _flat(valve.global_position) + _out(valve) * 2.0
+	_stand(s, valve_stand, valve_pt)
 	t = s.pick_target()
 	_check("valve without hose: info", t.get("id") == &"valve" and t.get("kind") == &"info")
 	_stand(s, hose.global_position + Vector3(-1.4, 0, 0), hose.global_position)
@@ -308,7 +323,7 @@ func _walkthrough() -> void:
 	s.advance(0.05)
 	s.interact_release()
 	_check("hose: in hand", s.logic.hose_held and s.get_node("Player/Head/Camera/Hand/Nozzle").visible)
-	_stand(s, Vector3(13.6, 0, 4.0), valve_pt)
+	_stand(s, valve_stand, valve_pt)
 	t = s.pick_target()
 	_check("valve with hose: attach (tap)", t.get("id") == &"valve" and t.get("kind") == &"tap")
 	s.interact_press()
@@ -324,14 +339,15 @@ func _walkthrough() -> void:
 
 	var flame: Node3D = props.get_node("Flame")
 	var flame_pt := flame.global_position + Vector3(0, 0.8, 0)
-	# the hay stack is in the way from the west: no spraying through it
-	_stand(s, Vector3(9.6, 0, 9.5), flame_pt)
-	_check("flame behind the hay stack: not a target", _target_id(s) != &"flame")
+	var flame_at := _flat(flame.global_position)
+	# the boundary fence is in the way from outside it: no spraying through it
+	_stand(s, flame_at + Vector3(3.7, 0, 3.1), flame_pt)
+	_check("flame behind the fence: not a target", _target_id(s) != &"flame")
 	# spraying into the air: water flows, the flame does not care
-	_stand(s, Vector3(13.8, 0, 5.0), flame_pt + Vector3(0, 0, -12))
+	_stand(s, flame_at + Vector3(0, 0, -5.0), flame_pt + Vector3(0, 0, -12))
 	_hold(s, 0.6)
 	_check("spray at nothing: water flowed, flame full", sounds.has(&"water_on") and s.logic.flame == 1.0)
-	_stand(s, Vector3(13.8, 0, 5.0), flame_pt)
+	_stand(s, flame_at + Vector3(0, 0, -5.0), flame_pt)
 	_check("flame in range: spray target", _target_id(s) == &"flame")
 	_hold(s, skin.douse_seconds * 0.5)
 	var half: float = s.logic.flame
@@ -352,7 +368,7 @@ func _walkthrough() -> void:
 	var got := []
 	s.finished.connect(func(a: int, b: int) -> void: got.append([a, b]))
 	var at: float = s.elapsed
-	s.place_player(Vector3(13.8, 0, 15.9))
+	s.place_player(_flat(props.get_node("Gate").global_position) + Vector3(0, 0, 3.9))
 	s.advance(0.05)
 	_check("exit: escaped", s.phase == s.Phase.END and s.logic.escaped and sounds.has(&"exit"))
 	s.advance(2.0)
@@ -464,18 +480,20 @@ func _physics() -> void:
 	_check("jump: lands", pl.is_on_floor() and sounds.has(&"jump") and sounds.has(&"land"))
 	_check("walk: footsteps", sounds.has(&"footstep"))
 
-	# fences hold, even jumping at them
-	s.place_player(Vector3(-4.5, 0.02, -12.5))
-	s.aim_at(Vector3(-4.5, 1.6, -30))
+	# fences hold, even jumping at them (the back fence, z -12, behind the shed's tank)
+	s.place_player(Vector3(14.5, 0.02, -11.0))
+	s.aim_at(Vector3(14.5, 1.6, -30))
 	for i in 4:
 		await _steps(s, Vector2(0, -1), 0.5, false, 0.1)
-	_check("fence: cannot walk or jump over (z %.2f)" % pl.global_position.z, pl.global_position.z > -14.0)
-	# the burning flame closes the lane to the gate
-	s.place_player(Vector3(13.8, 0.02, 6.8))
-	s.aim_at(Vector3(13.8, 1.6, 20))
+	_check("fence: cannot walk or jump over (z %.2f)" % pl.global_position.z, pl.global_position.z > -12.0)
+	# the burning flame closes the track to the gate
+	var fl: Vector3 = s.get_node("Props/Flame").global_position
+	var gz: float = s.get_node("Props/Gate").global_position.z
+	s.place_player(Vector3(fl.x, 0.02, fl.z - 3.1))
+	s.aim_at(Vector3(fl.x, 1.6, fl.z + 10))
 	for i in 4:
 		await _steps(s, Vector2(0, -1), 0.5, false, 0.1)
-	_check("flame: blocks the lane (z %.2f)" % pl.global_position.z, pl.global_position.z < 9.0)
+	_check("flame: blocks the lane (z %.2f)" % pl.global_position.z, pl.global_position.z < fl.z - 0.9)
 	_check("flame: no escape while it burns", s.phase == s.Phase.PLAY)
 	# put it out (logic path), then the debris: walking is not enough, a jump is
 	s.logic.pick_hose()
@@ -485,16 +503,17 @@ func _physics() -> void:
 	s.call("_on_flame_out")
 	await physics_frame
 	await physics_frame
-	s.place_player(Vector3(13.8, 0.02, 11.5))
-	s.aim_at(Vector3(13.8, 1.6, 30))
+	# the debris lies in the gateway on the yard side (z gz - 1.4 .. gz)
+	s.place_player(Vector3(fl.x, 0.02, gz - 2.8))
+	s.aim_at(Vector3(fl.x, 1.6, gz + 18))
 	await _steps(s, Vector2(0, -1), 2.0)
-	_check("debris: cannot walk through (z %.2f)" % pl.global_position.z, pl.global_position.z < 13.1)
+	_check("debris: cannot walk through (z %.2f)" % pl.global_position.z, pl.global_position.z < gz - 1.6)
 	s.advance(0.05)
 	_check("debris: still inside", s.phase == s.Phase.PLAY)
-	s.place_player(Vector3(13.8, 0.02, 10.5))
+	s.place_player(Vector3(fl.x, 0.02, gz - 4.2))
 	await _steps(s, Vector2.ZERO, 0.1)
 	await _steps(s, Vector2(0, -1), 2.0, false, 0.38)
-	_check("debris: one jump and a walk gets over (z %.2f)" % pl.global_position.z, pl.global_position.z > 15.3)
+	_check("debris: one jump and a walk gets over (z %.2f)" % pl.global_position.z, pl.global_position.z > gz + 1.3)
 	s.advance(0.05)
 	_check("debris: out = escaped", s.phase == s.Phase.END and s.logic.escaped)
 	await _free(s)
@@ -530,8 +549,8 @@ func _physics() -> void:
 	s.logic.pick_hose()
 	s.logic.attach_hose()
 	var outlet: Vector3 = (s.get_node("Props/Valve/Outlet") as Node3D).global_position
-	s.place_player(Vector3(1.0, 0.02, 4.0))
-	s.aim_at(Vector3(-10, 1.6, 4.0))
+	s.place_player(Vector3(outlet.x - 13.5, 0.02, 4.0))
+	s.aim_at(Vector3(-20, 1.6, 4.0))
 	await _steps(s, Vector2(0, -1), 0.5)
 	var d := Vector2(pl.global_position.x - outlet.x, pl.global_position.z - outlet.z).length()
 	_check("hose: leash %.2f m <= %.1f" % [d, skin.hose_length], d <= skin.hose_length + 0.01)
@@ -652,7 +671,8 @@ func _pause() -> void:
 	_check("skip: the same Space does not jump (%.2f m)" % top, top < 0.1)
 	s.set_physics_process(false)
 	var knife: Node3D = s.get_node("Props/Knife")
-	_stand(s, Vector3(-12.2, 0, -10.8), knife.global_position + Vector3(4, 0, 0))
+	var k_at := _flat(knife.global_position)
+	_stand(s, k_at + Vector3(1.3, 0, 0), knife.global_position + Vector3(0, 0, 4))
 	s.interact_press()
 	s.interact_release()
 	s.advance(0.05)
@@ -660,7 +680,7 @@ func _pause() -> void:
 	s.aim_at(knife.global_position)
 	s.advance(0.05)
 	_check("tap buffer: aiming within 0.2 s still picks up", s.logic.has_knife)
-	_stand(s, Vector3(13.6, 0, 5.4), Vector3(0, 1.6, 30))
+	_stand(s, _flat(s.get_node("Props/Hose").global_position) + Vector3(1.4, 0, 0), Vector3(30, 1.6, 30))
 	s.interact_press()
 	s.interact_release()
 	s.advance(0.3)

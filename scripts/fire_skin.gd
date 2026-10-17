@@ -5,9 +5,12 @@ extends Resource
 ## Art: every *_model field, when set, replaces that prop's placeholder `Model` node at start-up. The
 ## prop's root keeps its place, colliders and anchors, so a model only has to look right. A model may
 ## react to the game (optional): `set_state(state: StringName)` (or an AnimationPlayer with an animation
-## of that name) for "cut", "open", "attached", "out", "free"...; the valve's `set_turn(0..1)`; the
-## flame's `set_strength(0..1)`; the kangaroo's `set_hop(0..1)` (0 = on the ground). Without them the
-## scene animates the placeholder way.
+## of that name) for "taken", "cut", "held", "attached", "down" (hose put back), "open", "out", "free"
+## (kangaroo let out); the valve's `set_turn(0..1)`; the flame's `set_strength(0..1)`; the kangaroo's
+## `set_hop(0..1)` (0 = on the ground); the farm's `set_smoke(0..1)` (the smoke clock; a farm model that
+## has it brings its own fire front, so the placeholder ring of flames is not built). Without them the
+## scene animates the placeholder way. The art set: scenes/minigames/fire/art/ (the farm of
+## scenes/art_pilot/fire_farm.tscn, models from tools/models/fire/).
 
 ## Total time (s): the player must be out of the gate before it runs out.
 @export var timer_seconds := 90.0
@@ -24,13 +27,18 @@ extends Resource
 ## takes away about the same share of the view.
 @export var fog_clear := 0.006
 @export var fog_dense := 0.42
-@export var smoke_color := Color(0.46, 0.38, 0.33)
+## Fog and smoke colour, clear and at smoke 1 (the art pilot's orange-brown haze going dark).
+@export var smoke_color := Color(0.66, 0.36, 0.19)
+@export var smoke_color_dense := Color(0.38, 0.2, 0.12)
 ## How much the smoke colour covers the sky at the start (it is fully covered at smoke 1).
 @export var sky_fog_clear := 0.55
 ## Sun colour and energy, clear and in full smoke.
-@export var sun_color := Color(1.0, 0.72, 0.45)
-@export var sun_energy := 1.15
-@export var sun_energy_smoke := 0.3
+@export var sun_color := Color(1.0, 0.6, 0.32)
+@export var sun_energy := 1.35
+@export var sun_energy_smoke := 0.45
+## Flat ambient light, clear and in full smoke (smoke scatters the light: flatter, a little brighter).
+@export var ambient_energy := 0.42
+@export var ambient_energy_smoke := 0.55
 
 @export_group("Player")
 @export var walk_speed := 4.4
@@ -87,6 +95,8 @@ extends Resource
 @export var kangaroo_model: PackedScene
 ## The exclamation marker over a task.
 @export var marker_model: PackedScene
+## An ember spot fire catching in the yard (unset: flame quads); scaled up from nothing as it grows.
+@export var spot_model: PackedScene
 ## In-hand models (first person), shown at the bottom right.
 @export var hand_knife_model: PackedScene
 @export var hand_nozzle_model: PackedScene

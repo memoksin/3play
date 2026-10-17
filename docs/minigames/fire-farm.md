@@ -54,6 +54,14 @@ Footsteps, picking up the knife, cutting the fence, kangaroos hopping out, **suc
 - Mechanics are few: move, look, interact, jump. No steering of animals.
 - Memoksin (#125): a small first-person 3D scene is feasible and will not take long; built in parallel with the 2.5D reform (done around 16:00 on Sat), then polish until Sun 18:00.
 
+## Build (art in the game, #125)
+
+- The world is the look-dev farm `scenes/art_pilot/fire_farm.tscn`: `FireSkin.farm_model` = `scenes/minigames/fire/art/farm.tscn` (same slab, house, shed, windmill, pen, gums, grass, fire front, sky, light, post pass). Every task prop is a skin model from `scenes/minigames/fire/art/`; `tools/fire_gen.gd` builds the scene (colliders, anchors, placeholders) on the same layout.
+- Layout: pen in the south-west corner, its yard-side wall has the cuttable section (`pen_fence_cut` swaps to `pen_fence_cut_open` when cut). Knife on a chopping block by the pen. The flame is a strip of burning grass across the track right inside the broken gate (it closes the gate's mouth; out = `scorch_patch`). The valve moved off the shed wall (13 m from the flame there) to a standpipe by the track, ~5 m from the flame, hose coil next to it.
+- Kangaroos: out through the cut, across the yard, over the low boundary fence (they clear it, people cannot) and away south, from the fire.
+- `smoke` (the 90 s clock) drives fog, sky smoke, sun, ambient, the fire front creeping to the back fence (two more stretches catch later), smoke drift and flame haze.
+- Shots: `godot --path . -s res://tools/fire_shots.gd` (first person through the tasks, `export/shots/fire_*.png`). Frame time: `godot --path . -s res://tools/perf.gd -- --only=fire`.
+
 ## Open questions
 
 - The exact wording of the score on the card.

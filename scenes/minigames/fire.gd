@@ -67,18 +67,33 @@ const FRONT_NEAR := 30.0
 ## The wind brings the fire from the north-west (angle in the x-z plane, x = cos, z = sin): closer there.
 const WIND_FROM := -2.36
 const WIND_LEAN := 0.28
-## Kangaroo hops: normal length (m), time (s) and height (m); the big hop clears the scrub.
+## Kangaroo hops: normal length (m), time (s) and height (m); the big hop clears the boundary fence.
 const HOP_LEN := 2.0
 const HOP_TIME := 0.36
 const HOP_H := 0.55
 const BIG_HOP_TIME := 0.62
 const BIG_HOP_H := 2.3
-const HOSE_SEGMENTS := 16
+## Out of the pen the kangaroos cross the yard to this stretch of the boundary fence (x, z: the south fence,
+## away from the fire in the north-west), clear it in one big hop and bound off the slab's south edge.
+const ROO_FENCE := Vector2(-2.6, 12.0)
+const ROO_AWAY := Vector2(-0.4, 19.6)
+const HOSE_SEGMENTS := 28
+const HOSE_RADIUS := 0.024
+## The water jet from the nozzle: a ballistic arc (m/s, segments), thin at the nozzle, spreading out.
+const JET_SPEED := 13.0
+const JET_SEGMENTS := 18
 ## Ember attack: spot fires catch in the yard as time runs on (x, z, second it catches, size), away
 ## from the paths between the tasks. They only show the danger; they block nothing.
-const SPOTS: Array[Vector4] = [Vector4(-12.0, 2.0, 34.0, 1.0), Vector4(5.0, -4.5, 46.0, 1.2),
-	Vector4(-4.0, 12.0, 58.0, 1.1), Vector4(8.0, 11.5, 68.0, 1.3), Vector4(-16.0, -1.0, 76.0, 1.4)]
+const SPOTS: Array[Vector4] = [Vector4(-3.4, -1.6, 34.0, 1.0), Vector4(12.8, 1.6, 46.0, 1.2),
+	Vector4(-13.0, 1.6, 58.0, 0.9), Vector4(3.4, -6.2, 68.0, 1.3), Vector4(14.2, 10.4, 76.0, 1.1)]
 const SPOT_GROW := 3.0
+## The overview's air: almost no fog from the style camera, the play fog by the end of the swoop.
+const OVERVIEW_FOG := 0.0012
+## Post pass and heat haze: the style camera (overview) and first person.
+const POST_OV := {"blur_px": 3.5, "focus_band": 0.26, "focus_y": 0.56}
+const POST_FP := {"blur_px": 1.4, "focus_band": 0.42, "focus_y": 0.5}
+const HAZE_OV := 0.8
+const HAZE_FP := 2.4
 
 ## Debug/test hooks.
 var time_scale := 1.0
@@ -135,7 +150,20 @@ var _flame_mats: Array[ShaderMaterial] = []
 var _marker_mats: Array[StandardMaterial3D] = []
 var _wheel_basis := Basis()
 var _hose_segs: Array[MeshInstance3D] = []
+var _jet: Node3D
+var _jet_segs: Array[MeshInstance3D] = []
+var _jet_mat: StandardMaterial3D
 var _hint_key := ""
+## Fire effects with a `haze` (scenes/art_pilot/fire_fx/fire_fx.gd) outside the farm model: the flame, spots.
+var _fx: Array[Node] = []
+## The farm model brings its own fire front (it has set_smoke).
+var _art_world := false
+var _overview_fov := 50.0
+var _sky_mat: ShaderMaterial
+var _hand_rest := Vector3.ZERO
+var _hand_lag := Vector2.ZERO
+var _hand_yaw := 0.0
+var _hand_pitch := 0.0
 
 @onready var _env: Environment = ($Env as WorldEnvironment).environment
 @onready var _sun: DirectionalLight3D = $Sun
@@ -170,6 +198,9 @@ var _hint_key := ""
 @onready var _prompt_text: Label = $Hud/Prompt/Row/Text
 @onready var _banner: PanelContainer = $Hud/Banner
 @onready var _controls: Label = $Hud/Controls
+@onready var _hand: Node3D = $Player/Head/Camera/Hand
+@onready var _post := ($Post/Grade as ColorRect).material as ShaderMaterial
+@onready var _haze := ($Haze/Shimmer as ColorRect).material as ShaderMaterial
 
 
 func _ready() -> void:
@@ -180,8 +211,17 @@ func _ready() -> void:
 	assert(skin != null, "Disaster has no FireSkin")
 	ensure_actions()
 	_swap_models()
+	var farm := get_node_or_null(^"Farm/Model")
+	_art_world = farm != null and farm.has_method(&"set_smoke")
+	_sky_mat = _env.sky.sky_material as ShaderMaterial if _env.sky else null
+	if _sky_mat and _sky_mat.shader.get_shader_uniform_list().any(func(u: Dictionary) -> bool: return u.name == "sun_dir"):
+		_sky_mat.set_shader_parameter(&"sun_dir", _sun.global_transform.basis.z.normalized())
+	_overview_fov = _overview.fov
+	_hand_rest = _hand.position
 	_yaw = _player.rotation.y
 	_pitch = -0.08
+	_hand_yaw = _yaw
+	_hand_pitch = _pitch
 	for k in _roos:
 		_roo_home.append((k as Node3D).position)
 		_roo_yaw.append((k as Node3D).rotation.y)
@@ -192,6 +232,10 @@ func _ready() -> void:
 	_own_flame_materials()
 	_build_front()
 	_build_hose_line()
+	_build_jet()
+	for n in $Props.find_children("*", "Node3D", true, false) + get_node(^"FireFront").find_children("*", "Node3D", true, false):
+		if "haze" in n:
+			_fx.append(n)
 	for m in [_marker_a, _marker_b, _marker_exit]:
 		_collect_marker_mats(m)
 	_marker_exit.visible = false
@@ -332,47 +376,55 @@ func _collect_marker_mats(marker: Node) -> void:
 
 
 ## The fire all around the farm: flame tongues on a ring that closes in with the clock, heavier to the
-## north-west (the wind brings it), and crown fire in the burnt gums.
+## north-west (the wind brings it), and crown fire in the burnt gums. A farm model with set_smoke brings its
+## own front (the art farm: fire_front strips that creep up to the fence), so then only the spot fires are built.
 func _build_front() -> void:
-	_front_mat = ShaderMaterial.new()
-	_front_mat.shader = load("res://scenes/minigames/fire/flame.gdshader")
 	var front := Node3D.new()
 	front.name = "FireFront"
 	add_child(front)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 7022009
-	for i in FRONT_FLAMES:
-		var q := QuadMesh.new()
-		var h := rng.randf_range(4.0, 9.0)
-		q.size = Vector2(h * 0.75, h)
-		q.center_offset = Vector3(0, h / 2.0, 0)
-		var mi := MeshInstance3D.new()
-		mi.mesh = q
-		mi.material_override = _front_mat
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		front.add_child(mi)
-		_front.append(mi)
-		_front_angle.append(TAU * i / FRONT_FLAMES + rng.randf_range(-0.04, 0.04))
-	for sp in SPOTS:
-		var g := Node3D.new()
-		g.name = "Spot"
-		g.position = Vector3(sp.x, 0.0, sp.y)
-		g.visible = false
-		front.add_child(g)
-		for j in 3:
+	if not _art_world:
+		_front_mat = ShaderMaterial.new()
+		_front_mat.shader = load("res://scenes/minigames/fire/flame.gdshader")
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 7022009
+		for i in FRONT_FLAMES:
 			var q := QuadMesh.new()
-			var h := sp.w * (1.3 + 0.5 * j)
-			q.size = Vector2(h * 0.8, h)
+			var h := rng.randf_range(4.0, 9.0)
+			q.size = Vector2(h * 0.75, h)
 			q.center_offset = Vector3(0, h / 2.0, 0)
 			var mi := MeshInstance3D.new()
 			mi.mesh = q
 			mi.material_override = _front_mat
 			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			mi.position = Vector3(cos(j * 2.1) * 0.5, 0, sin(j * 2.1) * 0.5) * sp.w
-			g.add_child(mi)
+			front.add_child(mi)
+			_front.append(mi)
+			_front_angle.append(TAU * i / FRONT_FLAMES + rng.randf_range(-0.04, 0.04))
+	for sp in SPOTS:
+		var g: Node3D
+		if skin.spot_model:
+			g = skin.spot_model.instantiate()
+			g.rotation.y = sp.x * 1.7 + sp.y
+		else:
+			g = Node3D.new()
+			for j in 3:
+				var q := QuadMesh.new()
+				var h := sp.w * (1.3 + 0.5 * j)
+				q.size = Vector2(h * 0.8, h)
+				q.center_offset = Vector3(0, h / 2.0, 0)
+				var mi := MeshInstance3D.new()
+				mi.mesh = q
+				mi.material_override = _spot_mat()
+				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				mi.position = Vector3(cos(j * 2.1) * 0.5, 0, sin(j * 2.1) * 0.5) * sp.w
+				g.add_child(mi)
+		g.name = "Spot"
+		g.position = Vector3(sp.x, 0.0, sp.y)
+		g.visible = false
+		g.set_meta(&"size", sp.w if not skin.spot_model else sp.w * 0.75)
+		front.add_child(g)
 		_spots.append(g)
 	var bush := get_node_or_null("Farm/Model/Bush")
-	if bush:
+	if bush and not _art_world:
 		var k := 0
 		for tree in bush.get_children():
 			k += 1
@@ -389,23 +441,100 @@ func _build_front() -> void:
 			tree.add_child(mi)
 
 
+func _spot_mat() -> ShaderMaterial:
+	if _front_mat == null:
+		_front_mat = ShaderMaterial.new()
+		_front_mat.shader = load("res://scenes/minigames/fire/flame.gdshader")
+	return _front_mat
+
+
 func _build_hose_line() -> void:
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color("239063")
-	mat.roughness = 0.7
+	mat.albedo_color = Color("3f9a3b")  # lib.PAL hose_green, the coil's colour
+	mat.roughness = 0.45
+	var c := CylinderMesh.new()
+	c.top_radius = HOSE_RADIUS
+	c.bottom_radius = HOSE_RADIUS
+	c.height = 1.0
+	c.radial_segments = 8
+	c.rings = 1
+	c.cap_top = false
+	c.cap_bottom = false
 	for i in HOSE_SEGMENTS:
-		var c := CylinderMesh.new()
-		c.top_radius = 0.028
-		c.bottom_radius = 0.028
-		c.height = 1.0
-		c.radial_segments = 6
-		c.rings = 1
 		var mi := MeshInstance3D.new()
 		mi.mesh = c
 		mi.material_override = mat
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		_hose_line.add_child(mi)
 		_hose_segs.append(mi)
+
+
+## The water jet: tube pieces along the arc, a streaky see-through water material that scrolls outward.
+func _build_jet() -> void:
+	_jet = Node3D.new()
+	_jet.name = "Jet"
+	_jet.top_level = true
+	_jet.visible = false
+	add_child(_jet)
+	var noise := FastNoiseLite.new()
+	noise.frequency = 0.08
+	var tex := NoiseTexture2D.new()
+	tex.width = 64
+	tex.height = 256
+	tex.seamless = true
+	tex.noise = noise
+	_jet_mat = StandardMaterial3D.new()
+	_jet_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_jet_mat.albedo_color = Color(0.8, 0.92, 1.0, 0.7)
+	_jet_mat.albedo_texture = tex
+	_jet_mat.emission_enabled = true
+	_jet_mat.emission = Color(0.32, 0.4, 0.46)
+	_jet_mat.roughness = 0.15
+	_jet_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_jet_mat.uv1_scale = Vector3(1.0, 0.35, 1.0)
+	var c := CylinderMesh.new()
+	c.top_radius = 1.0
+	c.bottom_radius = 1.0
+	c.height = 1.0
+	c.radial_segments = 8
+	c.rings = 1
+	c.cap_top = false
+	c.cap_bottom = false
+	for i in JET_SEGMENTS:
+		var mi := MeshInstance3D.new()
+		mi.mesh = c
+		mi.material_override = _jet_mat
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_jet.add_child(mi)
+		_jet_segs.append(mi)
+
+
+func _pose_jet(delta: float) -> void:
+	_jet.visible = _spraying and _hand_nozzle.visible
+	if not _jet.visible:
+		return
+	var p0 := (_hand_nozzle.get_node("Tip") as Node3D).global_position
+	var v := -_camera.global_basis.z * JET_SPEED + Vector3(0, 1.2, 0)
+	var g := Vector3(0, -9.8, 0)
+	# time to reach the ground (or 0.75 s, ~9 m)
+	var t_end := 0.75
+	var a := 0.5 * g.y
+	var disc := v.y * v.y - 4.0 * a * p0.y
+	if disc >= 0.0:
+		t_end = minf(t_end, (-v.y - sqrt(disc)) / (2.0 * a))
+	var prev := p0
+	for i in _jet_segs.size():
+		var t := t_end * float(i + 1) / _jet_segs.size()
+		var p := p0 + v * t + 0.5 * g * t * t
+		var d := p - prev
+		var len := maxf(d.length(), 0.001)
+		var y := d / len
+		var x := y.cross(Vector3.UP if absf(y.y) < 0.9 else Vector3.RIGHT).normalized()
+		var z := x.cross(y)
+		var r := lerpf(0.022, 0.17, pow(float(i) / _jet_segs.size(), 1.3))
+		_jet_segs[i].global_transform = Transform3D(Basis(x * r, y * (len + 0.01), z * r), (prev + p) / 2.0)
+		prev = p
+	_jet_mat.uv1_offset.y = fposmod(_jet_mat.uv1_offset.y - delta * 3.0, 1.0)
 
 
 # --- time -----------------------------------------------------------------------
@@ -416,6 +545,7 @@ func _process(delta: float) -> void:
 	_look_keys(delta)
 	advance(delta * time_scale)
 	_pose_camera(delta)
+	_pose_jet(delta)
 
 
 ## Moves game time forward by dt seconds: overview, tasks, kangaroos, smoke, clock and the end.
@@ -696,12 +826,12 @@ func _pose_overview(t: float) -> void:
 	var from := drift * _overview_home()
 	if k <= 0.0:
 		_overview.global_transform = from
-		_overview.fov = 50.0
+		_overview.fov = _overview_fov
 		return
 	var e := k * k * (3.0 - 2.0 * k)
 	var to := _player.global_transform * Transform3D(Basis(Vector3.RIGHT, _pitch), Vector3(0, HEAD_Y, 0))
 	_overview.global_transform = from.interpolate_with(to, e)
-	_overview.fov = lerpf(50.0, skin.fov, e)
+	_overview.fov = lerpf(_overview_fov, skin.fov, e)
 
 
 func _overview_home() -> Transform3D:
@@ -728,6 +858,13 @@ func _pose_camera(delta: float) -> void:
 	_camera.fov = lerpf(_camera.fov, want, 1.0 - exp(-6.0 * delta))
 	_camera.rotation.z = deg_to_rad(sin(elapsed * 1.9) * 0.6 * gust + sin(_bob_t * 0.5) * 0.25 * k)
 	_camera.position.x = sin(elapsed * 23.0) * 0.006 * gust
+	# the hands swing with the steps and trail a little behind a turn
+	var turn := Vector2(wrapf(_yaw - _hand_yaw, -PI, PI), _pitch - _hand_pitch) / maxf(delta, 1e-4)
+	_hand_yaw = _yaw
+	_hand_pitch = _pitch
+	_hand_lag = _hand_lag.lerp((turn * 0.006).limit_length(0.035), 1.0 - exp(-10.0 * delta))
+	_hand.position = _hand_rest + Vector3(sin(_bob_t) * 0.012 * k + _hand_lag.x,
+			-absf(cos(_bob_t)) * 0.014 * k - _dip * 0.3 - _hand_lag.y, 0.0)
 
 
 ## 0..1 wind gust strength (grows with the smoke).
@@ -909,9 +1046,10 @@ func _on_flame_out() -> void:
 	_marker_b.visible = false
 	_hand_nozzle.visible = false
 	_hose_line.visible = false
-	var nozzle := _hose.get_node_or_null("Model/Nozzle") as Node3D
-	if nozzle:
-		nozzle.visible = true
+	if not _model_state(_hose, &"down"):
+		var nozzle := _hose.get_node_or_null("Model/Nozzle") as Node3D
+		if nozzle:
+			nozzle.visible = true
 	if not _model_state(_flame, &"out"):
 		var m := _flame.get_node_or_null("Model")
 		for mi in (m.find_children("Tongue*", "MeshInstance3D", true, false) if m else []):
@@ -960,27 +1098,38 @@ func _check_exit() -> void:
 
 # --- kangaroos ------------------------------------------------------------------
 
-## After the cut, each kangaroo hops to the gap, out through it, over the scrub and away into the bush.
+## After the cut, each kangaroo hops to the gap and out through it (the fence's local +Z is the open side),
+## across the yard to the boundary fence away from the fire, over it in one big hop and off into the bush.
 func _plan_roo_escape() -> void:
 	_roo_hops.clear()
 	var gap := _fence.global_position
+	var out := Vector3(_fence.global_basis.z.x, 0, _fence.global_basis.z.z).normalized()
+	var along := Vector3(_fence.global_basis.x.x, 0, _fence.global_basis.x.z).normalized()
 	var count := mini(_roos.size(), skin.kangaroos)
 	for i in _roos.size():
 		var hops: Array[Dictionary] = []
 		if i < count:
 			var s := float(i) - (count - 1) / 2.0
+			var fence_at := Vector3(ROO_FENCE.x + s * 1.1, 0, ROO_FENCE.y)
 			var pts: Array[Vector3] = [
 				(_roos[i] as Node3D).global_position,
-				gap + Vector3(s * 0.7, 0, 1.6),
-				gap + Vector3(s * 0.5, 0, -0.2),
+				gap - out * 1.6 + along * s * 0.7,
+				gap + out * 0.2 + along * s * 0.5,
+				gap + out * 3.0 + along * s * 0.8,
+				fence_at + Vector3(0, 0, -1.6),
 			]
 			var t0 := float(i) * skin.kangaroo_gap
 			t0 = _add_hops(hops, pts, t0, HOP_LEN, HOP_TIME, HOP_H)
-			var over := gap + Vector3(s * 0.8, 0, -3.4)
-			hops.append({"t": t0, "from": pts[2], "to": over, "dur": BIG_HOP_TIME, "h": BIG_HOP_H})
+			var over := fence_at + Vector3(0.3 * s, 0, 1.7)
+			hops.append({"t": t0, "from": pts[4], "to": over, "dur": BIG_HOP_TIME, "h": BIG_HOP_H})
 			t0 += BIG_HOP_TIME
-			var away: Array[Vector3] = [over, gap + Vector3(s * 3.0, 0, -12.0), gap + Vector3(3.0 + s * 6.0, 0, -28.0)]
-			_add_hops(hops, away, t0, HOP_LEN * 1.4, HOP_TIME * 1.1, HOP_H * 1.3)
+			# bounding away to the slab's edge; the last hop drops over it, out of sight
+			var edge := Vector3(ROO_AWAY.x + s * 2.4, 0, ROO_AWAY.y - 2.2)
+			var away: Array[Vector3] = [over, edge]
+			t0 = _add_hops(hops, away, t0, HOP_LEN * 1.4, HOP_TIME * 1.1, HOP_H * 1.3)
+			hops.append({"t": t0, "from": edge, "to": Vector3(ROO_AWAY.x + s * 2.8, -3.5, ROO_AWAY.y + 1.0),
+					"dur": HOP_TIME * 1.6, "h": HOP_H * 1.3})
+			_model_state(_roos[i], &"free")
 		_roo_hops.append(hops)
 
 
@@ -1069,49 +1218,71 @@ func _update_props(dt: float) -> void:
 		var wob := 1.0 + 0.06 * sin(a * 7.0 + elapsed * 0.3)
 		var rr := r * lean * wob
 		_front[i].position = Vector3(cos(a) * rr * 1.15, 0, sin(a) * rr)
-	_front_mat.set_shader_parameter(&"alpha", 0.35 + 0.65 * p)
+	if _front_mat:
+		_front_mat.set_shader_parameter(&"alpha", 0.35 + 0.65 * p)
 	for i in _spots.size():
 		var k := clampf((elapsed - SPOTS[i].z) / SPOT_GROW, 0.0, 1.0)
 		_spots[i].visible = k > 0.0
-		_spots[i].scale = Vector3.ONE * maxf(k, 0.05)
+		_spots[i].scale = Vector3.ONE * maxf(k, 0.05) * float(_spots[i].get_meta(&"size", 1.0))
 
 
+## The attached hose: from the tap's outlet down to the ground, along the ground behind the player and up
+## into the nozzle in the hand (a chain of short tubes on a cubic curve).
 func _pose_hose_line() -> void:
 	var a := (_valve.get_node("Outlet") as Node3D).global_position
-	var b := (_hand_nozzle.get_node("Tip") as Node3D).global_position if _hand_nozzle.visible else _hose.global_position
-	b = b - (-_camera.global_basis.z) * 0.12
-	var c1 := Vector3(a.x, 0.04, a.z)
-	var c2 := Vector3(b.x, 0.04, b.z) + Vector3(_player.global_basis.z.x, 0, _player.global_basis.z.z) * 0.6
+	var inlet := _hand_nozzle.get_node_or_null("Inlet") as Node3D
+	if inlet == null:
+		inlet = _hand_nozzle.get_node("Tip") as Node3D
+	var b := inlet.global_position if _hand_nozzle.visible else _hose.global_position
+	var back := Vector3(_player.global_basis.z.x, 0, _player.global_basis.z.z).normalized()
+	var c1 := Vector3(a.x, HOSE_RADIUS, a.z) + (Vector3(b.x, 0, b.z) - Vector3(a.x, 0, a.z)) * 0.35
+	var c2 := Vector3(b.x, HOSE_RADIUS, b.z) + back * 0.9
 	var prev := a
 	for i in _hose_segs.size():
 		var t := float(i + 1) / _hose_segs.size()
 		var u := 1.0 - t
 		var p := u * u * u * a + 3.0 * u * u * t * c1 + 3.0 * u * t * t * c2 + t * t * t * b
+		p.y = maxf(p.y, HOSE_RADIUS)
 		var seg := _hose_segs[i]
 		var d := p - prev
 		var len := maxf(d.length(), 0.001)
 		var y := d / len
 		var x := y.cross(Vector3.FORWARD if absf(y.dot(Vector3.FORWARD)) < 0.9 else Vector3.RIGHT).normalized()
 		var z := x.cross(y)
-		seg.global_transform = Transform3D(Basis(x, y * len, z), (prev + p) / 2.0)
+		seg.global_transform = Transform3D(Basis(x, y * (len + HOSE_RADIUS), z), (prev + p) / 2.0)
 		prev = p
 
 
 func _apply_smoke(_dt: float) -> void:
 	smoke = FireLogic.smoke(elapsed, skin) if phase != Phase.OVERVIEW else 0.0
 	var s := smoke
-	_env.fog_density = FireLogic.fog_density(s, skin)
-	_env.fog_light_color = skin.smoke_color
-	# the sky drowns in the smoke (an Environment value: changing the sky material would re-render it)
+	var smoke_col := skin.smoke_color.lerp(skin.smoke_color_dense, s)
+	# the overview (style camera) looks at the slab through clear air; the swoop brings in the play fog
+	var fp := _fp_amount()
+	_env.fog_density = FireLogic.fog_density(s, skin) if fp >= 1.0 else lerpf(OVERVIEW_FOG, skin.fog_clear, fp)
+	_env.fog_light_color = smoke_col
 	_env.fog_sky_affect = lerpf(skin.sky_fog_clear, 1.0, s)
 	_sun.light_color = skin.sun_color
 	_sun.light_energy = lerpf(skin.sun_energy, skin.sun_energy_smoke, s)
-	_env.ambient_light_energy = lerpf(0.55, 0.32, s)
+	_env.ambient_light_energy = lerpf(skin.ambient_energy, skin.ambient_energy_smoke, s)
+	# the sky's smoke (sun veiled, billows heavier): only on a real change, a sky change re-renders it
+	if _sky_mat and absf(float(_sky_mat.get_meta(&"smoke", -1.0)) - s) > 0.01:
+		_sky_mat.set_meta(&"smoke", s)
+		_sky_mat.set_shader_parameter(&"smoke", s)
+	_model_call(get_node(^"Farm"), &"set_smoke", s)
+	for f in _fx:
+		f.set(&"haze", s * 0.9)
+	if _post:
+		for k: String in POST_FP:
+			_post.set_shader_parameter(k, lerpf(POST_OV[k], POST_FP[k], fp))
+	if _haze:
+		_haze.set_shader_parameter(&"strength", lerpf(HAZE_OV, HAZE_FP, fp))
+		_heat_spot()
 	var ec := _embers.color
 	ec.a = 0.25 + 0.75 * s
 	_embers.color = ec
 	_embers.speed_scale = 1.0 + 1.2 * _gust()
-	var pc := skin.smoke_color
+	var pc := smoke_col
 	pc.a = 0.32 * s * s
 	_puffs.color = pc
 	var eye := _camera.global_position
@@ -1127,7 +1298,7 @@ func _apply_smoke(_dt: float) -> void:
 	var size := get_viewport().get_visible_rect().size
 	sm.set_shader_parameter(&"aspect", size.x / maxf(size.y, 1.0))
 	sm.set_shader_parameter(&"smoke", s * 0.92)
-	sm.set_shader_parameter(&"smoke_color", skin.smoke_color)
+	sm.set_shader_parameter(&"smoke_color", smoke_col)
 	var left := skin.timer_seconds - elapsed
 	var danger := smoothstep(HEART_FROM, 4.0, left) if phase == Phase.PLAY else 0.0
 	sm.set_shader_parameter(&"danger", danger)
@@ -1136,8 +1307,30 @@ func _apply_smoke(_dt: float) -> void:
 	if phase == Phase.END:
 		var e := clampf(_end_t / _end_dur, 0.0, 1.0)
 		fade = e * e
-		sm.set_shader_parameter(&"fade_color", Color.BLACK if logic.escaped else skin.smoke_color * 0.5)
+		sm.set_shader_parameter(&"fade_color", Color.BLACK if logic.escaped else smoke_col * 0.5)
 	sm.set_shader_parameter(&"fade", fade)
+
+
+## 0 = the style camera (overview), 1 = first person; in between during the swoop.
+func _fp_amount() -> float:
+	if phase != Phase.OVERVIEW:
+		return 1.0
+	var k := clampf((_intro_t / skin.overview_seconds - (1.0 - SWOOP)) / SWOOP, 0.0, 1.0)
+	return k * k * (3.0 - 2.0 * k)
+
+
+## Heat shimmer gathers over the burning strip while it is on screen.
+func _heat_spot() -> void:
+	var cam := get_viewport().get_camera_3d()
+	var at := _flame.global_position + Vector3(0, 1.0, 0)
+	if logic.flame_out or cam == null or cam.is_position_behind(at):
+		_haze.set_shader_parameter(&"hot_radius", 0.0)
+		return
+	var size := get_viewport().get_visible_rect().size
+	var p := cam.unproject_position(at) / Vector2(maxf(size.x, 1.0), maxf(size.y, 1.0))
+	var d := cam.global_position.distance_to(at)
+	_haze.set_shader_parameter(&"hot_spot", p)
+	_haze.set_shader_parameter(&"hot_radius", clampf(1.6 / maxf(d, 0.5), 0.04, 0.3))
 
 
 ## 0..1 heartbeat flush (a strong beat and a softer second one).
