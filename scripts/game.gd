@@ -226,7 +226,8 @@ func apply_audio_settings() -> void:
 func load_display_settings() -> void:
 	var cfg := _read_settings()
 	fullscreen_saved = cfg.has_section_key("display", "fullscreen")
-	fullscreen = fullscreen_saved and cfg.get_value("display", "fullscreen") == true
+	# Never chosen: the project opens fullscreen (window/size/mode), so the toggle shows it as on.
+	fullscreen = cfg.get_value("display", "fullscreen") == true if fullscreen_saved else true
 
 
 ## Sets, applies and saves the fullscreen mode (the window is left alone when headless).
