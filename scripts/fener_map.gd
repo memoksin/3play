@@ -268,11 +268,11 @@ const SPOTS := {
 	&"injured": [Vector2(-6.6, -1.4), Vector2(12.4, -16.2), Vector2(-42.0, 21.8)],
 	&"cold": [Vector2(-30.0, 30.0), Vector2(-14.0, 3.9), Vector2(40.0, -4.8)],
 }
-## Pickups are handed out at the rescue crews (CREWS), a couple of metres beside the crew's post.
-## kind -> spots; the first ITEM_COUNT spots are used. Batteries and the kit lie out from the start (the
-## first battery and the kit at the crew near the start, the second battery at the camp crew). The blanket
-## only appears when a person who needs one is found: at one of its spots, by the crew that is the
-## shorter detour from the player.
+## Pickups belong to a rescue crew zone (CREWS: the nearest one to the spot) and are taken by walking into
+## that zone, wherever the rescuers stand; the spot only says where the supply is drawn. kind -> spots; the
+## first ITEM_COUNT spots are used. The first battery and the kit belong to the crew near the start, the
+## second battery to the camp crew. The blanket belongs to the crew that is the shorter detour from the
+## player when a person who needs one is found. Nothing is out before it is needed (see Fener.needs()).
 const ITEMS := {
 	&"battery": [Vector2(-28.1, -12.0), Vector2(28.2, 23.6)],
 	&"kit": [Vector2(-28.1, -9.0)],

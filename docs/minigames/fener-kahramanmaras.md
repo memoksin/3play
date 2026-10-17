@@ -17,7 +17,8 @@ Snowing, the grid is down. Your family and neighbours are scattered in the dark;
 - Darkness is real light: low moon and ambient, warm practicals (camp fires, tents, the bakery oven, work lights,
   beacons) and the torch (shadowed spot: walls cut it). Gameplay "seen" = torch cone with a clear line of sight
   (`FenerMap` solids >= 2.2 m block it) or the 2.4 m circle around you.
-- Time 5:00. Battery drains while the torch is on (about 130 s); two spare batteries are handed out at the rescue crews (only to a torch below 65%).
+- Time 5:00. Battery drains while the torch is on (about 130 s); two spare batteries are handed out in the rescue crew zones (only to a torch below `low_battery`).
+- Supplies are handed out by walking into a rescue crew zone (the orange ring on the ground, the same area trapped people are reported to), not by walking up to a rescuer, and only while needed: the kit while an injured person waits and you hold none, the blanket likewise for a cold person, a battery when the torch is low. Nothing is out otherwise and the errand banner / guide row / arrow only ever name what is needed and not in hand.
 - Beginner-friendly tuning (aim: a careful first run saves 4-5 of 6): slower aftershocks (first one after 40 s, 2.5 s warning),
   4 hidden holes, long invulnerability after a hit, the light finds people 1.3 m beyond their body, crews and the
   assembly area count a little beyond their edge, followers hurry to catch up (and snap back after 22 m).
@@ -32,8 +33,8 @@ Snowing, the grid is down. Your family and neighbours are scattered in the dark;
 | Mom, Elif (sister) | LOST | whistle | found -> follows |
 | Grandpa | SLOW | whistle | follows, everyone walks slower |
 | Mrs. Ayse | TRAPPED | taps | under rubble: do not dig, report her to a rescue crew (NW crew or the AFAD tent) |
-| Mr. Hasan | INJURED | "help!" | first aid kit (handed out at the rescue crew), then follows slowly |
-| Little Can | COLD | "so cold..." | blanket (appears by a rescue crew once Can is found; the HUD points there), then follows |
+| Mr. Hasan | INJURED | "help!" | first aid kit (handed out in the rescue crew zone once he is found), then follows slowly |
+| Little Can | COLD | "so cold..." | blanket (handed out in a rescue crew zone once Can is found; the HUD points to the zone), then follows |
 
 Followers are safe once you walk into the assembly area with them. Score = safe + reported, of 6.
 Spots are random per run from `FenerMap.SPOTS` (each group in several regions).

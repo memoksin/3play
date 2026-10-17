@@ -278,8 +278,10 @@ func _playthrough(sd: int) -> void:
 			if it == null:
 				return
 			_check(tag + "the %s lies by a rescue crew" % need, FenerMap.CREWS.any(func(c: Vector3) -> bool: return Vector2(c.x, c.y).distance_to(it.pos) < 4.0))
-			_walk_to(it.pos, func() -> bool: return it.taken)
+			# the zone is the pickup: walk to where the HUD points and stop at its edge
+			_walk_to(g[0], func() -> bool: return it.taken)
 			_check(tag + "picked up the %s" % need, it.taken)
+			_check(tag + "no errand once the %s is in hand" % need, fener.goal().is_empty() or String(fener.goal()[1]) != "GOAL_" + String(need).to_upper())
 		if p.st == fener.St.WAIT:
 			_walk_to(p.pos, func() -> bool: return p.pos.distance_to(fener.ppos) < 1.2)
 			_wait(fener.TREAT_TIME + 0.3)
@@ -511,8 +513,8 @@ func _items_and_care() -> void:
 	_check("reporting to a crew counts as saved", trapped.st == fener.St.REPORTED and fener.saved_n == 1)
 
 
-## The rescue crew is where the supplies are: kit and battery out from the start, the blanket only once
-## someone who needs it has been found.
+## The rescue crew zone is where the supplies are handed out, only while needed, and the HUD only names
+## what is needed and not in hand.
 func _supplies() -> void:
 	_fresh(13)
 	fener.next_shock = 999.0
@@ -522,35 +524,108 @@ func _supplies() -> void:
 	for it in fener.items:
 		if it.kind == &"blanket":
 			blanket = it
+	var c: Vector3 = FenerMap.CREWS[0]
+	var zone := Vector2(c.x, c.y)
+	# inside the zone, but away from the rescuer at its centre and from the supplies
+	var inside := zone + Vector2(-4.5, 0.0)
 	var near_crew := func(it) -> bool:
-		return FenerMap.CREWS.any(func(c: Vector3) -> bool: return Vector2(c.x, c.y).distance_to(it.pos) < 4.0)
-	_check("kit and batteries lie by a crew from the start", kit != null and near_crew.call(kit) and fener.items.filter(func(it) -> bool: return it.kind == &"battery").all(near_crew))
+		return FenerMap.CREWS.any(func(cc: Vector3) -> bool: return Vector2(cc.x, cc.y).distance_to(it.pos) < 4.0)
+	_check("kit and batteries belong to a crew zone from the start", kit != null and near_crew.call(kit) and fener.items.filter(func(it) -> bool: return it.kind == &"battery").all(near_crew))
 	_check("the blanket is not out yet", blanket != null and not blanket.active)
-	_check("the HUD sends you to the kit first", String(fener.goal()[1]) == "GOAL_KIT")
+	_check("inside the zone, away from the figure and the supplies", fener.in_crew(0) == false and inside.distance_to(zone) > 4.0 and inside.distance_to(kit.pos) > fener.REACH and inside.distance_to(bat.pos) > fener.REACH)
+	_check("nothing needed at the start: no errand", fener.goal().is_empty() and fener.goal_crew() == -1)
+	_check("nothing is out at the start", not fener.item_ready(kit) and not fener.item_ready(bat))
 	var cold = fener.people.filter(func(p) -> bool: return p.def.kind == FenerPerson.Kind.COLD)[0]
+	var hurt = fener.people.filter(func(p) -> bool: return p.def.kind == FenerPerson.Kind.INJURED)[0]
+	# the zone gives nothing when nothing is needed
+	fener.ppos = inside
+	fener.step(DT)
+	_check("in the zone: no kit before anyone is hurt", fener.in_crew(0) and fener.kits == 0 and not kit.taken)
+	_check("in the zone: a full torch does not take the spare", not bat.taken and fener.bat > 90.0)
+	_check("in the zone: no pickup sound", not sounds.has(&"pickup"))
 	for s: Vector2 in FenerMap.ITEMS[&"blanket"]:
 		fener.ppos = s
 		fener.step(DT)
 	_check("no blanket to take before the cold one is found", fener.blankets == 0 and not blanket.taken)
-	fener.ppos = bat.pos
+	fener.bat = fener.skin.low_battery + 1.0
+	fener.ppos = inside
 	fener.step(DT)
-	_check("a full torch does not waste the spare battery", not bat.taken)
-	fener.ppos = kit.pos
+	_check("a torch just above low does not take the spare", not bat.taken)
+	# a hurt man found and waiting, nothing in hand: the kit is the errand, at the zone
+	hurt.pos = FenerMap.START + Vector2(2.0, 0.0)  # found from here
+	fener.ppos = FenerMap.START
+	fener.aim = 0.0
 	fener.step(DT)
-	_check("the kit is handed out at the crew", kit.taken and fener.kits == 1)
+	_check("the hurt man is found and waits", hurt.st == fener.St.WAIT)
+	var g: Array = fener.goal()
+	_check("no kit in hand: the HUD sends you to the kit at the zone", not g.is_empty() and String(g[1]) == "GOAL_KIT" and g[0] == zone and fener.goal_crew() == 0)
+	_check("the kit is out for him", fener.item_ready(kit))
+	fener.ppos = hurt.pos + Vector2(0.0, 12.0)  # outside any zone, next to nothing
+	fener.step(DT)
+	_check("away from the zone nothing is taken", not kit.taken and fener.kits == 0)
+	fener.ppos = inside
+	fener.step(DT)
+	_check("walking into the zone hands out the kit, away from the figure", kit.taken and fener.kits == 1 and sounds.has(&"pickup"))
+	_check("pickup sound is the kit (index 1)", fener.ITEM_KINDS.find(&"kit") == 1 and fener.ITEM_KINDS.find(&"battery") == 0 and fener.ITEM_KINDS.find(&"blanket") == 2)
+	_check("holding a kit: no kit errand", fener.goal().is_empty() and fener.goal_crew() == -1)
+	# a second kit is not handed out to someone who holds one
+	kit.taken = false
+	fener.step(DT)
+	_check("holding a kit: the zone gives no second one", not kit.taken and fener.kits == 1 and not fener.item_ready(kit))
+	_check("holding a kit: still no kit errand", fener.goal().is_empty())
+	kit.taken = true
+	# the same for the blanket
 	fener.ppos = cold.pos + Vector2(1.0, 0)
 	fener.aim = PI
 	fener.step(DT)
 	_check("finding the cold one puts a blanket by a crew", cold.st == fener.St.WAIT and blanket.active and near_crew.call(blanket))
-	var g: Array = fener.goal()
-	_check("the HUD says where the blanket is", not g.is_empty() and String(g[1]) == "GOAL_BLANKET" and g[0] == blanket.pos)
-	fener.ppos = blanket.pos
-	fener.step(DT)
-	_check("the blanket is handed out at the crew", blanket.taken and fener.blankets == 1)
-	_check("the goal clears", fener.goal().is_empty())
-	fener.bat = 20.0
 	g = fener.goal()
-	_check("a low torch sends you to a spare battery", not g.is_empty() and String(g[1]) == "GOAL_BATTERY")
+	var bz: int = fener.item_crew(blanket)
+	_check("no blanket in hand: the HUD sends you to the zone", not g.is_empty() and String(g[1]) == "GOAL_BLANKET" and g[0] == fener.crew_pos(bz))
+	var bc: Vector3 = FenerMap.CREWS[bz]
+	fener.ppos = Vector2(bc.x, bc.y) + Vector2(-4.5, 0.0)
+	fener.step(DT)
+	_check("the blanket is handed out in the zone", blanket.taken and fener.blankets == 1)
+	_check("everything in hand: the goal clears", fener.goal().is_empty())
+	# holding a blanket when a cold person is found: told to go to them, not to fetch
+	_fresh(13)
+	fener.next_shock = 999.0
+	cold = fener.people.filter(func(p) -> bool: return p.def.kind == FenerPerson.Kind.COLD)[0]
+	hurt = fener.people.filter(func(p) -> bool: return p.def.kind == FenerPerson.Kind.INJURED)[0]
+	fener.blankets = 1
+	fener.ppos = cold.pos + Vector2(1.0, 0)
+	fener.aim = PI
+	fener.step(DT)
+	_check("holding a blanket: no blanket errand", cold.st == fener.St.WAIT and fener.goal().is_empty())
+	_check("holding a blanket: the found line does not send you to the crew", fener.n_toast_label.text == fener.skin.text("FOUND_COLD_HAVE") % fener.person_name(cold))
+	fener.kits = 1
+	fener.ppos = hurt.pos + Vector2(1.0, 0)
+	fener.aim = PI
+	fener.step(DT)
+	_check("holding a kit: the found line does not send you to the crew", hurt.st == fener.St.WAIT and fener.n_toast_label.text == fener.skin.text("FOUND_INJURED_HAVE") % fener.person_name(hurt) and fener.goal().is_empty())
+	# the battery: only a low torch gets it, and is told so
+	_fresh(13)
+	fener.next_shock = 999.0
+	bat = _item(&"battery")
+	fener.ppos = inside
+	fener.step(DT)
+	_check("full torch: no battery errand, none handed out", fener.goal().is_empty() and not bat.taken)
+	fener.bat = fener.skin.low_battery - 1.0
+	g = fener.goal()
+	_check("a low torch sends you to the battery at the zone", not g.is_empty() and String(g[1]) == "GOAL_BATTERY" and g[0] == zone)
+	fener.step(DT)
+	_check("a low torch in the zone gets the spare", bat.taken and fener.bat > fener.skin.low_battery + 20.0 and sounds.has(&"pickup"))
+	_check("the spare in: the errand is gone", fener.goal().is_empty())
+	# the guide and the labels follow the same errand
+	_fresh(13)
+	fener.next_shock = 999.0
+	hurt = fener.people.filter(func(p) -> bool: return p.def.kind == FenerPerson.Kind.INJURED)[0]
+	fener.ppos = hurt.pos + Vector2(1.0, 0)
+	fener.aim = PI
+	fener.step(DT)
+	_check("a waiting hurt man: the kit errand", String(fener.goal()[1]) == "GOAL_KIT")
+	fener.kits = 1
+	_check("kit taken by hand: the errand is gone", fener.goal().is_empty() and fener.goal_crew() == -1)
 
 
 func _events() -> void:

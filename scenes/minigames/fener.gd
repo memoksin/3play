@@ -33,8 +33,6 @@ const MOVE_STEP := 0.12
 const TRAIL_STEP := 0.45
 const TRAIL_GAP := 3  # trail points between two followers
 const REACH := 2.2  # treat / pick up distance
-## A spare battery is handed out only to a torch that is below this charge (no wasting it at the start).
-const BAT_TAKE := 65.0
 ## The light finds a person this much beyond their body (metres): a lit shoulder is enough.
 const FIND_PAD := 1.3
 ## Assembly area counts this far outside its edge.
@@ -98,7 +96,8 @@ class Item:
 	var pos := Vector2.ZERO
 	var taken := false
 	var seen := false
-	## Handed out at a rescue crew; the blanket is not there until someone who needs it is found.
+	## Handed out in a rescue crew zone (never at a figure); the blanket is not there until someone who
+	## needs it is found. It is taken only while it is needed: see item_ready().
 	var active := true
 
 
@@ -165,7 +164,8 @@ var events_done: Array[int] = []
 var calls: Array[Call] = []
 var pops: Array[Pop] = []
 var area_seen := false
-var crew_seen := false
+## Per rescue crew zone (FenerMap.CREWS): the player has seen it.
+var crew_seen: Array[bool] = [false, false]
 var bat_warn := false
 var bat_low_warn := false
 var l_on := false
@@ -272,7 +272,7 @@ func reset(seed_value := -1) -> void:
 	follow.clear()
 	hist = [ppos]
 	area_seen = false
-	crew_seen = false
+	crew_seen = [false, false]
 	bat_warn = false
 	bat_low_warn = false
 	l_on = true
@@ -362,34 +362,64 @@ func _offer_blanket(p: Person) -> void:
 		return
 
 
-## What to fetch next and where: [position, text key] or [] when there is nothing to fetch.
+## Is `kind` needed right now: a kit while an injured person waits and you hold none, a blanket while a
+## cold one waits and you hold none, a battery when the torch is low. Nothing is handed out otherwise.
+func needs(kind: StringName) -> bool:
+	match kind:
+		&"battery":
+			return bat < skin.low_battery
+		&"kit":
+			return kits == 0 and people.any(func(p: Person) -> bool: return p.st == St.WAIT and p.def.kind == FenerPerson.Kind.INJURED)
+		&"blanket":
+			return blankets == 0 and people.any(func(p: Person) -> bool: return p.st == St.WAIT and p.def.kind == FenerPerson.Kind.COLD)
+	return false
+
+
+## Out there to be taken now: handed out by its crew, not taken yet, and needed.
+func item_ready(it: Item) -> bool:
+	return it.active and not it.taken and needs(it.kind)
+
+
+## The rescue crew zone (FenerMap.CREWS index) that hands out `it`.
+func item_crew(it: Item) -> int:
+	return _crew_at(it.pos)
+
+
+## Is the player inside rescue crew zone `i`.
+func in_crew(i: int) -> bool:
+	var c := FenerMap.CREWS[i]
+	return Vector2(c.x, c.y).distance_to(ppos) < c.z
+
+
+## What to fetch next and where: [centre of the crew zone, text key] or [] when there is nothing to
+## fetch. Only what is needed and not in hand.
 func goal() -> Array:
-	var kit: Item = null
-	var blanket: Item = null
+	var kinds := {FenerPerson.Kind.INJURED: &"kit", FenerPerson.Kind.COLD: &"blanket"}
+	for p in people:
+		if p.st != St.WAIT or not kinds.has(p.def.kind):
+			continue
+		for it in items:
+			if it.kind == kinds[p.def.kind] and item_ready(it):
+				return [crew_pos(item_crew(it)), "GOAL_" + String(it.kind).to_upper()]
 	var battery: Item = null
 	for it in items:
-		if it.taken or not it.active:
-			continue
-		match it.kind:
-			&"kit":
-				kit = it
-			&"blanket":
-				blanket = it
-			&"battery":
-				if battery == null or it.pos.distance_to(ppos) < battery.pos.distance_to(ppos):
-					battery = it
-	for p in people:
-		if p.st != St.WAIT:
-			continue
-		if p.def.kind == FenerPerson.Kind.COLD and blankets == 0 and blanket:
-			return [blanket.pos, "GOAL_BLANKET"]
-		if p.def.kind == FenerPerson.Kind.INJURED and kits == 0 and kit:
-			return [kit.pos, "GOAL_KIT"]
-	if battery and bat < BAT_TAKE:
-		return [battery.pos, "GOAL_BATTERY"]
-	if kit and kits == 0:
-		return [kit.pos, "GOAL_KIT"]
+		if it.kind == &"battery" and item_ready(it):
+			if battery == null or it.pos.distance_to(ppos) < battery.pos.distance_to(ppos):
+				battery = it
+	if battery:
+		return [crew_pos(item_crew(battery)), "GOAL_BATTERY"]
 	return []
+
+
+## Index of the crew zone the current errand sends you to, -1 without an errand.
+func goal_crew() -> int:
+	var gl := goal()
+	return _crew_at(gl[0]) if not gl.is_empty() else -1
+
+
+## Centre of rescue crew zone `i`.
+func crew_pos(i: int) -> Vector2:
+	return Vector2(FenerMap.CREWS[i].x, FenerMap.CREWS[i].y)
 
 
 func _make_hazards() -> void:
@@ -881,11 +911,11 @@ func _look() -> void:
 	if not area_seen and (lit_rect(FenerMap.AREA) or FenerMap.rect_dist(ppos, FenerMap.AREA) < 9.0):
 		area_seen = true
 		_say(_t("AREA_FOUND"), "good", 3.0)
-	if not crew_seen:
-		var c := FenerMap.CREWS[0]
-		var cp := Vector2(c.x, c.y)
-		if lit(cp, 1.0) or cp.distance_to(ppos) < 9.0:
-			crew_seen = true
+	for i in FenerMap.CREWS.size():
+		if not crew_seen[i]:
+			var cp := crew_pos(i)
+			if lit(cp, 1.0) or cp.distance_to(ppos) < 9.0:
+				crew_seen[i] = true
 
 
 func _hazards(dt: float) -> void:
@@ -1056,21 +1086,20 @@ func _found(p: Person) -> void:
 		FenerPerson.Kind.INJURED:
 			p.st = St.WAIT
 			p.hinted = true
-			_say(_t("FOUND_INJURED") % nm, "bad", 3.6)
+			_say(_t("FOUND_INJURED_HAVE" if kits > 0 else "FOUND_INJURED") % nm, "bad", 3.6)
 		FenerPerson.Kind.COLD:
 			p.st = St.WAIT
 			p.hinted = true
 			_offer_blanket(p)
-			_say(_t("FOUND_COLD") % nm, "bad", 3.6)
+			_say(_t("FOUND_COLD_HAVE" if blankets > 0 else "FOUND_COLD") % nm, "bad", 3.6)
 
 
 func _items() -> void:
 	for it in items:
 		if it.taken:
 			continue
-		if not it.active or it.pos.distance_to(ppos) >= REACH:
-			continue
-		if it.kind == &"battery" and bat >= BAT_TAKE:
+		# handed out by walking into the crew zone, wherever the rescuers stand, and only when needed
+		if not item_ready(it) or not in_crew(item_crew(it)):
 			continue
 		it.taken = true
 		it.seen = true
@@ -1296,23 +1325,22 @@ func _draw_overlay() -> void:
 			_text(n, font, TextFx.upper(_t("AREA_LABEL")), sp, Color(C_COOL, 0.75 + 0.25 * sin(t * 4.0)), 26)
 	var pending := people.any(func(p: Person) -> bool: return p.st == St.MARKED)
 	var gl := goal()
-	var gcrew := _crew_at(gl[0]) if not gl.is_empty() else -1
+	var gcrew := goal_crew()
+	# the crew zone is the ring on the ground: its name sits on the near edge of the ring, not on the rescuers
 	for i in FenerMap.CREWS.size():
 		var c := FenerMap.CREWS[i]
-		var cp := Vector2(c.x, c.y)
+		var sp := _sp(crew_pos(i) + Vector2(0.0, c.z), 0.2)
+		if not vr.grow(-20).has_point(sp):
+			continue
 		if i == gcrew:
-			var sp := _sp(cp, 3.2)
-			if vr.grow(-20).has_point(sp):
-				_text(n, font, TextFx.upper(_t("CREW_LABEL")), sp, Color(C_AMBER, 0.9), 22)
-		elif i == 0 and (crew_seen or pending):
-			var sp := _sp(cp, 3.2)
-			if vr.grow(-20).has_point(sp):
-				_text(n, font, TextFx.upper(_t("CREW_LABEL")), sp, Color(C_CREW, 0.8 if pending else 0.5), 22)
+			_text(n, font, TextFx.upper(_t("CREW_LABEL")), sp, Color(C_AMBER, 0.9), 22)
+		elif crew_seen[i] or (pending and i == 0):
+			_text(n, font, TextFx.upper(_t("CREW_LABEL")), sp, Color(C_CREW, 0.8 if pending else 0.5), 22)
 	_edge_arrow(n, FenerMap.AREA.get_center(), C_COOL, ps)
 	if pending:
 		_edge_arrow(n, Vector2(FenerMap.CREWS[0].x, FenerMap.CREWS[0].y), C_CREW, ps)
 	if not gl.is_empty():
-		_edge_arrow(n, gl[0], C_AMBER, ps)
+		_edge_arrow(n, gl[0], C_AMBER, ps)  # the centre of the crew zone
 	_guide_chip(n, font, ps, pending, gl)
 	if not gl.is_empty():
 		_goal_banner(n, font, vr, TextFx.upper(_t(gl[1])), t)
@@ -1346,7 +1374,7 @@ func _draw_overlay() -> void:
 			_warn_sign(n, sp, C_HOT if h.kind != &"cable" else Color("8fd3ff"))
 	# pickups seen
 	for it in items:
-		if it.taken or not it.seen:
+		if not it.seen or not item_ready(it):
 			continue
 		var sp := _sp(it.pos, 1.1)
 		if vr.has_point(sp):
