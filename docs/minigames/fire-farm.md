@@ -35,8 +35,8 @@ Farm yard, fences on four sides, kangaroo pen with kangaroos, 2 exclamation mark
 ## Score and ending (decided by burcubaran22)
 
 - **Score = the tasks completed, plus leaving successfully.** Shown as "X/3 done": the fence cut, the flame put out, and the player got out through the gate (the third counts only if the player leaves in time). `OPEN`: exact wording on the card.
-- **Time pressure = the view gets worse.** As time passes the **field of view shrinks** (smoke thickens, the screen darkens). The debris pile at the gate does **not** get worse. The pressure is that you see less and less, so leaving late is hard. This carries the "leave early" lesson of Black Saturday.
-- **Lose:** the time runs out before the player has left (the view is almost gone). The tasks done before that still count in the score. `OPEN`: how long the timer is (60 to 90 s is the minigame budget).
+- **Time pressure = the view gets worse.** The total time is **90 s** (proposed, to confirm; the minigame budget is 60 to 90 s, and a first-time player in first person needs time to find the tasks). The smoke follows the clock: the first **10 s are clear**, then the smoke **thickens gradually**, and in the **last 10 s it is very dense**. The debris pile at the gate does **not** get worse. The pressure is that you see less and less, so leaving late is hard. This carries the "leave early" lesson of Black Saturday.
+- **Lose:** the time runs out before the player has left (the view is almost gone). The tasks done before that still count in the score. `OPEN`: confirm the 90 s total.
 - **Kangaroos:** after the player cuts the fence, **two or three kangaroos run out through the gap** (a visible payoff).
 - **Result card:** the real event, numbers and the "leave early" lesson, with sources (`VERIFY`).
 
@@ -52,5 +52,5 @@ Footsteps, picking up the knife, cutting the fence, kangaroos hopping out, **suc
 
 ## Open questions
 
-- Timer length and the exact wording of the score on the card.
+- Confirm the 90 s total and the exact wording of the score on the card.
 - Real event details and what the card says (Black Saturday facts to verify).
