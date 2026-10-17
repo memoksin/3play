@@ -875,7 +875,7 @@ func _people(dt: float) -> void:
 			St.LOST:
 				p.call_t -= dt
 				if p.call_t <= 0.0:
-					p.call_t = rng.randf_range(3.6, 6.0)
+					p.call_t = call_gap(p.pos.distance_to(ppos)) * rng.randf_range(0.85, 1.15)
 					var c := Call.new()
 					c.who = p
 					calls.append(c)
@@ -1172,19 +1172,32 @@ func _draw_overlay() -> void:
 	var ps := _sp(ppos, 1.0)
 	var vr := Rect2(Vector2.ZERO, size)
 	var play := intro_left <= 0.0
-	# calls: arcs around you toward whoever is calling
+	# calls: arcs around you toward whoever is calling; the word sits on the caller (on screen) or on
+	# the screen edge along the true bearing (off screen), with the distance. Nearer = stronger.
+	var inner := Rect2(Vector2(40, 130), size - Vector2(80, 170))
 	for c in calls:
 		var p := c.who
-		var a := (_sp(p.pos, 1.0) - ps).angle()
+		var tgt := _sp(p.pos, 1.6)
+		var a := (tgt - ps).angle()
 		var age := c.t / 1.1
-		var cl := clampf(1.0 - p.pos.distance_to(ppos) / 70.0, 0.3, 1.0)
-		var col := Color(p.def.color, (1.0 - age) * (0.45 + 0.55 * cl))
+		var cl := cue_strength(p.pos.distance_to(ppos))
+		var col := Color(p.def.color, (1.0 - age) * (0.35 + 0.65 * cl))
 		for k in 3:
-			var rr := 46.0 + age * 90.0 - k * 12.0
+			var rr := 46.0 + age * (60.0 + 60.0 * cl) - k * 12.0
 			if rr > 10.0:
-				n.draw_arc(ps, rr, a - 0.42 + k * 0.1, a + 0.42 - k * 0.1, 18, col, 3.0 - k * 0.6, true)
-		var tp := (ps + Vector2.from_angle(a) * (78.0 + age * 90.0)).clamp(Vector2(60, 140), size - Vector2(60, 40))
-		_text(n, font, _call_text(p), tp, col, 24)
+				n.draw_arc(ps, rr, a - 0.42 + k * 0.1, a + 0.42 - k * 0.1, 18, col, (2.0 + 2.0 * cl) - k * 0.6, true)
+		var label := "%s  %d m" % [_call_text(p), roundi(p.pos.distance_to(ppos))]
+		var fs := roundi(lerpf(18.0, 30.0, cl))
+		if inner.has_point(tgt):
+			n.draw_arc(tgt, 10.0 + age * 40.0, 0.0, TAU, 24, col, 2.0 + 2.0 * cl, true)
+			_text(n, font, label, tgt + Vector2(0, -26.0 - age * 14.0), col, fs)
+		else:
+			var e := edge_point(ps, tgt, inner)
+			n.draw_set_transform(e, a)
+			n.draw_colored_polygon(PackedVector2Array([Vector2(18, 0), Vector2(-10, -13), Vector2(-4, 0), Vector2(-10, 13)]), Color(col, col.a * 0.9 + 0.1))
+			n.draw_set_transform(Vector2.ZERO, 0.0)
+			var lp := (e - Vector2.from_angle(a) * 52.0).clamp(Vector2(90, 150), size - Vector2(90, 40))
+			_text(n, font, label, lp, col, fs)
 	if not play:
 		return
 	# assembly area + crew labels, edge arrows
@@ -1274,11 +1287,41 @@ func _edge_arrow(n: CanvasItem, target: Vector2, col: Color, ps: Vector2) -> voi
 	if inner.has_point(sp):
 		return
 	var a := (sp - ps).angle()
-	var e := (ps + Vector2.from_angle(a) * 2000.0).clamp(inner.position, inner.end)
+	var e := edge_point(ps, sp, inner)
 	var c := Color(col, 0.75 + 0.25 * sin(t * 6.0))
 	n.draw_set_transform(e, a)
 	n.draw_colored_polygon(PackedVector2Array([Vector2(16, 0), Vector2(-10, -12), Vector2(-5, 0), Vector2(-10, 12)]), c)
 	n.draw_set_transform(Vector2.ZERO, 0.0)
+
+
+## Where the line from `from` (inside r) toward `to` leaves r: the same bearing, not a clamped point.
+## `to` itself when it is inside r.
+static func edge_point(from: Vector2, to: Vector2, r: Rect2) -> Vector2:
+	if r.has_point(to):
+		return to
+	var f := from.clamp(r.position, r.end)
+	var d := to - f
+	var k := 1.0
+	if absf(d.x) > 0.0001:
+		k = minf(k, ((r.end.x if d.x > 0.0 else r.position.x) - f.x) / d.x)
+	if absf(d.y) > 0.0001:
+		k = minf(k, ((r.end.y if d.y > 0.0 else r.position.y) - f.y) / d.y)
+	return f + d * maxf(k, 0.0)
+
+
+## Screen bearing (radians) from you to a person: what every cue of theirs points along.
+func cue_angle(p: Person) -> float:
+	return (_sp(p.pos, 1.6) - _sp(ppos, 1.0)).angle()
+
+
+## 0 far .. 1 close: how loud / big / frequent a cue is.
+static func cue_strength(dist: float) -> float:
+	return clampf(1.0 - dist / 70.0, 0.0, 1.0)
+
+
+## Seconds between two cues of a lost person: often when near, rarely when far.
+static func call_gap(dist: float) -> float:
+	return lerpf(6.0, 1.8, cue_strength(dist))
 
 
 func _warn_sign(n: CanvasItem, p: Vector2, col: Color) -> void:

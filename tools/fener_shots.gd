@@ -180,3 +180,22 @@ func _s_behind() -> void:
 	_goto(Vector2(30.0, -15.6), Vector2(36.0, -22.0))
 	_steps(4)
 	await _frames(60)
+
+
+## Cues: one caller on screen, the others off screen with edge markers and distances.
+func _s_cues() -> void:
+	_fresh()
+	var p = _person(FenerPerson.Kind.LOST)
+	var from: Vector2 = p.pos + Vector2(-9.0, 5.0)
+	if not f.walkable(from):
+		from = p.pos + Vector2(8.0, 5.0)
+	_goto(from, p.pos + Vector2(-20, 0))
+	f.l_on = false
+	for q in f.people:
+		q.call_t = 0.0
+	_steps(2)
+	for q in f.people:
+		q.call_t = 99.0
+	await _frames(3)
+	_steps(8)
+	await _frames(4)

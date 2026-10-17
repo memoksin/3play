@@ -67,7 +67,7 @@ falls and blocks part of the lane, a pole comes down by the market (new live cab
 | lamp_on / lamp_off | FN3 | 0-1 s on, 2-3 s off |
 | battery_low, battery_dead | FN4 | |
 | whistle | FN5 | index = person, from `pos` |
-| tap, call, cry | (new) | trapped tapping, injured "help", cold child |
+| tap, call, cry | (new) | trapped tapping, injured "help", cold child; `pos` is always the person's real spot (also behind walls); they repeat every 1.8 s (close) to 6 s (far) |
 | found | FN6 | index = person |
 | heartbeat | (new) | with found |
 | pickup | FN6? | index 0 battery, 1 kit, 2 blanket |

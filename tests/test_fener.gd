@@ -80,6 +80,7 @@ func _run() -> void:
 	_items_and_care()
 	_events()
 	_pointer()
+	_cues()
 	_time_up()
 	print("test_fener ok" if ok else "test_fener FAIL")
 	quit(0 if ok else 1)
@@ -541,6 +542,74 @@ func _pointer() -> void:
 	for k in 15:
 		fener.step(DT)
 	_check("release stops walking", is_equal_approx(fener.ppos.x, x1))
+	fener.ov_on = true
+
+
+## Cues (whistle / tap / call / cry) point at the real person: sound position, screen bearing, edge
+## marker and pan agree with where the person is, also behind a building; nearer = more often.
+func _cues() -> void:
+	_fresh(23)
+	fener.next_shock = 999.0
+	fener.ppos = Vector2(-20.0, 0.5)
+	fener.world.show_state(fener, 0.0)
+	for i in 30:
+		fener.world.show_state(fener, 0.1)
+	var cue_kinds: Array[StringName] = [&"whistle", &"tap", &"call", &"cry"]
+	var heard: Array = []
+	fener.sound_event.connect(func(k: StringName, i: int, p: Vector3) -> void:
+		if cue_kinds.has(k):
+			heard.append([i, p]))
+	fener.l_on = false  # nobody gets found: only cues
+	for k in 300:
+		fener.step(DT)
+		fener.ppos = Vector2(-20.0, 0.5)
+	var pos_ok := not heard.is_empty()
+	for h in heard:
+		var pp: Vector2 = fener.people[h[0]].pos
+		pos_ok = pos_ok and Vector2(h[1].x, h[1].z).distance_to(pp) < 0.001
+	_check("cue sound_event carries the person's real position", pos_ok)
+	var dir_ok := true
+	var edge_ok := true
+	var pan_ok := true
+	var hid := 0
+	var inner := Rect2(Vector2(40, 130), fener.size - Vector2(80, 170))
+	for p in fener.people:
+		var ps: Vector2 = fener.world.screen_of(Vector3(fener.ppos.x, FenerMap.ground_y(fener.ppos) + 1.0, fener.ppos.y))
+		var tp: Vector2 = fener.world.screen_of(Vector3(p.pos.x, FenerMap.ground_y(p.pos) + 1.6, p.pos.y))
+		dir_ok = dir_ok and absf(angle_difference(fener.cue_angle(p), (tp - ps).angle())) < 0.001
+		# the edge marker sits on the same bearing as the person
+		var e: Vector2 = fener.edge_point(ps, tp, inner)
+		if e != tp:
+			edge_ok = edge_ok and absf(angle_difference((e - ps).angle(), (tp - ps).angle())) < 0.01
+		edge_ok = edge_ok and inner.grow(0.5).has_point(e)
+		# pan agrees with the side of the screen
+		var pan: float = fener.pan_of(Vector3(p.pos.x, 0.0, p.pos.y))
+		if absf(pan) > 0.05:
+			pan_ok = pan_ok and signf(pan) == signf(cos(fener.cue_angle(p)))
+		if not fener.los(fener.ppos, p.pos):
+			hid += 1
+	_check("cue bearing matches the person's bearing on screen", dir_ok)
+	_check("edge marker keeps the true bearing", edge_ok)
+	_check("pan sign matches the cue side", pan_ok)
+	# behind a building: put a person right behind a wall, bearing must not change
+	var b: Rect2 = fener.opaque[0]
+	var q: Vector2 = b.get_center()
+	fener.ppos = q + Vector2(-(b.size.x * 0.5 + 6.0), 0.0)
+	var pe = fener.people[0]
+	pe.pos = q + Vector2(b.size.x * 0.5 + 6.0, 0.0)
+	fener.world.show_state(fener, 0.0)
+	for i in 30:
+		fener.world.show_state(fener, 0.1)
+	var ps2: Vector2 = fener.world.screen_of(Vector3(fener.ppos.x, FenerMap.ground_y(fener.ppos) + 1.0, fener.ppos.y))
+	var tp2: Vector2 = fener.world.screen_of(Vector3(pe.pos.x, FenerMap.ground_y(pe.pos) + 1.6, pe.pos.y))
+	_check("person behind a building: not in line of sight", not fener.los(fener.ppos, pe.pos))
+	_check("person behind a building: cue still on the true bearing", absf(angle_difference(fener.cue_angle(pe), (tp2 - ps2).angle())) < 0.001 and absf(angle_difference(fener.cue_angle(pe), 0.0)) < 1.6)
+	# pure edge math
+	var r := Rect2(Vector2(40, 130), Vector2(1000, 500))
+	var e1: Vector2 = fener.edge_point(Vector2(500, 400), Vector2(3000, 900), r)
+	_check("edge_point keeps the angle when clamped on one axis", absf((e1 - Vector2(500, 400)).angle() - (Vector2(3000, 900) - Vector2(500, 400)).angle()) < 0.001 and is_equal_approx(e1.x, r.end.x))
+	# closer = more often and clearer
+	_check("cues are more frequent and stronger when close", fener.call_gap(5.0) < fener.call_gap(40.0) and fener.call_gap(40.0) < fener.call_gap(90.0) and fener.cue_strength(5.0) > fener.cue_strength(50.0))
 	fener.ov_on = true
 
 
