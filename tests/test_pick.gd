@@ -70,6 +70,15 @@ func _run() -> void:
 	var c2: String = game.pick_for(&"citizen")
 	_check("citizen pool: kahramanmaras and black saturday, each once before a repeat",
 		c1 != c2 and [c1, c2].has("res://data/disasters/kahramanmaras.tres") and [c1, c2].has("res://data/disasters/black_saturday.tres"))
+	var last: String = c2
+	var repeat := false
+	for i in 6:
+		var c: String = game.pick_for(&"citizen")
+		repeat = repeat or c == last
+		last = c
+	_check("never the same disaster twice in a row (counts tied or not)", not repeat)
+	var counts_now: Dictionary = game.load_counts()
+	_check("last pick kept beside the counts", game.load_last(&"citizen") == last.get_file().get_basename() and counts_now.size() == 4)
 	DirAccess.remove_absolute(tmp)
 	game.store_path = ""
 	_check("real user file untouched by this test", game.store_path == "")
