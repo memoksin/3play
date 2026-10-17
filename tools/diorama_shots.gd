@@ -1,12 +1,12 @@
 extends SceneTree
-## Saves diorama screenshots (~1.5 s, ~5 s, ~9 s) for both Tier 1 disasters to
+## Saves diorama screenshots (~0.3 s opening dive as _0, then ~1.5 s, ~5 s, ~9 s) for both Tier 1 disasters to
 ## export/shots/diorama_<id>_<n>.png. Needs a window (not --headless):
 ## godot --path . -s res://tools/diorama_shots.gd
 
 const OUT := "res://export/shots/"
 const FRAME_CAP := 9000
 const DISASTERS := ["res://data/disasters/kahramanmaras.tres", "res://data/disasters/indian_ocean.tres"]
-const TIMES := [1.5, 5.0, 9.0]
+const TIMES := [0.3, 1.5, 5.0, 9.0]
 
 var frames := 0
 var failed := false
@@ -65,7 +65,7 @@ func _run() -> void:
 		for i in TIMES.size():
 			while d.t < TIMES[i]:
 				await process_frame
-			await _shot("diorama_%s_%d" % [game.disaster.id, i + 1])
+			await _shot("diorama_%s_%d" % [game.disaster.id, i])
 		root.remove_child(d)
 		d.free()
 	quit(1 if failed else 0)
