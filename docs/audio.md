@@ -21,13 +21,13 @@ For whoever has the game on their computer (memoksin or sudeimete).
 
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
-| G1 | Globe appear | The globe fades in slowly at scene start | Guitar swell 1.wav | Sub-d | https://freesound.org/people/Sub-d/sounds/47021/ | CC0 | chosen | Use only about seconds 4 to 6 of the file. Trim by ear. |
-| G2 | Globe spin ambience | The player rotates the globe by hand | Spaceship Ambience | nick121087 | https://freesound.org/people/nick121087/sounds/234316/ | CC0 | chosen | Loop. Starts the moment the player starts rotating the globe. |
-| G3 | Coordinate typing | Coordinates are typed out letter by letter | Computer keyboard typing snippet mono [loop] | cabled_mess | https://freesound.org/people/cabled_mess/sounds/361639/ | CC0 | chosen | Needs the typing text effect from issue #66 (start and end signals). |
-| G4 | Target lock | The lock reticle closes on the target | Target Lock 150 Beep | alphatone | https://freesound.org/people/alphatone/sounds/561771/ | CC0 | chosen | Use only the first 1 s of the file, matched to the lock animation. |
-| G5 | Zoom to country | Camera zooms in on the country | Whoosh.wav | crackles04 | https://freesound.org/people/crackles04/sounds/369698/ | CC0 | chosen | |
+| G1 | Globe appear | The globe fades in slowly at scene start | Guitar swell 1.wav | Sub-d | https://freesound.org/people/Sub-d/sounds/47021/ | CC0 | in repo | Use only about seconds 4 to 6 of the file. Trim by ear. |
+| G2 | Globe spin ambience | The player rotates the globe by hand | Spaceship Ambience | nick121087 | https://freesound.org/people/nick121087/sounds/234316/ | CC0 | in repo | Loop. Starts the moment the player starts rotating the globe. |
+| G3 | Coordinate typing | Coordinates are typed out letter by letter | Computer keyboard typing snippet mono [loop] | cabled_mess | https://freesound.org/people/cabled_mess/sounds/361639/ | CC0 | in repo | Needs the typing text effect from issue #66 (start and end signals). |
+| G4 | Target lock | The lock reticle closes on the target | Target Lock 150 Beep | alphatone | https://freesound.org/people/alphatone/sounds/561771/ | CC0 | in repo | Use only the first 1 s of the file, matched to the lock animation. |
+| G5 | Zoom to country | Camera zooms in on the country | Whoosh.wav | crackles04 | https://freesound.org/people/crackles04/sounds/369698/ | CC0 | in repo | |
 | G6 | Time counter | Clock or year counter runs while time advances | | | | | no sound | Test it silent first. If it feels empty, add a short digital tick later. |
-| G7 | Glitch and jump to the future | Globe glitches and jumps to year 3000+ (Tier 2) | Glitch Corruption | dotY21 | https://freesound.org/people/dotY21/sounds/348585/ | CC0 | chosen | Tier 2. |
+| G7 | Glitch and jump to the future | Globe glitches and jumps to year 3000+ (Tier 2) | Glitch Corruption | dotY21 | https://freesound.org/people/dotY21/sounds/348585/ | CC0 | in repo | Tier 2. |
 
 ### Still to do for the globe
 
@@ -39,9 +39,9 @@ For whoever has the game on their computer (memoksin or sudeimete).
 
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
-| M1 | Menu music | Loop while the role select screen is open | Title.mp3 (from Dark Sci-Fi Audio Pack) | SRG774 | https://opengameart.org/content/dark-sci-fi-audio-pack | CC0 | chosen | Cold and mysterious tone. The author suggests a slight crossfade when looping. The pack has 4 more tracks and 3 UI sounds, not used. |
-| M2 | Button hover | The mouse is over the "State" or "Citizen" button | UI_Hover | unfa | https://freesound.org/people/unfa/sounds/565131/ | CC0 | chosen (optional) | Not sure it is needed. Test the menu without it first. About 0.12 s. |
-| M3 | Button click | The player picks State or Citizen | Soft UI Button Click | Jummit | https://freesound.org/people/Jummit/sounds/528561/ | CC0 | chosen | Soft sci-fi click. |
+| M1 | Menu music | Loop while the role select screen is open | Title.mp3 (from Dark Sci-Fi Audio Pack) | SRG774 | https://opengameart.org/content/dark-sci-fi-audio-pack | CC0 | in repo | Cold and mysterious tone. The author suggests a slight crossfade when looping. The pack has 4 more tracks and 3 UI sounds, not used. |
+| M2 | Button hover | The mouse is over the "State" or "Citizen" button | UI_Hover | unfa | https://freesound.org/people/unfa/sounds/565131/ | CC0 | in repo | Not sure it is needed. Test the menu without it first. About 0.12 s. |
+| M3 | Button click | The player picks State or Citizen | Soft UI Button Click | Jummit | https://freesound.org/people/Jummit/sounds/528561/ | CC0 | in repo | Soft sci-fi click. |
 
 ### Still to do for the main menu
 
@@ -54,10 +54,10 @@ The diorama is the 3D intro (about 10 s): the camera orbits a small low-poly set
 
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
-| D1 | Kahramanmaras ambience | Diorama of Kahramanmaras (snow, wind) | DMP013016 HEAVY SNOW STORM MS.wav | martypinso | https://freesound.org/people/martypinso/sounds/35480/ | CC0 | chosen | Use the part from about 1:47 to 2:43 (about 56 s). Needs a soft fade at the ends if it loops. |
-| D2 | Indian Ocean ambience | Diorama of the Indian Ocean (waves on the shore) | Waves crashing on shore | jamgypsy | https://freesound.org/people/jamgypsy/sounds/795445/ | CC0 | chosen | Only waves (no birds, boats or people per the description). About 2 min. Also used as the base layer of C1 (Connect), see issue #95. |
-| D3 | Solar flare 3026 ambience | Diorama of the solar flare scenario | Solar Storm.wav | Puniho | https://freesound.org/s/151098/ | CC0 | chosen | Space ambience. |
-| D4 | Intro text typing | The intro lines type on, one after another | Computer keyboard typing snippet mono [loop] | cabled_mess | https://freesound.org/people/cabled_mess/sounds/361639/ | CC0 | chosen | Same file as G3, so all typed text in the game sounds the same. |
+| D1 | Kahramanmaras ambience | Diorama of Kahramanmaras (snow, wind) | DMP013016 HEAVY SNOW STORM MS.wav | martypinso | https://freesound.org/people/martypinso/sounds/35480/ | CC0 | in repo | Use the part from about 1:47 to 2:43 (about 56 s). Needs a soft fade at the ends if it loops. |
+| D2 | Indian Ocean ambience | Diorama of the Indian Ocean (waves on the shore) | Waves crashing on shore | jamgypsy | https://freesound.org/people/jamgypsy/sounds/795445/ | CC0 | in repo | Only waves (no birds, boats or people per the description). About 2 min. Also used as the base layer of C1 (Connect), see issue #95. |
+| D3 | Solar flare 3026 ambience | Diorama of the solar flare scenario | Solar Storm.wav | Puniho | https://freesound.org/s/151098/ | CC0 | in repo | Space ambience. |
+| D4 | Intro text typing | The intro lines type on, one after another | Computer keyboard typing snippet mono [loop] | cabled_mess | https://freesound.org/people/cabled_mess/sounds/361639/ | CC0 | in repo | Same file as G3, so all typed text in the game sounds the same. |
 | D5 | Diorama to minigame transition | The diorama ends and the minigame starts | | | | | no sound | No sound for now. Open question for the whole game: do scene transitions need a sound? See below. |
 
 ### Still to do for the diorama
@@ -97,15 +97,15 @@ Timeline from `scenes/minigames/connect.gd`: a calm bay until about 6 s before t
 
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
-| C1 | Calm bay ambience | From the start until the wave arrives | Morning Birds in a Quiet Urban Garden | WhisperingEarth | https://freesound.org/people/WhisperingEarth/sounds/798842/ | CC0 | chosen | Layer on top of the D2 wave sound (jamgypsy), which starts first and keeps playing. Two players at once. Issue #95. |
-| C2 | Rotate a pipe | The player clicks a pipe (0.1 s turn) | Clank1.wav | BMacZero | https://freesound.org/people/BMacZero/sounds/94127/ | CC0 | chosen | |
+| C1 | Calm bay ambience | From the start until the wave arrives | Morning Birds in a Quiet Urban Garden | WhisperingEarth | https://freesound.org/people/WhisperingEarth/sounds/798842/ | CC0 | in repo | Layer on top of the D2 wave sound (jamgypsy), which starts first and keeps playing. Two players at once. Issue #95. |
+| C2 | Rotate a pipe | The player clicks a pipe (0.1 s turn) | Clank1.wav | BMacZero | https://freesound.org/people/BMacZero/sounds/94127/ | CC0 | in repo | |
 | C3 | Wave rising | The wave comes into view, 15 s before the hit | | | | | later | Postponed. The first candidates were rejected, needs a new search. |
 | C4 | Wave hits | The wave crosses the bay and breaks on the beach, with the shake | | | | | later | Postponed. The first candidates were rejected, needs a new search. |
-| C5 | Water flows through the pipes | Water flows tile by tile after the hit | Hydrophone underwater stream close pipe gurgle.wav | JavierZumer | https://freesound.org/people/JavierZumer/sounds/422660/ | CC0 | chosen | Use the part from about 0:40 onward. |
-| C6 | Basin fills | The water reaches a basin and it fills | Water Echo.wav | eeriedescence | https://freesound.org/people/eeriedescence/sounds/419741/ | CC0 | chosen | Well-like echo. |
-| C7 | Broken line spills | The water spills out of a broken line | Big Water Splash | qubodup | https://freesound.org/people/qubodup/sounds/442773/ | CC0 | chosen (to test) | Repeat the same splash several times, each starting before the previous ends, to build an overflow. Try it, replace the sound if it feels fake. Issue #95. |
+| C5 | Water flows through the pipes | Water flows tile by tile after the hit | Hydrophone underwater stream close pipe gurgle.wav | JavierZumer | https://freesound.org/people/JavierZumer/sounds/422660/ | CC0 | in repo | Use the part from about 0:40 onward. |
+| C6 | Basin fills | The water reaches a basin and it fills | Water Echo.wav | eeriedescence | https://freesound.org/people/eeriedescence/sounds/419741/ | CC0 | in repo | Well-like echo. |
+| C7 | Broken line spills | The water spills out of a broken line | Big Water Splash | qubodup | https://freesound.org/people/qubodup/sounds/442773/ | CC0 | in repo | Repeat the same splash several times, each starting before the previous ends, to build an overflow. Try it, replace the sound if it feels fake. Issue #95. |
 | C8 | Village floods | The spilled water floods the village | | | | | no sound (test) | Leave empty and test the game. Add a sound only if it feels empty. |
-| C9 | Water drains | The water drains back (1.5 s) | wavesound.wav | transitking | https://freesound.org/people/transitking/sounds/11505/ | CC0 | chosen | Use only the first 4 s of the file (waves wash over the rock and drain back through a crack). |
+| C9 | Water drains | The water drains back (1.5 s) | wavesound.wav | transitking | https://freesound.org/people/transitking/sounds/11505/ | CC0 | in repo | Use only the first 4 s of the file (waves wash over the rock and drain back through a crack). |
 
 ## Result card
 
@@ -113,11 +113,11 @@ What happens on the card (`scenes/result.gd`): the card fades in, the score land
 
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
-| R1 | Card appears | The card fades in | Guitar swell 1.wav | Sub-d | https://freesound.org/people/Sub-d/sounds/47021/ | CC0 | proposed: reuse G1 | Same soft swell as the globe appearing (about seconds 4 to 6). Confirm. |
+| R1 | Card appears | The card fades in | Guitar swell 1.wav | Sub-d | https://freesound.org/people/Sub-d/sounds/47021/ | CC0 | in repo | Same soft swell as the globe appearing (about seconds 4 to 6). Confirm. |
 | R2 | Score lands | The score appears | | | | | no sound | Not needed. |
-| R3 | Closing line typing | The closing line types on | Computer keyboard typing snippet mono [loop] | cabled_mess | https://freesound.org/people/cabled_mess/sounds/361639/ | CC0 | chosen | Same as G3 and D4. Needs typing start and finish signals, issue #99. |
-| R4 | Button hover and click | Play again and Main menu | UI_Hover (unfa) and Soft UI Button Click (Jummit) | unfa, Jummit | see M2 and M3 | CC0 | chosen | Same sounds as the main menu (M2, M3). |
-| R5 | Result music | While the card is open, calm and thoughtful | Title.mp3 (from Dark Sci-Fi Audio Pack) | SRG774 | https://opengameart.org/content/dark-sci-fi-audio-pack | CC0 | chosen (may change) | Same as the main menu music (M1): the game starts and ends with the same music. May change after listening in the game; then try another track from the same pack (Sector, Airy) or another calm track. |
+| R3 | Closing line typing | The closing line types on | Computer keyboard typing snippet mono [loop] | cabled_mess | https://freesound.org/people/cabled_mess/sounds/361639/ | CC0 | in repo | Same as G3 and D4. Needs typing start and finish signals, issue #99. |
+| R4 | Button hover and click | Play again and Main menu | UI_Hover (unfa) and Soft UI Button Click (Jummit) | unfa, Jummit | see M2 and M3 | CC0 | in repo | Same sounds as the main menu (M2, M3). |
+| R5 | Result music | While the card is open, calm and thoughtful | Title.mp3 (from Dark Sci-Fi Audio Pack) | SRG774 | https://opengameart.org/content/dark-sci-fi-audio-pack | CC0 | in repo | Same as the main menu music (M1): the game starts and ends with the same music. May change after listening in the game; then try another track from the same pack (Sector, Airy) or another calm track. |
 
 ### Typed text everywhere (G3, D4, R3)
 

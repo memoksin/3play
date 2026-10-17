@@ -110,6 +110,10 @@ var history: Array[Dictionary] = []
 ## Audio clock in seconds (sum of the frame deltas, or of tick() calls).
 var clock := 0.0
 
+## Real files are loaded only with a sound device. Headless (tests, tools) the dummy driver never
+## releases a playing Ogg stream before quit, so every run would leak; tests inject streams instead.
+var use_files := DisplayServer.get_name() != "headless"
+
 var _players := {}  # id -> Array[AudioStreamPlayer]
 var _injected := {}  # id -> AudioStream (tests)
 var _cache := {}  # id -> AudioStream
@@ -264,7 +268,7 @@ func _stream_of(id: StringName) -> AudioStream:
 			print_verbose("Audio: unknown cue %s" % id)
 		return null
 	var path: String = ROOT + cue.path
-	if not ResourceLoader.exists(path):
+	if not use_files or not ResourceLoader.exists(path):
 		if not _missing_logged.has(id):
 			_missing_logged[id] = true
 			print_verbose("Audio: %s has no file yet (%s)" % [id, path])
