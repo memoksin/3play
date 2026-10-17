@@ -176,7 +176,7 @@ Dark snowy street, a flashlight with a battery, a whistle that shows the directi
 | FN6 | Found a family member | The player reaches a family member | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen (reuse of F2) | First second of the file. |
 | FN7 | Success | The family reaches the assembly point | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | chosen | One success sound for FN7, FR6 and BM4. |
 | FN8 | Aftershock | The aftershock hits | Cracking Earthquake | uagadugu | https://freesound.org/people/uagadugu/sounds/222521/ | CC0 | chosen (reuse of F6) | Trim to the shaking. |
-| FN8a | Building creak | Aftershock warning and the start of the aftershock |  |  |  |  | not found | No usable building creak was found. Left empty for now, test the game without it. |
+| FN8a | Building crack | Aftershock warning and the start of the aftershock | breaking_concrete | zatar | https://freesound.org/people/zatar/sounds/755522/ | CC0 (verify) | chosen | Burcu picked it: a hammer breaking concrete, for the building body cracking. Plays with FN8 (Cracking Earthquake). Trim to the first crack by ear. |
 | FN9 | Hurt | The player is hurt near a building | Hurt_C_07 | cabled_mess | https://freesound.org/people/cabled_mess/sounds/350926/ | CC0 | chosen | Retro-style hurt sound, about 0.2 s. |
 
 ## Fire (Black Saturday, kangaroo farm, first person)
