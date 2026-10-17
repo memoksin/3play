@@ -96,7 +96,7 @@ One block per category: visual, audio, code, text, other. Write "None" if not us
 |---|---|---|---|
 | Visual | Claude Code (code that draws the sprites, not an image generator) | Pixel-art sprite scripts | `tools/sprites/**`, `assets/sprites/**`. TODO add any image generator if one is used |
 | Visual | ChatGPT image generation | Team logo (healthy + damaged Stack pancake stack) for the pitch video; keyed versions derived in-repo by `tools/video/key_logo.py` (Claude Code) | `assets/video/stack_logo*.png`, `tools/video/intro_stack` (pitch video intro) |
-| Visual | Claude Code (code that renders the video, not an image generator) | Pitch video intro segment: storm, lightning, text, post effects | `tools/video/**`, `export/video/intro_stack*.mp4` |
+| Visual | Claude Code (code that renders the video, not an image generator) | Pitch video intro segment: storm, lightning, text, post effects. Film body (`tools/video/film.html`): title cards, transitions, targeting HUD, the pixel-art Easter bunny drawn by code, post effects over Godot gameplay captures | `tools/video/**`, `export/video/intro_stack*.mp4`, `export/video/film.mp4`, `export/video/pitch_film.mp4` |
 | Audio | None so far | TODO | TODO |
 | Code | Claude Code | Game code and tooling | `scenes/**`, `scripts/**`, `data/**`, `tests/**`, `tools/**`, `ui/**` (incl. `scenes/globe*`, `tools/globe/**`, `tools/build_theme.gd` which generates `ui/theme.tres`, `tools/render_mockups.gd`) |
 | Text | Claude | Drafts of design specs, intro and result card text; facts checked against sources | `docs/minigames/**`, `docs/ui.md`, `locale/strings.csv` |
