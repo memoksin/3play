@@ -3,7 +3,7 @@ extends CanvasLayer
 ## to the main menu or quit. Not available on the main menu or the boot scene, nor while a scene change
 ## is fading. Mounted once by Game (autoload), so it works in every scene.
 
-const NO_PAUSE := [&"main", &"language"]
+const NO_PAUSE := [&"main", &"language", &"splash", &"prologue"]
 ## Scenes that look around with the mouse (first person): only there the look settings show.
 const LOOK_SCENES := [&"fire"]
 
