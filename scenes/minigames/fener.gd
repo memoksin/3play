@@ -594,9 +594,16 @@ func _say(text: String, kind: String, secs: float) -> void:
 	_place_toast()
 
 
+## Bottom centre, above the errand banner; a long line wraps to two.
 func _place_toast() -> void:
-	n_toast.size.x = minf(n_toast.get_combined_minimum_size().x, size.x - 80.0)
-	n_toast.position = Vector2((size.x - n_toast.size.x) / 2.0, 118.0)
+	var font := n_toast_label.get_theme_font("font")
+	var fs := n_toast_label.get_theme_font_size("font_size")
+	var w := font.get_string_size(n_toast_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	n_toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	n_toast_label.max_lines_visible = 2
+	n_toast_label.custom_minimum_size.x = minf(w + 4.0, minf(size.x - 80.0, 1100.0) - 32.0)
+	n_toast.reset_size()
+	n_toast.position = Vector2((size.x - n_toast.size.x) / 2.0, size.y - 165.0 - n_toast.size.y)
 
 
 func _pop(p: Vector2, txt: String, col: Color, big := false, h := 2.3) -> void:
