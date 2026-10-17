@@ -17,6 +17,8 @@ const SILENT_DB := -80.0
 ## Fit quake (#89). Seconds after the big hit: the collapse starts (same as Fit.COLLAPSE_START),
 ## the rumble is faded out after the collapse (COLLAPSE_START + COLLAPSE_DUR), and the join is
 ## crossfaded (rumble fade-out and collapse fade-in, 0.1 to 0.2 s; 0 = hard cut).
+## Cues with "cut": a new play() stops the one still sounding (short fade), so repeats never stack.
+const CUT_FADE := 0.04
 const QUAKE_COLLAPSE_DELAY := 0.3
 const QUAKE_RUMBLE_END := 1.6
 const QUAKE_CROSSFADE := 0.15
@@ -132,11 +134,11 @@ const CUES := {
 	&"FR11b": {"path": "fire/footsteps_dirt_trim.ogg", "bus": &"SFX", "volume_db": -2.0, "notes": "kangaroos run: dirt footsteps layer, quiet source"},
 	# Beam (#124)
 	&"BM1": {"path": F_SOLAR, "bus": &"SFX", "volume_db": -12.0, "loop": true, "fade_in": 0.5, "notes": "space ambience, same file as D3"},
-	&"BM2": {"path": "beam/servo_panera.ogg", "bus": &"SFX", "volume_db": -5.0, "notes": "rotate a satellite; one servo move from Servo_1_Panera"},
+	&"BM2": {"path": "beam/servo_panera.ogg", "bus": &"SFX", "volume_db": -5.0, "cut": true, "notes": "rotate a satellite; one servo move from Servo_1_Panera"},
 	&"BM3": {"path": "beam/laser_beam_loop.ogg", "bus": &"SFX", "volume_db": -4.0, "loop": true, "notes": "the beam runs; 0.65 s loop, started at fire, stopped at the wave result"},
-	&"BM4": {"path": F_GLOCK, "bus": &"SFX", "volume_db": 0.0, "notes": "shot starts (charge), same file as C10"},
-	&"BM5": {"path": "beam/power_down_trim.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "wave result with cities lost"},
-	&"BM8": {"path": "beam/countdown_beeps.ogg", "bus": &"SFX", "volume_db": 10.0, "notes": "countdown tick; very quiet source, +10 dB"},
+	&"BM4": {"path": F_GLOCK, "bus": &"SFX", "volume_db": 0.0, "cut": true, "notes": "shot starts (charge), same file as C10"},
+	&"BM5": {"path": "beam/power_down_trim.ogg", "bus": &"SFX", "volume_db": -6.0, "cut": true, "notes": "wave result with cities lost"},
+	&"BM8": {"path": "beam/countdown_beeps.ogg", "bus": &"SFX", "volume_db": 10.0, "cut": true, "notes": "countdown tick; very quiet source, +10 dB"},
 }
 
 ## Scene file -> hook method.
@@ -243,6 +245,8 @@ func available(id: StringName) -> bool:
 ## Plays a cue once (looped when the cue says loop). opts: fade (s), volume_db (added), pitch.
 ## Returns the player, or null when the cue or its file is missing.
 func play(id: StringName, opts := {}) -> AudioStreamPlayer:
+	if CUES.get(id, {}).get("cut", false) and is_playing(id):
+		stop(id, CUT_FADE)
 	return _start(id, opts, false, &"play")
 
 
