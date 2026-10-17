@@ -32,18 +32,17 @@ Move, look with the mouse, an **interact** key (pick up, cut, attach, turn), a *
 
 Farm yard, fences on four sides, kangaroo pen with kangaroos, 2 exclamation markers, knife, cuttable fence section, hose, wall with a valve, a small flame (and no flame afterwards), broken gate with a debris pile, sky and smoke.
 
-## Score and ending (OPEN, proposal)
+## Score and ending (decided by burcubaran22)
 
-Nothing is decided yet. Proposal to keep it small:
-
-- **Score "X/N kangaroos saved"**: opening the fence saves the kangaroos in the pen; putting out the flame protects the farm. For example N = 5 kangaroos and the tasks decide how many get out.
-- **A timer** (60 to 90 s total): the fire grows, the smoke thickens, the debris near the gate gets worse. Leaving late = lose. This carries the "leave early" lesson of Black Saturday.
-- **Lose:** the time runs out before the player is out, or a task is skipped (fewer kangaroos saved).
+- **Score = the tasks completed, plus leaving successfully.** Shown as "X/3 done": the fence cut, the flame put out, and the player got out through the gate (the third counts only if the player leaves in time). `OPEN`: exact wording on the card.
+- **Time pressure = the view gets worse.** As time passes the **field of view shrinks** (smoke thickens, the screen darkens). The debris pile at the gate does **not** get worse. The pressure is that you see less and less, so leaving late is hard. This carries the "leave early" lesson of Black Saturday.
+- **Lose:** the time runs out before the player has left (the view is almost gone). The tasks done before that still count in the score. `OPEN`: how long the timer is (60 to 90 s is the minigame budget).
+- **Kangaroos:** after the player cuts the fence, **two or three kangaroos run out through the gap** (a visible payoff).
 - **Result card:** the real event, numbers and the "leave early" lesson, with sources (`VERIFY`).
 
 ## Sounds this game needs (to add to `docs/audio.md`)
 
-Footsteps, picking up the knife, cutting the fence, **success sound** for the fence, hose attach and valve turn, water flow, the flame, putting it out, **success sound** for the fire, fire and wind ambience, jump and landing on debris, the exit. Voice: none.
+Footsteps, picking up the knife, cutting the fence, kangaroos hopping out, **success sound** for the fence, hose attach and valve turn, water flow, the flame, putting it out, **success sound** for the fire, fire and wind ambience, jump and landing on debris, the exit. Voice: none.
 
 ## Art and build notes
 
@@ -53,6 +52,5 @@ Footsteps, picking up the knife, cutting the fence, **success sound** for the fe
 
 ## Open questions
 
-- Win and lose rule, number of tasks, timer length (see the proposal above).
+- Timer length and the exact wording of the score on the card.
 - Real event details and what the card says (Black Saturday facts to verify).
-- Are the kangaroos only decoration in the pen, or do they run out through the gap? (Running out is a nice visible payoff.)
