@@ -1,5 +1,5 @@
 extends SceneTree
-## Language: settings round trip, Turkish default, boot redirect, menu switch.
+## Language: settings round trip, Turkish default, boot flow (splash, prologue, menu), menu switch.
 
 const MAX_FRAMES := 900
 
@@ -30,6 +30,13 @@ func _settle(n := 4) -> void:
 		await process_frame
 
 
+## Waits (frame-capped by _process) until the current scene is `path`.
+func _wait_scene(path: String) -> void:
+	while current_scene == null or current_scene.scene_file_path != path:
+		await process_frame
+	await _settle(4)
+
+
 func _run() -> void:
 	var game := root.get_node("Game")
 	game.store_path = ""
@@ -47,13 +54,19 @@ func _run() -> void:
 	_check("removed file: no locale again", not game.has_locale())
 	TranslationServer.set_locale("en")
 
-	# no saved locale: Turkish by default, nothing saved, boot scene goes straight to the menu
+	# no saved locale: Turkish by default, nothing saved, first boot goes splash -> prologue -> menu
 	game.load_locale()
 	_check("default locale is Turkish", TranslationServer.get_locale().begins_with("tr"))
 	_check("boot scene is the language scene", ProjectSettings.get_setting("application/run/main_scene") == "res://scenes/language.tscn")
 	change_scene_to_file("res://scenes/language.tscn")
 	await _settle(6)
-	_check("first run lands on main menu", current_scene.scene_file_path == game.scene_path(&"main"))
+	_check("boot goes to the splash", current_scene.scene_file_path == "res://scenes/splash.tscn")
+	current_scene.skip()
+	await _wait_scene("res://scenes/prologue.tscn")
+	_check("first run: splash -> prologue", current_scene.scene_file_path == "res://scenes/prologue.tscn")
+	current_scene.skip()
+	await _wait_scene(game.scene_path(&"main"))
+	_check("prologue -> main menu", current_scene.scene_file_path == game.scene_path(&"main"))
 	_check("default is not saved", not game.has_locale())
 	game.open_settings()  # the flags live in the Settings panel now
 	await _settle(2)
@@ -70,10 +83,13 @@ func _run() -> void:
 	_check("menu still shown", current_scene.scene_file_path == game.scene_path(&"main"))
 	game.settings_panel.close()
 
-	# saved locale: boot scene forwards straight to the menu
+	# prologue seen: splash -> menu
 	change_scene_to_file("res://scenes/language.tscn")
 	await _settle(6)
-	_check("boot scene goes to the menu", current_scene.scene_file_path == game.scene_path(&"main"))
+	_check("second boot goes to the splash", current_scene.scene_file_path == "res://scenes/splash.tscn")
+	current_scene.skip()
+	await _wait_scene(game.scene_path(&"main"))
+	_check("prologue seen: splash -> menu", current_scene.scene_file_path == game.scene_path(&"main"))
 	game.load_locale()
 	_check("saved English wins over the default", TranslationServer.get_locale().begins_with("en"))
 

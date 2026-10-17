@@ -1,6 +1,6 @@
 extends CanvasLayer
-## The Settings panel: language (main menu only), volumes, mouse look (first-person scenes only) and
-## fullscreen. Opened from the main menu's gear and from the pause menu; mounted once by Game
+## The Settings panel: language (main menu only), volumes, mouse look (first-person scenes only),
+## fullscreen and, on the main menu, a replay of the prologue. Opened from the main menu's gear and from the pause menu; mounted once by Game
 ## (`Game.open_settings()`). Esc closes only this panel.
 
 signal closed
@@ -28,6 +28,7 @@ var _opener: Control
 @onready var _sens_value: Label = %SensValue
 @onready var _invert: CheckButton = %InvertY
 @onready var _fullscreen: CheckButton = %Fullscreen
+@onready var _replay: Button = %ReplayPrologue
 @onready var _back: Button = %Back
 
 
@@ -51,6 +52,7 @@ func _ready() -> void:
 		Game.set_mouse_sensitivity(v))
 	_invert.toggled.connect(Game.set_invert_y)
 	_fullscreen.toggled.connect(Game.set_fullscreen)
+	_replay.pressed.connect(_replay_prologue)
 	_back.pressed.connect(close)
 	_langs.picked.connect(func(_code: String) -> void: _refresh())
 
@@ -89,6 +91,7 @@ func _refresh() -> void:
 	_sens_label.text = tr("PAUSE_SENS")
 	_invert.text = tr("PAUSE_INVERT_Y")
 	_fullscreen.text = tr("SET_FULLSCREEN")
+	_replay.text = tr("SET_REPLAY_PROLOGUE")
 	_back.text = tr("SET_BACK")
 	# set without echoing back to Game (and the settings file)
 	_master.set_value_no_signal(roundf(Game.master_volume * 100.0))
@@ -105,6 +108,14 @@ func _refresh() -> void:
 	var look := PauseMenu.is_look_scene(scene)
 	_sens_row.visible = look
 	_invert.visible = look
+	# the prologue would end a run: only offered on the main menu
+	_replay.visible = scene != null and scene.scene_file_path == Game.scene_path(&"main")
+
+
+## Closes the panel and plays the ash Earth prologue again; it returns to the main menu.
+func _replay_prologue() -> void:
+	close()
+	get_tree().change_scene_to_file(Story.PROLOGUE)
 
 
 static func _pct(v: float) -> String:
