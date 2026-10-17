@@ -200,7 +200,7 @@ Spec: `docs/minigames/fire-farm.md`.
 | FR10 | Flame goes out | The flame is put out | | | | | decided | No separate sound: the flame sound (FR9) fades out. |
 | FR11 | Kangaroos run out | 2 to 3 kangaroos run through the gap | Horse Gallop Loop.wav + Footsteps Dirt 01 | DeadxCreed + aglinder | https://freesound.org/people/DeadxCreed/sounds/322448/ and https://freesound.org/people/aglinder/sounds/264469/ | CC0 (verify both) | chosen (to test) | No kangaroo hop CC0 exists. Layer both and play the pair 2 to 3 times, each starting before the previous ends. Replace if it sounds fake. |
 | FR12 | Smoke (cough, breath) | The smoke thickens | | | | | no sound | Not needed. |
-| FR13 | Ending shot | The camera rises out of first person over the burning farm (event `exit`), or the dark version when time runs out (event `lose`) | | | | | todo | A swell: wind and fire roar opening up, then a held quiet before the result card. The dark one lower and heavier. |
+| FR13 | Ending shot | The camera rises out of first person over the burning farm (event `exit`), or the dark version when time runs out (event `lose`) | FR1 mix (digital wildfire + wind), raised | vekoN + Podcapocalipsis | see FR1 | CC0 | chosen | No new file. On `exit`: raise the FR1 volume and open it up, then a held quiet before the result card. On `lose`: the same sound lowered (low-pass) and heavier. Burcu agreed. |
 
 ## Beam network (Isin Agi, solar flare 3026, #124)
 
