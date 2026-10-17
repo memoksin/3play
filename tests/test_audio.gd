@@ -424,6 +424,10 @@ func _run() -> void:
 	bm.satellite_turned.emit(0, 1)
 	_check("beam: satellite_turned plays BM2", _log() == ["play:BM2"])
 	audio.reset_history()
+	bm.satellite_turned.emit(1, 1)
+	_check("beam: a repeat BM2 cuts the one still playing",
+		_log() == ["stop:BM2", "play:BM2"] and audio._players.get(&"BM2", []).size() == 1)
+	audio.reset_history()
 	bm.sound_event.emit(&"charge", 0)
 	_check("beam: charge plays BM4", _log() == ["play:BM4"])
 	audio.reset_history()
@@ -442,7 +446,8 @@ func _run() -> void:
 	audio.reset_history()
 	bm.sound_event.emit(&"tick", 0)
 	bm.sound_event.emit(&"tick", 1)
-	_check("beam: tick plays BM8 each time", _log() == ["play:BM8", "play:BM8"])
+	_check("beam: tick plays BM8 each time, cutting the previous tick",
+		_log() == ["play:BM8", "stop:BM8", "play:BM8"])
 	bm.queue_free()
 	await process_frame
 	_check("beam: leaving stops BM1", "stop:BM1" in _log())
