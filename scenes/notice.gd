@@ -1,13 +1,12 @@
 extends Control
 ## Launch notice, once per game launch, between the Stack splash and the title screen: the advice to
-## play both the State and the Citizen side. It closes when the player ticks the confirm checkbox
-## (mouse click, or Enter / Space on the focused box). Story.notice_shown keeps it to one time per launch,
+## play both the State and the Citizen side. One click anywhere (or Enter / Space) closes it; the
+## "Got it" button is a CheckBox without a box, pressed by that click. Story.notice_shown keeps it to one time per launch,
 ## so coming back to the title from the menu does not show it again.
 ## Public API (tests): confirm_box (the CheckBox), leaving.
 
 const FADE_OUT := 0.35
-const TICK_HOLD := 0.35  # the tick stays visible before the fade
-const BOX := 44
+const TICK_HOLD := 0.1
 const STATE_HEX := "ff5a3c"
 const CITIZEN_HEX := "9fd8ff"
 
@@ -32,13 +31,14 @@ func _notification(what: int) -> void:
 func _apply_texts() -> void:
 	%Title.text = TextFx.upper(tr("NOTICE_TITLE"))
 	%Body.text = tr("NOTICE_BODY") % [STATE_HEX, CITIZEN_HEX]
-	confirm_box.text = " " + tr("NOTICE_CONFIRM")
+	confirm_box.text = tr("NOTICE_CONFIRM")
 	%Hint.text = tr("NOTICE_HINT")
 
 
-## Enter / Space tick the box even when the focus was lost (a click on the background).
+## A click anywhere or Enter / Space presses the button, even when the focus was lost.
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed(&"ui_accept") and not leaving:
+	var click: bool = event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+	if (click or event.is_action_pressed(&"ui_accept")) and not leaving:
 		get_viewport().set_input_as_handled()
 		confirm_box.button_pressed = true
 
@@ -55,13 +55,14 @@ func _on_toggled(on: bool) -> void:
 	tw.tween_callback(func() -> void: get_tree().change_scene_to_file(Story.TITLE))
 
 
-## A big, clear box (the theme has no CheckBox art): outline, filled with a tick when checked.
+## A clear outlined button; the CheckBox icons are blanked so it reads as a plain button.
 func _style_box() -> void:
-	confirm_box.add_theme_icon_override("unchecked", _box_icon(false, false))
-	confirm_box.add_theme_icon_override("checked", _box_icon(true, false))
-	confirm_box.add_theme_icon_override("unchecked_disabled", _box_icon(false, false))
-	confirm_box.add_theme_icon_override("checked_disabled", _box_icon(true, false))
-	confirm_box.add_theme_constant_override("h_separation", 12)
+	var blank := ImageTexture.create_from_image(Image.create(1, 1, false, Image.FORMAT_RGBA8))
+	for icon in ["unchecked", "checked", "unchecked_disabled", "checked_disabled"]:
+		confirm_box.add_theme_icon_override(icon, blank)
+	confirm_box.add_theme_constant_override("h_separation", 0)
+	confirm_box.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	confirm_box.icon_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color",
 			"font_hover_pressed_color", "font_disabled_color"]:
 		confirm_box.add_theme_color_override(c, Color(1, 1, 1, 1))
@@ -71,7 +72,7 @@ func _style_box() -> void:
 	focus.border_color = Color(0.62, 0.85, 1.0, 0.9)
 	focus.set_corner_radius_all(4)
 	focus.set_content_margin_all(10)
-	focus.content_margin_left = 16
+	focus.content_margin_left = 24
 	focus.content_margin_right = 24
 	var plain := StyleBoxFlat.new()
 	plain.bg_color = Color(0.62, 0.85, 1.0, 0.04)
@@ -85,29 +86,3 @@ func _style_box() -> void:
 	for s in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
 		confirm_box.add_theme_stylebox_override(s, plain)
 	confirm_box.add_theme_stylebox_override("focus", focus)
-
-
-func _box_icon(checked: bool, _hot: bool) -> ImageTexture:
-	var img := Image.create(BOX, BOX, false, Image.FORMAT_RGBA8)
-	var edge := Color(0.62, 0.85, 1.0, 1.0)
-	var fill := Color(0.62, 0.85, 1.0, 1.0) if checked else Color(0.02, 0.03, 0.05, 0.9)
-	for y in BOX:
-		for x in BOX:
-			var border := x < 4 or y < 4 or x >= BOX - 4 or y >= BOX - 4
-			img.set_pixel(x, y, edge if border else fill)
-	if checked:
-		var ink := Color(0.02, 0.03, 0.05, 1.0)
-		# tick: short stroke down-right, long stroke up-right, 5 px thick
-		var pts: Array[Vector2] = []
-		for i in 9:
-			pts.append(Vector2(10 + i, 22 + i))
-		for i in 18:
-			pts.append(Vector2(18 + i, 30 - i))
-		for p in pts:
-			for dy in range(-2, 3):
-				for dx in range(-1, 2):
-					var px := int(p.x) + dx
-					var py := int(p.y) + dy
-					if px >= 5 and py >= 5 and px < BOX - 5 and py < BOX - 5:
-						img.set_pixel(px, py, ink)
-	return ImageTexture.create_from_image(img)
