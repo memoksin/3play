@@ -1,0 +1,243 @@
+extends SceneTree
+## Frame-cost audit of every scene state. Needs a window (not --headless), vsync is forced off:
+## godot --path . -s res://tools/perf.gd [-- --secs=5 --repeat=3 --only=fit --skip-warm]
+## Per state: avg / p95 wall frame time (ms), script process time, draw calls, primitives, static memory.
+## With --repeat=N the table shows the median over N runs and flags states whose runs differ > 15 %.
+## Exits 0 after printing the table; always quits (frame cap + wall-clock watchdog).
+
+const FRAME_CAP := 4000000
+const WARMUP_FRAMES := 45
+const WARMUP_SECS := 1.2
+const GLOBES := {
+	"globe idle": ["res://data/disasters/indian_ocean.tres", false, false],
+	"globe spin": ["res://data/disasters/indian_ocean.tres", true, false],
+	"globe glitch (SF)": ["res://data/disasters/solar_flare.tres", true, true],
+}
+
+var secs := 5.0
+var repeat := 1
+var only := ""
+var frames := 0
+var started := 0
+var results := {}  # state -> Array[Dictionary]
+var order: Array[String] = []
+var win := Vector2i(1920, 1080)
+
+
+func _initialize() -> void:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--secs="):
+			secs = float(a.substr(7))
+		elif a.begins_with("--repeat="):
+			repeat = maxi(int(a.substr(9)), 1)
+		elif a.begins_with("--only="):
+			only = a.substr(7)
+		elif a.begins_with("--size="):
+			var parts := a.substr(7).split("x")
+			win = Vector2i(int(parts[0]), int(parts[1]))
+	started = Time.get_ticks_msec()
+	if DisplayServer.get_name() == "headless":
+		push_error("perf: needs a renderer; run without --headless")
+		quit(1)
+		return
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	Engine.max_fps = 0
+	if win.x > 0:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		DisplayServer.window_set_size(win)
+	_run.call_deferred()
+
+
+func _process(_delta: float) -> bool:
+	frames += 1
+	var budget_ms := (secs + 3.0) * 1000.0 * 14.0 * repeat + 60000.0
+	if frames > FRAME_CAP or Time.get_ticks_msec() - started > budget_ms:
+		push_error("perf: frame cap / watchdog hit")
+		quit(1)
+	return false
+
+
+func _run() -> void:
+	await process_frame
+	var game := root.get_node("Game")
+	game.store_path = ""  # never touch the real play counts
+	TranslationServer.set_locale("en")
+	print("perf: window ", DisplayServer.window_get_size(), " viewport ", root.size, " renderer ",
+			RenderingServer.get_video_adapter_name(), " secs ", secs, " repeat ", repeat)
+	for r in repeat:
+		for name in GLOBES:
+			await _globe(game, name)
+		for name in ["diorama kahr", "diorama io", "diorama sf"]:
+			await _diorama(game, name)
+		await _fit(game, "fit kahr idle", "res://data/disasters/kahramanmaras.tres", false)
+		await _fit(game, "fit kahr drag", "res://data/disasters/kahramanmaras.tres", true)
+		await _fit(game, "fit sf idle", "res://data/disasters/solar_flare.tres", false)
+		await _fit(game, "fit sf drag", "res://data/disasters/solar_flare.tres", true)
+		await _connect(game, "connect idle", false)
+		await _connect(game, "connect hit/flood", true)
+	_print_table()
+	quit(0)
+
+
+func _wanted(name: String) -> bool:
+	return only == "" or name.contains(only)
+
+
+## Measures `secs` seconds of frames. `each` (optional) is called once per frame with the frame index.
+func _measure(name: String, each := Callable()) -> void:
+	var w0 := Time.get_ticks_usec()
+	for i in WARMUP_FRAMES:
+		await process_frame
+	while (Time.get_ticks_usec() - w0) / 1e6 < WARMUP_SECS:  # Performance monitors refresh once per second
+		await process_frame
+	var times: Array[float] = []
+	var proc := 0.0
+	var calls := 0.0
+	var prims := 0.0
+	var mem := 0.0
+	var t0 := Time.get_ticks_usec()
+	var last := t0
+	var n := 0
+	while (Time.get_ticks_usec() - t0) / 1e6 < secs:
+		await process_frame
+		var now := Time.get_ticks_usec()
+		times.append((now - last) / 1000.0)
+		last = now
+		calls += Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
+		prims += Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)
+		mem = Performance.get_monitor(Performance.MEMORY_STATIC)
+		n += 1
+		if each.is_valid():
+			each.call(n)
+	proc = Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0  # 1 s average, taken at the end of the window
+	var wall := (Time.get_ticks_usec() - t0) / 1000.0
+	var sorted := times.duplicate()
+	sorted.sort()
+	var sum := 0.0
+	for x in times:
+		sum += x
+	var res := {
+		"avg": sum / maxf(n, 1), "p95": sorted[int(sorted.size() * 0.95)] if sorted.size() else 0.0,
+		"max": sorted.back() if sorted.size() else 0.0,
+		"proc": proc, "calls": calls / maxf(n, 1), "prims": prims / maxf(n, 1),
+		"mem": mem / 1048576.0, "frames": n, "wall": wall,
+	}
+	if not results.has(name):
+		results[name] = []
+		order.append(name)
+	results[name].append(res)
+	print("  %-18s avg %.2f ms p95 %.2f calls %d" % [name, res.avg, res.p95, res.calls])
+
+
+func _globe(game: Node, name: String) -> void:
+	if not _wanted(name):
+		return
+	var cfg: Array = GLOBES[name]
+	game.disaster = load(cfg[0])
+	var g: Node = load("res://scenes/globe.tscn").instantiate()
+	root.add_child(g)
+	g._done = true  # never advance the flow
+	if cfg[1]:
+		g.flick(12.0)
+	await _measure(name)
+	g.queue_free()
+	await process_frame
+
+
+func _diorama(game: Node, name: String) -> void:
+	if not _wanted(name):
+		return
+	var path: String = {"diorama kahr": "kahramanmaras", "diorama io": "indian_ocean", "diorama sf": "solar_flare"}[name]
+	game.disaster = load("res://data/disasters/%s.tres" % path)
+	var d: Node3D = load("res://scenes/diorama.tscn").instantiate()
+	root.add_child(d)
+	d.set(&"_done", true)
+	await _measure(name)
+	d.queue_free()
+	await process_frame
+
+
+func _fit(game: Node, name: String, disaster: String, drag: bool) -> void:
+	if not _wanted(name):
+		return
+	game.disaster = load(disaster)
+	var fit: Control = load("res://scenes/minigames/fit.tscn").instantiate()
+	root.add_child(fit)
+	await process_frame
+	if not drag:
+		await _measure(name)
+	else:
+		# Press on the first chip, then move the cursor in a circle > drag threshold: the real gui drag with preview.
+		var start: Vector2 = fit._chips[0].get_global_rect().get_center()
+		var last := start
+		_mouse(start, true, true, last)
+		await process_frame
+		var each := func(n: int) -> void:
+			var p := start + Vector2(120.0 + 60.0 * cos(n * 0.05), 40.0 * sin(n * 0.05))
+			_mouse(p, true, false, last)
+			last = p
+		await _measure(name, each)
+		print("    drag active: ", root.gui_is_dragging())
+		_mouse(last, false, true, last)
+	fit.queue_free()
+	await process_frame
+
+
+func _connect(game: Node, name: String, hit: bool) -> void:
+	if not _wanted(name):
+		return
+	game.disaster = load("res://data/disasters/indian_ocean.tres")
+	var s: Control = load("res://scenes/minigames/connect.tscn").instantiate()
+	s.submit = false
+	root.add_child(s)
+	await process_frame
+	if hit:
+		s.solve()
+		s.rotate_cell(5, 5)  # one line left broken: flood + flow both run
+		s.seek(s.skin.timer_seconds)
+	await _measure(name)
+	s.queue_free()
+	await process_frame
+
+
+func _mouse(pos: Vector2, pressed: bool, is_button: bool, last: Vector2) -> void:
+	var e: InputEvent
+	if is_button:
+		var b := InputEventMouseButton.new()
+		b.button_index = MOUSE_BUTTON_LEFT
+		b.pressed = pressed
+		b.button_mask = MOUSE_BUTTON_MASK_LEFT if pressed else 0
+		e = b
+	else:
+		var m := InputEventMouseMotion.new()
+		m.button_mask = MOUSE_BUTTON_MASK_LEFT if pressed else 0
+		m.relative = pos - last
+		e = m
+	e.position = pos
+	e.global_position = pos
+	root.push_input(e, true)
+
+
+static func _median(a: Array) -> float:
+	var s := a.duplicate()
+	s.sort()
+	return s[s.size() / 2]
+
+
+func _print_table() -> void:
+	print("")
+	print("%-18s %8s %8s %8s %8s %8s %7s %8s %7s %s" % ["state", "avg ms", "best ms", "p95 ms", "max ms", "proc ms", "calls", "prims", "mem MB", "noise"])
+	for name in order:
+		var rs: Array = results[name]
+		var col := func(key: String) -> Array:
+			return rs.map(func(r: Dictionary) -> float: return r[key])
+		var avgs: Array = col.call("avg")
+		var lo: float = avgs.min()
+		var hi: float = avgs.max()
+		var noisy := rs.size() > 1 and (hi - lo) / maxf(_median(avgs), 0.001) > 0.15
+		print("%-18s %8.2f %8.2f %8.2f %8.2f %8.2f %7d %8d %7.0f  %s" % [name, _median(avgs), lo, _median(col.call("p95")),
+				_median(col.call("max")), _median(col.call("proc")), _median(col.call("calls")), _median(col.call("prims")),
+				_median(col.call("mem")),
+				"NOISY %.2f-%.2f" % [lo, hi] if noisy else ("%.2f-%.2f" % [lo, hi] if rs.size() > 1 else "")])
+	print("(avg/p95/max: wall time between frames, vsync off; best: lowest run avg (least GPU contention); proc: Performance TIME_PROCESS, 1 s average;")
+	print(" values are medians over %d run(s); window %s)" % [repeat, DisplayServer.window_get_size()])
