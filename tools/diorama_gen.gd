@@ -1000,752 +1000,297 @@ func _kahr_commit(b: Dictionary) -> void:
 		i += 1
 
 
-# ---------- Indian Ocean ----------
+# ---------- Indian Ocean (Aceh coast, 26 Dec 2004, morning) ----------
+# Built from the Connect minigame's 2.5D models (assets/3d/indian_ocean) laid out like
+# scenes/minigames/connect/connect_world.gd: the slab (top only, no pipe board), the village,
+# mosque, palms and boats on top, the sea in section (water.gdshader) beside it. The coast frame is not
+# turned (the minigame turns it -22 deg to face its camera): the orbit camera does that instead.
 
-const SEA := """shader_type spatial;
-// Calm sea: small waves, turquoise over the shallow bed, deep blue further out.
-// level: sea level offset (drawback < 0). swell: 0..1, long low line rising on the horizon.
-uniform float level = 0.0;
-uniform float swell = 0.0;
-uniform float swell_z = -85.0;
-uniform float bed_slope = 0.08;
-uniform vec3 shallow : source_color = vec3(0.2, 0.62, 0.64);
-uniform vec3 deep : source_color = vec3(0.04, 0.2, 0.42);
-uniform vec3 foam : source_color = vec3(0.95, 0.97, 0.97);
-varying vec3 wpos;
-varying float crest;
+const IO := "res://assets/3d/indian_ocean/"
+const IO_K := 0.40402622  ## tan 22 deg: depth skew of the side cuts (connect_world.gd K)
+const IO_LAND := 0.35
+const IO_BEACH_W := 5.0
+const IO_U0 := -11.0
+const IO_D := 13.0
+const IO_SEABED := -13.8
+const IO_REST := -0.6  ## sea surface at the start
+## [model, coast u, depth d, yaw (deg)]: the minigame's own dressing (connect_world.gd PROPS).
+const IO_PROPS := [
+	["aceh_house_a", 15.6, 1.8, 0.0], ["aceh_house_b", 18.6, 1.9, 6.0],
+	["aceh_house_c", 21.6, 1.8, -4.0], ["mosque", 24.8, 2.2, 0.0],
+	["aceh_house_d", 11.0, 5.4, 8.0], ["aceh_house_b", 14.6, 10.4, -6.0],
+	["aceh_house_d", 17.4, 6.6, 0.0], ["aceh_house_a", 21.4, 7.2, 4.0], ["aceh_house_b", 25.6, 7.6, -8.0],
+	["palm_a", 4.2, 1.3, 185.0], ["palm_b", 6.3, 3.9, 160.0], ["palm_a", 5.2, 7.0, 200.0],
+	["palm_c", 7.6, 1.1, 20.0], ["palm_b", 4.6, 10.6, 170.0], ["palm_a", 7.2, 12.2, 190.0],
+	["palm_c", 12.9, 1.5, 40.0], ["palm_b", 17.5, 5.0, 120.0], ["palm_a", 23.5, 5.6, 200.0],
+	["palm_c", 28.0, 1.3, 0.0], ["palm_b", 28.6, 6.0, 150.0], ["palm_a", 11.8, 12.4, 180.0],
+	["palm_c", 9.8, 7.8, 60.0],
+	["boat_b", 2.5, 4.4, 8.0], ["boat_b", 3.1, 9.2, -16.0],
+]
 
-float waves(vec2 p) {
-	return 0.06 * sin(p.x * 0.35 + TIME * 0.8) + 0.05 * sin(p.y * 0.55 - TIME * 1.1 + p.x * 0.12);
-}
+func _io_beach_y(u: float) -> float:
+	if u <= 0.0:
+		return -0.9
+	if u >= IO_BEACH_W:
+		return IO_LAND
+	var t := u / IO_BEACH_W
+	return -0.9 + (IO_LAND + 0.9) * (1.0 - (1.0 - t) * (1.0 - t))
 
-void vertex() {
-	vec3 w = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-	float d = (w.z - swell_z) / 9.0;
-	crest = swell * exp(-d * d);
-	float h = waves(w.xz) + level + crest * 2.2;
-	VERTEX.y += h;
-	float e = 0.5;
-	float dx = waves(w.xz + vec2(e, 0.0)) - waves(w.xz - vec2(e, 0.0));
-	float dz = waves(w.xz + vec2(0.0, e)) - waves(w.xz - vec2(0.0, e));
-	dz += swell * 2.2 * (exp(-pow((w.z + e - swell_z) / 9.0, 2.0)) - exp(-pow((w.z - e - swell_z) / 9.0, 2.0)));
-	NORMAL = normalize(vec3(-dx, 2.0 * e, -dz));
-	wpos = w + vec3(0.0, h, 0.0);
-}
 
-void fragment() {
-	float bed = max(wpos.z * bed_slope, -12.0);
-	float depth = wpos.y - bed;
-	vec3 c = mix(shallow, deep, smoothstep(0.2, 3.5, depth));
-	float shore = 1.0 - smoothstep(0.0, 0.18, depth);
-	c = mix(c, deep * 0.55, smoothstep(0.05, 0.6, crest));
-	c = mix(c, foam, clamp(shore * 0.8 + smoothstep(0.75, 0.95, crest) * 0.8, 0.0, 1.0));
-	ALBEDO = c;
-	ROUGHNESS = 0.45;
-	SPECULAR = 0.12;
-}
-"""
+## Coast coordinates (u, depth d, height) -> slab frame.
+func _io_ud(u: float, d: float, y := 0.0) -> Vector3:
+	return Vector3(u - IO_K * d, y, -d)
+
+
+func _io_glb(parent: Node, file: String, pos: Vector3, rot_y := 0.0, s := 1.0, nm := "") -> Node3D:
+	var n: Node3D = load(IO + file + ".glb").instantiate()
+	n.name = nm if nm != "" else file.to_pascal_case()
+	n.position = pos
+	n.rotation_degrees.y = rot_y
+	if s != 1.0:
+		n.scale = Vector3.ONE * s
+	return _own(n, parent) as Node3D
+
+
+## Quad-strip mesh from rows of points; UV.y 0 on the first row, 1 on the last; UV2.x = water mode.
+func _io_grid(rows: Array, mode: int) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var nr := rows.size()
+	var nc: int = rows[0].size()
+	for j in nr:
+		for i in nc:
+			st.set_uv(Vector2(float(i) / (nc - 1), float(j) / (nr - 1)))
+			st.set_uv2(Vector2(mode, 0))
+			st.add_vertex(rows[j][i])
+	for j in nr - 1:
+		for i in nc - 1:
+			var a := j * nc + i
+			for k in [0, nc, 1, 1, nc, nc + 1]:
+				st.add_index(a + k)
+	st.generate_normals()
+	return st.commit()
+
+
+## connect's water.gdshader with the mode taken from UV2.x (one material for sea surface and sections),
+## `level` as an offset from the resting sea (the diorama draws the sea back through it) and `swell`
+## (the diorama's horizon line) as a low crest rising out of the sea.
+func _io_water_shader() -> Shader:
+	var code: String = (load("res://scenes/minigames/connect/water.gdshader") as Shader).code
+	code = code.replace("uniform int mode = 0;", "")
+	code = code.replace("uniform float level = -0.6;", "@@LEVEL@@")
+	var re := RegEx.new()
+	re.compile("\\blevel\\b")
+	code = re.sub(code, "(rest + level)", true)
+	code = code.replace("@@LEVEL@@", "uniform float level = 0.0;\nuniform float rest = -0.6;\nuniform float swell = 0.0;")
+	code = code.replace("swell(", "chop(")
+	for fn in ["void vertex() {", "void fragment() {"]:
+		assert(code.contains(fn))
+		code = code.replace(fn, fn + "\n\tint mode = int(UV2.x + 0.5);")
+	var alpha := "ALPHA = mix(0.82, 0.96, foam) * alpha_mul;"
+	assert(code.contains(alpha))
+	code = code.replace(alpha, "ALPHA = alpha_mul;")  # opaque: nothing under the sea shows
+	var surf := "VERTEX.y = (rest + level) + chop(VERTEX.xz, TIME);"
+	assert(code.contains(surf))
+	code = code.replace(surf, surf + "\n\t\tVERTEX.y += swell * 2.2 * exp(-pow((VERTEX.x - k_skew * VERTEX.z + 7.5) / 3.2, 2.0));")
+	var sh := Shader.new()
+	sh.code = code
+	return sh
+
+
+## True on the slab's top (plus a margin) in the slab frame: scatter keeps off the village there.
+func _io_on_slab(u: float, d: float, margin: float) -> bool:
+	var x := u - IO_K * d
+	return x > -16.0 - margin and x < 31.0 + margin and -d > -13.6 - margin and -d < 1.6 + margin
+
+
+## Jungle and ground cover that tie the slab's top to the plane around it: palms (dense behind the
+## village, thinning out into the fog), bushes, grass tufts and a few rocks.
+func _io_scatter() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 20041226
+	var scatter := _group("Scatter")
+	var palms := _group("Jungle", scatter)
+	var n := 0
+	var tries := 0
+	while n < 70 and tries < 4000:
+		tries += 1
+		var d := rng.randf_range(-9.0, 90.0)
+		var u := rng.randf_range(5.5, 80.0)
+		var far := maxf(maxf(d - 13.0, -d), maxf(u - 32.0, 0.0))  # distance from the slab, roughly
+		var keep := clampf(1.0 - far / 75.0, 0.0, 1.0)
+		if d < 0.0:
+			keep *= 0.0 if u < 42.0 else 0.25  # the front of the village stays open: card area
+		if rng.randf() > keep * keep + 0.04 or _io_on_slab(u, d, 2.0):
+			continue
+		var f: String = "palm_" + ["a", "b", "c"][rng.randi() % 3]
+		_io_glb(palms, f, _io_ud(u, d, IO_LAND - 0.08), rng.randf() * 360.0, rng.randf_range(0.9, 1.5), "Palm%d" % n)
+		n += 1
+	# a few rocks (the board's rock tiles lying bulge up) on the beach and the edge of the plane
+	var rocks := _group("Rocks", scatter)
+	var rp := [Vector2(1.5, -2.5), Vector2(4.0, 15.0), Vector2(3.0, 24.0), Vector2(14.0, -3.0), Vector2(33.0, 3.0), Vector2(36.0, 11.0), Vector2(20.0, 17.0), Vector2(9.0, 19.0)]
+	for i in rp.size():
+		var y := _io_beach_y(rp[i].x) if rp[i].x < IO_BEACH_W else IO_LAND
+		var r := _io_glb(rocks, "tile_rock_" + ["a", "b", "c"][i % 3], _io_ud(rp[i].x, rp[i].y, y - 0.12), rng.randf() * 360.0, rng.randf_range(0.45, 0.8), "Rock%d" % i)
+		r.rotation_degrees.x = -90.0
+	# bushes and grass tufts: dense along the slab's edge (seam), then out into the plane
+	var bush_mesh := SphereMesh.new()
+	bush_mesh.radius = 0.5
+	bush_mesh.height = 0.8
+	bush_mesh.radial_segments = 8
+	bush_mesh.rings = 4
+	bush_mesh.material = _mat(Color(0.2, 0.34, 0.16), 1.0)
+	var tuft_mesh := CylinderMesh.new()
+	tuft_mesh.top_radius = 0.0
+	tuft_mesh.bottom_radius = 0.2
+	tuft_mesh.height = 0.65
+	tuft_mesh.radial_segments = 5
+	tuft_mesh.rings = 1
+	tuft_mesh.material = _mat(Color(0.36, 0.5, 0.2), 1.0)
+	for kind in [[bush_mesh, 170, 1.0], [tuft_mesh, 320, 0.7]]:
+		var xfs: Array[Transform3D] = []
+		while xfs.size() < kind[1]:
+			var d := rng.randf_range(-6.0, 60.0)
+			var u := rng.randf_range(5.8, 58.0)
+			var edge := minf(minf(absf(d - 1.6), absf(d - 13.6)), absf(u - 32.0))  # near a slab edge
+			if rng.randf() > clampf(1.4 - edge / 14.0, 0.15, 1.0) or _io_on_slab(u, d, 0.4):
+				continue
+			var sc: float = kind[2] * rng.randf_range(0.7, 1.5)
+			var b := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(sc, sc * rng.randf_range(0.7, 1.1), sc))
+			xfs.append(Transform3D(b, _io_ud(u, d, IO_LAND - 0.06 + (0.2 * sc if kind[0] == bush_mesh else 0.3 * sc))))
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = kind[0]
+		mm.instance_count = xfs.size()
+		for i in xfs.size():
+			mm.set_instance_transform(i, xfs[i])
+		var mmi := MultiMeshInstance3D.new()
+		mmi.name = "Bushes" if kind[0] == bush_mesh else "Tufts"
+		mmi.multimesh = mm
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_own(mmi, scatter)
 
 
 func _io() -> void:
 	root_node = Node3D.new()
 	root_node.name = "SetIndianOcean"
-	var haze := Color(0.7, 0.79, 0.87)
+	var void_c := Color(0.07, 0.16, 0.24)
 
 	var env := WorldEnvironment.new()
 	env.name = "Env"
 	var e := Environment.new()
 	var sky := Sky.new()
 	var psm := ProceduralSkyMaterial.new()
-	psm.sky_top_color = Color(0.33, 0.56, 0.84)
-	psm.sky_horizon_color = Color(0.74, 0.82, 0.9)
-	psm.ground_horizon_color = haze
-	psm.ground_bottom_color = haze
-	psm.sun_angle_max = 20.0
+	psm.sky_top_color = Color(0.03, 0.07, 0.12)
+	psm.sky_horizon_color = void_c
+	psm.ground_horizon_color = void_c
+	psm.ground_bottom_color = void_c
+	psm.sun_angle_max = 0.0
 	sky.sky_material = psm
 	e.background_mode = Environment.BG_SKY
 	e.sky = sky
 	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	e.ambient_light_color = Color(0.75, 0.8, 0.88)
-	e.ambient_light_energy = 0.7
+	e.ambient_light_color = Color(0.62, 0.74, 0.9)
+	e.ambient_light_energy = 0.45
 	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	e.fog_enabled = true
 	e.fog_mode = Environment.FOG_MODE_DEPTH
-	e.fog_light_color = haze
+	e.fog_light_color = void_c
 	e.fog_depth_begin = 90.0
-	e.fog_depth_end = 320.0
+	e.fog_depth_end = 260.0
 	e.fog_depth_curve = 1.6
 	e.fog_density = 1.0
 	e.fog_sky_affect = 0.0
 	env.environment = e
 	_own(env, root_node)
 
+	# morning key: the minigame's sun (-36, -62) turned back by the coast's -22 deg
 	var sun := DirectionalLight3D.new()
 	sun.name = "MorningSun"
-	sun.light_color = Color(1.0, 0.92, 0.8)
-	sun.light_energy = 1.15
+	sun.light_color = Color(1.0, 0.87, 0.7)
+	sun.light_energy = 1.9
 	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 90.0
-	sun.rotation_degrees = Vector3(-32, -150, 0)
+	sun.shadow_blur = 1.2
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
+	sun.directional_shadow_max_distance = 140.0
+	sun.rotation_degrees = Vector3(-36, -40, 0)
 	_own(sun, root_node)
 
-	# land: beach sloping into a shallow bed
-	var land := MeshInstance3D.new()
-	land.name = "Beach"
-	var pm := PlaneMesh.new()
-	pm.size = Vector2(96, 76)
-	pm.subdivide_width = 96
-	pm.subdivide_depth = 150
-	land.mesh = pm
-	land.position = Vector3(0, 0, 4)
-	land.material_override = _shader(GROUND, {
-		"base_color": Color(0.93, 0.84, 0.64), "alt_color": Color(0.85, 0.78, 0.58),
-		"wet_color": Color(0.42, 0.37, 0.3), "void_color": haze, "radius": 44.0, "fade": 10.0,
-		"bump": 0.12, "slope": 0.08, "top": 0.7, "wet_level": 0.25})
-	_own(land, root_node)
-	# grass behind the village
-	var grass := MeshInstance3D.new()
-	grass.name = "Grass"
-	var gm := PlaneMesh.new()
-	gm.size = Vector2(96, 26)
-	gm.subdivide_width = 70
-	gm.subdivide_depth = 20
-	grass.mesh = gm
-	grass.position = Vector3(0, 0.74, 28)
-	grass.material_override = _shader(GROUND, {
-		"base_color": Color(0.4, 0.54, 0.28), "alt_color": Color(0.47, 0.58, 0.3),
-		"void_color": haze, "radius": 44.0, "fade": 10.0, "bump": 0.1})
-	_own(grass, root_node)
+	_io_glb(root_node, "coast_slab", Vector3.ZERO, 0.0, 1.0, "Slab")
 
+	# sea: one opaque surface (node "Sea": the diorama script drives its level / swell) running out to the
+	# horizon; where it lies under the land the shader discards it. Fine grid near the coast, coarse far out.
+	var sea_mat := ShaderMaterial.new()
+	sea_mat.shader = _io_water_shader()
+	var us := [-900.0, -400.0, -200.0, -100.0, -55.0, -32.0, -20.0]
+	for i in 27:
+		us.append(-14.0 + i)
+	us.append_array([18.0, 40.0])
+	var ds := [-900.0, -400.0, -200.0, -100.0, -55.0, -32.0, -20.0]
+	for i in 46:
+		ds.append(-14.0 + i)
+	ds.append_array([40.0, 70.0, 120.0, 200.0, 400.0, 900.0])
+	var top := []
+	for d in ds:
+		var row := []
+		for u in us:
+			row.append(_io_ud(u, d, 0.0))
+		top.append(row)
 	var sea := MeshInstance3D.new()
 	sea.name = "Sea"
-	var sm := PlaneMesh.new()
-	sm.size = Vector2(520, 300)
-	sm.subdivide_width = 130
-	sm.subdivide_depth = 300
-	sea.mesh = sm
-	sea.position = Vector3(0, 0, -146)
-	sea.material_override = _shader(SEA)
+	sea.mesh = _io_grid(top, 1)
+	sea.material_override = sea_mat
 	sea.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_own(sea, root_node)
 
-	# stilt houses + village
+	# land beyond the slab: beach and grass at the slab's heights (a hair below, so the slab's own top wins),
+	# out to the horizon; it also covers every side of the slab
+	var ground := MeshInstance3D.new()
+	ground.name = "Ground"
+	var gst := SurfaceTool.new()
+	gst.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var sand := Color(0.78, 0.68, 0.48)
+	var grass := Color(0.34, 0.47, 0.21)
+	var gu := [-4.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.5, 25.0, 120.0, 900.0]
+	var gd := [-900.0, 900.0]
+	for i in gu.size() - 1:
+		var q := []
+		for c in [[i, 0], [i + 1, 0], [i + 1, 1], [i, 1]]:
+			var uu: float = gu[c[0]]
+			var col := sand.lerp(grass, clampf((uu - 5.0) / 1.5, 0.0, 1.0))
+			q.append([_io_ud(uu, gd[c[1]], _io_beach_y(uu) - 0.06 if uu < 5.0 else IO_LAND - 0.06), col])
+		for k in [0, 2, 1, 0, 3, 2]:
+			gst.set_color(q[k][1])
+			gst.add_vertex(q[k][0])
+	gst.generate_normals()
+	ground.mesh = gst.commit()
+	var gm := _mat(Color.WHITE, 1.0)
+	gm.vertex_color_use_as_albedo = true
+	gm.cull_mode = BaseMaterial3D.CULL_DISABLED
+	ground.material_override = gm
+	ground.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_own(ground, root_node)
+
+	# village, mosque, palms and the boats pulled up on the beach
 	var village := _group("Village")
-	var huts := [Vector3(-9, 0.7, 9), Vector3(-3.5, 0.7, 11), Vector3(3, 0.7, 9.5), Vector3(-14.5, 0.7, 12)]
-	var wall := _mat(Color(0.72, 0.58, 0.4))
-	var wall2 := _mat(Color(0.62, 0.48, 0.34))
-	for i in huts.size():
-		var h := _group("StiltHouse%d" % i, village)
-		h.position = huts[i]
-		h.rotation_degrees.y = [6.0, -4.0, 10.0, -12.0][i]
-		_model(h, "pirate-kit/structure", Vector3.ZERO, 0, 1.6)
-		_model(h, "pirate-kit/structure-roof", Vector3(0, 2.2 * 1.6 - 0.15, 0), 0, 1.6)
-		var ww := wall if i % 2 == 0 else wall2
-		_box(h, "WallBack", Vector3(3.6, 2.3, 0.15), Vector3(0, 4.7, -1.75), Vector3.ZERO, ww)
-		_box(h, "WallL", Vector3(0.15, 2.3, 3.5), Vector3(-1.8, 4.7, 0), Vector3.ZERO, ww)
-		_box(h, "WallR", Vector3(0.15, 2.3, 3.5), Vector3(1.8, 4.7, 0), Vector3.ZERO, ww)
-		_box(h, "WallFrontL", Vector3(1.2, 2.3, 0.15), Vector3(-1.2, 4.7, 1.75), Vector3.ZERO, ww)
-		_box(h, "WallFrontR", Vector3(1.2, 2.3, 0.15), Vector3(1.2, 4.7, 1.75), Vector3.ZERO, ww)
-	_model(village, "city-kit-suburban/building-type-h", Vector3(10, 0.7, 13), 190, 5.0)
-	_model(village, "city-kit-suburban/building-type-a", Vector3(-20, 0.7, 18), 170, 5.0)
-	_model(village, "city-kit-suburban/building-type-c", Vector3(14.5, 0.7, 20), 175, 5.0)
-	_model(village, "survival-kit/barrel", Vector3(5.5, 0.7, 7.5), 0, 3.5)
-	_model(village, "survival-kit/box", Vector3(-6.2, 0.7, 7.2), 15, 3.0)
+	var n := 0
+	for p in IO_PROPS:
+		var u: float = p[1]
+		var d: float = p[2]
+		_io_glb(village, p[0], _io_ud(u, d, IO_LAND if u > IO_BEACH_W else _io_beach_y(u)), p[3], 1.0, "%s%d" % [String(p[0]).to_pascal_case(), n])
+		n += 1
+	# boats afloat in the shallows: the diorama bobs and draws the Float group's children back with the sea
+	var floats := _group("Float")
+	_io_glb(floats, "boat_a", _io_ud(-4.8, 8.4, IO_REST), 70.0, 1.0, "FishingBoat")
+	_io_glb(floats, "boat_b", _io_ud(-2.4, 3.2, IO_REST), -20.0, 1.0, "MooredBoat")
 
-	# palms
-	var palms := _group("Palms")
-	var pp := [Vector3(-17, 0.7, 6), Vector3(-12, 0.6, 4.5), Vector3(-6, 0.7, 14.5), Vector3(0.5, 0.65, 6), Vector3(7.5, 0.7, 9),
-			Vector3(13, 0.65, 6.5), Vector3(18, 0.7, 10), Vector3(-1, 0.7, 17), Vector3(22, 0.7, 3), Vector3(-22, 0.7, 11)]
-	var pm_names := ["pirate-kit/palm-detailed-bend", "pirate-kit/palm-detailed-straight", "pirate-kit/palm-straight",
-			"nature-kit/tree_palmTall", "nature-kit/tree_palmBend"]
-	for i in pp.size():
-		var mname: String = pm_names[i % pm_names.size()]
-		var s := 1.6 if mname.begins_with("pirate") else 5.0
-		_model(palms, mname, pp[i], i * 47.0, s * randf_range(0.9, 1.15), "Palm%d" % i)
-
-	# dock + boats
-	var dock := _group("Dock")
-	for i in 4:
-		_model(dock, "pirate-kit/structure-platform-dock", Vector3(8, -1.0 - i * 0.05, 1.5 - i * 4.0), 0, 1.6, "DockPart%d" % i)
-	_model(dock, "pirate-kit/boat-row-small", Vector3(-4.5, 0.05, 1.6), 75, 1.5, "BeachedBoatA")
-	_model(dock, "pirate-kit/boat-row-large", Vector3(-8.5, 0.15, 2.4), 100, 1.5, "BeachedBoatB")
-	var floats := _group("Float", dock)
-	_model(floats, "pirate-kit/boat-row-small", Vector3(11.5, -0.25, -11), 10, 1.5, "MooredBoat")
-	_model(floats, "pirate-kit/boat-row-large", Vector3(-2, -0.25, -15), -30, 1.5, "FishingBoat")
-
-	# rocks
-	var rocks := _group("Rocks")
-	_model(rocks, "pirate-kit/rocks-sand-a", Vector3(-19, -0.6, -2), 20, 0.7)
-	_model(rocks, "pirate-kit/rocks-sand-b", Vector3(19.5, -0.5, -3), -40, 0.6)
-	_model(rocks, "nature-kit/rock_largeA", Vector3(-12, -0.9, -6), 30, 5.0)
-	_model(rocks, "nature-kit/rock_smallA", Vector3(3, -0.75, -8), 0, 5.0)
-	_model(rocks, "nature-kit/stone_smallA", Vector3(-6, -0.7, -9.5), 60, 4.0)
-	_model(rocks, "nature-kit/rock_smallA", Vector3(15, -1.0, -11), 120, 6.0, "RockSmallB")
-
-	_io_details(village, huts, [6.0, -4.0, 10.0, -12.0], floats)
+	_io_scatter()
 
 	var focus := Marker3D.new()
 	focus.name = "Focus"
-	focus.position = Vector3(3.0, 1.0, 0.0)
+	focus.position = Vector3(10.0, -2.0, -4.0)
 	_own(focus, root_node)
 	_save("res://scenes/diorama/set_indian_ocean.tscn")
-
-
-# ---------- Indian Ocean: detail pass ----------
-# Small props are merged per material (SurfaceTool) so the extra detail costs few draw calls.
-
-var io_parts := {}
-var io_mats := {}
-var io_rng := RandomNumberGenerator.new()
-
-
-func _io_details(village: Node3D, huts: Array, hut_rot: Array, floats: Node3D) -> void:
-	io_rng.seed = 2004
-	var wood := _io_mat(Color(0.55, 0.38, 0.24))
-	var wood_l := _io_mat(Color(0.74, 0.58, 0.4))
-	var dark := _io_mat(Color(0.16, 0.14, 0.13))
-	var white := _io_mat(Color(0.93, 0.92, 0.88))
-	var skin := [_io_mat(Color(0.58, 0.4, 0.27)), _io_mat(Color(0.47, 0.32, 0.21))]
-	var cloth := [_io_mat(Color(0.86, 0.3, 0.24)), _io_mat(Color(0.24, 0.45, 0.72)), _io_mat(Color(0.95, 0.78, 0.3)),
-			_io_mat(Color(0.3, 0.6, 0.42)), _io_mat(Color(0.92, 0.9, 0.84)), _io_mat(Color(0.6, 0.35, 0.6))]
-	var pants := [_io_mat(Color(0.22, 0.24, 0.3)), _io_mat(Color(0.45, 0.38, 0.3)), _io_mat(Color(0.3, 0.3, 0.32))]
-
-	# stilt houses: corner posts, plank battens, framed windows with shutters, door, ladder, jars
-	for i in huts.size():
-		var b := _io_xf(huts[i], Vector3(0, hut_rot[i], 0))
-		for c in [Vector2(-1.8, -1.75), Vector2(1.8, -1.75), Vector2(-1.8, 1.75), Vector2(1.8, 1.75)]:
-			_io_box(b, Vector3(0.2, 2.4, 0.2), Vector3(c.x, 4.7, c.y), Vector3.ZERO, wood)
-		for k in 4:
-			var y := 3.75 + k * 0.55
-			_io_box(b, Vector3(3.62, 0.06, 0.05), Vector3(0, y, -1.84), Vector3.ZERO, wood)
-			_io_box(b, Vector3(0.05, 0.06, 3.52), Vector3(-1.89, y, 0), Vector3.ZERO, wood)
-			_io_box(b, Vector3(0.05, 0.06, 3.52), Vector3(1.89, y, 0), Vector3.ZERO, wood)
-		var shut: Material = cloth[[1, 3, 0, 1][i]]
-		for w in [[Vector3(-0.85, 4.85, -1.83), 0.0], [Vector3(0.85, 4.85, -1.83), 0.0], [Vector3(-1.88, 4.85, 0.3), 90.0], [Vector3(1.88, 4.85, -0.3), -90.0]]:
-			var wb: Transform3D = b * _io_xf(w[0], Vector3(0, w[1], 0))
-			_io_box(wb, Vector3(0.86, 0.8, 0.06), Vector3.ZERO, Vector3.ZERO, wood_l)
-			_io_box(wb, Vector3(0.64, 0.58, 0.06), Vector3(0, 0, -0.02), Vector3.ZERO, dark)
-			_io_box(wb, Vector3(1.0, 0.07, 0.2), Vector3(0, -0.43, -0.06), Vector3.ZERO, wood_l)
-			_io_box(wb, Vector3(0.34, 0.62, 0.04), Vector3(-0.62, 0, -0.14), Vector3(0, 35, 0), shut)
-			_io_box(wb, Vector3(0.34, 0.62, 0.04), Vector3(0.62, 0, -0.14), Vector3(0, -35, 0), shut)
-		_io_box(b, Vector3(1.2, 2.0, 0.06), Vector3(0, 4.55, 1.74), Vector3.ZERO, dark)
-		_io_box(b, Vector3(1.4, 0.1, 0.12), Vector3(0, 5.6, 1.8), Vector3.ZERO, wood_l)
-		for sx in [-0.42, 0.42]:
-			_io_beam(b, Vector3(sx, 3.55, 1.9), Vector3(sx, 0.0, 3.5), 0.09, wood)
-		for k in 7:
-			var t := (k + 0.6) / 7.6
-			_io_box(b, Vector3(0.84, 0.05, 0.14), Vector3(0, lerpf(3.55, 0.0, t), lerpf(1.9, 3.5, t)), Vector3.ZERO, wood_l)
-		_io_cyl(b, 0.26, 0.2, 0.55, Vector3(1.2, 0.27, 2.6), Vector3.ZERO, _io_mat(Color(0.6, 0.32, 0.2)), 10)
-		_io_cyl(b, 0.27, 0.27, 0.05, Vector3(1.2, 0.56, 2.6), Vector3.ZERO, wood, 10)
-	# laundry line between two posts behind the huts
-	var lp := [Vector3(-11.2, 0, 15.2), Vector3(-7.6, 0, 16.4)]
-	for p in lp:
-		_io_cyl(Transform3D.IDENTITY, 0.06, 0.06, 2.2, Vector3(p.x, _io_y(p.x, p.z) + 1.0, p.z), Vector3.ZERO, wood, 6)
-	var la := Vector3(lp[0].x, _io_y(lp[0].x, lp[0].z) + 2.0, lp[0].z)
-	var lb := Vector3(lp[1].x, _io_y(lp[1].x, lp[1].z) + 2.0, lp[1].z)
-	_io_wire(la, lb, 0.15, dark)
-	for k in 5:
-		var t := (k + 0.7) / 5.4
-		var p: Vector3 = la.lerp(lb, t) + Vector3(0, -0.15 * 4.0 * t * (1.0 - t) - 0.3, 0)
-		_io_box(Transform3D.IDENTITY, Vector3(0.5, 0.55, 0.03), p, Vector3(0, -18, 0), cloth[(k * 2 + 1) % cloth.size()])
-	_io_flush(village, "HutDetail")
-
-	_io_beach(wood, wood_l, dark, white, skin, cloth, pants)
-	_io_flush(village, "BeachLife")
-	_io_inland(wood, wood_l, dark, white, skin, cloth, pants)
-	_io_flush(village, "Inland")
-	_io_mosque(Vector3(4.0, _io_y(4.0, 24.0) - 0.1, 24.0), -4.0)
-	_io_flush(village, "Mosque")
-	_io_seabed()
-	var bed := _io_flush(root_node, "Seabed")
-	for m in bed.get_children():
-		(m as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-
-	# colourful fishing boats afloat: each one its own node so the Float bob/drawback moves it
-	var hulls := [[Vector3(-12.0, -0.5, -17.5), 28.0, 1, 0], [Vector3(17.0, -0.5, -21.0), -38.0, 3, 0]]
-	for i in hulls.size():
-		var h: Array = hulls[i]
-		_io_boat(Transform3D.IDENTITY, Vector3.ZERO, 0.0, cloth[h[2]], cloth[(h[2] + 1) % cloth.size()], white, wood, dark)
-		var n := _io_flush(floats, "PerahuAfloat%d" % i)
-		n.position = h[0]
-		n.rotation_degrees.y = h[1]
-
-
-func _io_mat(c: Color, rough := 0.9) -> StandardMaterial3D:
-	var k := c.to_html() + str(rough)
-	if not io_mats.has(k):
-		io_mats[k] = _mat(c, rough)
-	return io_mats[k]
-
-
-func _io_xf(pos: Vector3, rot_deg := Vector3.ZERO, s := Vector3.ONE) -> Transform3D:
-	return Transform3D(Basis.from_euler(rot_deg * PI / 180.0) * Basis.from_scale(s), pos)
-
-
-func _io_add(mesh: Mesh, xf: Transform3D, mat: Material) -> void:
-	if not io_parts.has(mat):
-		var st := SurfaceTool.new()
-		st.begin(Mesh.PRIMITIVE_TRIANGLES)
-		io_parts[mat] = st
-	(io_parts[mat] as SurfaceTool).append_from(mesh, 0, xf)
-
-
-## Commits the pending parts: one MeshInstance3D per material under a new group.
-func _io_flush(parent: Node, name: String) -> Node3D:
-	var g := _group(name, parent)
-	var i := 0
-	for mat in io_parts:
-		var mi := MeshInstance3D.new()
-		mi.name = "Part%d" % i
-		# positions, normals and indices only: keeps the generated .tscn small
-		var src := (io_parts[mat] as SurfaceTool).commit_to_arrays()
-		var arr := []
-		arr.resize(Mesh.ARRAY_MAX)
-		arr[Mesh.ARRAY_VERTEX] = src[Mesh.ARRAY_VERTEX]
-		arr[Mesh.ARRAY_NORMAL] = src[Mesh.ARRAY_NORMAL]
-		arr[Mesh.ARRAY_INDEX] = src[Mesh.ARRAY_INDEX]
-		var am := ArrayMesh.new()
-		am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
-		mi.mesh = am
-		mi.material_override = mat
-		_own(mi, g)
-		i += 1
-	io_parts.clear()
-	return g
-
-
-func _io_box(b: Transform3D, size: Vector3, pos: Vector3, rot := Vector3.ZERO, mat: Material = null) -> void:
-	var m := BoxMesh.new()
-	m.size = size
-	_io_add(m, b * _io_xf(pos, rot), mat)
-
-
-func _io_cyl(b: Transform3D, r_top: float, r_bot: float, h: float, pos: Vector3, rot: Vector3, mat: Material, seg := 8) -> void:
-	var m := CylinderMesh.new()
-	m.top_radius = r_top
-	m.bottom_radius = r_bot
-	m.height = h
-	m.radial_segments = seg
-	m.rings = 1
-	_io_add(m, b * _io_xf(pos, rot), mat)
-
-
-func _io_ball(b: Transform3D, r: float, pos: Vector3, mat: Material, s := Vector3.ONE, seg := 8, hemi := false) -> void:
-	var m := SphereMesh.new()
-	m.radius = r
-	m.height = r * (1.0 if hemi else 2.0)
-	m.is_hemisphere = hemi
-	m.radial_segments = seg
-	m.rings = maxi(3, seg / 2)
-	_io_add(m, b * _io_xf(pos, Vector3.ZERO, s), mat)
-
-
-func _io_prism(b: Transform3D, size: Vector3, pos: Vector3, rot: Vector3, mat: Material) -> void:
-	var m := PrismMesh.new()
-	m.size = size
-	_io_add(m, b * _io_xf(pos, rot), mat)
-
-
-## Box of `thick` cross-section spanning from `a` to `c`.
-func _io_beam(b: Transform3D, a: Vector3, c: Vector3, thick: float, mat: Material) -> void:
-	var d := c - a
-	var up := Vector3.UP if absf(d.normalized().y) < 0.98 else Vector3.FORWARD
-	var m := BoxMesh.new()
-	m.size = Vector3(thick, thick, d.length())
-	_io_add(m, b * Transform3D(Basis.looking_at(d, up), (a + c) * 0.5), mat)
-
-
-## Sagging wire in three straight pieces.
-func _io_wire(a: Vector3, c: Vector3, sag: float, mat: Material) -> void:
-	var pts := []
-	for k in 4:
-		var t := k / 3.0
-		pts.append(a.lerp(c, t) + Vector3(0, -sag * 4.0 * t * (1.0 - t), 0))
-	for k in 3:
-		_io_beam(Transform3D.IDENTITY, pts[k], pts[k + 1], 0.035, mat)
-
-
-## Mirrors the GROUND shader height (beach: slope 0.08, top 0.7, bump 0.12; grass: 0.74 + bump 0.1).
-func _io_n2(p: Vector2) -> float:
-	return sin(p.x * 0.9 + sin(p.y * 0.7)) * 0.5 + sin(p.y * 1.3 + p.x * 0.4) * 0.5
-
-
-func _io_y(x: float, z: float) -> float:
-	var p := Vector2(x, z)
-	var n := _io_n2(p * 0.35) + 0.5 * _io_n2(p * 1.1 + Vector2(3, 3))
-	var sand := minf(z * 0.08, 0.7) + 0.12 * n * smoothstep(-1.0, 4.0, z)
-	if z > 15.2:
-		return maxf(sand, 0.74 + 0.1 * n)
-	return sand
-
-
-## Low-poly figure facing -z, feet at `pos`. head: 0 hair, 1 headscarf, 2 cap. arms: 0 down, 1 pointing, 2 carrying.
-func _io_person(pos: Vector3, rot_y: float, shirt: Material, legs: Material, skin: Material, head := 0, s := 1.0, arms := 0) -> void:
-	var b := Transform3D(Basis(Vector3.UP, deg_to_rad(rot_y)).scaled(Vector3.ONE * s), pos)
-	var hair := _io_mat(Color(0.1, 0.08, 0.07))
-	_io_box(b, Vector3(0.14, 0.8, 0.16), Vector3(-0.09, 0.4, 0), Vector3.ZERO, legs)
-	_io_box(b, Vector3(0.14, 0.8, 0.16), Vector3(0.09, 0.4, 0), Vector3.ZERO, legs)
-	_io_box(b, Vector3(0.42, 0.6, 0.24), Vector3(0, 1.08, 0), Vector3.ZERO, shirt)
-	for side in [-1.0, 1.0]:
-		var ang := 8.0
-		if arms == 2 or (arms == 1 and side > 0):
-			ang = 75.0 if arms == 2 else 105.0
-		var sh := Vector3(0.27 * side, 1.34, 0)
-		var basis := Basis(Vector3.RIGHT, deg_to_rad(ang)) if ang > 10.0 else Basis(Vector3.BACK, deg_to_rad(-ang * side))
-		_io_add(_io_boxmesh(Vector3(0.11, 0.56, 0.12)), b * Transform3D(basis, sh + basis * Vector3(0, -0.28, 0)), shirt)
-	_io_ball(b, 0.13, Vector3(0, 1.53, 0), skin, Vector3.ONE, 6)
-	if head == 1:
-		_io_ball(b, 0.16, Vector3(0, 1.53, 0.035), shirt, Vector3(1, 1.1, 1), 6)
-		_io_box(b, Vector3(0.36, 0.2, 0.27), Vector3(0, 1.36, 0.01), Vector3.ZERO, shirt)
-	elif head == 2:
-		_io_cyl(b, 0.12, 0.13, 0.09, Vector3(0, 1.64, 0.01), Vector3.ZERO, hair, 8)
-	else:
-		_io_ball(b, 0.135, Vector3(0, 1.57, 0.02), hair, Vector3(1, 0.7, 1), 6)
-
-
-func _io_boxmesh(size: Vector3) -> BoxMesh:
-	var m := BoxMesh.new()
-	m.size = size
-	return m
-
-
-## Acehnese wooden fishing boat (perahu), bow towards -z, keel at y 0.
-func _io_boat(base: Transform3D, pos: Vector3, rot_y: float, hull: Material, stripe: Material, white: Material, wood: Material, dark: Material, tilt := 0.0) -> void:
-	var b := base * _io_xf(pos, Vector3(0, rot_y, tilt))
-	_io_prism(b, Vector3(1.5, 0.45, 4.4), Vector3(0, 0.225, 0), Vector3(0, 0, 180), hull)
-	_io_box(b, Vector3(1.5, 0.55, 4.4), Vector3(0, 0.725, 0), Vector3.ZERO, hull)
-	_io_prism(b, Vector3(1.5, 1.5, 0.75), Vector3(0, 0.82, -2.95), Vector3(-90, 0, 0), hull)
-	_io_prism(b, Vector3(1.5, 0.7, 0.55), Vector3(0, 0.75, 2.55), Vector3(90, 0, 0), hull)
-	_io_box(b, Vector3(1.54, 0.13, 4.42), Vector3(0, 0.82, 0), Vector3.ZERO, stripe)
-	_io_box(b, Vector3(1.56, 0.06, 4.44), Vector3(0, 1.02, 0), Vector3.ZERO, white)
-	_io_box(b, Vector3(1.3, 0.04, 4.2), Vector3(0, 1.03, 0), Vector3.ZERO, wood)
-	_io_box(b, Vector3(1.1, 0.8, 1.3), Vector3(0, 1.45, 1.0), Vector3.ZERO, white)
-	_io_box(b, Vector3(1.12, 0.22, 0.6), Vector3(0, 1.58, 0.7), Vector3.ZERO, dark)
-	_io_box(b, Vector3(1.35, 0.08, 1.7), Vector3(0, 1.9, 1.0), Vector3.ZERO, stripe)
-	_io_cyl(b, 0.04, 0.05, 2.4, Vector3(0, 2.2, -0.7), Vector3.ZERO, wood, 6)
-	_io_box(b, Vector3(0.02, 0.28, 0.45), Vector3(0, 3.2, -0.48), Vector3.ZERO, stripe)
-	_io_box(b, Vector3(0.08, 0.5, 0.08), Vector3(0, 1.4, -3.25), Vector3(-25, 0, 0), wood)
-
-
-## Fish drying rack: posts, net bed and rows of fish. Long side along local x.
-func _io_rack(pos: Vector3, rot_y: float, length: float, wood: Material) -> void:
-	var b := _io_xf(pos, Vector3(0, rot_y, 0))
-	var net := _io_mat(Color(0.36, 0.33, 0.26))
-	var fish := _io_mat(Color(0.75, 0.76, 0.78), 0.5)
-	for sx in [-0.5, 0.5]:
-		for sz in [-0.5, 0.5]:
-			_io_box(b, Vector3(0.08, 1.1, 0.08), Vector3(sx * length, 0.45, sz * 1.0), Vector3.ZERO, wood)
-		_io_box(b, Vector3(length + 0.2, 0.06, 0.06), Vector3(0, 0.95, sx * 1.0), Vector3.ZERO, wood)
-	_io_box(b, Vector3(length, 0.03, 1.0), Vector3(0, 0.95, 0), Vector3.ZERO, net)
-	var n := int(length / 0.4)
-	for r in 2:
-		for k in n:
-			_io_box(b, Vector3(0.07, 0.03, 0.24), Vector3(-length * 0.5 + (k + 0.5) * length / n, 0.98, -0.2 + r * 0.4),
-					Vector3(0, io_rng.randf_range(-15, 15), 0), fish)
-
-
-func _io_beach(wood: Material, wood_l: Material, dark: Material, white: Material, skin: Array, cloth: Array, pants: Array) -> void:
-	var I := Transform3D.IDENTITY
-	# a perahu pulled up on the sand, two fishermen and a heap of nets
-	_io_boat(I, Vector3(-14.2, _io_y(-14.2, -1.0) - 0.12, -1.0), -12.0, cloth[3], cloth[2], white, wood, dark, 7.0)
-	_io_person(Vector3(-12.9, _io_y(-12.9, 0.3), 0.3), -70.0, cloth[4], pants[0], skin[1], 2)
-	_io_person(Vector3(-15.6, _io_y(-15.6, 1.9), 1.9), 40.0, cloth[1], pants[1], skin[0], 0, 1.0, 2)
-	var netm := _io_mat(Color(0.3, 0.42, 0.36))
-	var buoy := _io_mat(Color(0.95, 0.5, 0.15))
-	_io_ball(I, 0.9, Vector3(-9.4, _io_y(-9.4, 5.9), 5.9), netm, Vector3(1.0, 0.35, 0.8), 10)
-	_io_ball(I, 0.6, Vector3(-8.7, _io_y(-8.7, 6.4) + 0.12, 6.4), netm, Vector3(1.0, 0.45, 1.0), 8)
-	for k in 4:
-		_io_ball(I, 0.12, Vector3(-9.9 + k * 0.4, _io_y(-9.4, 5.9) + 0.32, 5.7 + (k % 2) * 0.3), buoy, Vector3.ONE, 6)
-	# net hung to dry between two poles, floats along the top line
-	var na := Vector3(-3.9, 0, 4.6)
-	var nb := Vector3(-1.3, 0, 4.9)
-	for p in [na, nb]:
-		_io_cyl(I, 0.06, 0.07, 2.2, Vector3(p.x, _io_y(p.x, p.z) + 1.0, p.z), Vector3.ZERO, wood, 6)
-	var ny := _io_y(na.x, na.z) + 1.25
-	var mid := (na + nb) * 0.5
-	_io_box(I, Vector3(2.5, 1.3, 0.03), Vector3(mid.x, ny, mid.z), Vector3(0, -rad_to_deg((nb - na).angle_to(Vector3.RIGHT)), 0), netm)
-	for k in 6:
-		var p := na.lerp(nb, (k + 0.5) / 6.0)
-		_io_ball(I, 0.08, Vector3(p.x, ny + 0.66, p.z), buoy, Vector3.ONE, 6)
-	# fish drying racks and the women tending them
-	_io_rack(Vector3(16.8, _io_y(16.8, 13.0), 13.0), 6.0, 4.2, wood)
-	_io_rack(Vector3(-25.0, _io_y(-25.0, 4.5), 4.5), 78.0, 3.6, wood)
-	_io_rack(Vector3(19.5, _io_y(19.5, 16.0), 16.0), -4.0, 3.2, wood)
-	_io_person(Vector3(15.6, _io_y(15.6, 11.7), 11.7), 10.0, cloth[5], pants[2], skin[0], 1)
-	_io_person(Vector3(-23.6, _io_y(-23.6, 3.4), 3.4), 120.0, cloth[2], pants[0], skin[1], 1)
-	# beach stall (warung): posts, counter, striped awning, blank sign, stools
-	var sb := _io_xf(Vector3(15.6, _io_y(15.6, 3.0) - 0.05, 3.0), Vector3(0, -12, 0))
-	var red: Material = cloth[0]
-	for c in [Vector2(-1.5, -1.0), Vector2(1.5, -1.0), Vector2(-1.5, 1.0), Vector2(1.5, 1.0)]:
-		_io_box(sb, Vector3(0.12, 2.5, 0.12), Vector3(c.x, 1.25, c.y), Vector3.ZERO, wood)
-	_io_box(sb, Vector3(3.0, 0.9, 0.5), Vector3(0, 0.45, -0.75), Vector3.ZERO, wood_l)
-	_io_box(sb, Vector3(3.1, 0.06, 0.6), Vector3(0, 0.92, -0.75), Vector3.ZERO, white)
-	for k in 6:
-		_io_box(sb, Vector3(0.53, 0.06, 2.7), Vector3(-1.33 + k * 0.53, 2.62, -0.15), Vector3(-10, 0, 0), red if k % 2 == 0 else white)
-	_io_box(sb, Vector3(2.2, 0.55, 0.06), Vector3(0, 3.05, 1.0), Vector3.ZERO, cloth[1])
-	_io_box(sb, Vector3(2.3, 0.65, 0.04), Vector3(0, 3.05, 1.02), Vector3.ZERO, white)
-	for k in 4:
-		_io_box(sb, Vector3(0.3, 0.3, 0.3), Vector3(-0.8 + k * 0.4, 1.1, -0.75), Vector3(0, k * 20.0, 0), [cloth[2], cloth[3], cloth[0], cloth[4]][k])
-	for c in [Vector2(-1.0, -1.9), Vector2(0.6, -2.1)]:
-		_io_cyl(sb, 0.2, 0.2, 0.45, Vector3(c.x, 0.23, c.y), Vector3.ZERO, cloth[1], 8)
-	_io_person(Vector3(15.6, 0, 3.0) + Vector3(0, _io_y(15.6, 3.6), 0.5), 168.0, cloth[3], pants[1], skin[0], 2)
-	_io_person(Vector3(14.4, _io_y(14.4, 1.0), 1.0), 165.0, cloth[2], pants[0], skin[1], 0)
-	# beach umbrella
-	var ux := 12.6
-	var uz := 1.6
-	_io_cyl(I, 0.04, 0.04, 2.3, Vector3(ux, _io_y(ux, uz) + 1.1, uz), Vector3.ZERO, white, 6)
-	_io_cyl(I, 0.05, 1.2, 0.45, Vector3(ux, _io_y(ux, uz) + 2.25, uz), Vector3.ZERO, cloth[2], 10)
-	# family between the huts, children at the waterline looking at the sea
-	_io_person(Vector3(-3.6, _io_y(-3.6, 7.0), 7.0), 200.0, cloth[1], pants[2], skin[0], 1)
-	_io_person(Vector3(-3.0, _io_y(-3.0, 7.3), 7.3), 190.0, cloth[2], pants[0], skin[0], 0, 0.62)
-	_io_person(Vector3(2.4, _io_y(2.4, 5.0), 5.0), 150.0, cloth[4], pants[1], skin[1], 2, 1.0, 2)
-	_io_person(Vector3(0.6, _io_y(0.6, 0.9), 0.9), 15.0, cloth[0], pants[0], skin[1], 0, 0.64, 1)
-	_io_person(Vector3(1.5, _io_y(1.5, 1.4), 1.4), -10.0, cloth[1], pants[2], skin[0], 0, 0.6)
-	_io_person(Vector3(-0.6, _io_y(-0.6, 1.8), 1.8), 30.0, cloth[2], pants[1], skin[0], 1, 0.66)
-	# men on the jetty, one wading with a hand net
-	_io_person(Vector3(8.6, 0.25, -10.6), 10.0, cloth[4], pants[0], skin[1], 2)
-	_io_person(Vector3(7.4, 0.25, -9.6), -20.0, cloth[1], pants[1], skin[0], 0, 1.0, 1)
-	_io_person(Vector3(-6.0, _io_y(-6.0, -4.2), -4.2), 140.0, cloth[3], pants[2], skin[1], 2)
-	# tide pools, pebbles and a wrack line of seaweed on the wet sand
-	var pool := _io_mat(Color(0.32, 0.5, 0.52), 0.3)
-	for p in [Vector3(-17.5, 1.7, 1.1), Vector3(-1.0, 2.4, 0.7), Vector3(12.0, 1.0, 1.0), Vector3(21.0, 1.9, 0.9), Vector3(5.0, 2.8, 0.55), Vector3(-21.5, 2.6, 0.8)]:
-		_io_cyl(I, p.z, p.z, 0.05, Vector3(p.x, _io_y(p.x, p.y) + 0.02, p.y), Vector3.ZERO, pool, 10)
-	var pebble := _io_mat(Color(0.55, 0.52, 0.48))
-	var weed := _io_mat(Color(0.3, 0.32, 0.18))
-	for k in 22:
-		var x := io_rng.randf_range(-26, 26)
-		var z := io_rng.randf_range(0.4, 3.6)
-		var r := io_rng.randf_range(0.15, 0.35)
-		_io_box(I, Vector3(r, r * 0.6, r * 0.8), Vector3(x, _io_y(x, z) + 0.04, z), Vector3(io_rng.randf_range(-20, 20), io_rng.randf_range(0, 90), 0), pebble)
-	for k in 20:
-		var x := io_rng.randf_range(-26, 26)
-		var z := 3.2 + io_rng.randf_range(-0.4, 0.4)
-		_io_box(I, Vector3(io_rng.randf_range(0.3, 0.8), 0.04, 0.12), Vector3(x, _io_y(x, z) + 0.02, z), Vector3(0, io_rng.randf_range(-40, 40), 0), weed)
-	# coconuts under the palms, dune grass where the sand meets the village
-	var nut := _io_mat(Color(0.42, 0.3, 0.16))
-	for p in [Vector2(-17, 6), Vector2(-12, 4.5), Vector2(0.5, 6), Vector2(7.5, 9), Vector2(13, 6.5), Vector2(18, 10), Vector2(22, 3)]:
-		for k in 1:
-			var x: float = p.x + io_rng.randf_range(-0.9, 0.9)
-			var z: float = p.y + io_rng.randf_range(-0.9, 0.9)
-			_io_ball(I, 0.17, Vector3(x, _io_y(x, z) + 0.1, z), nut, Vector3.ONE, 6)
-	var dune := _io_mat(Color(0.56, 0.6, 0.3))
-	for k in 18:
-		var x := io_rng.randf_range(-27, 27)
-		var z := io_rng.randf_range(6.0, 15.0)
-		if absf(x - 8.0) < 2.5 and z < 9.0:
-			continue
-		_io_tuft(Vector3(x, _io_y(x, z), z), dune, io_rng.randf_range(0.7, 1.2))
-
-
-func _io_tuft(pos: Vector3, mat: Material, s: float) -> void:
-	for k in 2:
-		_io_prism(Transform3D.IDENTITY, Vector3(0.24, 0.6, 0.05) * s, pos + Vector3(0, 0.27 * s, 0), Vector3(io_rng.randf_range(-20, 20), k * 90.0 + io_rng.randf_range(0, 40), 0), mat)
-
-
-func _io_inland(wood: Material, wood_l: Material, dark: Material, white: Material, skin: Array, cloth: Array, pants: Array) -> void:
-	var I := Transform3D.IDENTITY
-	# coastal road (fades into the void at the rim like the ground), kerbs, dashed centre line
-	var rz := 24.3
-	var road := MeshInstance3D.new()
-	road.name = "Road"
-	road.mesh = _io_boxmesh(Vector3(32, 0.5, 3.0))
-	road.position = Vector3(-20, 0.72, rz)
-	road.material_override = _shader(GROUND, {"base_color": Color(0.36, 0.36, 0.38), "alt_color": Color(0.4, 0.4, 0.41),
-			"void_color": Color(0.7, 0.79, 0.87), "radius": 44.0, "fade": 10.0, "bump": 0.0})
-	_own(road, root_node)
-	var kerb := MeshInstance3D.new()
-	kerb.name = "Kerbs"
-	var km := _io_boxmesh(Vector3(32, 0.5, 0.3))
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	st.append_from(km, 0, Transform3D(Basis.IDENTITY, Vector3(0, 0, -1.65)))
-	st.append_from(km, 0, Transform3D(Basis.IDENTITY, Vector3(0, 0, 1.65)))
-	kerb.mesh = st.commit()
-	kerb.position = Vector3(-20, 0.77, rz)
-	kerb.material_override = _shader(GROUND, {"base_color": Color(0.78, 0.76, 0.72), "alt_color": Color(0.74, 0.72, 0.68),
-			"void_color": Color(0.7, 0.79, 0.87), "radius": 44.0, "fade": 10.0, "bump": 0.0})
-	_own(kerb, root_node)
-	var paint := _io_mat(Color(0.95, 0.93, 0.85))
-	for k in 7:
-		_io_box(I, Vector3(1.4, 0.02, 0.12), Vector3(-32 + k * 4.0, 0.98, rz), Vector3.ZERO, paint)
-	# utility poles with sagging wires, one service drop to each roadside house
-	var pole := _io_mat(Color(0.62, 0.6, 0.57))
-	var wire := _io_mat(Color(0.12, 0.12, 0.13))
-	var tops := []
-	for px in [-27.0, -17.0, -7.0]:
-		var pz := rz + 2.2
-		var y0 := _io_y(px, pz)
-		_io_cyl(I, 0.09, 0.14, 7.5, Vector3(px, y0 + 3.75, pz), Vector3.ZERO, pole, 8)
-		_io_box(I, Vector3(1.8, 0.12, 0.12), Vector3(px, y0 + 7.0, pz), Vector3.ZERO, pole)
-		for sx in [-0.75, 0.75]:
-			_io_cyl(I, 0.04, 0.05, 0.16, Vector3(px + sx, y0 + 7.13, pz), Vector3.ZERO, white, 6)
-		if px == -17.0:
-			_io_cyl(I, 0.22, 0.22, 0.6, Vector3(px + 0.3, y0 + 6.3, pz + 0.2), Vector3.ZERO, pole, 8)
-		tops.append(Vector3(px, y0 + 7.2, pz))
-	for k in tops.size() - 1:
-		for sx in [-0.75, 0.75]:
-			_io_wire(tops[k] + Vector3(sx, 0, 0), tops[k + 1] + Vector3(sx, 0, 0), 0.5, wire)
-	_io_wire(tops[0] + Vector3(0.75, 0, 0), Vector3(-26.0, 4.6, 18.5), 0.3, wire)
-	# picket fence along the mosque grounds, water tank tower
-	_io_fence(Vector3(-27.0, 0, 26.9), Vector3(-23.5, 0, 26.9), white)
-	_io_tank(Vector3(-15.0, 0, 19.5), cloth[1], pole)
-	# motorbikes on the road and pedestrians
-	_io_moto(Vector3(-8.0, 0.98, rz - 0.8), 90.0, cloth[0], dark, white)
-	_io_person(Vector3(-8.0, 1.0, rz - 0.8), 90.0, cloth[1], pants[0], skin[0], 2, 1.0, 2)
-	_io_moto(Vector3(-24.0, 0.98, rz + 0.8), -90.0, cloth[1], dark, white)
-	_io_person(Vector3(-24.0, 1.0, rz + 0.8), -90.0, cloth[4], pants[1], skin[1], 1, 1.0, 2)
-	_io_person(Vector3(-5.6, _io_y(-5.6, 26.6), 26.6), -20.0, cloth[4], pants[0], skin[0], 2)
-	_io_person(Vector3(-6.4, _io_y(-6.4, 26.4), 26.4), -10.0, cloth[2], pants[2], skin[1], 2)
-	_io_person(Vector3(-17.0, _io_y(-17.0, 22.0), 22.0), 90.0, cloth[5], pants[0], skin[0], 1)
-	# bushes and grass tufts
-	var bush := [_io_mat(Color(0.26, 0.44, 0.22)), _io_mat(Color(0.33, 0.5, 0.24))]
-	var grassm := _io_mat(Color(0.36, 0.5, 0.24))
-	for p in [Vector2(-13.5, 16.0), Vector2(-10.0, 16.5), Vector2(2.5, 17.5), Vector2(5.5, 16.8), Vector2(21.5, 17.5), Vector2(-24.0, 23.5),
-			Vector2(-27.0, 31.0), Vector2(-4.0, 21.0), Vector2(6.0, 21.0), Vector2(-6.0, 20.5)]:
-		for k in 2:
-			var x: float = p.x + io_rng.randf_range(-0.8, 0.8)
-			var z: float = p.y + io_rng.randf_range(-0.8, 0.8)
-			var r := io_rng.randf_range(0.5, 0.9)
-			_io_ball(I, r, Vector3(x, _io_y(x, z) + r * 0.45, z), bush[k % 2], Vector3(1.0, 0.8, 1.0), 6)
-	for k in 14:
-		var x := io_rng.randf_range(-28, 28)
-		var z := io_rng.randf_range(16.0, 32.0)
-		if absf(z - rz) < 2.0:
-			continue
-		_io_tuft(Vector3(x, _io_y(x, z), z), grassm, io_rng.randf_range(0.8, 1.3))
-
-
-## Concrete house with a corrugated tin gable roof, front (door, windows, porch) towards -z.
-func _io_house(pos: Vector3, rot_y: float, wall: Material, tin: Material, wood: Material, dark: Material, white: Material) -> void:
-	var b := _io_xf(Vector3(pos.x, _io_y(pos.x, pos.z) - 0.1, pos.z), Vector3(0, rot_y, 0))
-	_io_box(b, Vector3(6.2, 0.35, 4.8), Vector3(0, 0.17, 0), Vector3.ZERO, white)
-	_io_box(b, Vector3(6.0, 2.8, 4.6), Vector3(0, 1.75, 0), Vector3.ZERO, wall)
-	_io_prism(b, Vector3(6.0, 1.3, 4.6), Vector3(0, 3.8, 0), Vector3(0, 90, 0), wall)
-	var slope := rad_to_deg(atan2(1.3, 2.3))
-	var half := Vector2(2.3, 1.3).length() + 0.35
-	for side in [-1.0, 1.0]:
-		var rb := b * _io_xf(Vector3(0, 3.82, side * 1.2), Vector3(side * slope, 0, 0))
-		_io_box(rb, Vector3(6.6, 0.08, half), Vector3(0, 0.12, side * 0.06), Vector3.ZERO, tin)
-		for k in 11:
-			_io_box(rb, Vector3(0.05, 0.05, half), Vector3(-3.0 + k * 0.6, 0.18, side * 0.06), Vector3.ZERO, tin)
-	_io_box(b, Vector3(6.7, 0.1, 0.25), Vector3(0, 5.17, 0), Vector3.ZERO, tin)
-	_io_box(b, Vector3(1.0, 1.9, 0.06), Vector3(-0.9, 1.3, -2.32), Vector3.ZERO, wood)
-	for wx in [0.9, 2.2]:
-		_io_box(b, Vector3(0.9, 0.95, 0.06), Vector3(wx, 1.9, -2.32), Vector3.ZERO, white)
-		_io_box(b, Vector3(0.7, 0.75, 0.06), Vector3(wx, 1.9, -2.34), Vector3.ZERO, dark)
-		_io_box(b, Vector3(1.0, 0.08, 0.18), Vector3(wx, 1.4, -2.38), Vector3.ZERO, white)
-	_io_box(b, Vector3(0.06, 0.95, 0.9), Vector3(3.02, 1.9, 0.6), Vector3.ZERO, white)
-	_io_box(b, Vector3(0.06, 0.75, 0.7), Vector3(3.04, 1.9, 0.6), Vector3.ZERO, dark)
-	_io_box(b, Vector3(3.2, 0.12, 1.6), Vector3(-0.6, 0.42, -3.1), Vector3.ZERO, white)
-	for px in [-2.0, 0.8]:
-		_io_box(b, Vector3(0.14, 2.6, 0.14), Vector3(px, 1.6, -3.75), Vector3.ZERO, wood)
-	_io_box(b, Vector3(3.4, 0.08, 1.9), Vector3(-0.6, 2.95, -3.05), Vector3(-8, 0, 0), tin)
-
-
-func _io_fence(a: Vector3, c: Vector3, mat: Material) -> void:
-	var n := int(a.distance_to(c) / 0.5)
-	for k in n + 1:
-		var p := a.lerp(c, float(k) / n)
-		_io_box(Transform3D.IDENTITY, Vector3(0.08, 0.8, 0.05), Vector3(p.x, _io_y(p.x, p.z) + 0.38, p.z), Vector3.ZERO, mat)
-	var ya := _io_y(a.x, a.z)
-	var yc := _io_y(c.x, c.z)
-	for h in [0.25, 0.6]:
-		_io_beam(Transform3D.IDENTITY, Vector3(a.x, ya + h, a.z - 0.04), Vector3(c.x, yc + h, c.z - 0.04), 0.06, mat)
-
-
-func _io_tank(pos: Vector3, tank: Material, frame: Material) -> void:
-	var y := _io_y(pos.x, pos.z)
-	for c in [Vector2(-0.6, -0.6), Vector2(0.6, -0.6), Vector2(-0.6, 0.6), Vector2(0.6, 0.6)]:
-		_io_box(Transform3D.IDENTITY, Vector3(0.1, 3.0, 0.1), Vector3(pos.x + c.x, y + 1.5, pos.z + c.y), Vector3.ZERO, frame)
-	_io_box(Transform3D.IDENTITY, Vector3(1.5, 0.1, 1.5), Vector3(pos.x, y + 3.0, pos.z), Vector3.ZERO, frame)
-	_io_beam(Transform3D.IDENTITY, Vector3(pos.x - 0.6, y + 0.3, pos.z - 0.62), Vector3(pos.x + 0.6, y + 2.8, pos.z - 0.62), 0.06, frame)
-	_io_cyl(Transform3D.IDENTITY, 0.68, 0.68, 1.3, Vector3(pos.x, y + 3.7, pos.z), Vector3.ZERO, tank, 14)
-	_io_cyl(Transform3D.IDENTITY, 0.25, 0.68, 0.2, Vector3(pos.x, y + 4.45, pos.z), Vector3.ZERO, tank, 14)
-
-
-## Motorbike along local -z.
-func _io_moto(pos: Vector3, rot_y: float, body: Material, dark: Material, white: Material) -> void:
-	var b := _io_xf(pos, Vector3(0, rot_y, 0))
-	for z in [-0.65, 0.65]:
-		_io_cyl(b, 0.3, 0.3, 0.1, Vector3(0, 0.3, z), Vector3(0, 0, 90), dark, 10)
-	_io_box(b, Vector3(0.24, 0.35, 1.0), Vector3(0, 0.55, 0.05), Vector3.ZERO, body)
-	_io_box(b, Vector3(0.28, 0.12, 0.6), Vector3(0, 0.78, 0.25), Vector3.ZERO, dark)
-	_io_beam(b, Vector3(0, 0.35, -0.65), Vector3(0, 1.0, -0.45), 0.06, white)
-	_io_box(b, Vector3(0.6, 0.05, 0.05), Vector3(0, 1.0, -0.45), Vector3.ZERO, dark)
-	_io_box(b, Vector3(0.3, 0.25, 0.2), Vector3(0, 0.85, -0.55), Vector3.ZERO, body)
-
-
-## Baiturrahman-style mosque: white hall, black domes, minaret. Front towards -z.
-func _io_mosque(pos: Vector3, rot_y: float) -> void:
-	var b := _io_xf(pos, Vector3(0, rot_y, 0), Vector3.ONE * 0.62)
-	var wall := _io_mat(Color(0.95, 0.94, 0.9))
-	var trim := _io_mat(Color(0.82, 0.8, 0.76))
-	var dome := _io_mat(Color(0.18, 0.18, 0.2), 0.5)
-	var gold := _io_mat(Color(0.9, 0.72, 0.3), 0.4)
-	var dark := _io_mat(Color(0.22, 0.24, 0.3))
-	_io_box(b, Vector3(13.0, 0.6, 10.5), Vector3(0, 0.3, 0), Vector3.ZERO, trim)
-	_io_box(b, Vector3(10.0, 4.2, 7.5), Vector3(0, 2.7, 0.5), Vector3.ZERO, wall)
-	_io_box(b, Vector3(10.4, 0.35, 7.9), Vector3(0, 4.9, 0.5), Vector3.ZERO, trim)
-	_io_box(b, Vector3(10.0, 0.6, 7.5), Vector3(0, 5.35, 0.5), Vector3.ZERO, wall)
-	for k in 5:
-		var x := -4.0 + k * 2.0
-		_io_box(b, Vector3(0.9, 2.0, 0.08), Vector3(x, 2.4, -3.27), Vector3.ZERO, dark)
-		_io_cyl(b, 0.45, 0.45, 0.08, Vector3(x, 3.4, -3.27), Vector3(90, 0, 0), dark, 10)
-	for k in 3:
-		var z := -1.5 + k * 2.4
-		for sx in [-1.0, 1.0]:
-			_io_box(b, Vector3(0.08, 2.0, 0.9), Vector3(sx * 5.02, 2.4, z), Vector3.ZERO, dark)
-			_io_cyl(b, 0.45, 0.45, 0.08, Vector3(sx * 5.02, 3.4, z), Vector3(0, 0, 90), dark, 10)
-	# portico with columns
-	_io_box(b, Vector3(5.0, 0.4, 2.2), Vector3(0, 4.0, -4.4), Vector3.ZERO, wall)
-	for k in 4:
-		_io_cyl(b, 0.18, 0.2, 3.3, Vector3(-2.1 + k * 1.4, 2.25, -5.2), Vector3.ZERO, wall, 10)
-	_io_cyl(b, 0.9, 1.3, 1.0, Vector3(0, 4.7, -4.4), Vector3.ZERO, dome, 12)
-	_io_ball(b, 0.9, Vector3(0, 5.2, -4.4), dome, Vector3(1, 1.25, 1), 12, true)
-	# central drum, onion dome, finial
-	_io_cyl(b, 2.6, 2.6, 1.0, Vector3(0, 6.15, 0.5), Vector3.ZERO, wall, 16)
-	_io_cyl(b, 2.75, 2.75, 0.2, Vector3(0, 6.7, 0.5), Vector3.ZERO, trim, 16)
-	_io_ball(b, 2.6, Vector3(0, 6.75, 0.5), dome, Vector3(1, 1.25, 1), 16, true)
-	_io_cyl(b, 0.04, 0.4, 0.9, Vector3(0, 10.3, 0.5), Vector3.ZERO, dome, 10)
-	_io_cyl(b, 0.04, 0.04, 1.0, Vector3(0, 11.1, 0.5), Vector3.ZERO, gold, 6)
-	_io_ball(b, 0.16, Vector3(0, 11.5, 0.5), gold, Vector3.ONE, 8)
-	# corner domes
-	for c in [Vector2(-4.0, -2.0), Vector2(4.0, -2.0), Vector2(-4.0, 3.0), Vector2(4.0, 3.0)]:
-		_io_cyl(b, 0.9, 0.9, 0.7, Vector3(c.x, 6.0, c.y), Vector3.ZERO, wall, 10)
-		_io_ball(b, 0.95, Vector3(c.x, 6.35, c.y), dome, Vector3(1, 1.3, 1), 10, true)
-		_io_cyl(b, 0.03, 0.03, 0.6, Vector3(c.x, 7.8, c.y), Vector3.ZERO, gold, 6)
-	# minaret
-	var m := Vector3(8.2, 0, -3.0)
-	_io_box(b, Vector3(2.0, 1.2, 2.0), m + Vector3(0, 0.6, 0), Vector3.ZERO, trim)
-	_io_cyl(b, 0.65, 0.8, 8.0, m + Vector3(0, 5.0, 0), Vector3.ZERO, wall, 12)
-	for y in [4.0, 7.0]:
-		_io_cyl(b, 0.85, 0.85, 0.18, m + Vector3(0, y, 0), Vector3.ZERO, trim, 12)
-	_io_cyl(b, 1.05, 0.7, 0.4, m + Vector3(0, 9.2, 0), Vector3.ZERO, trim, 12)
-	_io_cyl(b, 0.55, 0.55, 1.2, m + Vector3(0, 10.0, 0), Vector3.ZERO, wall, 12)
-	_io_ball(b, 0.62, m + Vector3(0, 10.6, 0), dome, Vector3(1, 1.4, 1), 12, true)
-	_io_cyl(b, 0.03, 0.03, 0.7, m + Vector3(0, 11.8, 0), Vector3.ZERO, gold, 6)
-	# courtyard path towards the road
-	_io_box(b, Vector3(2.4, 0.08, 4.0), Vector3(0, 0.02, -7.2), Vector3.ZERO, trim)
-
-
-## Hidden under the sea until the drawback: seaweed beds, coral heads, stranded fish.
-func _io_seabed() -> void:
-	var I := Transform3D.IDENTITY
-	var weed := _io_mat(Color(0.25, 0.3, 0.16))
-	var coral := [_io_mat(Color(0.82, 0.5, 0.44)), _io_mat(Color(0.75, 0.66, 0.5))]
-	var fish := _io_mat(Color(0.78, 0.8, 0.84), 0.4)
-	for k in 10:
-		var x := io_rng.randf_range(-22, 22)
-		var z := io_rng.randf_range(-12, -3)
-		_io_cyl(I, io_rng.randf_range(0.6, 1.4), io_rng.randf_range(0.6, 1.4), 0.06, Vector3(x, z * 0.08 + 0.02, z), Vector3.ZERO, weed, 8)
-	for k in 6:
-		var x := io_rng.randf_range(-20, 20)
-		var z := io_rng.randf_range(-12, -4)
-		_io_ball(I, io_rng.randf_range(0.25, 0.5), Vector3(x, z * 0.08, z), coral[k % 2], Vector3(1, 0.6, 1), 6)
-	for k in 16:
-		var x := io_rng.randf_range(-16, 18)
-		var z := io_rng.randf_range(-11, -2.5)
-		_io_box(I, Vector3(0.1, 0.08, 0.32), Vector3(x, z * 0.08 + 0.04, z), Vector3(0, io_rng.randf_range(0, 180), 80), fish)
 
 
 # ---------- Solar flare (year 3026) ----------
