@@ -48,9 +48,9 @@ const SETS := {
 	},
 	&"black_saturday": {
 		"scene": "res://scenes/diorama/set_black_saturday.tscn",
-		"from": -32.0, "to": 38.0, "radius": 42.0, "elevation": [22.0, 17.0], "lift": 9.0,
+		"from": -32.0, "to": 38.0, "radius": 66.0, "elevation": [34.0, 29.0], "lift": 15.0,
 		"haze": Color(0.85, 0.42, 0.16), "sky": [Color(0.3, 0.1, 0.06), Color(1.0, 0.52, 0.2)],
-		"fog": [40.0, 115.0], "exposure": 0.8, "sun": 0.8,
+		"fog": [80.0, 175.0], "exposure": 0.8, "sun": 0.8,
 	},
 }
 ## Opening dive: the scene starts in the haze colour the globe faded into and the camera
