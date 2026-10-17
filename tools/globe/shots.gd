@@ -43,7 +43,7 @@ func _run() -> void:
 	if DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT)) != OK:
 		_fail("cannot create " + OUT)
 		return
-	TranslationServer.set_locale("en")  # stable HUD text, comparable with the prototype renders
+	TranslationServer.set_locale(OS.get_environment("SHOT_LOCALE") if OS.has_environment("SHOT_LOCALE") else "en")  # stable HUD text, comparable with the prototype renders
 	var game := root.get_node_or_null("Game")
 	var packed: PackedScene = load("res://scenes/globe.tscn")
 	if game == null or packed == null:

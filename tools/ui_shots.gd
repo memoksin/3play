@@ -31,7 +31,7 @@ func _run() -> void:
 		quit(1)
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
-	TranslationServer.set_locale("en")
+	TranslationServer.set_locale(OS.get_environment("SHOT_LOCALE") if OS.has_environment("SHOT_LOCALE") else "en")
 	var game := root.get_node("Game")
 	var only := ""
 	for a in OS.get_cmdline_user_args():
