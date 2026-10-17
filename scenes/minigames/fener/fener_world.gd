@@ -27,6 +27,7 @@ const LOOK_AHEAD := 3.0
 const CAM_BOX := Rect2(-44, -30, 88, 66)
 const CHUNK := 8.0
 const CELL := 0.5
+const ATLAS := 2048
 const FADE_ALPHA := 0.8  # transparency of a building that hides the player
 const FADE_H := 3.8
 const AMBIENT := 0.045  # play: dark enough that the torch matters
@@ -76,6 +77,8 @@ var _cam_target := Vector3.ZERO
 var _cam_shake := Vector3.ZERO
 var _play_xf := Transform3D()
 var _hero_xf := Transform3D()
+## The viewport's shadow atlas before this scene shrank it (restored on exit).
+var _atlas_prev := {}
 
 # per run
 var _dyn: Node3D
@@ -104,8 +107,37 @@ func _ready() -> void:
 	cam = $Camera
 	cam.fov = FOV
 	_hero_xf = _cam_xf(HERO_TARGET, HERO_DIST)
+	_small_shadow_atlas()
 	if get_parent() == null or not get_parent().has_method(&"apply_event"):
 		_preview.call_deferred()
+
+
+## The Moon (fener_world.tscn) keeps shadow_enabled but only 3 m of shadow distance: its 0.06 energy shadows are
+## invisible, a 90 m split re-drew the whole street (+220 draw calls), and with shadows off the frames come out
+## ~20 % darker (Compatibility), the faded houses' floors black.
+## The torch is the only shadow caster, and its map is ATLAS / 2 wide: the default 4096 atlas (cleared and
+## filled every frame) is 4x the memory traffic for the same 1024 map.
+func _small_shadow_atlas() -> void:
+	var vp := get_viewport()
+	_atlas_prev = {"size": vp.positional_shadow_atlas_size, "q": [vp.positional_shadow_atlas_quad_0, vp.positional_shadow_atlas_quad_1,
+			vp.positional_shadow_atlas_quad_2, vp.positional_shadow_atlas_quad_3]}
+	vp.positional_shadow_atlas_size = ATLAS
+	vp.positional_shadow_atlas_quad_0 = Viewport.SHADOW_ATLAS_QUADRANT_SUBDIV_1
+	vp.positional_shadow_atlas_quad_1 = Viewport.SHADOW_ATLAS_QUADRANT_SUBDIV_DISABLED
+	vp.positional_shadow_atlas_quad_2 = Viewport.SHADOW_ATLAS_QUADRANT_SUBDIV_DISABLED
+	vp.positional_shadow_atlas_quad_3 = Viewport.SHADOW_ATLAS_QUADRANT_SUBDIV_DISABLED
+
+
+func _exit_tree() -> void:
+	if _atlas_prev.is_empty():
+		return
+	var vp := get_viewport()
+	if vp:
+		vp.positional_shadow_atlas_size = _atlas_prev.size
+		vp.positional_shadow_atlas_quad_0 = _atlas_prev.q[0]
+		vp.positional_shadow_atlas_quad_1 = _atlas_prev.q[1]
+		vp.positional_shadow_atlas_quad_2 = _atlas_prev.q[2]
+		vp.positional_shadow_atlas_quad_3 = _atlas_prev.q[3]
 
 
 ## Run alone (F6, art shots): a controller-less look at the set.
@@ -253,6 +285,8 @@ func _build_slab() -> void:
 		var n: Node3D = s.instantiate()
 		n.name = "Slab"
 		add_child(n)
+		for m in n.find_children("*", "GeometryInstance3D", true, false):  # the torch never reaches it
+			(m as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		return
 	# fallback until the Blender slab is built: a plain block of earth under the ground
 	var b := FenerMap.BOUNDS
@@ -261,6 +295,7 @@ func _build_slab() -> void:
 	bm.size = Vector3(b.size.x, 6.0, b.size.y)
 	mi.mesh = bm
 	mi.material_override = _mat("slab")
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.position = Vector3(b.get_center().x, -3.02, b.get_center().y)
 	mi.name = "Slab"
 	add_child(mi)
@@ -337,6 +372,7 @@ func _build_ground() -> void:
 	var dm := MeshInstance3D.new()
 	dm.mesh = dashes.commit()
 	dm.material_override = _mat("paint")
+	dm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(dm)
 
 
@@ -661,6 +697,9 @@ func _build_fx_pool() -> void:
 
 ## First use of a material variant compiles its shader (a visible hitch): the faded (alpha) copy of
 ## the building materials and the debris material are drawn once, tiny, right in front of the camera.
+## The alpha copies are kept for the life of the scene: a material variant's shader is freed with its last
+## user, and the first real fade would compile it again (a ~150 ms hitch the first time a house hides you).
+var _fade_keep: Array[Material] = []
 var _warm: Node3D
 var _warm_t := 0.0
 var _warm_torch_ahead := false
@@ -679,13 +718,14 @@ func _prewarm() -> void:
 				continue
 			for i in mi.mesh.get_surface_count():
 				var src := mi.get_active_material(i) as BaseMaterial3D
-				if src == null or seen.has(src.albedo_texture != null):
+				if src == null or seen.has(src):
 					continue
-				seen[src.albedo_texture != null] = true
+				seen[src] = true
 				var d := src.duplicate() as BaseMaterial3D
 				d.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 				d.albedo_color.a = 0.02
 				mats.append(d)
+				_fade_keep.append(d)
 	mats.append(_debris[0].mesh.surface_get_material(0))
 	# lit by every kind of light the game has: in the torch cone and by the player's lamp (shadowed
 	# spot + omni, at the start), by the rescue crew (plain spots, beacons) and by the camp fires
@@ -707,6 +747,7 @@ func _warm_quad(m: Material) -> MeshInstance3D:
 	mi.mesh = q
 	mi.material_override = m
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = 16384.0  # drawn (and its shader built) even when the camera looks elsewhere
 	return mi
 
 

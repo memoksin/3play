@@ -89,7 +89,7 @@ light_energy = 0.06
 shadow_enabled = true
 shadow_blur = 1.5
 directional_shadow_mode = 0
-directional_shadow_max_distance = 90.0
+directional_shadow_max_distance = 3.0
 
 [node name="Camera" type="Camera3D" parent="."]
 rotation_degrees = Vector3(-40, -22, 0)
