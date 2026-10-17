@@ -4,6 +4,11 @@ extends Control
 ## The body (fact, help, cold, CO) scrolls when the card would not fit on screen;
 ## place, score, buttons and closing line always stay visible.
 
+## Audio hook for #99 / docs/audio.md R3: keyboard-typing loop for the closing
+## line. Once each, at its first and last letter (also when skipped).
+signal closing_typing_started
+signal closing_typing_finished
+
 const MARGIN := 32  # free space above and below the card
 
 
@@ -28,7 +33,7 @@ func _ready() -> void:
 	TextFx.fade_in(%Card)
 	TextFx.fade_in(%Score, 0.3)
 	TextFx.fade_in(%Buttons, 0.6)
-	TextFx.type_on($Center/Card/Box/Closing, 1.0, 24.0)
+	TextFx.type_on($Center/Card/Box/Closing, 1.0, 24.0, closing_typing_started.emit, closing_typing_finished.emit)
 
 
 ## Sizes the scroll area to the body, capped so the whole card fits the screen.
