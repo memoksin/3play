@@ -231,8 +231,7 @@ func _io_mini() -> void:
 	s.seek(skin.timer_seconds - 7.0)  # the last seven seconds before the wave: the timer runs red
 	await _begin()
 	var cell_pos := func(i: int) -> Vector2:
-		var c: Vector2i = Vector2i(i % skin.cols, i / skin.cols)
-		return Vector2(s.GRID_X + (c.x + 0.5) * s.CELL, s.GRID_Y + (c.y + 0.5) * s.CELL) * s.UP
+		return s.cell_center(Vector2i(i % skin.cols, i / skin.cols))
 	await _seconds(0.5)
 	for i in wrong:
 		# turn it until it fits (every click is a real click on the tile)

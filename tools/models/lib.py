@@ -137,7 +137,7 @@ PAL = {
     "ocean_shallow": {"c": "2d7487", "r": 0.15, "snow": 0, "raw": True},
     "land_green":   {"c": "5c7a46", "r": 0.9, "snow": 0},
     "land_dry":     {"c": "a3864f", "r": 0.9, "snow": 0},
-    "sand":         {"c": "cdb688", "r": 0.9, "snow": 0},
+    "sf_sand":      {"c": "cdb688", "r": 0.9, "snow": 0},
     "crust_a":      {"c": "a8805a", "r": 0.95, "snow": 0},
     "crust_b":      {"c": "9a5a40", "r": 0.95, "snow": 0},
     "crust_c":      {"c": "6e625e", "r": 0.95, "snow": 0},
@@ -160,6 +160,47 @@ PAL = {
     "hot_plate":    {"c": "ff6a3a", "r": 0.4, "snow": 0, "emit": ("ff3a12", 4.0)},
     "city_neon":    {"c": "bff2ff", "r": 0.3, "snow": 0, "emit": ("6fe3ff", 3.0)},
     "city_window":  {"c": "ffd9a8", "r": 1.0, "snow": 0, "emit": ("ffb866", 2.2)},
+    # tropical coast (Indian Ocean, Aceh 2004). "snow" = how much weather dust the face takes (finish(dust=...)).
+    "sand":        {"c": "dcc495", "r": 0.95, "snow": 0.3},
+    "sand_wet":    {"c": "a38a62", "r": 0.45, "snow": 0},
+    "sand_dark":   {"c": "8c7550", "r": 1.0, "snow": 0},
+    "sand_cut":    {"c": "bf9a64", "r": 1.0, "snow": 0},
+    "limestone_cut": {"c": "9d8f76", "r": 1.0, "snow": 0},
+    "coral":       {"c": "d98c78", "r": 0.9, "snow": 0},
+    "coral_pale":  {"c": "e0cdb0", "r": 0.9, "snow": 0},
+    "coral_teal":  {"c": "4f9a92", "r": 0.9, "snow": 0},
+    "coral_gold":  {"c": "d6a645", "r": 0.9, "snow": 0},
+    "reef_rock":   {"c": "8a8172", "r": 0.95, "snow": 0},
+    "limestone":   {"c": "b9ac93", "r": 0.95, "snow": 0},
+    "laterite":    {"c": "a55a3c", "r": 1.0, "snow": 0},
+    "topsoil":     {"c": "5b3f2b", "r": 1.0, "snow": 0},
+    "grass":       {"c": "77a24a", "r": 0.95, "snow": 0.2},
+    "grass_dark":  {"c": "557f37", "r": 0.95, "snow": 0.2},
+    "dirt_path":   {"c": "b08d62", "r": 1.0, "snow": 0.4},
+    "palm_trunk":  {"c": "8d7558", "r": 0.9, "snow": 0.2},
+    "palm_leaf":   {"c": "4f913c", "r": 0.8, "snow": 0.1},
+    "palm_leaf_dry": {"c": "b0a04e", "r": 0.85, "snow": 0.1},
+    "coconut":     {"c": "6e5a2c", "r": 0.8, "snow": 0},
+    "thatch":      {"c": "b79c5f", "r": 1.0, "snow": 0.3},
+    "tin_roof":    {"c": "a3abb0", "r": 0.45, "snow": 0.3},
+    "tin_rust":    {"c": "9e5d3b", "r": 0.7, "snow": 0.3},
+    "wood_teal":   {"c": "3f8b86", "r": 0.8, "snow": 0.4},
+    "wood_green":  {"c": "62a05d", "r": 0.8, "snow": 0.4},
+    "wood_cream":  {"c": "e2d4b0", "r": 0.8, "snow": 0.4},
+    "wood_blue":   {"c": "4b7bb0", "r": 0.8, "snow": 0.4},
+    "wood_dark":   {"c": "5c402b", "r": 0.85, "snow": 0.3},
+    "mosque_white": {"c": "e8e4d8", "r": 0.8, "snow": 0.3},
+    "dome_green":  {"c": "3d8f5d", "r": 0.35, "snow": 0.1},
+    "boat_blue":   {"c": "2f70b0", "r": 0.5, "snow": 0.2},
+    "boat_red":    {"c": "c23b2e", "r": 0.5, "snow": 0.2},
+    "boat_yellow": {"c": "e3b43d", "r": 0.5, "snow": 0.2},
+    "batik":       {"c": "9a4a2e", "r": 1.0, "snow": 0},
+    "pipe_paint":  {"c": "e8a634", "r": 0.45, "snow": 0},
+    "pipe_inner":  {"c": "6f4527", "r": 0.8, "snow": 0},
+    "pipe_flange": {"c": "4a4f57", "r": 0.4, "snow": 0},
+    "io_plate":    {"c": "5f656c", "r": 0.85, "snow": 0},
+    "plate_edge":  {"c": "8a9096", "r": 0.85, "snow": 0},
+    "basin_tile":  {"c": "8fb3b4", "r": 0.5, "snow": 0},
 }
 
 SNOW_RGB = PAL["snow"]["c"]
@@ -281,7 +322,7 @@ def _nodes_albedo(m, key: str, opt: dict) -> None:
         mix.data_type = "RGBA"
         L.new(amt.outputs[0], mix.inputs["Factor"])
         L.new(col, mix.inputs["A"])
-        mix.inputs["B"].default_value = (*hexc(SNOW_RGB), 1.0)
+        mix.inputs["B"].default_value = (*hexc(opt.get("dust", SNOW_RGB)), 1.0)
         col = mix.outputs["Result"]
 
     # ground grime: darker, warmer band near z = 0 (splash, wet slush)
@@ -639,7 +680,8 @@ def _ground_plane(size=200.0):
 
 def finish(name: str, out_dir: str, tex: int = 1024, ground: bool = True, **opt) -> str:
     """Bevel + join + bake + export <out_dir>/<name>.glb. opt: snow, ao, ao_dist, edge, edge_r, grime,
-    grime_h, tone, tone_scale, margin (uv island margin)."""
+    grime_h, tone, tone_scale, margin (uv island margin), dust (hex colour of the up-face weather dust,
+    default snow; e.g. sand for a dry coast)."""
     sc = bpy.context.scene
     unbaked = lambda o: "emit" in PAL[o["pal"]] or PAL[o["pal"]].get("raw")
     glow = [o for o in _parts if unbaked(o)]

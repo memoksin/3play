@@ -90,7 +90,11 @@ Put the real names in the `.tres` so they can change without code. `VERIFY` spel
 
 Grid size, timer, tile grid (type + start rotation per cell), community names, prompt key, result text keys, real-number fields with source.
 
-## Art needs (for sudeimete, issue #11)
+## Art (2.5D, #122)
+
+The 2D sprite art below is replaced by the 2.5D style (`docs/art/style-2.5d.md`): the coast is a world slab (`scenes/minigames/connect/connect_world.tscn`), the sea cut in section on the left, the grid in the slab's front cut, the four communities on top. It opens on the 3/4 hero view and glides into the play view, which looks square at the front cut from a little above (16° down), so the grid reads as a flat board like the 2D layout. Water: the tsunami is a vertex-animated breaking wave (`wave.gdshader`, `connect_wave.gd`: swell, curl, plunge, bore, spray/foam particles, a lens splash and a camera kick when it hits the shore); pipes, basins, spills and floods use `fluid.gdshader`. Models: `tools/models/indian_ocean/`. Rules, timing and layout above are unchanged.
+
+## Art needs (2D version, superseded; for sudeimete, issue #11)
 
 - **Top view (side):** bay background (ocean left, beach, village). 4 community spots. Rising sea level and a tsunami wave. A flooded version of each community (or a water overlay).
 - **Underground view (side):** soil background, rock tile.

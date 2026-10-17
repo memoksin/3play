@@ -88,7 +88,7 @@ def surface_parts():
     H = [[relief(x, y) for x in xs] for y in ys]
     Z = [[surf_z(x, y) + H[j][i] for i, x in enumerate(xs)] for j, y in enumerate(ys)]
     # land top: one mesh per colour band
-    bands = {"sand": [], "land_green": [], "land_dry": [], "crust_c": [], "cloud": []}
+    bands = {"sf_sand": [], "land_green": [], "land_dry": [], "crust_c": [], "cloud": []}
     water_faces = []
     for j in range(ny):
         for i in range(nx):
@@ -99,7 +99,7 @@ def surface_parts():
             if max(hs) < -0.01:
                 continue
             if hm < 0.16:
-                b = "sand"
+                b = "sf_sand"
             elif hm < 0.75:
                 b = "land_green"
             elif hm < 1.35:
@@ -193,7 +193,7 @@ def cuts():
         front = rng.random() < 0.62
         d = rng.uniform(WATER + 0.3, LAYERS[-2][2] - 0.2)
         r = rng.uniform(0.12, 0.36) * (1.5 if d > 3.4 else 1.0)
-        mat = "basalt" if d > 4.8 else rng.choice(["crust_c", "basalt", "crust_b", "sand"])
+        mat = "basalt" if d > 4.8 else rng.choice(["crust_c", "basalt", "crust_b", "sf_sand"])
         if front:
             x = rng.uniform(X0 + 0.3, X1 - 0.3)
             L.ball("stone", 0.5, (x, Y0 - 0.02, surf_z(x, Y0) - d), mat=mat, scale=(r * 2.2, r * 1.2, r * 1.5), subdiv=1)
