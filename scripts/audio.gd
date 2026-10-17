@@ -714,7 +714,16 @@ func _hook_connect(c) -> void:
 		loop(&"C1")
 		c.pipe_turned.connect(func() -> void: play(&"C2"))
 		c.sound_event.connect(_on_connect_event.bind(c))
-		_bind_exit(c, [&"D2", &"C1", &"C5"], 0.5))
+		# Burcu: no water sound may outlive the fill. The result card can open over the scene, so the
+		# finish stops the water too; leaving the scene (pause menu, Play again) stops everything.
+		if c.has_signal(&"finished"):
+			c.finished.connect(func(_saved: int, _total: int) -> void: _stop_connect_water(0.3))
+		_bind_exit(c, [&"D2", &"C1", &"C3", &"C4", &"C5", &"C6", &"C7", &"C9"], 0.5))
+
+
+func _stop_connect_water(fade: float) -> void:
+	for id: StringName in [&"C5", &"C6", &"C7"]:
+		stop(id, fade)
 
 
 func _on_connect_event(kind: StringName, _index: int, c: Node) -> void:
@@ -733,7 +742,7 @@ func _on_connect_event(kind: StringName, _index: int, c: Node) -> void:
 		&"spill":
 			spill(c)
 		&"drain":
-			stop(&"C5", 0.3)
+			_stop_connect_water(0.3)  # the basins are done filling: the C6 echo file runs ~25 s
 			play(&"C9")
 
 

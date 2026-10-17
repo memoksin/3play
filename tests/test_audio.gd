@@ -246,6 +246,20 @@ func _run() -> void:
 	var seen: Array = _log()
 	_check("connect: flow loop, then drain", "loop:C5" in seen and "stop:C5" in seen and "play:C9" in seen)
 	_check("connect: basins echo (C6) or lines spill (C7)", "play:C6" in seen or "play:C7" in seen)
+	for id in [&"C5", &"C6", &"C9"]:
+		audio.inject_stream(id, _wav(30.0))
+	con.sound_event.emit(&"flow", 0)
+	con.sound_event.emit(&"basin", 0)
+	var running: bool = audio.is_playing(&"C5") and audio.is_playing(&"C6")
+	con.sound_event.emit(&"drain", 0)
+	_check("connect: the water (C5, C6) stops at the drain, after the fill (Burcu)",
+		running and not audio._players.has(&"C5") and not audio._players.has(&"C6"))
+	con.sound_event.emit(&"flow", 0)
+	con.sound_event.emit(&"basin", 1)
+	con.finished.emit(1, 3)
+	_check("connect: the water stops when the minigame finishes",
+		not audio._players.has(&"C5") and not audio._players.has(&"C6"))
+	audio.clear_injected()
 	con.queue_free()
 	await process_frame
 
