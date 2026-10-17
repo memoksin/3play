@@ -2,7 +2,7 @@ extends SceneTree
 ## Story: prologue flag round trip, boot path choice, prologue line flow and skip, replay from Settings.
 ## godot --headless --path . -s res://tests/test_story.gd
 
-const MAX_FRAMES := 1800
+const MAX_FRAMES := 4800
 const PROLOGUE := "res://scenes/prologue.tscn"
 
 var ok := true
@@ -39,6 +39,16 @@ func _open_prologue() -> void:
 	await _wait_scene(PROLOGUE)
 
 
+## Start on the title always plays the prologue (seen or not); skipping it lands on the main menu.
+func _start_to_main(story, main_path: String) -> void:
+	_check("title is up before Start", current_scene.scene_file_path == story.TITLE)
+	current_scene.get_node("%Start").pressed.emit()
+	await _wait_scene(PROLOGUE)
+	_check("Start -> prologue (prologue seen: %s)" % story.prologue_seen(), current_scene.scene_file_path == PROLOGUE)
+	current_scene.skip()
+	await _wait_scene(main_path)
+
+
 func _run() -> void:
 	var story = load("res://scripts/story.gd")  # loaded late: it needs the Game autoload
 	var game := root.get_node("Game")
@@ -50,11 +60,14 @@ func _run() -> void:
 	# Story round trip
 	game.settings_path = path
 	_check("unseen at first", not story.prologue_seen())
-	_check("after_splash -> title", story.after_splash() == story.TITLE)
+	story.notice_shown = false
+	_check("after_splash -> notice (first in this launch)", story.after_splash() == story.NOTICE)
+	story.notice_shown = true
+	_check("after_splash -> title (notice already shown)", story.after_splash() == story.TITLE)
 	_check("after_title -> prologue", story.after_title() == PROLOGUE)
 	story.mark_prologue_seen()
 	_check("seen after mark", story.prologue_seen())
-	_check("after_title -> main", story.after_title() == main_path)
+	_check("after_title -> prologue even when seen", story.after_title() == PROLOGUE)
 	DirAccess.remove_absolute(abs_path)
 	game.settings_path = ""
 	story.mark_prologue_seen()
@@ -104,6 +117,7 @@ func _run() -> void:
 	current_scene.get_node("%SkipButton").pressed.emit()
 	await _wait_scene(main_path)
 	_check("Skip button lands on main", current_scene.scene_file_path == main_path)
+	story.notice_shown = false
 	change_scene_to_file(story.SPLASH)
 	await _wait_scene(story.SPLASH)
 	var click := InputEventMouseButton.new()
@@ -111,10 +125,12 @@ func _run() -> void:
 	click.pressed = true
 	click.position = Vector2(300, 300)
 	Input.parse_input_event(click)
+	await _wait_scene(story.NOTICE)
+	_check("mouse click skips the splash (notice first)", current_scene.scene_file_path == story.NOTICE)
+	current_scene.confirm_box.button_pressed = true
 	await _wait_scene(story.TITLE)
-	_check("mouse click skips the splash", current_scene.scene_file_path == story.TITLE)
-	current_scene.get_node("%Start").pressed.emit()
-	await _wait_scene(main_path)
+	_check("notice -> title", current_scene.scene_file_path == story.TITLE)
+	await _start_to_main(story, main_path)
 
 	# Settings on the main menu: replay the prologue even though it was seen
 	var panel = game.settings_panel
@@ -175,23 +191,20 @@ func _run() -> void:
 	current_scene.back()
 	await _wait_scene(story.TITLE)
 	_check("credits back returns to the title", current_scene.scene_file_path == story.TITLE)
-	current_scene.get_node("%Start").pressed.emit()
-	await _wait_scene(main_path)
-	_check("title start (prologue seen) -> main", current_scene.scene_file_path == main_path)
+	await _start_to_main(story, main_path)
+	_check("title start (prologue seen) -> prologue -> main", current_scene.scene_file_path == main_path)
 	# the role select goes back to the title with Back and with Esc
 	current_scene.get_node("%Back").pressed.emit()
 	await _wait_scene(story.TITLE)
 	_check("role select Back -> title", current_scene.scene_file_path == story.TITLE)
-	current_scene.get_node("%Start").pressed.emit()
-	await _wait_scene(main_path)
+	await _start_to_main(story, main_path)
 	var esc := InputEventAction.new()
 	esc.action = &"ui_cancel"
 	esc.pressed = true
 	Input.parse_input_event(esc)
 	await _wait_scene(story.TITLE)
 	_check("role select Esc -> title", current_scene.scene_file_path == story.TITLE)
-	current_scene.get_node("%Start").pressed.emit()
-	await _wait_scene(main_path)
+	await _start_to_main(story, main_path)
 
 	DirAccess.remove_absolute(abs_path)
 	game.settings_path = ""
