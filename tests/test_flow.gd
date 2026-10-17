@@ -83,6 +83,7 @@ func _run() -> void:
 	_check_sun_fixed()
 	var game := root.get_node("Game")
 	game.store_path = ""  # never touch the real play counts
+	game.settings_path = ""  # the menu must not redirect to the language scene
 	for role in [&"citizen", &"state"]:
 		for win in [true, false]:
 			game.start(role)
