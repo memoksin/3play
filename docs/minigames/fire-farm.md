@@ -48,7 +48,7 @@ Footsteps, picking up the knife, cutting the fence, kangaroos hopping out, **suc
 
 - First person 3D scene, small: one yard, a few props. The 2.5D style guide (#121) applies to the look.
 - Mechanics are few: move, look, interact, jump. No steering of animals.
-- `OPEN`: is first person OK for the time left? Memoksin to estimate.
+- Memoksin (#125): a small first-person 3D scene is feasible and will not take long; built in parallel with the 2.5D reform (done around 16:00 on Sat), then polish until Sun 18:00.
 
 ## Open questions
 
