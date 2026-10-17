@@ -77,10 +77,28 @@ func _run() -> void:
 		voice.typing_started.emit()
 		voice.typing_finished.emit()
 		_check("story: Voice typing loops ST2 from first to last letter", _log() == ["loop:ST2", "stop:ST2"])
+	# Menu music: M1 starts on the title, keeps running through credits, the prologue fades it out.
+	audio.inject_stream(&"M1", _wav(5.0))
+	audio.reset_history()
+	var title: Node = load("res://scenes/title.tscn").instantiate()
+	root.add_child(title)
+	await process_frame
+	var on_title: bool = audio.is_playing(&"M1")
+	title.queue_free()
+	await process_frame
+	var cred: Node = load("res://scenes/credits.tscn").instantiate()
+	root.add_child(cred)
+	await process_frame
+	_check("music: M1 on the title and on through credits", on_title and audio.is_playing(&"M1")
+		and audio._players.get(&"M1", []).size() == 1)
+	cred.queue_free()
+	await process_frame
 	var pro: Node = load("res://scenes/prologue.tscn").instantiate()
 	audio.inject_stream(&"ST1", _wav(1.0))
+	audio.reset_history()
 	root.add_child(pro)
 	await process_frame
+	_check("music: the prologue fades M1 out", "stop:M1" in _log())
 	audio.reset_history()
 	pro.typing_started.emit()
 	pro.typing_finished.emit()
@@ -88,6 +106,8 @@ func _run() -> void:
 	pro.queue_free()
 	await process_frame
 	audio.stop_all()
+	for p in audio.get_children():  # the M1 fade-out is a 1 s tween: do not wait for it
+		p.free()
 	audio.clear_injected()
 	var pickers: Array[Node] = game_node.find_children("*", "", true, false).filter(
 		func(n: Node) -> bool: return n.scene_file_path == audio.LANG_PICKER_SCENE) if game_node else []

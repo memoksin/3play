@@ -150,6 +150,8 @@ const SCENE_HOOKS := {
 	"res://scenes/diorama.tscn": &"_hook_diorama",
 	"res://scenes/ui/intro_text.tscn": &"_hook_intro_text",
 	"res://scenes/prologue.tscn": &"_hook_prologue",
+	"res://scenes/title.tscn": &"_hook_menu_music",
+	"res://scenes/credits.tscn": &"_hook_menu_music",
 	"res://scenes/ui/lang_picker.tscn": &"_hook_lang_picker",
 	"res://scenes/minigames/fit.tscn": &"_hook_fit",
 	"res://scenes/minigames/connect.tscn": &"_hook_connect",
@@ -212,7 +214,14 @@ func _hook_existing() -> void:
 
 
 ## Story typed text (Burcu): the keyboard loop runs from the first to the last letter of each line.
+## Title and credits: the menu music M1 starts on the title and runs on through credits and back
+## (loop() keeps a running loop); the prologue fades it out, the role select (main) picks it up again.
+func _hook_menu_music(_n: Node) -> void:
+	loop(&"M1")
+
+
 func _hook_prologue(n: Node) -> void:
+	stop(&"M1", 1.0)
 	n.typing_started.connect(func() -> void: loop(&"ST1"))
 	n.typing_finished.connect(func() -> void: stop(&"ST1", 0.05))
 	_bind_exit(n, [&"ST1"], 0.05)
