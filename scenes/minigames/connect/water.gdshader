@@ -35,7 +35,9 @@ uniform float ts_draw = 0.0;       // drawback: the sea sucked off the shore ahe
 uniform float ts_inland = 0.0;     // flood surface drop per metre inland (it thins out, drains back)
 uniform float ts_churn = 0.0;      // whitewater on the moving water
 uniform float ts_flow = 0.0;       // current along u (m/s, + inland), carries the foam and the mud
-uniform float ts_mud = 0.0;        // sand and mud stirred up: the flood is brown, the sea goes murky
+uniform float ts_mud = 0.0;
+uniform float ts_hold = 0.0;       // a lost town: the flood over the land stays this high (m over `level`)
+uniform float ts_hold_slope = 0.0; // ... dropping this much per metre inland        // sand and mud stirred up: the flood is brown, the sea goes murky
 
 varying vec3 lp;
 varying float v_u;
@@ -80,7 +82,11 @@ float eta(float u, float d) {
 	float crest = ts_crest * (1.0 + 0.1 * sin(d * 0.8 + 0.7) + 0.06 * sin(d * 2.1 + 1.9));
 	float plat = ts_plat - ts_inland * max(u, 0.0);
 	float draw = ts_draw * exp(-pow((u + 1.6) / 4.5, 2.0)) * smoothstep(-1.0, 3.0, x);
-	return crest * head + plat * ahead - draw;
+	float e = crest * head + plat * ahead - draw;
+	if (ts_hold > 0.0) {
+		e = max(e, (ts_hold - ts_hold_slope * max(u, 0.0)) * smoothstep(-1.0, beach_w, u));
+	}
+	return e;
 }
 
 // Forward throw of the face's upper part (the water there moves faster than the foot).
