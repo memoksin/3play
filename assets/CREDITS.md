@@ -148,13 +148,6 @@ Columns required per asset: name, author, link, license, where used.
 | audio/trailer/t27_egg_crack.ogg | Egg cracking.wav by FngerSounds, https://freesound.org/s/250133/. Pitch film (trailer) T27. Preview from Freesound, trimmed with ffmpeg. First 2.7 s, -3 dB. | CC0 |
 | audio/trailer/t31_tv_off.ogg | Turning the TV off by Cloud-10, https://freesound.org/people/Cloud-10/sounds/648174/. Pitch film (trailer) T31. Preview from Freesound, trimmed with ffmpeg. First 0.28 s. | CC0 |
 
-## Planned third-party assets (NOT in the repo yet: move a row up and fill every column once added)
-
-| Asset | Author | Link | License | Where used |
-|---|---|---|---|---|
-| Music loop | TODO | TODO | TODO (CC0 only) | TODO |
-| Sound effects | TODO (Freesound) | TODO | TODO (CC0 only; check each file, some Freesound files are CC-BY) | TODO |
-
 ## AI usage declaration
 
 One block per category: visual, audio, code, text, other. Write "None" if not used, do not leave blank.
