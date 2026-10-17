@@ -18,13 +18,15 @@ func _ready() -> void:
 	%Place.text = "%s, %s" % [d.text("PLACE"), d.text("YEAR")]
 	%Score.text = d.text("CARD_SCORE") % Game.saved
 	if Game.total > 0 and Game.saved * 2 < Game.total:
-		%Score.add_theme_color_override("font_color", Palette.DANGER)
+		%Score.add_theme_color_override("font_color", Palette.HUD_RED)
 	%Numbers.text = d.text("CARD_NUMBERS")
 	%Fact.text = d.text("CARD_FACT")
 	%Help.text = d.text("CARD_HELP")
 	var cold: int = Game.extra.get("cold", 0)
 	_optional(%Cold, d, "CARD_COLD", cold if cold > 0 else null)
 	_optional(%Co, d, "CARD_CO")
+	%Replay.text = TextFx.upper(tr("RESULT_REPLAY"))
+	%Menu.text = TextFx.upper(tr("RESULT_MENU"))
 	%Replay.pressed.connect(Game.start.bind(Game.role))
 	%Menu.pressed.connect(Game.next)
 	get_viewport().size_changed.connect(fit)

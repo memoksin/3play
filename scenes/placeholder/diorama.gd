@@ -9,5 +9,5 @@ func _ready() -> void:
 	var intro: IntroText = INTRO.instantiate()
 	intro.auto_advance = 4.0
 	add_child(intro)
-	intro.show_text(d.text("PLACE"), d.text("YEAR"), [d.text("INTRO_1"), d.text("INTRO_2")])
+	intro.show_text(d.text("PLACE"), d.text("YEAR"), [d.text("INTRO_1"), d.text("INTRO_2")], IntroText.coords_text(d.lat, d.lon))
 	intro.done.connect(Game.next)

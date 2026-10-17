@@ -27,9 +27,15 @@ func _ready() -> void:
 	%Next.pressed.connect(_on_next)
 
 
-func show_text(place: String, date: String, lines: Array[String]) -> void:
-	%Place.text = place.to_upper()
-	%Date.text = date.to_upper()
+## `coords`: e.g. "37.58°N  036.93°E" (see coords_text()); empty hides the
+## coordinate and LOCKED rows.
+func show_text(place: String, date: String, lines: Array[String], coords := "") -> void:
+	%Place.text = TextFx.upper(place)
+	%Date.text = TextFx.upper(date)
+	%Coords.text = coords
+	%Coords.visible = coords != ""
+	%Locked.visible = coords != ""
+	%Next.text = TextFx.upper(tr("INTRO_NEXT"))
 	for c in %Lines.get_children():
 		c.queue_free()
 	var labels: Array[Label] = []
@@ -71,6 +77,11 @@ func _line_finished() -> void:
 		return
 	_line_open = false
 	typing_finished.emit()
+## The globe HUD's coordinate format, e.g. "37.58°N  036.93°E".
+static func coords_text(lat: float, lon: float) -> String:
+	var la := ("%.2f" % absf(lat)).lpad(5, "0") + "°" + ("N" if lat >= 0 else "S")
+	var lo := ("%.2f" % absf(lon)).lpad(6, "0") + "°" + ("E" if lon >= 0 else "W")
+	return la + "  " + lo
 
 
 func _typed() -> void:
