@@ -28,6 +28,8 @@ For whoever has the game on their computer (memoksin or sudeimete).
 | G5 | Zoom to country | Camera zooms in on the country | Whoosh.wav | crackles04 | https://freesound.org/people/crackles04/sounds/369698/ | CC0 | chosen | |
 | G6 | Time counter | Clock or year counter runs while time advances | | | | | no sound | Test it silent first. If it feels empty, add a short digital tick later. |
 | G7 | Glitch and jump to the future | Globe glitches and jumps to year 3000+ (Tier 2) | Glitch Corruption | dotY21 | https://freesound.org/people/dotY21/sounds/348585/ | CC0 | chosen | Tier 2. |
+| G8 | Riser, main menu to globe | The player leaves the menu and the globe appears | | | | | todo | The current transition sound is too short. A riser that builds into the reveal (in the spirit of the Activision intro). |
+| G9 | Globe ambience | While the globe is shown (space or Earth feel) | | | | | todo | No water. The Indian Ocean minigame ambience must not play on the globe (bug, fix with sudeimete). NASA Earth recordings were suggested, license to verify. |
 
 ### Still to do for the globe
 
@@ -42,11 +44,22 @@ For whoever has the game on their computer (memoksin or sudeimete).
 | M1 | Menu music | Loop while the role select screen is open | Title.mp3 (from Dark Sci-Fi Audio Pack) | SRG774 | https://opengameart.org/content/dark-sci-fi-audio-pack | CC0 | chosen | Cold and mysterious tone. The author suggests a slight crossfade when looping. The pack has 4 more tracks and 3 UI sounds, not used. |
 | M2 | Button hover | The mouse is over the "State" or "Citizen" button | UI_Hover | unfa | https://freesound.org/people/unfa/sounds/565131/ | CC0 | chosen (optional) | Not sure it is needed. Test the menu without it first. About 0.12 s. |
 | M3 | Button click | The player picks State or Citizen | Soft UI Button Click | Jummit | https://freesound.org/people/Jummit/sounds/528561/ | CC0 | chosen | Soft sci-fi click. |
+| M4 | Prompt typing | The line "Who are you when disaster strikes?" types out | Computer keyboard typing snippet mono [loop] | cabled_mess | https://freesound.org/people/cabled_mess/sounds/361639/ | CC0 | chosen (reuse of G3) | Same typing sound as everywhere else. |
 
 ### Still to do for the main menu
 
 - Download the files and add them to the repo, then to `assets/CREDITS.md`, then set Status to `in repo`.
 - Re-check the license line on each page when downloading.
+
+## Language screen (flag select)
+
+First screen at the first launch, with the flags. It reuses the main menu sounds.
+
+| # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
+|---|---|---|---|---|---|---|---|---|
+| LS1 | Flag hover | The mouse is over a flag | UI_Hover | unfa | https://freesound.org/people/unfa/sounds/565131/ | CC0 | chosen (reuse of M2) | Same as the main menu hover. |
+| LS2 | Flag click | A language is chosen | Soft UI Button Click | Jummit | https://freesound.org/people/Jummit/sounds/528561/ | CC0 | chosen (reuse of M3) | Same as the main menu click. |
+| LS3 | Music | The language screen is open | | | | | no sound | The menu music (M1) starts at the main menu. To confirm. |
 
 ## Diorama
 
@@ -59,6 +72,7 @@ The diorama is the 3D intro (about 10 s): the camera orbits a small low-poly set
 | D3 | Solar flare 3026 ambience | Diorama of the solar flare scenario | Solar Storm.wav | Puniho | https://freesound.org/s/151098/ | CC0 | chosen | Space ambience. |
 | D4 | Intro text typing | The intro lines type on, one after another | Computer keyboard typing snippet mono [loop] | cabled_mess | https://freesound.org/people/cabled_mess/sounds/361639/ | CC0 | chosen | Same file as G3, so all typed text in the game sounds the same. |
 | D5 | Diorama to minigame transition | The diorama ends and the minigame starts | | | | | no sound | No sound for now. Open question for the whole game: do scene transitions need a sound? See below. |
+| D6 | Continue prompt hover | The mouse is over the "Continue" prompt | UI_Hover | unfa | https://freesound.org/people/unfa/sounds/565131/ | CC0 | chosen (reuse of M2) | A bit louder than in the menu. |
 
 ### Still to do for the diorama
 
@@ -161,6 +175,7 @@ Dark snowy street, a flashlight with a battery, a whistle that shows the directi
 | FN6 | Found a family member | The player reaches a family member | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen (reuse of F2) | First second of the file. |
 | FN7 | Success | The family reaches the assembly point | | | | | todo | A success sound, the same one as FR6 and BM4. |
 | FN8 | Aftershock | The aftershock hits | Cracking Earthquake | uagadugu | https://freesound.org/people/uagadugu/sounds/222521/ | CC0 | chosen (reuse of F6) | Trim to the shaking. |
+| FN8a | Building creak | Aftershock warning and the start of the aftershock | | | | | todo | Does not play yet in the game. A real building creak is still to be found; it layers on top of FN8. Old row: F5. |
 | FN9 | Hurt | The player is hurt near a building | | | | | todo | Needs a search. |
 
 ## Fire (Black Saturday, kangaroo farm, first person)
