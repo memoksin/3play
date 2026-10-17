@@ -110,6 +110,7 @@ func _leave_globe(role: StringName, space: bool) -> void:
 
 
 func _run() -> void:
+	load("res://scripts/story.gd").progress_path = ""  # never touch the real mission progress
 	_check_sun_glued()
 	var game := root.get_node("Game")
 	# a temp play-count file (never the real one): the two runs per role take both of its scenarios
