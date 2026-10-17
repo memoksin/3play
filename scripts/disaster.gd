@@ -15,6 +15,8 @@ extends Resource
 @export var minigame: StringName
 ## Mechanic data (FitSkin, ConnectSkin, BeamSkin, FenerSkin). Owned by the minigame.
 @export var skin: Resource
+## Mission badge model (Story progress, tools/models/badges/): drawn by BadgeView on the badges screen and in the badge moment after the result card.
+@export var badge: PackedScene
 ## Solar flare: globe glitches to year 3000+.
 @export var glitch := false
 

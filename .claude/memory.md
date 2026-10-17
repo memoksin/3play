@@ -11,6 +11,8 @@ Shared by every agent. Loaded via CLAUDE.md. Hard cap 40 lines; one line per fac
 
 - 2.5D art: models only from `tools/models/` (headless Blender, `python3 tools/models/build.py`); camera, light, palette rules in `docs/art/style-2.5d.md` (#121).
 - Fener people: `assets/3d/kahramanmaras/meshy_<name>.glb` (Meshy mesh, Quaternius UAL clips, in place); clip list and the move speed per clip (else feet slide) in `tools/models/meshy/README.md`.
+- Story progress (#127): Story.record() on the result card writes user://progress.cfg (done, best, badge = saved >= half); tests/tools that reach result.tscn set load("res://scripts/story.gd").progress_path = "". Badge = Disaster.badge (PackedScene, models in tools/models/badges/, 3026 = scenes/badges/badge_solar_flare.tscn).
+- Voice autoload (scripts/voice.gd): Voice.say(key) types a prologue-style line; on the glitch run it holds the globe (globe.paused) after the 3026 lock (coords_typing_finished + globe.future > 0), agreed with memoksin on #128.
 ## Gotchas
 - PRs to `dev` auto-merge and `Closes #N` never fires there: close the issue by hand after merge.
 - After adding assets or editing `locale/strings.csv`, run `godot --headless --path . --import`, or new keys show raw.

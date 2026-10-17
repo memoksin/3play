@@ -51,6 +51,15 @@ For whoever has the game on their computer (memoksin or sudeimete).
 - Download the files and add them to the repo, then to `assets/CREDITS.md`, then set Status to `in repo`.
 - Re-check the license line on each page when downloading.
 
+## All buttons in the whole game
+
+Burcu's rule: every button in every scene uses the same two sounds, no exceptions.
+
+| # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
+|---|---|---|---|---|---|---|---|---|
+| UI1 | Button hover | The mouse is over any button: menus, minigame choice and card buttons, the pause menu (4 buttons), settings, result card | UI_Hover | unfa | https://freesound.org/people/unfa/sounds/565131/ | CC0 | chosen (M2) | Same as M2. Also on the pause menu opened inside a minigame. |
+| UI2 | Button click | Any button is pressed, including the pause menu buttons | Soft UI Button Click | Jummit | https://freesound.org/people/Jummit/sounds/528561/ | CC0 | chosen (M3) | Same as M3. |
+
 ## Language screen (flag select)
 
 First screen at the first launch, with the flags. It reuses the main menu sounds.
@@ -176,7 +185,7 @@ Dark snowy street, a flashlight with a battery, a whistle that shows the directi
 | FN6 | Found a family member | The player reaches a family member | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen (reuse of F2) | First second of the file. |
 | FN7 | Success | The family reaches the assembly point | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | chosen | One success sound for FN7, FR6 and BM4. |
 | FN8 | Aftershock | The aftershock hits | Cracking Earthquake | uagadugu | https://freesound.org/people/uagadugu/sounds/222521/ | CC0 | chosen (reuse of F6) | Trim to the shaking. |
-| FN8a | Building creak | Aftershock warning and the start of the aftershock |  |  |  |  | not found | No usable building creak was found. Left empty for now, test the game without it. |
+| FN8a | Building crack | Aftershock warning and the start of the aftershock | breaking_concrete | zatar | https://freesound.org/people/zatar/sounds/755522/ | CC0 (verify) | chosen | Burcu picked it: a hammer breaking concrete, for the building body cracking. Plays with FN8 (Cracking Earthquake). Trim to the first crack by ear. |
 | FN9 | Hurt | The player is hurt near a building | Hurt_C_07 | cabled_mess | https://freesound.org/people/cabled_mess/sounds/350926/ | CC0 | chosen | Retro-style hurt sound, about 0.2 s. |
 
 ## Fire (Black Saturday, kangaroo farm, first person)
@@ -209,12 +218,12 @@ Rotate satellites to route the solar beam into collectors, waves, a countdown, "
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
 | BM1 | Space ambience | Whole minigame | Solar Storm.wav | Puniho | https://freesound.org/s/151098/ | CC0 | chosen (reuse of D3) | |
-| BM2 | Rotate a satellite | The player rotates a satellite | Servo motor | Burningmonkey | https://freesound.org/people/Burningmonkey/sounds/322021/ | CC0 | chosen | Use seconds 3 to 4 of the file. |
+| BM2 | Rotate a satellite | The player rotates a satellite | Servo_1_Panera.wav | sinmente0987 | https://freesound.org/people/sinmente0987/sounds/160712/ | CC0 (checked by Sude) | chosen | Burcu picked it instead of Servo motor (Burningmonkey). Use only the first 1 s to 1.5 s of the file. |
 | BM3 | Beam | The beam runs through the satellites | Laser Beam Firing | SecureSubset | https://freesound.org/people/SecureSubset/sounds/783986/ | CC0 | chosen | About 0.75 s. Repeat it back to back so it becomes a continuous sound while the beam runs. |
 | BM4 | Collector charged, city saved | A collector is charged | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | chosen (same as FN7) | The same success sound as FN7 and FR6. |
 | BM5 | City lost | A city is lost | power-down-01.wav | newagesoup | https://freesound.org/people/newagesoup/sounds/348249/ | CC0 | chosen | Use the part from 1 s onward. |
-| BM6 | Wave warning | A wave is coming | | | | | later | Empty for now, to search later. |
-| BM7 | Wave hits | The wave hits | | | | | later | Empty for now. |
+| BM6 | Wave warning | A wave is coming (briefing card, countdown start) |  |  |  |  | no sound | Burcu: silent for now. The countdown beeps (BM8) already cover it. Decide after a test in the game. |
+| BM7 | Wave hits | The shot (the beam travels) |  |  |  |  | no sound | Burcu: silent. The shot is already BM3 (beam) with BM4 and BM5. Optional later: a short low boom on wave 4. |
 | BM8 | Countdown | The countdown runs | Bomb Countdown Beeps | snakebarney | https://freesound.org/people/snakebarney/sounds/138108/ | CC0 | chosen |  |
 
 ## Pitch film (trailer, about 50 s, silent render, sounds added by the team)
@@ -223,17 +232,17 @@ Source: `tools/video/film.html` cue sheet and `tools/video/intro_stack_v2.html` 
 
 | # | Time (s) | What happens | Sound needed | Status |
 |---|---|---|---|---|
-| T1 | 0 to 8 | Intro: the Stack logo in a storm | Rain loop and low wind, under the whole intro | todo |
-| T2 | about 2.4 | Distant sheet lightning in the clouds | Far soft thunder | todo |
-| T3 | 2.8 and 3.4 | Two close lightning strikes, the logo flickers | Two thunder cracks | todo |
-| T4 | 3.9 | Final strike hits the logo (2 frames silhouette, 1 inverted) | Big thunder crack and impact, then silence for a beat | todo |
-| T5 | 4.45 to 5.3 | "STACK PRESENTS" types on | Letter-by-letter type-on blips with a glitch feel | todo |
-| T6 | 5.5 | Last far strike | Far thunder | todo |
-| T7 | 6.05 to 7.65 | The camera pushes into the logo's eye | Riser, low and building, ends in a cut | todo |
+| T1 | 0 to 8 | Intro: the Stack logo in a storm | Seamless Rain Low (QuietLily) https://freesound.org/people/QuietLily/sounds/584101/ , loop under the whole intro | chosen |
+| T2 | about 2.4 | Distant sheet lightning in the clouds | thunder.rumble.ogg (xUMR) https://freesound.org/people/xUMR/sounds/486557/ , use seconds 5 to 10 of the file | chosen |
+| T3 | 2.8 and 3.4 | Two close lightning strikes, the logo flickers | First: Thunderclap (Fission9) https://freesound.org/people/Fission9/sounds/534023/ . Second: Very close lightning strike (Simon Spiers) https://freesound.org/people/Simon%20Spiers/sounds/437243/ | chosen |
+| T4 | 3.9 | Final strike hits the logo (2 frames silhouette, 1 inverted) | Thunder with no rain (shazzakip) https://freesound.org/people/shazzakip/sounds/398013/ (Burcu's pick; it is described as very far away, so check by ear that it is big enough, add Simon Spiers underneath if not) | chosen |
+| T5 | 4.45 to 5.3 | "STACK PRESENTS" types on | Keyboard typing (G3), same file as the game | chosen (reuse of G3) |
+| T6 | 5.5 | Last far strike | Same as T2: thunder.rumble.ogg (xUMR), seconds 5 to 10 | chosen |
+| T7 | 6.05 to 7.65 | The camera pushes into the logo's eye | noise riser (reathance) https://freesound.org/people/reathance/sounds/503796/ | chosen |
 | T8 | 7.75 | Pure black | Silence | no sound |
-| T9 | 8.2, 8.5, 9.2, 9.5 | Darkness with a heartbeat glow | Heartbeat lub-dub (two beats, twice) | todo |
-| T10 | 8.8 to 10.0 | A faint voice echoes: "Sesimi duyan var mı?" | The line spoken by a team member, with echo (if text-to-speech is used it must be declared as AI) | todo |
-| T11 | 10.0 to 12.35 | "Hayatın göremediğimiz boyutları vardır" | Soft sting for a statement | todo |
+| T9 | 8.2, 8.5, 9.2, 9.5 | Darkness with a heartbeat glow | SLOW HEARTBEAT (daandraait) https://freesound.org/s/249716/ , use seconds 2 to 3 of the file (lub-dub) | chosen |
+| T10 | 8.8 to 10.0 | A faint voice echoes: "Sesimi duyan var mı?" |  | Burcu: no voice recording. Silent. | | | no sound | Dropped by Burcu. The on-screen text stays. |
+| T11 | 10.0 to 12.35 | "Hayatın göremediğimiz boyutları vardır" | Cinematic Low Pitch Impact (Jofae) https://freesound.org/people/Jofae/sounds/408141/ , also used for the title cards (T13) | chosen |
 | T12 | 12.4 | The darkness tears open into the Kahramanmaras diorama | Rip or whoosh, then the D1 Winter Wind from the game | todo (D1 exists) |
 | T13 | 14.3 to 16.6 | Title card "TAHMİN ET" | Title card hit (glitch plus low boom), the same for all 5 cards | todo |
 | T14 | 16.6, 28.0, 36.3, 43.8 | Four glitch cuts between clips | Short glitch or digital stutter (G7 style) | todo |
@@ -249,10 +258,16 @@ Source: `tools/video/film.html` cue sheet and `tools/video/intro_stack_v2.html` 
 | T24 | 34.3 | Title card "TERCİH ET" | Title card hit (T13) | todo |
 | T25 | 36.3 to 40 | The globe spins again, "Dünyanın dört bir yanından", "3 afet senaryosu" | Globe spin G2, statement stings | reuse G2 |
 | T26 | 39.7 | Pixelate into the Easter bunny scene | Pixelate or 8-bit sweep | todo |
-| T27 | 41.5 | The egg bursts and the bunny pops out | 8-bit pop or burst | todo |
+| T27 | 41.5 | The egg bursts and the bunny pops out | Another sound, to search. Candidates: egg crack CC0: Egg cracking.wav (FngerSounds) https://freesound.org/s/250133/ | to choose |
 | T28 | 41.6 | "Belki bir de easter egg, kim bilir…" | Statement sting | todo |
 | T29 | 43.8 to 47.4 | Result card, the closing line types on (44.4 to 45.9) | Card swell (R1), typing (G3) | reuse R1, G3 |
 | T30 | 47.4 | Title card "FARK ET" | Title card hit (T13) | todo |
-| T31 | 49.1 | CRT power-off | TV or CRT switch-off sound | todo |
+| T31 | 49.1 | CRT power-off | Another sound, to search. Candidates: https://freesound.org/s/616850/ , https://freesound.org/people/SpliceSound/sounds/188197/ , https://freesound.org/people/Cloud-10/sounds/648174/ (check licence) | to choose |
 | T32 | 49.8 to 50.3 | Black | Silence | no sound |
 | T33 | whole film | Music under the film | One music bed. To decide: the menu music M1 (Title.mp3) or a new track. | to decide |
+
+
+### Notes from Burcu (pitch film and game)
+
+- Possible later use: "8 Bit Sound - 1-Up!" (Breviceps, https://freesound.org/people/Breviceps/sounds/450613/ , CC0) as the sound when a badge (rozet) is earned on the result card. Not decided, not in the game yet.
+- All typed text from the story layer (the Voice lines, prologue, any other typed line) uses the same keyboard typing sound as G3, D4 and R3.
