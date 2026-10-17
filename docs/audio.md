@@ -106,3 +106,19 @@ Timeline from `scenes/minigames/connect.gd`: a calm bay until about 6 s before t
 | C7 | Broken line spills | The water spills out of a broken line | Big Water Splash | qubodup | https://freesound.org/people/qubodup/sounds/442773/ | CC0 | chosen (to test) | Repeat the same splash several times, each starting before the previous ends, to build an overflow. Try it, replace the sound if it feels fake. Issue #95. |
 | C8 | Village floods | The spilled water floods the village | | | | | no sound (test) | Leave empty and test the game. Add a sound only if it feels empty. |
 | C9 | Water drains | The water drains back (1.5 s) | wavesound.wav | transitking | https://freesound.org/people/transitking/sounds/11505/ | CC0 | chosen | Use only the first 4 s of the file (waves wash over the rock and drain back through a crack). |
+
+## Result card
+
+What happens on the card (`scenes/result.gd`): the card fades in, the score lands 0.3 s later, the buttons (Play again, Main menu) come at 0.6 s, and the closing line types on last.
+
+| # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
+|---|---|---|---|---|---|---|---|---|
+| R1 | Card appears | The card fades in | Guitar swell 1.wav | Sub-d | https://freesound.org/people/Sub-d/sounds/47021/ | CC0 | proposed: reuse G1 | Same soft swell as the globe appearing (about seconds 4 to 6). Confirm. |
+| R2 | Score lands | The score appears | | | | | no sound | Not needed. |
+| R3 | Closing line typing | The closing line types on | Computer keyboard typing snippet mono [loop] | cabled_mess | https://freesound.org/people/cabled_mess/sounds/361639/ | CC0 | chosen | Same as G3 and D4. Needs typing start and finish signals, issue #99. |
+| R4 | Button hover and click | Play again and Main menu | UI_Hover (unfa) and Soft UI Button Click (Jummit) | unfa, Jummit | see M2 and M3 | CC0 | chosen | Same sounds as the main menu (M2, M3). |
+| R5 | Result music | While the card is open, calm and thoughtful | | | | | todo | Needs a search. Idea: another track from the Dark Sci-Fi Audio Pack (same source as the menu music), or a separate calm track. |
+
+### Typed text everywhere (G3, D4, R3)
+
+All text that types on letter by letter uses the same keyboard typing sound, started with the first letter and stopped with the last one, like the globe coordinates. Each typing effect needs start and finish signals: diorama intro text and the result closing line. Tracked in issue #99 (assigned to iremaltunsgt, who owns intro text and the result card; memoksin did the globe in #66).
