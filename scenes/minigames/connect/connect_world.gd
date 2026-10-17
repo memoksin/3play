@@ -23,6 +23,10 @@ const BOAT_STRAND: Array[Vector2] = [Vector2(8.8, 3.1), Vector2(9.6, 10.2), Vect
 ## Community centres on top (coast u, depth d), one per basin, above its shaft (coast_slab.py SHAFTS).
 const VILLAGE_UD: Array[Vector2] = [Vector2(15.6, 1.8), Vector2(18.6, 1.9), Vector2(21.6, 1.8), Vector2(24.8, 2.2)]
 const VILLAGE_R := 1.7
+## Run-up limits (connect_wave.gd reach): every community saved -> the water stops on the beach; some
+## saved -> it stops VILLAGE_KEEP m short of the first saved one (the unsaved ones past it get their own flood).
+const BEACH_REACH := 4.2
+const VILLAGE_KEEP := 3.0
 const HOVER_LIFT := 0.32
 const LOCK_COLOR := Color(1.0, 0.82, 0.35)  # warm gold: the frame glint of a line that just locked
 const DENY_TILT := 0.14  # rad, peak of the "locked" wiggle
@@ -847,12 +851,29 @@ func show_state(s: Node) -> void:
 func _show_wave(s: Node, level: float) -> void:
 	var tau: float = s.elapsed - s.skin.timer_seconds
 	var drain := clampf((s._hit_t() - s._drain_start()) / s.DRAIN, 0.0, 1.0) if s._hit else 0.0
+	_wave.reach = run_up_reach(s)
+	_wave.reach_y = beach_y(_wave.reach) if _wave.reach < U1 else LAND
 	_wave.update(tau, s.WAVE_LEAD, drain, level)
 	_wave.apply(_sea_mats)
-	var on_land: bool = _wave.p.ts_plat + _wave.p.ts_crest > 0.01 and _wave.front_at(0.0) > BEACH_W - 8.0
+	var on_land: bool = _wave.p.ts_plat + _wave.p.ts_crest > 0.01 and _wave.front_at(0.0) > BEACH_W - 8.0 and _wave.reach > BEACH_W
 	for mi in _flood_meshes:
 		mi.visible = on_land
 	_show_boats(tau)
+
+
+## How far inland the tsunami runs (coast u) for the result: INF = the whole town (nothing saved), the beach
+## (all saved), else VILLAGE_KEEP short of the first saved community. Before the hit the result is open: INF.
+func run_up_reach(s: Node) -> float:
+	var saved: Array = s._saved
+	if not s._hit or not saved.has(true):
+		return INF
+	if not saved.has(false):
+		return BEACH_REACH
+	var r := INF
+	for v in mini(saved.size(), VILLAGE_UD.size()):
+		if saved[v]:
+			r = minf(r, VILLAGE_UD[v].x - VILLAGE_KEEP)
+	return maxf(r, BEACH_REACH)
 
 
 ## Water depth over the ground at coast (u, d) (< 0: dry).
