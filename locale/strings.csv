@@ -262,6 +262,7 @@ PROLOGUE_1,"Humanity did not see what was coming.","İnsanlık başına geleceğ
 PROLOGUE_2,"As their world fell, they only blamed each other.","Dünyaları yok olurken sadece birbirlerini suçladılar."
 PROLOGUE_3,"My employers chose you for this mission, Agent.","İşverenlerim bu görev için seni seçti, Ajan."
 PROLOGUE_4,"Go, and wake your people.","Git ve halkını uyandır."
-PROLOGUE_HINT,"Click: next | Esc: skip","Tık: devam | Esc: atla"
+PROLOGUE_HINT,"CLICK · NEXT | ESC · SKIP","TIKLA · DEVAM | ESC · ATLA"
+SPLASH_HINT,"ANY KEY · SKIP","HERHANGİ BİR TUŞ · ATLA"
 
 SET_REPLAY_PROLOGUE,"Replay prologue","Prologu tekrar izle"
