@@ -6,6 +6,7 @@ extends Node2D
 ##   cell_at(pos) / cell_center(cell)   a ray from the camera against the satellites' plane (y = BEAM_Y),
 ##                                      and the projection back: clicks land cell by cell in perspective
 ##   event_pos(ev), seg_points(seg)     screen px of an event / the ends of a segment
+##   alert_pos(ev), set_alerts(marks)   where the "!" over a struck city hangs / show those badges (alerts.gd)
 ##   cell, origin                       px of one cell around the grid's middle / of the grid's far-left corner
 ## A piece is still a Node2D at its screen position (the HUD-side bits, like city codes, are drawn in 2D);
 ## its model is a Node3D child standing at the piece's `world` position. Every piece is a BeamSkin *_scene
@@ -21,6 +22,7 @@ const HABITAT := preload("res://scenes/minigames/beam/sf/habitat.tscn")
 const CITY := preload("res://scenes/minigames/beam/sf/city.tscn")
 const STATION := preload("res://scenes/minigames/beam/sf/station.tscn")
 const BEAMS := preload("res://scenes/minigames/beam/sf/beams.tscn")
+const ALERTS := preload("res://scenes/minigames/beam/sf/alerts.gd")
 ## The 2D effects layer (bursts, rising labels) is reused: it works in screen px, which is what event_pos gives.
 const FX := preload("res://scenes/minigames/beam/fx.tscn")
 
@@ -41,6 +43,7 @@ var font: Font
 var backdrop: Node2D
 var grid: Node2D
 var beams: Node2D
+var alerts: Node2D
 var fx: Node2D
 var _stage: Node2D
 var _sats: Array[Node2D] = []
@@ -139,6 +142,10 @@ func build(level: BeamLogic.Level, wave: BeamWave, skin_: BeamSkin, _area: Rect2
 	beams = _spawn(skin.beams_scene, BEAMS, _stage, false)
 	beams.board = self
 	_stage.add_child(beams)
+	alerts = ALERTS.new()
+	alerts.name = "Alerts"
+	alerts.cell = cell
+	_stage.add_child(alerts)
 	fx = _spawn(skin.fx_scene, FX, _stage)
 	fx.font = font
 	fx.cell = cell
@@ -155,7 +162,7 @@ func tick(dt: float) -> void:
 	# the shake (a board offset in px, set by the scene) turns the camera; the layers in 2D move with the board
 	var k := position * SHAKE_RAD
 	_cam.transform = Transform3D(lay.cam.basis * Basis.from_euler(Vector3(k.y, k.x, 0.0)), lay.cam.origin)
-	for n in [backdrop, beams, fx]:
+	for n in [backdrop, beams, alerts, fx]:
 		if n and n.has_method(&"tick"):
 			n.tick(dt)
 	for p in _sats:
@@ -220,6 +227,18 @@ func event_pos(ev: BeamLogic.Event) -> Vector2:
 			return screen_of(lay.cell_pos(ev.pos.x + 0.5, -0.5))
 		return screen_of(lay.cell_pos(-0.5 if ev.city == "W" else cols + 0.5, ev.pos.y + 0.5))
 	return cell_center(ev.pos)
+
+
+## Where the "!" over the city this event strikes hangs, in screen px: above the city, the habitat, the
+## stretch of ring the beam leaves through, the Parker truss at the column it returns by.
+func alert_pos(ev: BeamLogic.Event) -> Vector2:
+	var up := 0.85 if ev.kind == &"earth" else (0.7 if ev.city == "N" else (0.75 if ev.kind == &"habitat" else 0.45))
+	return event_pos(ev) + Vector2(0, -cell * up)
+
+
+## Shows the "!" badges: city key -> screen px (empty = none).
+func set_alerts(marks: Dictionary) -> void:
+	alerts.set_marks(marks)
 
 
 func seg_points(s: BeamLogic.Seg) -> PackedVector2Array:

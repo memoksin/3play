@@ -11,7 +11,8 @@ extends Control
 signal finished(saved: int, total: int)
 signal satellite_turned(index: int, dir: int)
 ## Audio hooks (no sounds wired yet). kind / index:
-## ready (route turned safe), tick (last seconds; index 1 = last 3), charge (shot starts),
+## ready (route turned safe), rush (route safe: the clock drops to RUSH_TIME and the flare is coming),
+## tick (last seconds; index 1 = last 3), charge (shot starts),
 ## fire (beam leaves the Sun), reflect (index = nth reflection of the shot), split, overheat,
 ## collect, blackout (a city goes dark), wave_good / wave_bad (result card).
 signal sound_event(kind: StringName, index: int)
@@ -41,6 +42,11 @@ const FLASH_FIRE := Color8(255, 200, 120)
 const FLASH_HIT := Color8(255, 60, 40)
 const TOAST_TIME := 1.3
 const TOAST_Y := 324.0
+## Route found (the puzzle is solved): the countdown drops to RUSH_TIME seconds, the screen shakes
+## (RUSH_SHAKE once, then a RUSH_TREMOR rumble) and the alarm shows until the flare fires.
+const RUSH_TIME := 3.0
+const RUSH_SHAKE := 12.0
+const RUSH_TREMOR := 4.0
 ## A blackout slows the shot for a moment (hit stop).
 const HIT_STOP := 0.12
 const HIT_STOP_SPEED := 0.25
@@ -63,6 +69,8 @@ var time_left := 0.0
 var time_total := 0.0
 var fire_t := 0.0
 var fired_at := 0.0
+## The route was found this countdown and the clock was cut to RUSH_TIME.
+var rushed := false
 ## Best run per wave: {saved, total, energy, stars, early, lost} or null.
 var best: Array = []
 ## Last wave result shown.
@@ -88,6 +96,9 @@ var _clock := 0.0
 var _toast_left := 0.0
 var _finished := false
 var _fire_style: StyleBoxFlat
+var _rush: Label
+var _alert_sim: BeamLogic.Result
+var _alert_marks := {}
 var _hidden := false
 var _windowed := DisplayServer.get_name() != "headless"
 
@@ -119,6 +130,7 @@ func _ready() -> void:
 	_forecast_caption.text = TextFx.upper(_t("FORECAST"))
 	_bar.draw.connect(_draw_bar)
 	_fire.pressed.connect(fire)
+	_make_rush_label()
 	var card := StyleBoxFlat.new()  # the prototype's card: near opaque, so the board does not show through
 	card.bg_color = Color(0.035, 0.055, 0.11, 0.95)
 	card.border_color = Color(0.47, 0.67, 1.0, 0.22)
@@ -176,6 +188,7 @@ func load_wave(i: int) -> void:
 	fired_at = 0.0
 	fire_t = 0.0
 	_last_sec = 99
+	rushed = false
 	hover = -1
 	focus = -1
 	board.build(level, wave, skin, AREA, get_viewport_rect().size)
@@ -250,6 +263,7 @@ func start_countdown() -> void:
 	phase = Phase.PLAN
 	time_left = time_total
 	_last_sec = 99
+	rushed = false
 	_toast_text(_t("TOAST_WAVE") % (wave_index + 1), Color("ffd27a"))
 	_refresh_view()
 	_update_hud()
@@ -417,6 +431,8 @@ func advance(dt: float) -> void:
 					board.fx.spark(h, SPARK_COL)
 	_shake *= pow(0.02, dt)
 	_flash *= pow(0.05, dt)
+	if phase == Phase.PLAN and rushed:
+		_shake = maxf(_shake, RUSH_TREMOR)
 	board.position = Vector2(randf() - 0.5, randf() - 0.5) * _shake if _shake > 0.1 else Vector2.ZERO
 	_toast_left = maxf(0.0, _toast_left - dt)
 	_toast.modulate.a = minf(minf(1.0, (TOAST_TIME - _toast_left) / 0.15), _toast_left / 0.3)
@@ -498,9 +514,23 @@ func rotate_sat(si: int, dir: int) -> bool:
 	if preview and perfect and not was:
 		sound_event.emit(&"ready", 0)
 		_toast_text(_t("TOAST_SAFE"), OK)
+	if perfect and not was:
+		_rush_clock()
 	_refresh_view()
 	_update_hud()
 	return true
+
+
+## The puzzle is solved: the flare is coming, the clock drops to RUSH_TIME (once per countdown, and
+## only if more than that is left), the screen shakes and the alarm shows.
+func _rush_clock() -> void:
+	if phase != Phase.PLAN or rushed or time_left <= RUSH_TIME:
+		return
+	rushed = true
+	time_left = RUSH_TIME
+	_shake = maxf(_shake, RUSH_SHAKE)
+	_flash_now(0.3, FLASH_HIT)
+	sound_event.emit(&"rush", 0)
 
 
 ## Debug: turn every satellite to the wave's solution (the prototype's SF.solve()).
@@ -634,6 +664,8 @@ func _refresh_view() -> void:
 		p.heat = heat
 		p.locked = locked
 		p.overheat_predicted = show_route and c.t == "T" and sim.over.has(si)
+	if board.has_method(&"set_alerts"):
+		board.set_alerts(_alerts() if show_route else {})
 	var cities: Dictionary = board.cities()
 	for key: String in cities:
 		var piece: Node2D = cities[key]
@@ -653,6 +685,38 @@ func _refresh_view() -> void:
 	bd.charging = phase == Phase.FIRE and fire_t < 0.0
 	bd.arrow = planning or phase == Phase.BRIEF
 	_flash_rect.color = Color(_flash_col, _flash if _flash > 0.01 else 0.0)
+
+
+## City key -> screen px of the "!" over it, for every place the previewed flare hits (a city, a habitat,
+## a ring or the Parker base, the first strike of each).
+func _alerts() -> Dictionary:
+	if sim != _alert_sim:
+		_alert_sim = sim
+		_alert_marks = {}
+		for ev in sim.events:
+			if ev.city != "" and not _alert_marks.has(ev.city):
+				_alert_marks[ev.city] = board.alert_pos(ev)
+	return _alert_marks
+
+
+func _make_rush_label() -> void:
+	_rush = Label.new()
+	_rush.name = "Rush"
+	_rush.theme_type_variation = &"HudTitle"
+	_rush.add_theme_color_override(&"font_color", BAD)
+	_rush.add_theme_color_override(&"font_outline_color", Color(0.1, 0.0, 0.0, 0.9))
+	_rush.add_theme_constant_override(&"outline_size", 8)
+	_rush.add_theme_font_size_override(&"font_size", 44)
+	_rush.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_rush.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_rush.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_rush.visible = false
+	$Hud.add_child(_rush)
+	_rush.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	_rush.offset_left = -284.0
+	_rush.offset_right = -24.0
+	_rush.offset_top = 256.0
+	_rush.offset_bottom = 372.0
 
 
 func _update_hud() -> void:
@@ -678,6 +742,10 @@ func _update_hud() -> void:
 	else:
 		var n := dark.size()
 		_set_forecast(_t("DARKENED") % n if n > 0 else _t("CLEAN"), BAD if n > 0 else OK)
+	_rush.visible = phase == Phase.PLAN and rushed
+	if _rush.visible:
+		_rush.text = TextFx.upper(_t("RUSH"))
+		_rush.modulate.a = 0.75 + 0.25 * sin(_clock * 14.0)
 	_fire.disabled = phase != Phase.PLAN
 	_fire.text = TextFx.upper(_t("FIRED") if phase == Phase.FIRE else _t("FIRE"))
 	var ready := phase == Phase.PLAN and preview and perfect
