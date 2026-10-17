@@ -5,6 +5,7 @@
 //
 // Usage: node tools/video/render.mjs <segment>                 full render + mp4
 //        node tools/video/render.mjs <segment> --still 1.5,3.2  only PNG stills at those times (iteration), no mp4
+//        node tools/video/render.mjs <segment> --resume         keep export/video/frames/<segment>/, render only missing frames
 //        node tools/video/render.mjs film --clips /abs/dir        serve Godot clip PNGs from another folder (default
 //                                                                 export/video/clips) at /__clips/ and pass ?clips= to the page
 // renderAt(t) may return a Promise (film.html loads clip frames); the capture waits for it.
@@ -23,6 +24,7 @@ const si = process.argv.indexOf('--still');
 const stills = si > 0 ? process.argv[si + 1].split(',').map(Number) : null;
 const ci = process.argv.indexOf('--clips');
 const clipsDir = ci > 0 ? resolve(process.argv[ci + 1]) : null;
+const resume = process.argv.includes('--resume');
 const W = 1920, H = 1080;
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -78,10 +80,11 @@ async function main() {
   const info = await evaluate('window.SEGMENT');
   const frames = stills ? stills.map((t) => Math.round(t * info.fps)) : [...Array(info.frames).keys()];
   const dir = join(root, 'export', 'video', stills ? 'stills' : 'frames', seg);
-  rmSync(dir, { recursive: true, force: true });   // script-owned output: start clean
+  if (!(resume && !stills)) rmSync(dir, { recursive: true, force: true });   // script-owned output: start clean
   mkdirSync(dir, { recursive: true });
   const t0 = Date.now();
   for (const [k, f] of frames.entries()) {
+    if (resume && !stills && existsSync(join(dir, `${String(f).padStart(5, '0')}.png`))) continue;
     // render, then wait one animation frame so the compositor has presented it before the capture
     await evaluate(`Promise.resolve(window.renderAt(${f} / ${info.fps})).then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(1)))))`);
     const shot = await send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: 0, width: W, height: H, scale: 1 } });
@@ -92,6 +95,7 @@ async function main() {
   console.log();
   ws.close();
   if (info.cues) writeFileSync(join(root, 'export', 'video', `${seg}_cues.json`), JSON.stringify(info.cues, null, 1));
+  if (info.audio) writeFileSync(join(root, 'export', 'video', `${seg}_audio.json`), JSON.stringify(info.audio, null, 1));   // tools/video/mix.py
   if (stills) { console.log('stills in', dir); return; }
   const mp4 = join(root, 'export', 'video', `${seg}.mp4`);
   const ff = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(info.fps), '-i', join(dir, '%05d.png'),

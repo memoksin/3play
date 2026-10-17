@@ -30,38 +30,122 @@ const INTRO_LEN = 8.0;                // approved intro length (export/video/app
 const SCENARIO_COUNT = 3;             // step 16: number of disaster scenarios
 const TL = [
   // step id             start   len   clip / text
-  { step: 5,  id: "dark",       start: 0.0,  len: 4.4 },
-  { step: 5,  id: "s_hayat",    start: 2.0,  len: 2.35, text: "Hayatın *göremediğimiz* boyutları vardır" },
-  { step: 6,  id: "diorama",    start: 4.4,  len: 4.2,  clip: "kahr_diorama", in: 0.9 },          // past the game's fly-in, orbiting
-  { step: 7,  id: "c_tahmin",   start: 6.3,  len: 2.3,  text: "TAHMİN ET" },
-  { step: 8,  id: "kahr_mini",  start: 8.6,  len: 2.9,  clip: "kahr_mini", in: 2.6 },             // two drags (Elif Bebek, Soba) land in the cut
-  { step: 9,  id: "globe",      start: 11.5, len: 3.0,  clip: "globe_spin", in: 0.5 },
-  { step: 9,  id: "c_kesfet",   start: 12.2, len: 2.3,  text: "KEŞFET" },
+  { step: 5,  id: "dark",       start: 0.0,  len: 4.2 },
+  { step: 5,  id: "s_hayat",    start: 1.8,  len: 2.35, text: "Hayatın *göremediğimiz* boyutları vardır" },
+  { step: 6,  id: "diorama",    start: 4.2,  len: 3.9,  clip: "kahr_diorama", in: 0.9 },          // past the game's fly-in, orbiting
+  { step: 7,  id: "c_tahmin",   start: 5.9,  len: 2.2,  text: "TAHMİN ET" },
+  { step: 8,  id: "fener",      start: 8.1,  len: 4.6,  clip: "fener_mini", in: 0.45 },           // dark, a whistle, the lamp clicks on (+0.8), "ANNE" found, the family follows
+  { step: 9,  id: "globe",      start: 12.7, len: 2.9,  clip: "globe_spin", in: 0.5 },
+  { step: 9,  id: "c_kesfet",   start: 13.3, len: 2.2,  text: "KEŞFET" },
   // lock: the HUD locks `lock` s after start (the game's crosshair closes at clip 4.67 s), extra push + flash from `zoom` s.
   // target = screen point (clip px) of the Indian Ocean when locked. hud: "brackets" (the game draws its own crosshair
   // and readout) or "full" (our own crosshair, rings and readout, for a clip without the game's lock UI).
-  { step: 10, id: "lock",       start: 14.5, len: 3.6,  clip: "globe_lock_io", in: 1.6, speed: 1.5, lock: 2.05, zoom: 3.2, target: [960, 540], hud: "brackets" },
-  { step: 11, id: "c_mudahale", start: 18.1, len: 1.9,  text: "MÜDAHALE ET" },
-  { step: 12, id: "io_mini",    start: 20.0, len: 3.0,  clip: "io_mini", in: 6.5, speed: 1.1 },   // last rotations, "Dalga geldi!", water flows
-  { step: 13, id: "black",      start: 23.0, len: 0.7 },
-  { step: 14, id: "menu",       start: 23.7, len: 4.6,  clip: "menu_roles", in: 0.3 },           // "Devlet" hovers ~26.4, under TERCİH ET
-  { step: 14, id: "s_fark",     start: 24.25, len: 2.0, text: "Farkındalık *tek taraflı* değildir" },
-  { step: 14, id: "c_tercih",   start: 26.3, len: 2.0,  text: "TERCİH ET" },
-  { step: 15, id: "globe2",     start: 28.3, len: 3.8,  clip: "globe_spin2", in: 0.3 },
-  { step: 15, id: "s_dunya",    start: 28.6, len: 3.5,  text: "Dünyanın *dört bir yanından*" },
-  { step: 16, id: "s_count",    start: 29.9, len: 2.2,  text: `*${SCENARIO_COUNT}* afet senaryosu` },
-  { step: 17, id: "bunny",      start: 32.1, len: 3.7 },
-  { step: 18, id: "s_easter",   start: 33.6, len: 2.2,  text: "Belki bir de *easter egg*, kim bilir…" },
-  { step: 19, id: "result",     start: 35.8, len: 3.6,  clip: "result_card", in: 0.5 },          // the closing line types on 36.4-37.9
-  { step: 19, id: "c_fark",     start: 39.4, len: 2.4,  text: "FARK ET" },
-  { step: 19, id: "end",        start: 41.8, len: 0.5 },   // pure black tail
+  { step: 10, id: "lock",       start: 15.6, len: 3.6,  clip: "globe_lock_io", in: 1.6, speed: 1.5, lock: 2.05, zoom: 3.2, target: [960, 540], hud: "brackets" },
+  { step: 11, id: "c_mudahale", start: 19.2, len: 1.8,  text: "MÜDAHALE ET" },
+  { step: 12, id: "io_mini",    start: 21.0, len: 5.4,  clip: "io_mini", in: 8.0, hit: 3.0 },    // the wall rises, breaks over the town at +hit (clip 11.0 s), the flood
+  { step: 13, id: "black",      start: 26.4, len: 0.6 },
+  { step: 14, id: "title",      start: 27.0, len: 1.9,  clip: "title", in: 0.6 },                // the eye opens on the title screen
+  { step: 14, id: "s_fark",     start: 27.25, len: 1.65, text: "Farkındalık *tek taraflı* değildir" },   // typed where the game's tagline sits
+  { step: 14, id: "menu",       start: 28.9, len: 2.5,  clip: "menu_roles", in: 2.4 },           // "Devlet" hovers ~29.6, under TERCİH ET
+  { step: 14, id: "c_tercih",   start: 29.3, len: 2.1,  text: "TERCİH ET" },
+  { step: 15, id: "globe2",     start: 31.4, len: 3.5,  clip: "globe_spin2", in: 0.3 },
+  { step: 15, id: "s_dunya",    start: 31.7, len: 3.2,  text: "Dünyanın *dört bir yanından*" },
+  { step: 16, id: "s_count",    start: 32.9, len: 2.0,  text: `*${SCENARIO_COUNT}* afet senaryosu` },
+  { step: 17, id: "bunny",      start: 34.9, len: 3.5 },
+  { step: 18, id: "s_easter",   start: 36.4, len: 2.0,  text: "Belki bir de *easter egg*, kim bilir…" },
+  { step: 19, id: "c_aaa",      start: 38.4, len: 2.3,  text: "AAA" },                            // calm, like an "AAA game" label
+  { step: 19, id: "s_yok",      start: 39.55, len: 1.15, text: "yok yok" },
+  { step: 19, id: "logo",       start: 40.7, len: 1.9 },                                          // "3play" lands (the game's logo)
+  { step: 19, id: "c_fark",     start: 42.6, len: 2.4,  text: "FARK ET" },                        // CRT power-off in its last 0.7 s
+  { step: 20, id: "team",       start: 45.3, len: 4.5 },                                          // the developers: four portraits + names
+  { step: 20, id: "end",        start: 49.8, len: 0.6 },   // pure black tail
 ];
 const R = Object.fromEntries(TL.map((r) => [r.id, r]));
 const end = (r) => r.start + r.len;
 // silent beats for the team's audio (film-local seconds); the visuals pulse on the heartbeats
-const HEART = [[0.22, 1], [0.50, 0.7], [1.22, 1], [1.50, 0.7], [R.black.start + 0.12, 0.8], [R.black.start + 0.40, 0.55]];
+// (lub, dub) pairs 0.45 s apart: the gap of t9_heartbeat.ogg, so the glow pulses on the sound
+const HEART = [[0.22, 1], [0.67, 0.7], [1.32, 1], [1.77, 0.7], [R.black.start + 0.06, 0.8], [R.black.start + 0.51, 0.55]];
 const VOICE = { t: 0.8, len: 1.2, text: "Sesimi duyan var mı?" };   // echoing voice over the dark
-const CUTS = [R.kahr_mini.start, R.io_mini.start, R.globe2.start, R.result.start];   // glitch cuts
+const CUTS = [R.fener.start, R.io_mini.start, R.menu.start, R.globe2.start];   // glitch cuts
+// the developers part: photo (assets/sprites/ui/team/<id>.png) and the name exactly as scenes/credits.gd
+const TEAM = [["mehmet", "Mehmet Yiğit Keskin"], ["sude", "Sude İlayda Mete"], ["burcu", "Burcu Baran"], ["irem", "İrem Altunsöğüt"]];
+const TEAM_TITLE = "EMEĞİ GEÇENLER";   // CREDITS_TITLE (tr)
+
+// ================================================================ SOUND (the mix: tools/video/mix.py reads it from export/video/film_audio.json)
+// Every cue is tied to a row above, so retiming a row moves its sounds. Times are film seconds (`at`), or `final`
+// seconds for the intro (it plays before the film). file = repo path; ss / dur = trim in the file (s); lu = loudness
+// of the placed sound in LUFS before the master (tools/video/mix.py sets the gain from a measurement); peak = sample
+// peak in dBFS instead, for sounds too short to measure; fade = [in, out] s; loop = repeat the trim to fill dur;
+// tempo = speed-up (keeps pitch); ceil = peak cap of the layer (dBFS). Stems: the game's own sound captured with the clip (clip.wav), placed under its row.
+const A = "assets/audio/";
+const TYPE_STEP = 0.032;                                  // drawLine's default seconds per letter
+const typeLen = (r, step = TYPE_STEP) => [...r.text.replace(/\*/g, "")].length * step;
+const T11 = A + "trailer/t11_low_impact.ogg", G7 = A + "globe/glitch_corruption.ogg", G3 = A + "globe/keyboard_typing_loop.ogg";
+const HEART_FILE = { file: A + "trailer/t9_heartbeat.ogg", lub: 0.15 };   // the lub peaks 0.15 s into the file
+function cardHit(T, r, note) {                             // title card: low boom + the start of the glitch
+  return [{ T, at: r.start, file: T11, lu: -22, ceil: -7, fade: [0, 1.2], dur: 3.2, note }, { T, at: r.start, file: G7, dur: 0.45, lu: -27, fade: [0, 0.12], note: note + " (glitch layer)" }];
+}
+function typing(T, r, dur, lu = -28, note = "typing") { return { T, at: r.start, file: G3, dur, lu, fade: [0.01, 0.06], note }; }
+const MUSIC = {                                           // one bed: M1 Title.mp3 (menu music), 134.35 s into the file at film 0,
+  file: A + "menu/title.ogg", from: 134.35, lu: -24,       // so its swells peak on the diorama (4.75) and on the logo (40.75)
+  keys: [[0, -14], [3.8, -6], [4.6, 0], [21.0, 0], [21.6, -5], [26.38, -5], [26.4, -80], [27.0, -80], [27.7, 0],
+    [38.2, 0], [40.6, -3], [42.0, -1], [42.6, 0], [end(R.c_fark) - 0.75, 0], [end(R.c_fark) - 0.1, -80], [R.team.start, -80], [R.team.start + 0.8, 3],
+    [end(R.team) - 0.7, 3], [end(R.team), -80]],        // [film s, dB]: in from the dark, out at the black cut, back on the title, out on the CRT
+};
+const STEMS = [                                           // row id, loudness, fades [in, out]
+  { T: "T14b", row: "fener", lu: -21, ceil: -12, fade: [0.03, 0.3], note: "Fener in-game sound: wind, footsteps, the mother's whistle, lamp click (FN3), found (FN6)" },
+  { T: "T15b", row: "globe", lu: -28, fade: [0.2, 0.3], note: "globe in-game sound: swell (G1), drone (G9)" },
+  { T: "T17b", row: "lock", lu: -24, fade: [0.05, 0.1], note: "lock in-game sound at 1.5x: drone, coordinates typing (G3), zoom whoosh (G5)" },
+  { T: "T20", row: "io_mini", lu: -20, fade: [0.03, 0.015], note: "Connect in-game sound: wave rising (C3), the wave hits (C4), water; hard cut" },
+  { T: "T22b", row: "title", lu: -34, ceil: -24, fade: [0.3, 0.05], note: "title screen in-game sound (space ambience)" },
+  { T: "T22", row: "menu", lu: -27, ceil: -14, fade: [0.03, 0.2], note: "role menu in-game sound: hover (M2) on Devlet" },
+  { T: "T25b", row: "globe2", lu: -28, fade: [0.03, 0.2], note: "second globe in-game sound (G9)" },
+];
+const SFX = [
+  // intro (approved picture, unchanged cue times)
+  { T: "T1", final: 0, file: A + "trailer/t1_rain_loop.ogg", dur: 7.75, loop: true, lu: -26, fade: [0.4, 0.5], note: "rain under the intro" },
+  { T: "T2", final: 2.4, file: A + "trailer/t2_far_thunder.ogg", lu: -28, fade: [0, 0.5], note: "distant sheet lightning" },
+  { T: "T3", final: 2.8, file: A + "trailer/t3a_thunderclap.ogg", dur: 3.0, lu: -24, ceil: -7, fade: [0, 1.0], note: "close strike 1" },
+  { T: "T3", final: 3.4, file: A + "trailer/t3b_close_strike.ogg", dur: 3.0, lu: -22, ceil: -6, fade: [0, 1.2], note: "close strike 2" },
+  { T: "T4", final: 3.9, file: A + "trailer/t4_final_strike.ogg", dur: 3.8, lu: -22, ceil: -6, fade: [0, 1.5], note: "final strike (plain file, raised)" },
+  { T: "T5", final: 4.45, file: G3, dur: 0.85, lu: -27, fade: [0.01, 0.06], note: "STACK PRESENTS typing" },
+  { T: "T6", final: 5.5, file: A + "trailer/t2_far_thunder.ogg", lu: -29, fade: [0, 0.6], note: "last far strike" },
+  { T: "T7", final: 6.05, file: A + "trailer/t7_noise_riser.ogg", lu: -27, ceil: -8, fade: [0.08, 0.05], note: "push into the eye (T8: silence from 7.75)" },
+  // film
+  ...HEART.filter((h, i) => i % 2 === 0).map(([t], i) => ({ T: i < 2 ? "T9" : "T21", at: t - HEART_FILE.lub, file: HEART_FILE.file, lu: i < 2 ? -20 : -22, note: "heartbeat (lub-dub)" })),
+  { T: "T11", at: R.s_hayat.start, file: T11, lu: -23, ceil: -7, fade: [0, 1.5], dur: 3.5, note: "statement: Hayatın göremediğimiz boyutları vardır" },
+  typing("T11b", R.s_hayat, typeLen(R.s_hayat)),
+  { T: "T12", at: R.diorama.start, file: A + "diorama/winter_wind.ogg", ss: 4, dur: R.diorama.len + 0.1, lu: -25, fade: [0.6, 0.3], note: "the eye opens on the snowy diorama (D1)" },
+  ...cardHit("T13", R.c_tahmin, "TAHMİN ET"),
+  { T: "T14", at: R.fener.start, file: G7, dur: 0.45, lu: -23, fade: [0, 0.1], note: "glitch cut: Fener" },
+  { T: "T15", at: R.globe.start - 2.1, file: A + "globe/whoosh.ogg", lu: -24, fade: [0.2, 0.4], note: "zoom-blur whip to the globe (peak on the cut)" },
+  ...cardHit("T16", R.c_kesfet, "KEŞFET"),
+  { T: "T17", at: R.lock.start + R.lock.lock, file: A + "globe/target_lock_trim.ogg", lu: -26, fade: [0, 0.1], note: "target lock (G4)" },
+  ...cardHit("T19", R.c_mudahale, "MÜDAHALE ET"),
+  { T: "T14", at: R.io_mini.start, file: G7, dur: 0.45, lu: -24, fade: [0, 0.1], note: "glitch cut: Indian Ocean" },
+  { T: "T20b", at: R.io_mini.start + R.io_mini.hit, file: T11, dur: 2.38, lu: -20, ceil: -6, fade: [0, 0.4], note: "the wave breaks over the town: low boom under the game's C4" },
+  { T: "T23", at: R.s_fark.start, file: T11, dur: 1.6, lu: -26, ceil: -10, fade: [0, 0.8], note: "statement sting: Farkındalık tek taraflı değildir" },
+  typing("T23b", R.s_fark, typeLen(R.s_fark)),
+  { T: "T14", at: R.menu.start, file: G7, dur: 0.45, lu: -25, fade: [0, 0.1], note: "glitch cut: role menu" },
+  ...cardHit("T24", R.c_tercih, "TERCİH ET"),
+  { T: "T14", at: R.globe2.start, file: G7, dur: 0.45, lu: -24, fade: [0, 0.1], note: "glitch cut: second globe" },
+  { T: "T25", at: R.globe2.start, file: A + "globe/spaceship_ambience.ogg", dur: R.globe2.len, lu: -28, fade: [0.3, 0.4], note: "globe spin ambience (G2)" },
+  typing("T25c", R.s_dunya, typeLen(R.s_dunya)),
+  typing("T25d", R.s_count, typeLen(R.s_count)),
+  { T: "T25e", at: R.s_count.start + 0.45, file: A + "menu/ui_hover.ogg", peak: -17, note: "the digit 3 settles" },
+  { T: "T26", at: end(R.globe2) - 0.4, file: G7, ss: 0.6, dur: 0.75, lu: -23, fade: [0.05, 0.2], note: "pixelate into the bunny scene" },
+  { T: "T27", at: R.bunny.start + 1.4 - 1.08, file: A + "trailer/t27_egg_crack.ogg", lu: -21, ceil: -8, fade: [0, 0.4], note: "egg cracks (+0.55, +1.0) and bursts (+1.4)" },
+  { T: "T28", at: R.s_easter.start, file: T11, dur: 1.6, lu: -27, ceil: -10, fade: [0, 0.8], note: "statement sting: Belki bir de easter egg" },
+  typing("T28b", R.s_easter, typeLen(R.s_easter)),
+  { T: "T29", at: R.c_aaa.start - 0.2, file: A + "globe/guitar_swell_trim.ogg", lu: -22, fade: [0, 0.3], note: "AAA appears: calm swell (R1), no hit" },
+  typing("T29b", R.s_yok, typeLen(R.s_yok, 0.075), -27, "yok yok types on"),
+  { T: "T29c", at: R.logo.start, file: T11, dur: 4.0, lu: -19, ceil: -6, fade: [0, 1.6], note: "3play lands (the music swell peaks with it)" },
+  ...cardHit("T30", R.c_fark, "FARK ET"),
+  { T: "T31", at: end(R.c_fark) - 0.75, file: A + "trailer/t31_tv_off.ogg", peak: -9, note: "CRT power-off" },
+  ...TEAM.map((m, i) => ({ T: "T32", at: R.team.start + 0.45 + i * 0.32, file: A + "menu/ui_hover.ogg", peak: -18, note: `portrait: ${m[1]}` })),
+  { T: "T32b", at: R.team.start + 0.15, file: G3, dur: 0.55, lu: -28, fade: [0.01, 0.06], note: "EMEĞİ GEÇENLER types on" },
+  { T: "T32c", at: R.team.start + 0.65, file: G3, ss: 3, dur: 1.75, lu: -29, fade: [0.01, 0.1], note: "the names type on" },
+];
 
 // ================================================================ config
 const W = 1920, H = 1080, FPS = 60;
@@ -190,7 +274,7 @@ function drawPlaceholder(r, f, t) {
       fx.fillStyle = "#e6e9f0"; fx.fillRect(bx - 8, by - 14, bw + 16, 18);
       for (let k = 0; k < 6; k++) { fx.fillStyle = rng() < 0.5 ? "#f2c14e" : "#2e3448"; fx.fillRect(bx + 20 + (k % 3) * (bw - 50) / 2.2, by + 30 + Math.floor(k / 3) * 70, 26, 34); }
     }
-  } else if (r.clip === "kahr_mini" || r.clip === "io_mini") {
+  } else if (r.clip === "fener_mini" || r.clip === "io_mini") {
     const io = r.clip === "io_mini";
     fx.fillStyle = io ? "#0b1a22" : "#1b1622"; fx.fillRect(0, 0, W, H);
     const n = Math.floor(s * 2.2), cols = 8, rows = 5, cs = 130, ox = W / 2 - cols * cs / 2, oy = H / 2 - rows * cs / 2 + 40;
@@ -207,7 +291,7 @@ function drawPlaceholder(r, f, t) {
       }
     }
     if (!io) { const k = (s * 0.9) % 1; fx.fillStyle = "#ece4d2"; fx.fillRect(lerp(200, 1300, k), lerp(900, 420, k), 90, 90); }
-  } else if (r.clip === "menu_roles") {
+  } else if (r.clip === "menu_roles" || r.clip === "title") {
     fx.fillStyle = "#0f0c15"; fx.fillRect(0, 0, W, H);
     fx.font = "120px VT323"; fx.textAlign = "center"; fx.fillStyle = "#ece4d2"; fx.fillText("3PLAY", W / 2, 300);
     const hov = s > 1.4 ? 1 : 0;
@@ -237,7 +321,7 @@ function drawCard(r, t, o = {}) {
   const T0 = r.start, T1 = end(r);
   if (t < T0 || t >= T1) return;
   const px = o.px || 172, baseY = o.y || 990, step = o.step || 0.058;
-  const chars = [...r.text], split = r.text.lastIndexOf("ET");
+  const chars = [...r.text], et = r.text.lastIndexOf("ET"), split = et < 0 ? chars.length : et;   // no "ET": all amber
   const out = o.noOut ? 0 : smooth(T1 - 0.4, T1, t);
   fx.save();
   if (o.scrim) {
@@ -258,12 +342,13 @@ function drawCard(r, t, o = {}) {
     const a = t - ti; if (a < 0) continue;
     const sty = i >= split ? COOL : AMB;
     const x = W / 2 + (xs[i] - W / 2) * spread;
-    const g = clamp(1 - a / 0.16), f = frameOf(a);
+    // calm (o.calm): no jitter, no chroma split, a slow soft arrival instead of the white-hot glitch
+    const g = o.calm ? 0 : clamp(1 - a / 0.16), f = frameOf(a);
     const gx = g * 22 * (hash1(i * 13 + f * 7 + T0) - 0.5), gy = g * 10 * (hash1(i * 31 + f * 3 + T0) - 0.5);
-    const hot = clamp(1 - a / 0.12), alpha = (1 - out) * (f === 1 ? 0.35 : 1);
+    const hot = o.calm ? 0.35 * clamp(1 - a / 0.5) : clamp(1 - a / 0.12), alpha = (1 - out) * (o.calm ? easeOut(a / 0.35) : f === 1 ? 0.35 : 1);
     const c = sty.col.map((v) => Math.round(lerp(v, 255, hot)));
-    fx.globalCompositeOperation = "lighter";
-    fx.shadowColor = `rgba(${sty.glow},${0.9 * alpha})`; fx.shadowBlur = 28 + 40 * hot;
+    fx.globalCompositeOperation = o.calm ? "source-over" : "lighter";   // calm: a big label, no additive blow-out
+    fx.shadowColor = `rgba(${sty.glow},${(o.calm ? 0.55 : 0.9) * alpha})`; fx.shadowBlur = 28 + 40 * hot;
     fx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${alpha})`; fx.fillText(ch, x + gx, baseY + gy);
     fx.shadowBlur = 0;
     if (g > 0) {
@@ -664,6 +749,107 @@ function drawBunnyScene(t) {
   fx.save(); fx.imageSmoothingEnabled = false; fx.drawImage(pcv, 0, 0, W, H); fx.restore();
 }
 
+// ---------------------------------------------------------------- step 19: the "AAA" gag on a calm dark stage, then the game's logo lands
+function drawStage(t) {
+  const g = fx.createRadialGradient(W / 2, H / 2 - 40, 0, W / 2, H / 2 - 40, 1150);
+  g.addColorStop(0, "rgba(28,22,40,1)"); g.addColorStop(0.55, "rgba(14,11,20,1)"); g.addColorStop(1, "rgba(4,3,7,1)");
+  fx.fillStyle = g; fx.fillRect(0, 0, W, H);
+  // a few slow motes of dust in the light, seeded
+  fx.save(); fx.globalCompositeOperation = "lighter";
+  const rng = mulberry32(4242);
+  for (let i = 0; i < 46; i++) {
+    const x = rng() * W, y0 = rng() * H, sp = 6 + rng() * 14, z = rng();
+    const y = ((y0 - sp * t) % H + H) % H;
+    fx.fillStyle = `rgba(236,228,210,${0.05 + 0.08 * z})`;
+    fx.fillRect(x + 10 * Math.sin(t * 0.4 + i), y, 2 + 2 * z, 2 + 2 * z);
+  }
+  fx.restore();
+}
+// "3play" as the game draws it (ui/logo.tscn): VT323, light main face, red copy shifted left, blue copy right
+const LOGO = { text: "3play", px: 330, y: 640, main: [230, 232, 240], red: [255, 90, 60], blue: [159, 216, 255] };
+function drawLogo(t) {
+  const r = R.logo, u = t - r.start;
+  if (u < 0 || t >= end(r)) return;
+  const land = easeOut(u / 0.24), out = smooth(end(r) - 0.3, end(r), t);
+  const sc = lerp(1.32, 1, land) * (1 + 0.025 * Math.exp(-Math.max(0, u - 0.24) * 9) * Math.sin(Math.max(0, u - 0.24) * 30)) * (1 + 0.04 * out);
+  const a = clamp(u / 0.08) * (1 - out);
+  const split = lerp(34, 9, easeOut(u / 0.4));
+  fx.save();
+  fx.translate(W / 2, LOGO.y - LOGO.px * 0.3); fx.scale(sc, sc); fx.translate(-W / 2, -(LOGO.y - LOGO.px * 0.3));
+  fx.font = `${LOGO.px}px VT323`; fx.textAlign = "center"; fx.textBaseline = "alphabetic";
+  fx.fillStyle = `rgba(0,0,0,${0.55 * a})`; fx.fillText(LOGO.text, W / 2 + 10, LOGO.y + 12);     // drop shadow
+  fx.globalCompositeOperation = "lighter";
+  fx.fillStyle = rgba(LOGO.red, 0.85 * a); fx.fillText(LOGO.text, W / 2 - split, LOGO.y);
+  fx.fillStyle = rgba(LOGO.blue, 0.85 * a); fx.fillText(LOGO.text, W / 2 + split, LOGO.y);
+  fx.globalCompositeOperation = "source-over";
+  fx.shadowColor = `rgba(200,220,255,${0.6 * a})`; fx.shadowBlur = 40 + 60 * Math.exp(-u * 5);
+  const hot = Math.exp(-u * 6);
+  fx.fillStyle = rgba(LOGO.main.map((v) => Math.round(lerp(v, 255, hot))), a); fx.fillText(LOGO.text, W / 2, LOGO.y);
+  fx.restore();
+  // side rules settle in after the landing, like the title cards
+  const ru = smooth(0.3, 0.8, u) * (1 - out);
+  if (ru > 0) {
+    fx.save(); fx.globalCompositeOperation = "lighter";
+    fx.font = `${LOGO.px}px VT323`; const hw = fx.measureText(LOGO.text).width / 2 + 60, L = 300 * ru, y = LOGO.y - LOGO.px * 0.3;
+    fx.fillStyle = `rgba(236,228,210,${0.5 * ru})`; fx.fillRect(W / 2 - hw - L, y, L, 2); fx.fillRect(W / 2 + hw, y, L, 2);
+    fx.restore();
+  }
+}
+
+// ---------------------------------------------------------------- step 20: the developers (photos + names as in scenes/credits.gd)
+const PHOTOS = {};                        // id -> ImageBitmap (assets/sprites/ui/team/<id>.png, round, transparent corners)
+async function loadPhotos() {
+  for (const [id] of TEAM) {
+    try { PHOTOS[id] = await createImageBitmap(await (await fetch(`../../assets/sprites/ui/team/${id}.png`)).blob()); } catch { PHOTOS[id] = null; }
+  }
+}
+function typedText(s, t0, t, cps = 30) { return [...s].slice(0, clamp(Math.floor((t - t0) * cps), 0, 999)).join(""); }
+function drawTeam(t) {
+  const r = R.team, u = t - r.start;
+  if (u < 0 || t >= end(r)) return;
+  const out = smooth(end(r) - 0.6, end(r), t);
+  drawStage(t);
+  fx.save();
+  fx.globalAlpha = 1 - out;
+  // header, typed, with the amber bar of the place captions
+  const ht = typedText(TEAM_TITLE, 0.15, u, 26);
+  fx.font = "64px VT323"; fx.textAlign = "center"; fx.textBaseline = "alphabetic";
+  fx.shadowColor = "rgba(255,150,50,0.6)"; fx.shadowBlur = 24;
+  fx.fillStyle = rgba(PAL.amber, 1); fx.fillText(ht, W / 2, 292);
+  fx.shadowBlur = 0;
+  const ru = smooth(0.5, 1.0, u), hw = fx.measureText(TEAM_TITLE).width / 2 + 40;
+  fx.fillStyle = `rgba(236,228,210,${0.45 * ru})`; fx.fillRect(W / 2 - hw - 220 * ru, 272, 220 * ru, 2); fx.fillRect(W / 2 + hw, 272, 220 * ru, 2);
+  const D = 320, gap = 440, cy = 570;
+  TEAM.forEach(([id, name], i) => {
+    const t0 = 0.45 + i * 0.32, a = t - r.start - t0;
+    if (a < 0) return;
+    const cx = W / 2 + (i - 1.5) * gap, sc = lerp(0.86, 1, easeOutBack(a / 0.4)), al = clamp(a / 0.25);
+    fx.save();
+    fx.globalAlpha = (1 - out) * al;
+    // soft glow behind, the photo (already round), a thin amber ring drawn around it
+    const g = fx.createRadialGradient(cx, cy, D * 0.3, cx, cy, D * 0.85);
+    g.addColorStop(0, "rgba(242,193,78,0.10)"); g.addColorStop(1, "rgba(242,193,78,0)");
+    fx.fillStyle = g; fx.fillRect(cx - D, cy - D, 2 * D, 2 * D);
+    fx.translate(cx, cy); fx.scale(sc, sc);
+    fx.save(); fx.beginPath(); fx.arc(0, 0, D / 2 - 2, 0, Math.PI * 2); fx.clip();
+    if (PHOTOS[id]) fx.drawImage(PHOTOS[id], -D / 2, -D / 2, D, D); else { fx.fillStyle = "#1c1726"; fx.fillRect(-D / 2, -D / 2, D, D); }
+    fx.restore();
+    const ring = easeOut(a / 0.6);
+    fx.lineWidth = 3; fx.strokeStyle = rgba(PAL.amber, 0.9); fx.shadowColor = "rgba(255,150,50,0.8)"; fx.shadowBlur = 16;
+    fx.beginPath(); fx.arc(0, 0, D / 2 + 8, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ring); fx.stroke();
+    fx.restore();
+    // the name types on under the photo, one line, fg colour
+    fx.save();
+    fx.globalAlpha = 1 - out;
+    fx.font = "46px VT323"; fx.textAlign = "center"; fx.textBaseline = "alphabetic";
+    fx.shadowColor = "rgba(236,200,150,0.35)"; fx.shadowBlur = 14;
+    const n = typedText(name, t0 + 0.2, u, 34);
+    fx.fillStyle = rgba(PAL.fg, 1); fx.fillText(n, cx, cy + D / 2 + 78);
+    fx.restore();
+  });
+  fx.restore();
+}
+
 // ---------------------------------------------------------------- WebGL post (bloom, CA, zoom blur, glitch, pixelate, CRT off, grain, vignette)
 const gl = out.getContext("webgl", { preserveDrawingBuffer: true, antialias: false, premultipliedAlpha: false });
 const VS = "attribute vec2 p; varying vec2 v; void main(){ v = p * 0.5 + 0.5; gl_Position = vec4(p, 0.0, 1.0); }";
@@ -784,10 +970,10 @@ function drawScene(t) {
     });
     drawCaption(t, r.start + 0.8, end(r) - 0.1, [["KAHRAMANMARAŞ, TÜRKİYE", 52, PAL.fg], ["37.58°K  36.93°D  ·  2023", 40, PAL.amber]]);
   }
-  // 8: Kahramanmaraş minigame; whips out at the end
-  if (inRow(R.kahr_mini, t, 0, 0.05)) {
-    const r = R.kahr_mini, wo = smooth(end(r) - 0.32, end(r), t);
-    drawClip(r, t, { scale: (1.05 - 0.05 * easeOut((t - r.start) / 0.35)) * (1 - 0.45 * wo * wo), alpha: 1 - wo });
+  // 8: Fener at night (glitch cut in); whips out at the end
+  if (inRow(R.fener, t, 0, 0.05)) {
+    const r = R.fener, wo = smooth(end(r) - 0.32, end(r), t);
+    drawClip(r, t, { scale: (1.06 - 0.04 * easeOut((t - r.start) / r.len)) * (1 - 0.45 * wo * wo), alpha: 1 - wo });
   }
   // 9: globe spins in (zoom-blur whip), crossfades into the lock clip
   if (inRow(R.globe, t, 0.15, 0.3)) {
@@ -802,32 +988,38 @@ function drawScene(t) {
   }
   // 11: dark water + MÜDAHALE ET
   if (inRow(R.c_mudahale, t)) drawDeep(t);
-  // 12: Indian Ocean minigame (hard cut to black after)
-  if (inRow(R.io_mini, t)) drawClip(R.io_mini, t, { scale: 1.05 - 0.05 * easeOut((t - R.io_mini.start) / 0.35) });
-  // 14: menu opens like the eye again
+  // 12: Indian Ocean minigame: slow push in toward the beach as the wall rises, hard cut to black after
+  if (inRow(R.io_mini, t)) { const r = R.io_mini; drawClip(r, t, { scale: 1.04 + 0.05 * smooth(r.start, r.start + r.hit, t), cx: 700, cy: 330 }); }
+  // 14: the title screen opens like the eye again; glitch cut to the role menu
+  if (inRow(R.title, t)) {
+    const r = R.title;
+    eyeOpen(t, r.start, 0.8, (op) => drawClip(r, t, { scale: 1.05 - 0.05 * easeOut((t - r.start) / r.len), alpha: 0.35 + 0.65 * op }));
+  }
   if (inRow(R.menu, t)) {
     const r = R.menu, wo = smooth(end(r) - 0.25, end(r), t);
-    eyeOpen(t, r.start, 0.8, (op) => drawClip(r, t, { scale: (1.05 - 0.05 * easeOut((t - r.start) / r.len)) * (1 - 0.3 * wo * wo), alpha: (0.35 + 0.65 * op) * (1 - wo), dy: -70 }));
+    drawClip(r, t, { scale: (1.03 - 0.03 * easeOut((t - r.start) / r.len)) * (1 - 0.3 * wo * wo), alpha: 1 - wo, dy: -70 });
   }
   // 15/16: second spin (ends in a pixelate transition into the bunny)
   if (inRow(R.globe2, t)) { const r = R.globe2; drawClip(r, t, { scale: 0.98 - 0.1 * easeOut((t - r.start) / 0.6) + 0.04 * smooth(r.start + 1.5, end(r), t), dy: -95 }); }   // lifted: the lines sit under the globe
   // 17: bunny
   if (inRow(R.bunny, t)) drawBunnyScene(t);
-  // 19: result card, then it sinks into the dark behind FARK ET
-  if (inRow(R.result, t, 0, R.c_fark.len)) {
-    const r = R.result, dim = smooth(end(r) - 0.35, end(r) + 0.2, t);
-    drawClip(r, t, { scale: 1.0 + 0.12 * smooth(r.start, end(r) + 1.5, t), cy: 972, alpha: lerp(1, 0.08, dim) });   // push anchored on the closing line
-  }
+  // 19: "AAA", "yok yok", the logo lands; FARK ET on the same stage
+  if (t >= R.c_aaa.start && t < end(R.c_fark)) drawStage(t);
+  drawLogo(t);
+  // 20: the developers
+  drawTeam(t);
   // text
   drawLine(R.s_hayat, t, { y: 568, px: 84 });
   drawCard(R.c_tahmin, t, { scrim: 0.92 });
   drawCard(R.c_kesfet, t, { scrim: 0.6 });
   drawCard(R.c_mudahale, t, { y: 600 });
-  drawLine(R.s_fark, t, { y: 985, px: 84, scrim: 0.85, cursorHold: 0.6 });
+  drawLine(R.s_fark, t, { y: 462, px: 60, cursorHold: 0.4 });
   drawCard(R.c_tercih, t, { scrim: 0.85 });
   drawLine(R.s_dunya, t, { y: 890, px: 76, scrim: 0.85, cursorHold: 0.3 });
   drawLine(R.s_count, t, { y: 1005, px: 84, hlScale: 1.5 });
   drawLine(R.s_easter, t, { y: 985, px: 76, cursorHold: 0.8 });
+  drawCard(R.c_aaa, t, { y: 600, px: 300, step: 0.16, calm: true, rule: 320, cursorOff: R.s_yok.start });
+  drawLine(R.s_yok, t, { y: 760, px: 92, step: 0.075, cursorHold: 0.6 });
   drawCard(R.c_fark, t, { y: 610, px: 210, noOut: true, rule: 300 });
 }
 function postState(t) {
@@ -837,9 +1029,9 @@ function postState(t) {
   // glitch cuts
   for (const c of CUTS) { const f = frameOf(t - c + 2 / FPS); if (t >= c - 2 / FPS && f < 7) P.glitch = [0.6, 1, 0.8, 1, 0.5, 0.25, 0.1][f]; }
   // eye-open bloom + slight CA as the lids part
-  for (const [t0, d] of [[R.diorama.start, 1.05], [R.menu.start, 0.8]]) { const u = (t - t0) / d; if (u > 0 && u < 1.2) P.ca += 0.006 * Math.sin(Math.PI * clamp(u)); }
+  for (const [t0, d] of [[R.diorama.start, 1.05], [R.title.start, 0.8]]) { const u = (t - t0) / d; if (u > 0 && u < 1.2) P.ca += 0.006 * Math.sin(Math.PI * clamp(u)); }
   // whip from the minigame to the globe
-  const wk = smooth(end(R.kahr_mini) - 0.3, end(R.kahr_mini), t) * (1 - smooth(R.globe.start, R.globe.start + 0.5, t));
+  const wk = smooth(end(R.fener) - 0.3, end(R.fener), t) * (1 - smooth(R.globe.start, R.globe.start + 0.5, t));
   P.zb = Math.max(P.zb, 0.22 * wk);
   const wm = smooth(end(R.menu) - 0.25, end(R.menu), t) * (t < end(R.menu) ? 1 : 0);
   P.zb = Math.max(P.zb, 0.18 * wm);
@@ -858,10 +1050,13 @@ function postState(t) {
   if (t >= g2 - 0.4 && t < g2) P.pix = Math.round(lerp(1, 40, easeIn((t - g2 + 0.4) / 0.4))) || 1;
   if (t >= g2 && t < g2 + 0.35) P.pix = Math.max(1, Math.round(lerp(40, 1, easeOut((t - g2) / 0.35))));
   if (P.pix > 1 && P.pix < 2) P.pix = 1;
-  // end: CRT power-off on FARK ET, then black
+  // the logo lands: a soft cool flash and a short zoom-blur settle (no shake)
+  const lu = t - R.logo.start;
+  if (lu >= 0 && lu < 1.0) { P.flash = Math.max(P.flash, 0.2 * Math.exp(-lu * 7)); P.flashCol = [0.75, 0.85, 1.0]; P.zb = Math.max(P.zb, 0.14 * Math.exp(-lu * 9)); P.ca += 0.004 * Math.exp(-lu * 6); }
+  // FARK ET: CRT power-off, then black until the developers fade in
   const c0 = end(R.c_fark) - 0.7;
-  if (t >= c0) P.crt = clamp((t - c0) / 0.62);
-  if (t >= end(R.c_fark)) P.fade = 0;
+  if (t >= c0 && t < end(R.c_fark)) P.crt = clamp((t - c0) / 0.62);
+  if (t >= end(R.c_fark) && t < R.team.start) P.fade = 0;
   return P;
 }
 
@@ -892,24 +1087,36 @@ async function renderAt(t) {
 // ---------------------------------------------------------------- cue sheet for the audio team (final-film seconds = INTRO_LEN + film seconds)
 function cues() {
   const c = HEART.map(([t], i) => ({ film: t, what: `heartbeat (${i % 2 ? "dub" : "lub"})` }));
-  c.push({ film: R.diorama.start, what: "darkness tears open: snowy Kahramanmaraş diorama" }, { film: R.black.start, what: "hard cut to black" },
-    { film: R.menu.start, what: "menu opens (eye again)" }, { film: end(R.globe2) - 0.4, what: "pixelate into the bunny scene" },
-    { film: R.globe.start - 0.3, what: "zoom-blur whip to the globe" }, { film: R.lock.start + R.lock.lock, what: "target lock (Indian Ocean)" });
-  c.push({ film: VOICE.t, len: VOICE.len, what: `voice, echoing: "${VOICE.text}"` });
+  c.push({ film: R.diorama.start, what: "darkness tears open: snowy Kahramanmaraş diorama" }, { film: R.fener.start + 0.8, what: "Fener: the lamp clicks on, the mother is found" },
+    { film: R.globe.start - 0.3, what: "zoom-blur whip to the globe" }, { film: R.lock.start + R.lock.lock, what: "target lock (Indian Ocean)" },
+    { film: R.io_mini.start + R.io_mini.hit, what: "the wave breaks over the town" }, { film: R.black.start, what: "hard cut to black" },
+    { film: R.title.start, what: "title screen opens (eye again)" }, { film: end(R.globe2) - 0.4, what: "pixelate into the bunny scene" },
+    { film: R.logo.start, what: "3play lands" }, { film: R.team.start, what: "developers" });
+  c.push({ film: VOICE.t, len: VOICE.len, what: `voice, echoing: "${VOICE.text}" (dropped: no voice, the rings stay)` });
   for (const r of TL) if (r.text) c.push({ film: r.start, len: r.len, what: `${r.id.startsWith("c_") ? "title card" : "statement"}: ${r.text.replace(/\*/g, "")}` });
   for (const t of CUTS) c.push({ film: t, what: "glitch cut" });
   c.push({ film: end(R.lock) - 0.35, what: "zoom flash into the ocean" });
   c.push({ film: R.bunny.start + 1.4, what: "egg bursts, bunny pops out" });
-  c.push({ film: end(R.c_fark) - 0.7, what: "CRT power-off" }, { film: end(R.c_fark), what: "black" });
-  return c.map((x) => ({ ...x, final: +(x.film + INTRO_LEN).toFixed(2) })).sort((a, b) => a.film - b.film);
+  c.push({ film: end(R.c_fark) - 0.7, what: "CRT power-off" }, { film: end(R.c_fark), what: "black" }, { film: R.end.start, what: "black (end)" });
+  return c.map((x) => ({ ...x, film: +x.film.toFixed(2), final: +(x.film + INTRO_LEN).toFixed(2) })).sort((a, b) => a.film - b.film);
 }
 
 // ---------------------------------------------------------------- boot
-window.SEGMENT = { name: "film", fps: FPS, duration: DURATION, frames: Math.round(DURATION * FPS), cues: cues() };
+function audioPlan() {                                   // final-film seconds for tools/video/mix.py
+  const fin = (c) => +((c.final ?? c.at + INTRO_LEN)).toFixed(3);
+  return {
+    intro: INTRO_LEN, length: +(INTRO_LEN + DURATION).toFixed(3),
+    music: { ...MUSIC, start: INTRO_LEN, keys: MUSIC.keys.map(([t, db]) => [+(t + INTRO_LEN).toFixed(3), db]) },
+    stems: STEMS.map((s) => { const r = R[s.row]; return { ...s, clip: r.clip, in: r.in, speed: r.speed || 1, at: +(r.start + INTRO_LEN).toFixed(3), len: r.len }; }),
+    sfx: SFX.map((c) => ({ ...c, at: fin(c), final: undefined })).sort((a, b) => a.at - b.at),
+  };
+}
+window.SEGMENT = { name: "film", fps: FPS, duration: DURATION, frames: Math.round(DURATION * FPS), cues: cues(), audio: audioPlan() };
 (async () => {
   for (const name of new Set(TL.filter((r) => r.clip).map((r) => r.clip))) CLIPS[name] = await probeClip(name);
   window.SEGMENT.clips = Object.fromEntries(Object.entries(CLIPS).map(([k, v]) => [k, v ? v.frames : "PLACEHOLDER"]));
   await document.fonts.load("172px VT323");
+  await loadPhotos();
   window.renderAt = renderAt;
   await renderAt(Q.has("t") ? parseFloat(Q.get("t")) : 0);
   document.documentElement.dataset.ready = "1";

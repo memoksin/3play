@@ -2,7 +2,7 @@
 # Final pitch film: approved intro + film body -> export/video/pitch_film.mp4 (H.264, yuv420p, 1920x1080, 60 fps, no audio).
 # Never touches export/video/approved/. Stream-copies when both parts have identical stream parameters and the joined
 # file decodes cleanly; otherwise (or with MODE=reencode) re-encodes once with the render.mjs settings (crf 16, slow).
-# Fails if the result is longer than 60 s.
+# Fails if the result is longer than 60 s. The sound is added after this by tools/video/mix.py --mux (-> pitch.mp4).
 #
 #   tools/video/assemble.sh                                   # uses the default paths below
 #   INTRO=/path/to/intro_stack_v2_cut.mp4 tools/video/assemble.sh

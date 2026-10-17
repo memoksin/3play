@@ -1,42 +1,72 @@
 # Pitch film (trailer) sounds
 
-For mixing the ~50 s pitch film. Cue list and picks: `docs/audio.md`, section "Pitch film". Not used by the game. All new files are Freesound previews (CC0, page checked), trimmed with ffmpeg, Ogg Vorbis 44.1 kHz q5, not normalised. Levels are the raw level of each file (integrated LUFS / sample peak), set them by ear in the mix. Credits: `assets/CREDITS.md`.
+Sounds of the pitch film (`export/video/pitch.mp4`, 58.4 s: the approved 8.0 s intro, then the film body). Cue list:
+`docs/audio.md`, section "Pitch film". Not used by the game. The new files in this folder are Freesound previews (CC0,
+page checked), trimmed with ffmpeg, Ogg Vorbis 44.1 kHz q5, not normalised. Credits: `assets/CREDITS.md`.
+
+The mix is code, not a DAW session: every cue below is a row of the `SFX`, `STEMS` and `MUSIC` tables in
+`tools/video/film.html`, tied to the picture timeline (`TL`), so a retimed shot takes its sounds with it.
+`python3 tools/video/mix.py` measures each placed sound and sets it to its planned loudness, then masters the whole
+film to -14 LUFS integrated with a -2.5 dBTP limiter (see `tools/video/README.md`).
+
+Columns: Film time = final-film seconds (intro + film). Trim = the part of the file used. Level = loudness of the
+placed sound before the master (LUFS, or sample peak in dBFS for very short sounds); `cap` = its own peak limit. The
+master then lifts the whole mix by about +7 dB.
 
 ## New files (this folder)
 
-| T# | File | Film time (s) | Trim / notes | LUFS / peak |
+| T# | File | Film time (s) | Trim | Level |
 |---|---|---|---|---|
-| T1 | `t1_rain_loop.ogg` | 0 to 8 | Rain.wav (idomusics), source 20 to 29 s, +12 dB (source is very quiet, -39.6 LUFS), 8 s seamless loop (1 s crossfade). Loop it under the whole intro. | -27.8 / -9.9 dBFS |
-| T2, T6 | `t2_far_thunder.ogg` (mono) | 2.4, 5.5 | Source seconds 5 to 10, short fades. Same file for both. | -24.2 / -5.7 dBFS |
-| T3 (1st) | `t3a_thunderclap.ogg` | 2.8 | Thunderclap (Fission9), 0.5 to 10.9 s, tail fade. | -26.1 / -0.2 dBFS |
-| T3 (2nd) | `t3b_close_strike.ogg` | 3.4 | Very close lightning strike (Simon Spiers). Source is 4 s of quiet, then the strike at 20 s; file starts on the strike (19.9 to 27 s). | -11.7 / +0.4 dBFS |
-| T4 | `t4_final_strike.ogg` | 3.9 | Thunder with no rain (shazzakip), 15 to 24 s (loudest rumble). Clearly weak (about 18 LU below T3b). | -30.2 / -11.8 dBFS |
-| T4 (alt) | `t4_final_strike_layered.ogg` | 3.9 | T4 (+6 dB) mixed with T3b, limiter, 7 s. Use instead of T4 if T4 is too small. | -15.1 / +0.8 dBFS |
-| T7 | `t7_noise_riser.ogg` | 6.05 to 7.65 | Riser, the last 1.6 s before the source goes silent (source 3.0 to 4.6 s), 80 ms fade-in, -1.5 dB. Fits the slot. | -15.9 / -1.0 dBFS |
-| T9, T21 | `t9_heartbeat.ogg` | 8.2, 8.5, 9.2, 9.5; 31.12, 31.40 | One lub-dub (source 2.45 to 3.25 s), 0.8 s. T21 reuses it. | -22.9 / -9.4 dBFS |
-| T11 | `t11_low_impact.ogg` | 10.0 | Cinematic Low Pitch Impact (Jofae), 6.15 s with tail fade. Also the statement sting (T23, T28) and the base of the title-card hit (T13, T16, T19, T24, T30). | -16.5 / +0.4 dBFS |
-| T27 | `t27_egg_crack.ogg` | 41.5 | Egg cracking (FngerSounds), 2.7 s. Source clipped (+1.5 dBFS), lowered 3 dB. | -15.7 / -1.1 dBFS |
-| T31 | `t31_tv_off.ogg` | 49.1 | Turning the TV off (Cloud-10), 0.28 s. Very short and quiet (LUFS not measurable, gated), raise it. | n/a / -12.2 dBFS |
+| T1 | `t1_rain_loop.ogg` | 0 to 7.75 | 8 s seamless loop, fades 0.4 / 0.5 s | -26 LUFS |
+| T2, T6 | `t2_far_thunder.ogg` (mono) | 2.4, 5.5 | whole file (source seconds 5 to 10), fade-out 0.5 s | -28, -29 LUFS |
+| T3 (1st) | `t3a_thunderclap.ogg` | 2.8 | first 3.0 s, fade-out 1.0 s | -24 LUFS, cap -7 dBFS |
+| T3 (2nd) | `t3b_close_strike.ogg` | 3.4 | first 3.0 s (starts on the strike), fade-out 1.2 s | -22 LUFS, cap -6 |
+| T4 | `t4_final_strike.ogg` | 3.9 | first 3.8 s, fade-out 1.5 s. The plain file, raised in the mix (Burcu's call) | -22 LUFS, cap -6 |
+| T7 | `t7_noise_riser.ogg` | 6.05 to 7.65 | whole file (1.6 s), fades 0.08 / 0.05 s | -27 LUFS, cap -8 |
+| T9, T21 | `t9_heartbeat.ogg` | 8.07, 9.17; 34.31 | whole file (one lub-dub, 0.8 s). The lub peaks 0.15 s in, on the red glow at 8.22, 9.32, 34.46; the dub 0.45 s later | -20, -22 LUFS |
+| T11 and the hits | `t11_low_impact.ogg` | see the cue list | first 1.6 to 4.0 s with a long fade-out: statement stings, title card booms, the wave, the logo | -19 to -27 LUFS, cap -6 to -10 |
+| T27 | `t27_egg_crack.ogg` | 43.22 | whole file (2.7 s): its small cracks fall on the egg's cracks (43.45, 43.9), the big one on the burst (44.3) | -21 LUFS, cap -8 |
+| T31 | `t31_tv_off.ogg` | 52.25 | whole file (0.28 s), on the CRT power-off | peak -9 dBFS |
 
-## Reused game files (no copies)
+`t4_final_strike_layered.ogg` stays as the T4 alternative; it is not in the mix.
 
-| T# | Existing file | Film time (s) |
-|---|---|---|
-| T5, T29 (typing) | `assets/audio/globe/keyboard_typing_loop.ogg` (G3) | 4.45 to 5.3; 44.4 to 45.9 |
-| T29 (card swell) | `assets/audio/globe/guitar_swell_trim.ogg` (R1) | 43.8 |
-| T15 | `assets/audio/globe/whoosh.ogg` (G5) | 19.2 |
-| T17 | `assets/audio/globe/target_lock_trim.ogg` (G4) | 24.55 |
-| T20 | `assets/audio/connect/pipe_water_stream.ogg` (C5), `assets/audio/connect/water_echo.ogg` (C6) | 28 to 31 |
-| T22 | `assets/audio/menu/title.ogg` (M1), `assets/audio/menu/ui_hover.ogg` (M2) | 31.7 |
-| T25 | `assets/audio/globe/spaceship_ambience.ogg` (G2) | 36.3 to 40 |
-| T12 (after the rip) | `assets/audio/diorama/winter_wind.ogg` (D1) | 12.4 |
-| T13, T16, T19, T24, T30 (title cards) | `assets/audio/trailer/t11_low_impact.ogg` (T11) | 14.3, 20.2, 26.1, 34.3, 47.4 |
-| T23, T28 (statements) | `assets/audio/trailer/t11_low_impact.ogg` (T11) | 32.25, 41.6 |
-| T14, T26 (glitch cuts, pixelate) | `assets/audio/globe/glitch_corruption.ogg` (G7) | 16.6, 28.0, 36.3, 43.8; 39.7 |
-| T18 (flash whoosh) | `assets/audio/globe/whoosh.ogg` (G5) | 25.75 |
-| T33 (music bed, quiet) | `assets/audio/menu/title.ogg` (M1) | whole film |
+## Game files used by the film (no copies)
 
-## Still open
+| T# | File | Film time (s) | Trim | Level |
+|---|---|---|---|---|
+| T5 | `globe/keyboard_typing_loop.ogg` (G3) | 4.45 to 5.3 | first 0.85 s | -27 LUFS |
+| T11b, T23b, T25c, T25d, T28b, T29b, T32b, T32c | `globe/keyboard_typing_loop.ogg` (G3) | 9.8, 35.25, 39.7, 40.9, 44.4, 47.55, 53.45, 53.95 | as long as each line types (0.5 to 1.75 s) | -27 to -29 LUFS |
+| T12 | `diorama/winter_wind.ogg` (D1) | 12.2 to 16.3 | from 4 s, 4.0 s, fades 0.6 / 0.3 s | -25 LUFS |
+| T13, T16, T19, T24, T30 (glitch layer) | `globe/glitch_corruption.ogg` (G7) | 13.9, 21.3, 27.2, 37.3, 50.6 | first 0.45 s, under the card boom (T11) | -27 LUFS |
+| T14 (glitch cuts) | `globe/glitch_corruption.ogg` (G7) | 16.1, 29.0, 36.9, 39.4 | first 0.45 s | -23 to -25 LUFS |
+| T15 | `globe/whoosh.ogg` (G5) | 18.6 (peaks on the cut at 20.7) | whole file | -24 LUFS |
+| T17 | `globe/target_lock_trim.ogg` (G4) | 25.65 | whole file | -26 LUFS |
+| T25 | `globe/spaceship_ambience.ogg` (G2) | 39.4 to 42.9 | first 3.5 s | -28 LUFS |
+| T25e | `menu/ui_hover.ogg` (M2) | 41.35 | whole file, when the digit 3 settles | peak -17 dBFS |
+| T26 | `globe/glitch_corruption.ogg` (G7) | 42.5 | 0.6 to 1.35 s | -23 LUFS |
+| T29 | `globe/guitar_swell_trim.ogg` (R1) | 46.2 | whole file: the calm "AAA" label, no hit | -22 LUFS |
+| T32 | `menu/ui_hover.ogg` (M2) | 53.75, 54.07, 54.39, 54.71 | whole file, one per portrait | peak -18 dBFS |
+| T33 (music bed) | `menu/title.ogg` (M1) | 8.0 to 57.8 | from 134.35 s, so its own swells peak on the diorama (12.75) and on the logo (48.75); volume curve in `MUSIC.keys` | -24 LUFS |
 
-- T4: Burcu decides between `t4_final_strike.ogg` and `t4_final_strike_layered.ogg`.
-- T12: Burcu's note lists only the D1 wind; no separate rip sound.
+## Game sound recorded with the clips (stems)
+
+`tools/video/capture.sh` records the game's own sound with every clip (Godot Movie Maker, Music bus muted):
+`export/video/clips/<clip>/clip.wav`. The mix cuts it like the picture (same in-point and speed).
+
+| T# | Clip | Film time (s) | What is heard | Level |
+|---|---|---|---|---|
+| T14b | `fener_mini` | 16.1 to 20.7 | wind (FN1), footsteps (FN2), the mother's whistle (FN5), lamp click (FN3), found (FN6) | -21 LUFS, cap -12 |
+| T15b | `globe_spin` | 20.7 to 23.6 | swell (G1), drone (G9) | -28 LUFS |
+| T17b | `globe_lock_io` | 23.6 to 27.2 | at 1.5x: drone, coordinates typing (G3), zoom whoosh (G5) | -24 LUFS |
+| T20 | `io_mini` | 29.0 to 34.4 | wave rising (C3), the wave hits (C4), water; hard cut to silence | -20 LUFS |
+| T22b | `title` | 35.0 to 36.9 | title screen ambience | -34 LUFS, cap -24 |
+| T22 | `menu_roles` | 36.9 to 39.4 | hover (M2) on Devlet | -27 LUFS, cap -14 |
+| T25b | `globe_spin2` | 39.4 to 42.9 | drone (G9) | -28 LUFS |
+
+The diorama clip's sound is not used (it carries the hidden intro card's typing); T12 (D1) plays there instead.
+
+## Notes
+
+- T10 (the voice "Sesimi duyan var mı?"): no recording, dropped by Burcu. The on-screen echo rings stay.
+- Silence: T8 (7.75 to 8.0, black), the hard cut to black (34.4 to 35.0, only the T21 heartbeat), the gap after the
+  CRT power-off (52.9 to 53.3) and the end (57.8 to 58.4).
