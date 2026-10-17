@@ -179,16 +179,16 @@ Dark snowy street, a flashlight with a battery, a whistle that shows the directi
 
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
-| FN1 | Snowstorm ambience | Whole minigame | G56-21-Winter Wind.wav | craigsmith | https://freesound.org/people/craigsmith/sounds/438876/ | CC0 | in repo (not wired yet; same as D1) | The same new snowstorm sound as D1. |
-| FN2 | Footsteps | The player walks | Footsteps Dirt Gravel | PotatokingXII | https://freesound.org/people/PotatokingXII/sounds/352870/ | CC0 | in repo (not wired yet) | Normal footsteps (not snow). About 35 s, trim to a clean stride loop. |
-| FN3 | Flashlight on and off | The flashlight is turned on or off | Flashlight Clicking On and Off | deleted_user_7146007 | https://freesound.org/people/deleted_user_7146007/sounds/383659/ | CC0 | in repo (not wired yet) | 0 to 1 s = turning on. 2 to 3 s = turning off. |
-| FN4 | Battery low | The flashlight battery is running out | Electronic Timer Beeping 4X | Rudmer_Rotteveel | https://freesound.org/people/Rudmer_Rotteveel/sounds/536420/ | CC0 | in repo (not wired yet) | The file already holds 4 beeps ("bip bip"). Play it when the battery is low. |
-| FN5 | Whistle | The whistle that shows the direction | metal whistle | strongbot | https://freesound.org/people/strongbot/sounds/568995/ | CC0 | in repo (not wired yet) | First 3 seconds of the file. |
-| FN6 | Found a family member | The player reaches a family member | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | in repo (not wired yet; reuse of F2) | First second of the file. Burcu: the same Game Pickup sound also plays when the player picks up an item (battery, kit, blanket; event `pickup`). |
-| FN7 | Success | The family reaches the assembly point | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | in repo (not wired yet) | One success sound for FN7, FR6 and BM4. |
-| FN8 | Aftershock | The aftershock hits | Cracking Earthquake | uagadugu | https://freesound.org/people/uagadugu/sounds/222521/ | CC0 | in repo (not wired yet; reuse of F6) | Trim to the shaking. |
-| FN8a | Building crack | Aftershock warning and the start of the aftershock | breaking_concrete | zatar | https://freesound.org/people/zatar/sounds/755522/ | CC0 (verify) | in repo (not wired yet) | Burcu picked it: a hammer breaking concrete, for the building body cracking. Plays with FN8 (Cracking Earthquake). Trim to the first crack by ear. |
-| FN9 | Hurt | The player is hurt near a building | Hurt_C_07 | cabled_mess | https://freesound.org/people/cabled_mess/sounds/350926/ | CC0 | in repo (not wired yet) | Retro-style hurt sound, about 0.2 s. |
+| FN1 | Snowstorm ambience | Whole minigame | G56-21-Winter Wind.wav | craigsmith | https://freesound.org/people/craigsmith/sounds/438876/ | CC0 | in repo (same as D1) | The same new snowstorm sound as D1. |
+| FN2 | Footsteps | The player walks | Footsteps Dirt Gravel | PotatokingXII | https://freesound.org/people/PotatokingXII/sounds/352870/ | CC0 | in repo | Normal footsteps (not snow). About 35 s, trim to a clean stride loop. |
+| FN3 | Flashlight on and off | The flashlight is turned on or off | Flashlight Clicking On and Off | deleted_user_7146007 | https://freesound.org/people/deleted_user_7146007/sounds/383659/ | CC0 | in repo | 0 to 1 s = turning on. 2 to 3 s = turning off. |
+| FN4 | Battery low | The flashlight battery is running out | Electronic Timer Beeping 4X | Rudmer_Rotteveel | https://freesound.org/people/Rudmer_Rotteveel/sounds/536420/ | CC0 | in repo | The file already holds 4 beeps ("bip bip"). Play it when the battery is low. |
+| FN5 | Whistle | The whistle that shows the direction | metal whistle | strongbot | https://freesound.org/people/strongbot/sounds/568995/ | CC0 | in repo | First 3 seconds of the file. |
+| FN6 | Found a family member | The player reaches a family member | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | in repo (reuse of F2) | First second of the file. Burcu: the same Game Pickup sound also plays when the player picks up an item (battery, kit, blanket; event `pickup`). |
+| FN7 | Success | The family reaches the assembly point | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | in repo | One success sound for FN7, FR6 and BM4. |
+| FN8 | Aftershock | The aftershock hits | Cracking Earthquake | uagadugu | https://freesound.org/people/uagadugu/sounds/222521/ | CC0 | in repo (reuse of F6) | Trim to the shaking. |
+| FN8a | Building crack | Aftershock warning and the start of the aftershock | breaking_concrete | zatar | https://freesound.org/people/zatar/sounds/755522/ | CC0 (verify) | in repo | Burcu picked it: a hammer breaking concrete, for the building body cracking. Plays with FN8 (Cracking Earthquake). Trim to the first crack by ear. |
+| FN9 | Hurt | The player is hurt near a building | Hurt_C_07 | cabled_mess | https://freesound.org/people/cabled_mess/sounds/350926/ | CC0 | in repo | Retro-style hurt sound, about 0.2 s. |
 
 ## Fire (Black Saturday, kangaroo farm, first person)
 

@@ -255,14 +255,19 @@ func _scene() -> void:
 			_check("result: unsolved -> the town is still flooded after the drain, the sea settled (%.2f m)" % depth_end.min(),
 				s._finished and s._hit_t() > s._drain_start() + s.DRAIN and land_on and depth_end.min() > 1.0 and sea_still)
 		else:
-			_check("result: partial -> lost communities keep their water at the end, saved ones dry",
-				(wd._floods[3] as Node3D).visible and depth_end[0] < 0.0 and depth_end[1] < 0.0 and depth_end[2] < 0.0)
+			_check("result: partial -> one line open floods the whole town, still flooded at the end (%.2f m)" % depth_end.min(),
+				land_on and depth_end.min() > 1.0 and sea_still)
+			var red := []
+			for v in 4:
+				red.append(s._flood_at[v] >= 0.0 and s._flow_t() >= s._flood_at[v])  # connect.gd _draw_names
+			_check("result: partial -> names show the real result: only community 4 red", red == [false, false, false, true])
 		if case == "solved":
 			_check("result: solved -> no flood over the land, every community dry", s.saved_count == 4 and not shown and not wet.has(true))
 		elif case == "unsolved":
 			_check("result: unsolved -> the flood covers the town", s.saved_count < 4 and not s._saved.has(true) and shown and wet.has(true))
 		else:
-			_check("result: partial -> the saved communities stay dry", s._saved == [true, true, true, false] and wet == [false, false, false, false])
+			_check("result: partial -> score from the lines (3 saved), the picture floods every community",
+				s.saved_count == 3 and s._saved == [true, true, true, false] and shown and not wet.has(false))
 		s.queue_free()
 		await process_frame
 
@@ -329,7 +334,7 @@ func _scene() -> void:
 	s.queue_free()
 	await process_frame
 
-	# one broken line -> 3/4
+	# one broken line -> 3/4 (the score counts the completed lines; the picture floods the whole town)
 	s = _new_scene()
 	await process_frame
 	s.time_scale = 0.0
@@ -337,7 +342,16 @@ func _scene() -> void:
 	s.solve()
 	s.rotate_cell(5, 5)
 	_check("scene: one turned corner leaves 3 lines", L.complete_lines(skin, s.rots) == 3)
+	var kinds := []
+	s.sound_event.connect(func(kind: StringName, index: int) -> void: kinds.append([kind, index]))
+	var got := []
+	s.finished.connect(func(a: int, b: int) -> void: got.append([a, b]))
 	s.seek(200.0)
+	_check("scene: 3 basins fill, community 4 floods (one flood event), then drain, finished(3, 4)",
+		kinds.filter(func(e: Array) -> bool: return e[0] == &"basin").size() == 3
+		and kinds.filter(func(e: Array) -> bool: return e[0] == &"spill").size() == 1
+		and kinds.filter(func(e: Array) -> bool: return e[0] == &"flood") == [[&"flood", 3]]
+		and kinds[kinds.size() - 1][0] == &"drain" and got == [[3, 4]])
 	_check("scene: one broken line -> 3/4", s.saved_count == 3)
 	_check("scene: community 4 floods", s._flood_at[3] >= 0.0 and s._flood_at[0] < 0.0)
 	s.queue_free()

@@ -143,7 +143,7 @@ var _crew: Array[Actor] = []
 var _crew_root: Node3D
 var _me: Actor
 var _area_ring: MeshInstance3D
-var _crew_ring: MeshInstance3D
+var _crew_rings: Array[MeshInstance3D] = []
 var _debris: Array[CPUParticles3D] = []
 var _dust: Array[CPUParticles3D] = []
 var _next_fx := 0
@@ -768,9 +768,11 @@ func _build_static_marks() -> void:
 	var a := FenerMap.AREA
 	_area_ring = _mark(root, 4, Color(0.44, 0.83, 0.77), a.get_center(), a.size, 0.05)
 	_area_ring.visible = false
-	var c := FenerMap.CREWS[0]
-	_crew_ring = _mark(root, 0, Color(1.0, 0.6, 0.2), Vector2(c.x, c.y), Vector2.ONE * c.z * 2.0, 0.05)
-	_crew_ring.visible = false
+	# the rescue crew zones (where supplies are handed out and trapped people are reported): a ring on the ground
+	for c in FenerMap.CREWS:
+		var ring := _mark(root, 0, Color(1.0, 0.6, 0.2), Vector2(c.x, c.y), Vector2.ONE * c.z * 2.0, 0.05)
+		ring.visible = false
+		_crew_rings.append(ring)
 	var pad := FenerMap.SHOCK_PAD
 	for i in ctrl.risky.size():
 		var r: Rect2 = ctrl.risky[i]
@@ -1225,7 +1227,8 @@ func show_state(c: Node, dt: float) -> void:
 	for i in mini(_items.size(), ctrl.items.size()):
 		var it = ctrl.items[i]
 		var n := _items[i]
-		n.visible = not it.taken
+		n.visible = ctrl.item_ready(it)  # out only while it can be taken
+		n.position = Vector3(it.pos.x, FenerMap.ground_y(it.pos), it.pos.y)
 		var m := n.get_node_or_null(^"Model") as Node3D
 		if m:
 			m.position.y = 0.15 + sin(_t * 2.4 + i) * 0.06
@@ -1267,7 +1270,14 @@ func show_state(c: Node, dt: float) -> void:
 		(b.material_override as ShaderMaterial).set_shader_parameter(&"pulse", pulse)
 	_area_ring.visible = ctrl.area_seen
 	var pending: bool = ctrl.people.any(func(p) -> bool: return p.st == ctrl.St.MARKED)
-	_crew_ring.visible = pending
+	var gcrew: int = ctrl.goal_crew()
+	for i in _crew_rings.size():
+		var ring := _crew_rings[i]
+		var lit_up: bool = i == gcrew or (pending and i == 0)
+		ring.visible = lit_up or ctrl.crew_seen[i]
+		var mat := ring.material_override as ShaderMaterial
+		mat.set_shader_parameter(&"alpha", 1.0 if lit_up else 0.55)
+		mat.set_shader_parameter(&"pulse", 0.5 + 0.5 * sin(_t * 5.0) if lit_up else 0.0)
 	# found: a warm light on the face, fading
 	if _face_t > 0.0:
 		_face_t = maxf(0.0, _face_t - dt * 0.5)
