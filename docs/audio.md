@@ -191,7 +191,7 @@ Spec: `docs/minigames/fire-farm.md`.
 | FR4 | Pick up the knife | The player picks up the knife | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen (reuse of F2) | First second of the file. |
 | FR5 | Cut the fence | The knife rubs on the fence | Sanding_a_Piece_Of_Wood.wav | CapsLok | https://freesound.org/people/CapsLok/sounds/204948/ | CC0 | chosen | Use the part from 16 s to 19 s of the file. Plays while the knife rubs the fence. |
 | FR6 | Success | A task is done (fence cut, flame out) | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | chosen (same as FN7) | The same success sound as FN7 and BM4. |
-| FR7.1 | Hose attached | The hose is put on the valve |  |  |  |  | todo | Another click sound for attaching the hose: not a mouse click. |
+| FR7.1 | Hose attached | The hose is put on the valve | Door Lock.wav | nebulasnails | https://freesound.org/people/nebulasnails/sounds/405534/ | CC0 | chosen | About 0.75 s door latch. |
 | FR7.2 | Valve turn | The valve is turned | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | chosen | Use 0:58 to 1:03 of the file. |
 | FR8 | Water spray | The hose sprays | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | chosen | Use 1:07 to 1:18 of the file (confirmed). |
 | FR9 | Small flame | The small flame burns | Forest fire in the Cerrado biome, Tocantins - Brazil | ricardoemfield | https://freesound.org/people/ricardoemfield/sounds/752028/ | CC0 (verify) | chosen | Burcu picked it. Fades out when the flame is put out (FR10). License still to be checked on the page by Sude. |
