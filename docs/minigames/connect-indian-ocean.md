@@ -58,14 +58,14 @@ The shipped level starts with every pipe tile rotated randomly. The **seed is fi
 - At 60 s the **tsunami hits**. Water pours into the 4 inlets and flows along the pipelines.
 - A **completed line** carries the water to its basin. The basin fills.
 - An **incomplete line** stops at the break and the water spills out.
-- **All or nothing:** only when every line is complete does the town stay dry. One open line and the wave floods **every** community.
+- Only when every line is complete does the town stay dry. One open line and the wave floods the **whole town** (the picture); the score still counts the completed lines.
 - After the flow, the wave drains back to the ocean (short animation), then the result card.
 
 ## Score: how X/Y is computed
 
 - `Y = 4` (one line, one basin, one community each).
-- `X` = 4 if every line is complete at the moment the wave hits, else 0 (all or nothing).
-- Shown as "X/4 communities saved". Example: 3 lines done, 1 not = every community flooded = "0/4 saved".
+- `X` = number of completed lines at the moment the wave hits.
+- Shown as "X/4 communities saved". Example: 3 lines done, 1 not = "3/4 saved" (the town is still shown flooded; the lost community's name is red).
 - No separate win or lose line.
 
 ## Result card text (draft)
@@ -93,7 +93,7 @@ Grid size, timer, tile grid (type + start rotation per cell), community names, p
 
 ## Art (2.5D, #122)
 
-The 2D sprite art below is replaced by the 2.5D style (`docs/art/style-2.5d.md`): the coast is a world slab (`scenes/minigames/connect/connect_world.tscn`), the sea cut in section on the left, the grid in the slab's front cut, the four communities on top. It opens on the 3/4 hero view and glides into the play view, which looks square at the front cut from a little above (16° down), so the grid reads as a flat board like the 2D layout. Water: the tsunami is the sea itself, one height field in `water.gdshader` on one water body (the sea surface and its front/left sections, continued over the land), driven by `connect_wave.gd` from the hit time: the drawback pulls the sea off the beach, the swell comes in from the left cut and stands up over the reef, breaks on the beach (spray, a light lens splash, a camera kick), runs as a muddy bore over the whole town and then the sea settles, so the communities the player saved stay dry and the lost ones stay under water. Boats ride the field and are left stranded in the town, palms bend with the current. No drawn edges on any water. Pipes, basins, spills and the village floods use `fluid.gdshader`. Models: `tools/models/indian_ocean/`. How far the bore runs inland follows the result (`connect_wave.gd` reach): every line complete -> it breaks and runs up the beach only, the water goes through the pipes into the basins and the town stays dry; one line open -> all or nothing: every community floods (the result is 0 saved), the bore runs over the whole town. A lost town does not dry out: after the peak the sea settles but the flood over the land stands still (`ts_hold`) until the result card; only a fully solved run-up runs back to the sea. Rules, timing and layout above are unchanged.
+The 2D sprite art below is replaced by the 2.5D style (`docs/art/style-2.5d.md`): the coast is a world slab (`scenes/minigames/connect/connect_world.tscn`), the sea cut in section on the left, the grid in the slab's front cut, the four communities on top. It opens on the 3/4 hero view and glides into the play view, which looks square at the front cut from a little above (16° down), so the grid reads as a flat board like the 2D layout. Water: the tsunami is the sea itself, one height field in `water.gdshader` on one water body (the sea surface and its front/left sections, continued over the land), driven by `connect_wave.gd` from the hit time: the drawback pulls the sea off the beach, the swell comes in from the left cut and stands up over the reef, breaks on the beach (spray, a light lens splash, a camera kick), runs as a muddy bore over the whole town and then the sea settles, so the communities the player saved stay dry and the lost ones stay under water. Boats ride the field and are left stranded in the town, palms bend with the current. No drawn edges on any water. Pipes, basins, spills and the village floods use `fluid.gdshader`. Models: `tools/models/indian_ocean/`. How far the bore runs inland follows the result (`connect_wave.gd` reach): every line complete -> it breaks and runs up the beach only, the water goes through the pipes into the basins and the town stays dry; one line open -> the bore runs over and floods the whole town (the score and the names still show the real per-line result). A lost town does not dry out: after the peak the sea settles but the flood over the land stands still (`ts_hold`) until the result card; only a fully solved run-up runs back to the sea. Rules, timing and layout above are unchanged.
 
 ## Art needs (2D version, superseded; for sudeimete, issue #11)
 
