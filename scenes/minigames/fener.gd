@@ -30,13 +30,20 @@ const ITEM_KINDS: Array[StringName] = [&"battery", &"kit", &"blanket"]
 const PLAYER_R := 0.35
 const TRAIL_STEP := 0.45
 const TRAIL_GAP := 3  # trail points between two followers
-const REACH := 1.7  # treat / pick up distance
-const TREAT_TIME := 1.4
-const INV_TIME := 1.5
-const STUN_HOLE := 1.0
-const KNOCK := 1.6
-const WALL_WARN := 0.9  # seconds under a leaning wall before dust warns
-const WALL_HIT := 2.0  # ... before a piece falls
+const REACH := 2.2  # treat / pick up distance
+## The light finds a person this much beyond their body (metres): a lit shoulder is enough.
+const FIND_PAD := 1.3
+## Assembly area counts this far outside its edge.
+const AREA_PAD := 2.0
+## A follower further behind than this hurries; much further, it catches up at once.
+const CATCH_FROM := 5.0
+const SNAP_FROM := 22.0
+const TREAT_TIME := 1.0
+const INV_TIME := 2.4
+const STUN_HOLE := 0.6
+const KNOCK := 1.8
+const WALL_WARN := 1.4  # seconds under a leaning wall before dust warns
+const WALL_HIT := 3.4  # ... before a piece falls
 const FIN_DELAY := 2.2
 const INTRO_HOLD := 0.8
 const INTRO_GLIDE := 1.8
@@ -882,13 +889,18 @@ func _people(dt: float) -> void:
 					var kind: StringName = {FenerPerson.Kind.TRAPPED: &"tap", FenerPerson.Kind.INJURED: &"call",
 							FenerPerson.Kind.COLD: &"cry"}.get(p.def.kind, &"whistle")
 					_emit(kind, p.idx, p.pos)
-				if lit(p.pos, 0.45):
+				if lit(p.pos, FIND_PAD):
 					_found(p)
 			St.FOLLOW:
 				var k := follow.find(p)
 				var hp := hist[maxi(0, hist.size() - 1 - (k + 1) * TRAIL_GAP)]
 				var to := hp - p.pos
 				var cap := (skin.slow_speed if p.def.kind == FenerPerson.Kind.SLOW or p.def.kind == FenerPerson.Kind.INJURED else skin.walk_speed) * 1.25
+				var gap := p.pos.distance_to(ppos)
+				if gap > SNAP_FROM:  # knocked about or left far behind: never lose them
+					p.pos = hp
+					to = Vector2.ZERO
+				cap *= 1.0 + clampf((gap - CATCH_FROM) / CATCH_FROM, 0.0, 1.5)
 				var stepv := to * minf(1.0, dt * 6.0)
 				if stepv.length() > cap * dt:
 					stepv = stepv.normalized() * cap * dt
@@ -1006,7 +1018,7 @@ func _items() -> void:
 
 
 func _save_followers() -> void:
-	if follow.is_empty() or not FenerMap.AREA.has_point(ppos):
+	if follow.is_empty() or not FenerMap.AREA.grow(AREA_PAD).has_point(ppos):
 		return
 	for p in follow:
 		p.st = St.SAVED
@@ -1201,10 +1213,10 @@ func _draw_overlay() -> void:
 			var sp := _sp(cp, 3.2)
 			if vr.grow(-20).has_point(sp):
 				_text(n, font, TextFx.upper(_t("CREW_LABEL")), sp, Color(C_CREW, 0.8 if pending else 0.5), 22)
-	if area_seen or not follow.is_empty():
-		_edge_arrow(n, FenerMap.AREA.get_center(), C_COOL, ps)
+	_edge_arrow(n, FenerMap.AREA.get_center(), C_COOL, ps)
 	if pending:
 		_edge_arrow(n, Vector2(FenerMap.CREWS[0].x, FenerMap.CREWS[0].y), C_CREW, ps)
+	_guide_chip(n, font, ps, pending)
 	# found people: names, needs, treatment ring
 	for p in people:
 		if p.st == St.LOST or p.st == St.SAVED or p.st == St.REPORTED:
@@ -1255,6 +1267,45 @@ func _draw_overlay() -> void:
 		_edges(n, Color(0.0, 0.0, 0.0, 0.55 * absf(b)), 220.0)
 	if flash > 0.0:
 		n.draw_rect(vr, Color(1.0, 0.2, 0.1, flash * 0.22))
+
+
+## Always-on guide under the top-left panel: which way and how far the assembly area (and a waiting
+## rescue crew) is, and how many people are still to save.
+func _guide_chip(n: CanvasItem, font: Font, ps: Vector2, pending: bool) -> void:
+	var lost := 0
+	var with_me := follow.size()
+	var needy := 0
+	for p in people:
+		match p.st:
+			St.LOST:
+				lost += 1
+			St.WAIT, St.MARKED, St.TREAT:
+				needy += 1
+	var rows: Array = [[FenerMap.AREA.get_center(), C_COOL, TextFx.upper(_t("AREA_LABEL"))]]
+	if pending:
+		var c := FenerMap.CREWS[0]
+		for cc in FenerMap.CREWS:
+			if Vector2(cc.x, cc.y).distance_to(ppos) < Vector2(c.x, c.y).distance_to(ppos):
+				c = cc
+		rows.append([Vector2(c.x, c.y), C_CREW, TextFx.upper(_t("CREW_LABEL"))])
+	var h := 70.0 + 38.0 * rows.size()
+	var box := Rect2(Vector2(16, HUD_TOP + 126.0), Vector2(330, h))
+	n.draw_rect(box, Color(0.03, 0.03, 0.06, 0.78))
+	n.draw_rect(box, Color(0.62, 0.85, 1.0, 0.25), false, 1.0)
+	var y := box.position.y + 8.0
+	for r in rows:
+		var tp: Vector2 = r[0]
+		var col: Color = r[1]
+		var a := (_sp(tp, 1.0) - ps).angle()
+		n.draw_set_transform(Vector2(box.position.x + 26, y + 17), a)
+		n.draw_colored_polygon(PackedVector2Array([Vector2(17, 0), Vector2(-12, -13), Vector2(-5, 0), Vector2(-12, 13)]), col)
+		n.draw_set_transform(Vector2.ZERO, 0.0)
+		var txt := "%s · %d m" % [r[2], roundi(tp.distance_to(ppos))]
+		n.draw_string(font, Vector2(box.position.x + 54, y + 25), txt, HORIZONTAL_ALIGNMENT_LEFT, 266.0, 24, col)
+		y += 38.0
+	var left := people.size() - saved_n
+	n.draw_string(font, Vector2(box.position.x + 12, y + 24), _t("HUD_LEFT") % left, HORIZONTAL_ALIGNMENT_LEFT, 306.0, 26, C_TEXT)
+	n.draw_string(font, Vector2(box.position.x + 12, y + 48), _t("HUD_LEFT_SUB") % [lost, with_me, needy], HORIZONTAL_ALIGNMENT_LEFT, 306.0, 18, C_DIM)
 
 
 func _call_text(p: Person) -> String:

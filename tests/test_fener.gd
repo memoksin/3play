@@ -80,6 +80,7 @@ func _run() -> void:
 	_items_and_care()
 	_events()
 	_pointer()
+	_easy()
 	_time_up()
 	print("test_fener ok" if ok else "test_fener FAIL")
 	quit(0 if ok else 1)
@@ -542,6 +543,38 @@ func _pointer() -> void:
 		fener.step(DT)
 	_check("release stops walking", is_equal_approx(fener.ppos.x, x1))
 	fener.ov_on = true
+
+
+## Beginner-friendly level: a roomy clock, followers never get lost, the light finds people a bit early.
+func _easy() -> void:
+	_fresh(21)
+	fener.next_shock = 999.0
+	_check("easy: 5 minutes and a battery that outlasts them", fener.skin.time_seconds >= 270.0 and 100.0 / fener.skin.drain >= 100.0)
+	var m = fener.people[0]
+	m.pos = fener.ppos + Vector2(6.0, 0.0)
+	fener.aim = 0.0
+	fener.step(DT)
+	_check("easy: a person 6 m ahead in the light is found", m.st == fener.St.FOLLOW)
+	m.pos = fener.ppos + Vector2(8.0, 3.2)  # about 0.7 rad off the aim: beyond the cone, within the find pad
+	m.st = fener.St.LOST
+	fener.aim = 0.0
+	fener.step(DT)
+	_check("easy: find pad widens the light for people", fener.lit(m.pos, fener.FIND_PAD))
+	_fresh(22)
+	fener.next_shock = 999.0
+	var f = fener.people[0]
+	f.st = fener.St.FOLLOW
+	fener.follow.append(f)
+	f.pos = fener.ppos + Vector2(30.0, 0.0)
+	fener.step(DT)
+	_check("easy: a far follower is pulled back to the player", f.pos.distance_to(fener.ppos) < 5.0)
+	f.pos = fener.ppos + Vector2(12.0, 0.0)
+	var gap0: float = f.pos.distance_to(fener.ppos)
+	_wait(1.0)
+	_check("easy: a lagging follower catches up", f.pos.distance_to(fener.ppos) < gap0 - 4.0)
+	fener.ppos = FenerMap.AREA.position - Vector2(1.5, 1.5)
+	fener.step(DT)
+	_check("easy: the assembly area counts a little beyond its edge", f.st == fener.St.SAVED)
 
 
 func _time_up() -> void:
