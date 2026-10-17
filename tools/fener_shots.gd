@@ -35,6 +35,10 @@ func _process(_d: float) -> bool:
 
 
 func _run() -> void:
+	# Game._ready can pump the main loop (window mode) while root is still adding the autoloads: wait it out
+	var t0 := Time.get_ticks_msec()
+	while Time.get_ticks_msec() - t0 < 400 or root.get_node_or_null("Audio") == null:
+		await process_frame
 	if DisplayServer.get_name() == "headless":
 		push_error("fener_shots: needs a renderer; run without --headless")
 		quit(1)
