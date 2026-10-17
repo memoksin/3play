@@ -411,6 +411,13 @@ func _update_sun() -> void:
 	_update_future()
 
 
+## The Earth-fixed sun in world space at the lock pose (spin and pitch of the end of the spin): where the
+## sun stands on screen for the rest of the run. A pure function of the run, so it never moves.
+func _lock_sun() -> Vector3:
+	var lock := _axial.global_basis * Basis(Vector3.RIGHT, _to_pitch) * Basis(Vector3.UP, _spin_y(SPIN))
+	return (lock * _sun_local).normalized()
+
+
 ## Spin angle at timeline `time`. Glitch run: after the swap the Earth turns back the other way.
 func _spin_y(time: float) -> float:
 	var ts := _glitch_at + GLITCH_SWAP
@@ -636,7 +643,11 @@ func _update_future() -> void:
 	flare.set_shader_parameter(&"center", _cam.unproject_position(Vector3.ZERO) / view)
 	flare.set_shader_parameter(&"radius", tan(asin(1.0 / d)) / tan(deg_to_rad(_cam.fov / 2)) / 2)
 	flare.set_shader_parameter(&"aspect", view.x / view.y)
-	flare.set_shader_parameter(&"sun2d", Vector2(_sun_world.x, -_sun_world.y).normalized())
+	# The corona / magnetopause sits on the screen side the sun has at the lock, from the first torn band to the
+	# last frame. _sun_world turns with the spinning Earth (the terminator is glued to the ground), so
+	# feeding it here swept the whole halo round the planet right to left while the Earth spun back.
+	var lock_sun := _lock_sun()
+	flare.set_shader_parameter(&"sun2d", Vector2(lock_sun.x, -lock_sun.y).normalized())
 	flare.set_shader_parameter(&"fade", 1.0 - 0.8 * smoothstep(0.1, 0.9, zoom))
 	flare.set_shader_parameter(&"burn", smoothstep(0.25, 1.0, zoom))
 	_flare.visible = future > 0.0

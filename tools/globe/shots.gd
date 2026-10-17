@@ -78,6 +78,11 @@ func _fail(msg: String) -> void:
 
 func _run() -> void:
 	await process_frame  # root is not in the tree during _initialize: _ready would be deferred
+	# A saved fullscreen choice makes Game._ready pump frames: wait until every autoload is ready and added
+	while not (root.get_node_or_null("Game") and root.get_node("Game").is_node_ready()
+			and root.get_node_or_null("Audio") and root.get_node("Audio").is_node_ready()):
+		await process_frame
+	await process_frame
 	if DisplayServer.get_name() == "headless":
 		_fail("needs a renderer; run without --headless")
 		return

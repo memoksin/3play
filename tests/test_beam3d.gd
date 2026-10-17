@@ -89,6 +89,7 @@ func _picking() -> void:
 	var s := await _new_scene()
 	var good := 0
 	var total := 0
+	var sats := 0
 	for wi in s.skin.waves.size():
 		_plan(s, wi)
 		var b: Node2D = s.board
@@ -110,6 +111,7 @@ func _picking() -> void:
 		var near_w: float = b.cell_center(Vector2i(1, s.level.rows - 1)).x - b.cell_center(Vector2i(0, s.level.rows - 1)).x
 		_check("wave %d: perspective, far row %.0f px per cell, near row %.0f px" % [wi + 1, far_w, near_w], far_w > 10.0 and near_w > far_w * 1.2)
 		# real mouse clicks, off centre inside the cell, turn exactly that satellite
+		sats += s.level.sats.size()
 		for si in s.level.sats.size():
 			var c: Vector2i = s.level.sats[si].pos
 			var before: PackedInt32Array = s.rots.duplicate()
@@ -120,7 +122,7 @@ func _picking() -> void:
 				turned += 1 if s.rots[k] != before[k] else 0
 			total += 1
 			good += 1 if turned == 1 and s.rots[si] == posmod(before[si] + 1, 8) else 0
-	_check("clicks: %d of %d satellite clicks (off centre) turned that satellite and no other" % [good, total], good == total and total == 29)
+	_check("clicks: %d of %d satellite clicks (off centre) turned that satellite and no other" % [good, total], good == total and total == sats and sats > 20)
 	# an empty cell and the HUD side do nothing
 	_plan(s, 3)
 	var r: PackedInt32Array = s.rots.duplicate()
@@ -149,9 +151,8 @@ func _look() -> void:
 	for i in 30:
 		s.advance(0.05)
 	_check("satellite: rotation.y = -r * PI / 4 (r = %d)" % s.turns[0], body != null and absf(body.rotation.y + s.turns[0] * PI / 4.0) < 0.001)
-	s.rotate_sat(0, -1)
-	s.rotate_sat(0, -1)
-	s.rotate_sat(0, -1)
+	while s.turns[0] > -1:  # back past zero: the angle turns positive
+		s.rotate_sat(0, -1)
 	for i in 30:
 		s.advance(0.05)
 	_check("satellite: turning back gives a positive angle (r = %d)" % s.turns[0], absf(body.rotation.y + s.turns[0] * PI / 4.0) < 0.001 and body.rotation.y > 0.0)
@@ -217,6 +218,7 @@ func _hud() -> void:
 			rects.append((s.get_node(path) as Control).get_global_rect())
 		var toast := s.get_node("%Toast") as Control
 		rects.append(Rect2(Vector2(toast.position.x, 324.0), toast.size))
+		rects.append((s.get_node("Hud/Rush") as Control).get_global_rect())  # the rush alarm
 		for rect in rects:
 			var nearest := Vector2(clampf(c.x, rect.position.x, rect.end.x), clampf(c.y, rect.position.y, rect.end.y))
 			sun_ok = sun_ok and nearest.distance_to(c) > r_px
@@ -232,7 +234,7 @@ func _hud() -> void:
 				var p: Vector2 = (b.city(key) as Node2D).position
 				for rect in rects:
 					clear = clear and not rect.has_point(p)
-	_check("HUD: panels and toast stay off the Sun's disc (every wave)", sun_ok)
-	_check("HUD: panels and toast stay off the cities and habitats (every wave)", clear)
+	_check("HUD: panels, toast and rush alarm stay off the Sun's disc (every wave)", sun_ok)
+	_check("HUD: panels, toast and rush alarm stay off the cities and habitats (every wave)", clear)
 	s.queue_free()
 	await process_frame

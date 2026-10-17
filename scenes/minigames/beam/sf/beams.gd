@@ -1,7 +1,8 @@
 extends Node2D
 ## 3D beam layer: every BeamLogic segment is a ribbon of the art's fx/beam_path.gd (fx/beam.gdshader).
 ## Planning: the preview route as dim ribbons, a red glint where it reaches a city. Shot: each ribbon grows
-## along its segment at its own time (`fill`), a lens glint and a light where it ends; the flare itself comes
+## along its segment at its own time (`fill`), a lens glint and a light where it ends (a collector swallows its
+## beam: the ribbon narrows into the core, see collector.gd for the rest); the flare itself comes
 ## out of the Sun along the long ribbon from the emitter to the Parker gate while the shot charges.
 ## The scene sets `sim` and `mode`; `fire_t` is the shot clock in cells of beam time. Same properties and
 ## `heads()` as the 2D placeholder (scenes/minigames/beam/beams.gd).
@@ -26,6 +27,9 @@ const GLINT_SCALE := 0.8
 ## Ribbon look per mode: [width, intensity] of a segment, of the Sun beam's core and its outer sheath.
 const LOOK_PREVIEW := [0.7, 0.4, 1.0, 0.18, 4.0, 0.06]
 const LOOK_FIRE := [1.5, 1.0, 1.5, 1.0, 5.0, 0.35]
+## A beam into a collector is drawn into its mouth over the last SINK_TAPER m (fx/beam.gdshader `sink`).
+const SINK_TAPER := 3.4
+const SINK_COL := Color(0.35, 1.0, 0.7)
 
 var board: Node2D
 var sim: BeamLogic.Result:
@@ -127,6 +131,8 @@ func _rebuild() -> void:
 		d.node = _path.add_segment(p[0], p[1], s.e, look[0], look[1])
 		var kind: StringName = s.end.kind if s.end else &""
 		d.bad = kind in BAD
+		if kind == &"collect":
+			BeamPath.set_sink(d.node, minf(SINK_TAPER, p[0].distance_to(p[1]) * 0.8), SINK_COL)
 		if GLINT.has(kind) and (mode == Mode.FIRE or d.bad):
 			var g: Array = GLINT[kind]
 			var strength := 1.0 if mode == Mode.FIRE else 0.5

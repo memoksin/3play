@@ -108,6 +108,7 @@ func grid_at(screen: Vector2) -> Vector2:
 # --- shared helpers of the pieces -----------------------------------------------------------------
 
 const DIAL := preload("res://assets/3d/solar_flare/fx/dial.gdshader")
+const FLARE := preload("res://assets/3d/solar_flare/fx/flare.gdshader")
 
 
 ## The lit windows of a model are its `<name>_glow` mesh: shown = powered.
@@ -132,3 +133,21 @@ static func add_dial(parent: Node3D, y: float, size: float, color: Color, pointe
 	parent.add_child(mi)
 	mi.position.y = y
 	return m
+
+
+## A hidden lens star (fx/flare.gdshader) at the parent's origin; the caller sizes it and sets its "intensity".
+static func add_glint(parent: Node3D, color: Color, spikes: float) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.name = "Glint"
+	mi.mesh = QuadMesh.new()
+	var m := ShaderMaterial.new()
+	m.shader = FLARE
+	m.set_shader_parameter("color", color)
+	m.set_shader_parameter("spikes", spikes)
+	m.set_shader_parameter("ring", 1.0)
+	m.render_priority = 4
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.visible = false
+	parent.add_child(mi)
+	return mi

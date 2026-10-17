@@ -5,6 +5,10 @@ extends Node3D
 
 ## Emitted right before the scene change.
 signal finished
+## Audio hook (docs/audio.md, typed text = keyboard typing loop): once per line, at its first and last
+## letter. A skipped or replaced line still emits typing_finished, so they always come in pairs.
+signal typing_started
+signal typing_finished
 
 const LINES: Array[StringName] = [&"PROLOGUE_1", &"PROLOGUE_2", &"PROLOGUE_3", &"PROLOGUE_4"]
 const VOICE_COLOR := Color("f3e6c8")
@@ -19,6 +23,7 @@ const DOLLY_SECONDS := 28.0
 
 var _index := -1
 var _typing := false
+var _keys := false  # typing_started emitted, typing_finished not yet
 var _leaving := false
 var _line_tween: Tween
 var _type_tween: Tween
@@ -105,6 +110,7 @@ func skip() -> void:
 		if tw:
 			tw.kill()
 	_typing = false
+	_typing_off()
 	var tw := create_tween()
 	tw.tween_property(%Fade, "color:a", 1.0, LEAVE_FADE)
 	tw.tween_callback(_leave)
@@ -136,11 +142,12 @@ func _next_line() -> void:
 	_box_tween.tween_property(%VoiceBox, "modulate:a", 1.0, FADE_IN)
 	if _index == 0:
 		_box_tween.parallel().tween_property(%Tag, "modulate:a", 1.0, 0.8)
-	_type_tween = TextFx.type_on(%Voice, 0.3, TYPE_CPS, Callable(), _on_typed.bind(last))
+	_type_tween = TextFx.type_on(%Voice, 0.3, TYPE_CPS, _typing_on, _on_typed.bind(last))
 
 
 func _on_typed(last: bool) -> void:
 	_typing = false
+	_typing_off()
 	if _box_tween:
 		_box_tween.custom_step(9999.0)
 		_box_tween.kill()
@@ -150,6 +157,18 @@ func _on_typed(last: bool) -> void:
 	if not last:
 		_line_tween.tween_property(%VoiceBox, "modulate:a", 0.0, FADE_OUT)
 	_line_tween.tween_callback(_next_line)
+
+
+func _typing_on() -> void:
+	_keys = true
+	typing_started.emit()
+
+
+## Ends the typing sound once: on the last letter, or when the line is skipped / replaced mid-way.
+func _typing_off() -> void:
+	if _keys:
+		_keys = false
+		typing_finished.emit()
 
 
 func _build_overlay() -> void:
