@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scenes/main.gd" id="1"]
 [ext_resource type="PackedScene" path="res://ui/logo.tscn" id="2"]
 [ext_resource type="Theme" path="res://ui/space_theme.tres" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/ui/space_bg.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://scenes/ui/settings_button.tscn" id="5"]
+[ext_resource type="Script" path="res://scenes/ui/badges_button.gd" id="6"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -137,3 +138,16 @@ uppercase = true
 
 [node name="SettingsButton" parent="." instance=ExtResource("5")]
 layout_mode = 1
+
+[node name="BadgesButton" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -112.0
+offset_top = 16.0
+offset_right = -68.0
+offset_bottom = 60.0
+grow_horizontal = 0
+flat = true
+script = ExtResource("6")

@@ -43,6 +43,7 @@ func _intro() -> IntroText:
 
 
 func _run() -> void:
+	load("res://scripts/story.gd").progress_path = ""  # never touch the real mission progress
 	var lines: Array[String] = ["First line of text.", "Second line of text.", "Third."]
 	# Normal run.
 	var n := _intro()
