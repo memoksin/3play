@@ -26,6 +26,10 @@ const LOOK_AHEAD := 3.0
 ## Camera target stays inside this (the void shows a little at the edges of the slab).
 const CAM_BOX := Rect2(-44, -30, 88, 66)
 const CHUNK := 8.0
+## A ground chunk is split in four (down to this size) while more lights touch it than the renderer can use (FenerLights).
+const TILE_MIN := 2.0
+## Range of the spark light on a live cable end (_hazard_visual).
+const CABLE_LIGHT_RANGE := 5.0
 const CELL := 0.5
 const ATLAS := 2048
 const FADE_ALPHA := 0.8  # transparency of a building that hides the player
@@ -159,11 +163,11 @@ func setup(c: Node) -> void:
 		rebuild(c)
 		return
 	_build_slab()
-	_build_ground()
 	_build_places()
 	_build_crews()
 	_build_static_marks()
 	_build_player()
+	_build_ground()  # after the lights: the tiles are split by the lights that touch them
 	_build_fx_pool()
 	for ev in FenerMap.EVENTS:  # loaded now, not in the frame of the aftershock
 		_scene(ev[4])
@@ -301,8 +305,10 @@ func _build_slab() -> void:
 	add_child(mi)
 
 
-## Ground: 0.5 m cells, classified by surface, merged in runs, one mesh per 8 m chunk (so every chunk
-## gets its own nearby lights: the Compatibility renderer caps lights per mesh at 8).
+## Ground: 0.5 m cells, classified by surface, merged in runs, one mesh per tile. The Compatibility renderer lights
+## a mesh with at most 8 lights and pairs lights by bounding box, so the tiles are 8 m chunks split in four, again
+## and again down to TILE_MIN, wherever too many lights touch one (FenerLights; tests/test_fener_lights.gd checks).
+## World-space triplanar textures and per-tile flat normals: the seams between tiles do not show.
 func _build_ground() -> void:
 	var root := Node3D.new()
 	root.name = "Ground"
@@ -315,65 +321,120 @@ func _build_ground() -> void:
 	for iz in nz:
 		for ix in nx:
 			kinds[iz * nx + ix] = FenerMap.surface_at(b.position + Vector2(ix + 0.5, iz + 0.5) * CELL)
-	var per := int(CHUNK / CELL)
-	for cz in range(0, nz, per):
-		for cx in range(0, nx, per):
-			var st := {}
-			for iz in range(cz, mini(cz + per, nz)):
-				var ix := cx
-				while ix < mini(cx + per, nx):
-					var k := kinds[iz * nx + ix]
-					var run := 1
-					while ix + run < mini(cx + per, nx) and kinds[iz * nx + ix + run] == k:
-						run += 1
-					var y := 0.0 if k == "road" else FenerMap.SIDEWALK_H
-					var x0 := b.position.x + ix * CELL
-					var z0 := b.position.y + iz * CELL
-					_quad(st, k, Vector3(x0, y, z0), Vector3(x0 + run * CELL, y, z0 + CELL))
-					ix += run
-				# kerb faces where the road meets a raised cell
-				for jx in range(cx, mini(cx + per, nx)):
-					var k := kinds[iz * nx + jx]
-					if k != "road":
-						continue
-					var x0 := b.position.x + jx * CELL
-					var z0 := b.position.y + iz * CELL
-					if iz > 0 and kinds[(iz - 1) * nx + jx] != "road":
-						_wall(st, Vector3(x0, 0, z0), Vector3(x0 + CELL, 0, z0))
-					if iz < nz - 1 and kinds[(iz + 1) * nx + jx] != "road":
-						_wall(st, Vector3(x0 + CELL, 0, z0 + CELL), Vector3(x0, 0, z0 + CELL))
-					if jx > 0 and kinds[iz * nx + jx - 1] != "road":
-						_wall(st, Vector3(x0, 0, z0 + CELL), Vector3(x0, 0, z0))
-					if jx < nx - 1 and kinds[iz * nx + jx + 1] != "road":
-						_wall(st, Vector3(x0 + CELL, 0, z0), Vector3(x0 + CELL, 0, z0 + CELL))
-			var mesh := ArrayMesh.new()
-			for k: String in st:
-				var s: SurfaceTool = st[k]
-				s.generate_normals()
-				s.commit(mesh)
-				mesh.surface_set_material(mesh.get_surface_count() - 1, _mat(k))
-			var mi := MeshInstance3D.new()
-			mi.mesh = mesh
-			root.add_child(mi)
-	# centre dashes on the avenue and the cross street
-	var dashes := SurfaceTool.new()
-	dashes.begin(Mesh.PRIMITIVE_TRIANGLES)
+	# centre dashes on the avenue and the cross street, as world rects (cut to the tiles below)
+	var dashes: Array[Rect2] = []
 	var x := b.position.x + 2.0
 	while x < b.end.x - 2.0:
 		if absf(x) > 6.5:
-			_tri_quad(dashes, Vector3(x, 0.006, -0.08), Vector3(x + 2.2, 0.006, 0.08))
+			dashes.append(Rect2(x, -0.08, 2.2, 0.16))
 		x += 5.0
 	var z := b.position.y + 2.0
 	while z < b.end.y - 2.0:
 		if absf(z) > 6.5:
-			_tri_quad(dashes, Vector3(-0.08, 0.006, z), Vector3(0.08, 0.006, z + 2.2))
+			dashes.append(Rect2(-0.08, z, 0.16, 2.2))
 		z += 5.0
-	dashes.generate_normals()
-	var dm := MeshInstance3D.new()
-	dm.mesh = dashes.commit()
-	dm.material_override = _mat("paint")
-	dm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	root.add_child(dm)
+	for t in _ground_tiles(nx, nz):
+		var cx := t.position.x
+		var cz := t.position.y
+		var ex := t.end.x
+		var ez := t.end.y
+		var st := {}
+		for iz in range(cz, ez):
+			var ix := cx
+			while ix < ex:
+				var k := kinds[iz * nx + ix]
+				var run := 1
+				while ix + run < ex and kinds[iz * nx + ix + run] == k:
+					run += 1
+				var y := 0.0 if k == "road" else FenerMap.SIDEWALK_H
+				var x0 := b.position.x + ix * CELL
+				var z0 := b.position.y + iz * CELL
+				_quad(st, k, Vector3(x0, y, z0), Vector3(x0 + run * CELL, y, z0 + CELL))
+				ix += run
+			# kerb faces where the road meets a raised cell
+			for jx in range(cx, ex):
+				var k := kinds[iz * nx + jx]
+				if k != "road":
+					continue
+				var x0 := b.position.x + jx * CELL
+				var z0 := b.position.y + iz * CELL
+				if iz > 0 and kinds[(iz - 1) * nx + jx] != "road":
+					_wall(st, Vector3(x0, 0, z0), Vector3(x0 + CELL, 0, z0))
+				if iz < nz - 1 and kinds[(iz + 1) * nx + jx] != "road":
+					_wall(st, Vector3(x0 + CELL, 0, z0 + CELL), Vector3(x0, 0, z0 + CELL))
+				if jx > 0 and kinds[iz * nx + jx - 1] != "road":
+					_wall(st, Vector3(x0, 0, z0 + CELL), Vector3(x0, 0, z0))
+				if jx < nx - 1 and kinds[iz * nx + jx + 1] != "road":
+					_wall(st, Vector3(x0 + CELL, 0, z0), Vector3(x0 + CELL, 0, z0 + CELL))
+		var rect := Rect2(b.position + Vector2(cx, cz) * CELL, Vector2(t.size) * CELL)
+		for d in dashes:
+			var c := d.intersection(rect)
+			if c.has_area():
+				_quad(st, "paint", Vector3(c.position.x, 0.006, c.position.y), Vector3(c.end.x, 0.006, c.end.y))
+		var mesh := ArrayMesh.new()
+		for k: String in st:
+			var s: SurfaceTool = st[k]
+			s.generate_normals()
+			s.commit(mesh)
+			mesh.surface_set_material(mesh.get_surface_count() - 1, _mat(k))
+		var mi := MeshInstance3D.new()
+		mi.mesh = mesh
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF  # flat; saves a shadow draw per tile in the torch cone
+		root.add_child(mi)
+
+
+## Ground tiles as cell rects: every 8 m chunk, split while the lights that touch it do not fit.
+func _ground_tiles(nx: int, nz: int) -> Array[Rect2i]:
+	var budget := _light_budget()
+	var out: Array[Rect2i] = []
+	var per := int(CHUNK / CELL)
+	for cz in range(0, nz, per):
+		for cx in range(0, nx, per):
+			_split_tile(Rect2i(cx, cz, mini(per, nx - cx), mini(per, nz - cz)), budget, out)
+	return out
+
+
+func _split_tile(r: Rect2i, budget: FenerLights, out: Array[Rect2i]) -> void:
+	var b := FenerMap.BOUNDS
+	var box := AABB(Vector3(b.position.x + r.position.x * CELL, 0.0, b.position.y + r.position.y * CELL),
+			Vector3(r.size.x * CELL, FenerMap.SIDEWALK_H, r.size.y * CELL))
+	var least := int(TILE_MIN / CELL)
+	var cut_x := r.size.x > least
+	var cut_z := r.size.y > least
+	if budget.fits_tile(box) or not (cut_x or cut_z):
+		out.append(r)
+		return
+	var w1 := r.size.x / 2 if cut_x else r.size.x
+	var h1 := r.size.y / 2 if cut_z else r.size.y
+	for ix in (2 if cut_x else 1):
+		for iz in (2 if cut_z else 1):
+			var q := Rect2i(r.position.x + ix * w1, r.position.y + iz * h1, w1 if ix == 0 else r.size.x - w1, h1 if iz == 0 else r.size.y - h1)
+			_split_tile(q, budget, out)
+
+
+## Every light the ground tiles can meet (tests/test_fener_lights.gd counts the same way, from the live nodes).
+func _light_budget() -> FenerLights:
+	var fl := FenerLights.new()
+	for l in find_children("*", "Light3D", true, false):
+		if l is DirectionalLight3D or l == torch or l == near_light or l == _face_light or not l.is_visible_in_tree():
+			continue
+		fl.add_light(l)
+	# live cable ends: spark lights made per run (_hazard_visual) at the spark end, plus the one an aftershock drops
+	var ends: Array[Vector2] = []
+	for c in FenerMap.CABLES:
+		ends.append(c[3])
+	for ev in FenerMap.EVENTS:
+		if ev[3] != null and ev[3][0] == "cable":
+			ends.append(ev[3][1])
+	for p in ends:
+		fl.add_fixed(FenerLights.omni_box(Vector3(p.x, FenerMap.ground_y(p) + 0.35, p.y), CABLE_LIGHT_RANGE), false, "cable " + str(p))
+	fl.set_player(torch.spot_range, torch.spot_angle, near_light.omni_range, FenerMap.BOUNDS)
+	var spots: Array = []
+	for k in FenerMap.SPOTS:
+		spots.append_array(FenerMap.SPOTS[k])
+	fl.add_face_spots(_face_light.omni_range, spots)
+	fl.add_report_spots(FenerMap.SPOTS[&"trapped"])
+	return fl
 
 
 func _quad(st: Dictionary, k: String, a: Vector3, c: Vector3) -> void:
@@ -810,7 +871,7 @@ func _hazard_visual(h) -> Dictionary:
 			var l := OmniLight3D.new()
 			l.position = Vector3(0, 0.35, 0)
 			l.light_color = SPARK
-			l.omni_range = 5.0
+			l.omni_range = CABLE_LIGHT_RANGE
 			l.omni_attenuation = 1.3
 			l.light_energy = 0.0
 			root.add_child(l)

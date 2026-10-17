@@ -3,7 +3,8 @@ out of the Earth and floating. Only the body: earth layers in section (gravel, s
 cut faces with stones, roots and cut-open utility pipes, rocks hanging under it, a snow cornice on the
 two edges the camera sees (front = Godot +Z, left = -X). The fault of the 6 Feb quake shows in both cut
 faces as a dark rupture with a step. The walkable top is not here: the game builds it as 8 m tiles so
-every tile gets its own lights (Compatibility renderer: 8 lights per mesh).
+every tile gets its own lights (Compatibility renderer: 8 lights per mesh). The body is cut into 8 m tiles for
+the same reason (tests/test_fener_lights.gd counts the lights on every one).
 Must match FenerMap.BOUNDS (-56..56, -40..40) and FenerMap.SIDEWALK_H. Blender: X right, +Y back (Godot z = -y)."""
 import math
 import os
@@ -17,6 +18,7 @@ Y0, Y1 = -40.0, 40.0    # Y0 = front cut (Godot z = +40)
 TOP = 0.12              # sidewalk / snow level of the game's ground tiles
 LAYERS = [("snow_shade", TOP, -0.3), ("gravel", -0.3, -1.0), ("soil", -1.0, -2.6), ("clay", -2.6, -4.6), ("rock", -4.6, -7.2)]
 ZB = -7.2
+TILE = 8.0              # the body is exported as TILE x TILE m pieces (lights per mesh)
 FAULT_X = 18.0          # where the rupture cuts the front face
 FAULT_Y = 6.0           # ... and the left face (Blender y)
 
@@ -124,6 +126,13 @@ def hanging_rocks():
               r2=rng.uniform(0.0, 0.25), bevel=0.04, segs=1)
 
 
+def seen(ix, iy):
+    """The camera (Godot +Z, -X side, pitch -40) only sees the front and the left cut and what hangs under them
+    (a rock hangs ~8 m out of view at most): the back and right walls, the bottom and the rocks deep inside are
+    never drawn, so they are not exported (saves draw calls)."""
+    return iy <= 0 or ix <= 0
+
+
 out = L.out_dir_arg("assets/3d/kahramanmaras")
 L.reset(seed=23)
 L.rescue_palette()
@@ -136,4 +145,4 @@ pipes()
 cornice()
 hanging_rocks()
 L.finish("fener_hood_slab", out, tex=4096, ground=False, snow=0.85, ao=0.85, ao_dist=1.2, edge=0.3, edge_r=0.03,
-         grime=0.0, tone=0.14, tone_scale=0.35, margin=0.0012)
+         grime=0.0, tone=0.14, tone_scale=0.35, margin=0.0012, tile=TILE, tile_origin=(X0, Y0), tile_keep=seen)
