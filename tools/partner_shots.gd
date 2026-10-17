@@ -46,7 +46,7 @@ func _run() -> void:
 	await process_frame
 	for locale: String in locales:
 		TranslationServer.set_locale(locale)
-		await _shot("res://scenes/notice.tscn", "notice", locale, size)
+		await _shot("res://scenes/egg_notice.tscn", "notice", locale, size)
 		for id in ["indian_ocean", "kahramanmaras", "solar_flare", "black_saturday"]:
 			game.reset_launch()
 			var d: Disaster = load("res://data/disasters/%s.tres" % id)

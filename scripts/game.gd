@@ -35,7 +35,7 @@ const PATHS := [
 const MAIN_ODDS := 0.65
 ## The easter egg: a first Devlet pick that lands on it gets the notice screen before the globe.
 const EASTER_EGG := "res://data/disasters/solar_flare.tres"
-const NOTICE := "res://scenes/notice.tscn"
+const NOTICE := "res://scenes/egg_notice.tscn"
 const SET_SCENE := "res://scenes/diorama/set_%s.tscn"
 ## Off-screen warm-up viewport size.
 const WARM_SIZE := Vector2i(128, 72)
@@ -340,7 +340,7 @@ func _launch() -> void:
 		_open_run()
 
 
-## The notice screen (see scenes/notice.gd), before anything of the run is loaded.
+## The notice screen (see scenes/egg_notice.gd), before anything of the run is loaded.
 func _show_notice() -> void:
 	if DisplayServer.get_name() == "headless":
 		get_tree().change_scene_to_file.call_deferred(NOTICE)
