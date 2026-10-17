@@ -419,15 +419,14 @@ func _scene_flow() -> void:
 	_check("scene: briefing -> countdown 45 s", _press(s, "Go") and s.phase == P.PLAN and s.time_left == 45.0 and not s.get_node("%Overlay").visible)
 	_check("scene: forecast shows the risk", s.get_node("%Forecast").text == tr("SF_BEAM_RISK") % s.sim.hit.size())
 	var fire_btn := s.get_node("%Fire") as Button
-	_check("scene: fire button hidden (a solved puzzle fires by itself), still armed under the flag", not s.show_fire_button
-		and not fire_btn.visible and not fire_btn.disabled)
-	s.show_fire_button = true
-	s.advance(0.0)
-	s.advance(0.01)
-	_check("scene: show_fire_button brings the Fire button back", fire_btn.visible)
+	_check("scene: fire button shown by default (fire early without a perfect route)", s.show_fire_button
+		and fire_btn.visible and not fire_btn.disabled)
 	s.show_fire_button = false
 	s.advance(0.01)
-	_check("scene: and hides it again", not fire_btn.visible)
+	_check("scene: show_fire_button = false hides it", not fire_btn.visible)
+	s.show_fire_button = true
+	s.advance(0.01)
+	_check("scene: and brings it back", fire_btn.visible)
 
 	# real mouse: left click +1, right click -1, shift click -1, wheel
 	var r0: int = s.rots[0]

@@ -55,7 +55,7 @@ const HIT_STOP_SPEED := 0.25
 var time_scale := 1.0
 ## The Fire button is hidden: a solved puzzle cuts the clock and the flare fires by itself. true shows it again
 ## (the F key fires either way).
-var show_fire_button := false
+var show_fire_button := true
 ## false: emit `finished` but do not call Game (tests).
 var submit := true
 var phase := Phase.TITLE
