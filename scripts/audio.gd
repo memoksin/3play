@@ -95,6 +95,8 @@ const CUES := {
 	# Result card
 	&"R1": {"path": F_SWELL, "bus": &"SFX", "volume_db": -6.0, "notes": "card appears, same file as G1 (proposed)"},
 	&"R3": {"path": F_TYPING, "bus": &"SFX", "volume_db": -12.0, "loop": true, "notes": "closing line typing, same file as G3"},
+	&"ST1": {"path": F_TYPING, "bus": &"SFX", "volume_db": -12.0, "loop": true, "notes": "prologue typing, same file as G3 (Burcu: all story typed text)"},
+	&"ST2": {"path": F_TYPING, "bus": &"SFX", "volume_db": -12.0, "loop": true, "notes": "Voice line typing (3026 lock), same file as G3"},
 	&"R5": {"path": F_MUSIC, "bus": &"Music", "volume_db": -8.0, "loop": true, "fade_in": 1.0, "notes": "result music, same file as M1 (may change)"},
 	# Solar flare Fit (#107)
 	&"S1": {"path": F_SOLAR, "bus": &"SFX", "volume_db": -12.0, "loop": true, "fade_in": 0.5, "notes": "ambience, same file as D3"},
@@ -147,6 +149,7 @@ const SCENE_HOOKS := {
 	"res://scenes/globe.tscn": &"_hook_globe",
 	"res://scenes/diorama.tscn": &"_hook_diorama",
 	"res://scenes/ui/intro_text.tscn": &"_hook_intro_text",
+	"res://scenes/prologue.tscn": &"_hook_prologue",
 	"res://scenes/ui/lang_picker.tscn": &"_hook_lang_picker",
 	"res://scenes/minigames/fit.tscn": &"_hook_fit",
 	"res://scenes/minigames/connect.tscn": &"_hook_connect",
@@ -205,6 +208,23 @@ func _ready() -> void:
 func _hook_existing() -> void:
 	for n: Node in get_tree().root.find_children("*", "", true, false):
 		_on_node_added(n)
+	_hook_voice(get_tree().root.get_node_or_null("Voice"))
+
+
+## Story typed text (Burcu): the keyboard loop runs from the first to the last letter of each line.
+func _hook_prologue(n: Node) -> void:
+	n.typing_started.connect(func() -> void: loop(&"ST1"))
+	n.typing_finished.connect(func() -> void: stop(&"ST1", 0.05))
+	_bind_exit(n, [&"ST1"], 0.05)
+
+
+## The Voice autoload (3026 lock line) lives for the whole game, so it is hooked once, here.
+func _hook_voice(v: Node) -> void:
+	if v == null or not v.has_signal(&"typing_started") or v.has_meta(&"audio_hooked"):
+		return
+	v.set_meta(&"audio_hooked", true)
+	v.typing_started.connect(func() -> void: loop(&"ST2"))
+	v.typing_finished.connect(func() -> void: stop(&"ST2", 0.05))
 
 
 func _process(delta: float) -> void:
