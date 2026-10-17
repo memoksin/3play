@@ -197,3 +197,8 @@ text = "SET_REPLAY_PROLOGUE"
 unique_name_in_owner = true
 layout_mode = 2
 text = "SET_BACK"
+
+[node name="Quit" type="Button" parent="Root/Center/Panel/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "PAUSE_QUIT"
