@@ -9,6 +9,7 @@ const T := 2.0
 const K := 0.40402622  # tan 22 deg: depth skew of the side cuts
 const GRID_TOP := -1.0
 const U0 := -11.0
+const U1 := 31.0  # back of the land (coast_slab.py)
 const D := 13.0
 const LAND := 0.35
 const SEABED := -13.8
@@ -16,14 +17,16 @@ const BEACH_W := 5.0
 const CUT_Z := 0.46  # pipe cut plane: the face the player clicks
 const PIPE_RI := 0.34
 const SEA_REST := -0.6  # sea surface at the start
-const LOGICAL_M := T / 16.0  # one logical px of the 2D layout (sea rise, surge) in metres
+const LOGICAL_M := T / 16.0  # one logical px of the 2D layout (sea rise) in metres
+## Where the bore leaves each boat (coast u, d), in PROPS order of the boats.
+const BOAT_STRAND: Array[Vector2] = [Vector2(8.8, 3.1), Vector2(9.6, 10.2), Vector2(7.6, 5.6)]
 ## Community centres on top (coast u, depth d), one per basin, above its shaft (coast_slab.py SHAFTS).
 const VILLAGE_UD: Array[Vector2] = [Vector2(15.6, 1.8), Vector2(18.6, 1.9), Vector2(21.6, 1.8), Vector2(24.8, 2.2)]
 const VILLAGE_R := 1.7
-const WAVE_START_U := -9.5   # crest rises out of the sea at the left of the play view
-const WAVE_SEA_U := -2.8     # where it stands at the hit
-const WAVE_BEACH_U := 2.5    # where it breaks
-const SURGE_REACH_U := 9.0   # run-up stops at the coastal path, short of the villages
+## Run-up limits (connect_wave.gd reach): every community saved -> the water stops on the beach; some
+## saved -> it stops VILLAGE_KEEP m short of the first saved one (the unsaved ones past it get their own flood).
+const BEACH_REACH := 4.2
+const VILLAGE_KEEP := 3.0
 const HOVER_LIFT := 0.32
 const LOCK_COLOR := Color(1.0, 0.82, 0.35)  # warm gold: the frame glint of a line that just locked
 const DENY_TILT := 0.14  # rad, peak of the "locked" wiggle
@@ -56,11 +59,16 @@ const PROPS := [
 const WATER := preload("res://scenes/minigames/connect/water.gdshader")
 const FLUID := preload("res://scenes/minigames/connect/fluid.gdshader")
 const WAVE_SCRIPT := preload("res://scenes/minigames/connect/connect_wave.gd")
-const WAVE_H := 5.4
-const WAVE_FADE := 0.7       # the collapsed bore hands over to the run-up sheet
-const SHORE_HIT_T := 1.15    # seconds after the hit the bore reaches the beach and the slab edge
+const SEA_STEP := 0.2  # the sea / flood mesh: 0.2 m along the coast normal (the bore's face is ~1 m)
+const SEA_ROWS := 26   # 0.5 m in depth
 const LENS_DUR := 3.2
 const SOFT := preload("res://scenes/style/soft_particle.gdshader")
+## Weather and time of day come from the disaster (Disaster.atmosphere), like the diorama set before the
+## game, and the background is the diorama's screen gradient sky: the cut keeps the same world.
+const DIORAMA := preload("res://scenes/diorama/diorama.gd")
+const DISASTER := "res://data/disasters/indian_ocean.tres"  # run alone (F6, art shots)
+const DEEP_FOG_Y := -15.5  # height fog under the grid: the deep rock fades out
+const DEEP_FOG := 0.35
 
 @onready var coast: Node3D = $Coast
 @onready var camera: Camera3D = $CameraPlay
@@ -83,13 +91,14 @@ var _pours: Array[MeshInstance3D] = []    # stream from the stub into each basin
 var _pour_fx: Array[CPUParticles3D] = []
 var _spill_foam: Array[CPUParticles3D] = []
 var _sea_mats: Array[ShaderMaterial] = []
-var _sea_top_mat: ShaderMaterial
-var _wave: Node3D  # connect_wave.gd
+var _flood_meshes: Array[MeshInstance3D] = []  # the water body's part over the land
+var _wave: Node3D  # connect_wave.gd: the tsunami's state (the sea's height field) and its spray
+var _boats: Array[Node3D] = []   # carried off by the wave
+var _boat_base: Array[Transform3D] = []
 var _impact_t := -100.0   # game time of the last wave impact (camera kick)
 var _impact_k := 0.0
 var _lens_t0 := -100.0    # game time the bore hit the shore (lens splash)
 var _now := 0.0
-var _surge_mat: ShaderMaterial
 var _floods: Array[MeshInstance3D] = []
 var _flood_mats: Array[ShaderMaterial] = []
 var _splashes: Array[CPUParticles3D] = []
@@ -98,22 +107,19 @@ var _pools: Array[MeshInstance3D] = []
 var _hover_frame: MeshInstance3D
 var _frame_mesh: ArrayMesh
 var _lock_frames := {}  # cell index -> MeshInstance3D: the glint frame, made when the cell first locks
-var _amb: Array[Node3D] = []     # swaying / bobbing things: palms, boats
+var _amb: Array[Node3D] = []     # swaying things: palms
 var _amb_base: Array[Transform3D] = []
 var _setup := false
 var _fish: MultiMesh
 var _fish_seed: Array[Vector4] = []   # school, phase, offset y, offset z
 var _gulls: Array[Node3D] = []
 var _smokes: Array[CPUParticles3D] = []
-var _chunks: Array[Node3D] = []
-var _chunk_y: Array[float] = []
 var _sun_energy := 1.0
 var _sun_color := Color.WHITE
 var _amb_energy := 1.0
 var _sky: ShaderMaterial
-var _sky_top := Color.BLACK
-var _sky_mid := Color.BLACK
-var _sky_glow := Color.BLACK
+var _atm: Atmosphere
+var _env: Environment
 const FISH := 42
 ## Cooking smoke over two back houses (coast u, depth d, chimney height): a Sunday breakfast.
 const SMOKE_AT: Array[Vector3] = [Vector3(11.4, 5.9, 3.3), Vector3(25.9, 8.1, 3.3)]
@@ -124,11 +130,14 @@ const SMOKE_AT: Array[Vector3] = [Vector3(11.4, 5.9, 3.3), Vector3(25.9, 8.1, 3.
 @export var hero_dist := 86.0
 ## Play framing: square to the front cut (no yaw against the slab), from a little above and tilted
 ## `play_pitch` deg down, so the grid reads as a flat board with a light perspective while the slab top
-## and the village show a little. `play_center` = the front-cut point at the screen centre (coast
-## frame), `play_dist` = camera distance to it, `play_shift` = vertical lens shift (view fraction at
-## near = 1, framing only: it does not change the perspective).
-@export var play_center := Vector2(10.6, 0.0)
-@export var play_dist := 61.0
+## and the village show a little. Close enough that the slab fills the screen width (sea at the left
+## edge, strata past the right one) and the deep body runs out at the bottom: no void at the sides or
+## under the board; the four communities stay just under the HUD and the grid's last row above the
+## bottom edge. `play_center` = the front-cut point at the screen centre (coast frame), `play_dist` =
+## camera distance to it, `play_shift` = vertical lens shift (view fraction at near = 1, framing only:
+## it does not change the perspective).
+@export var play_center := Vector2(10.6, -1.05)
+@export var play_dist := 48.5
 @export var play_pitch := -16.0
 @export var play_yaw := 0.0
 @export var play_shift := 0.0
@@ -144,6 +153,7 @@ var _shake := Vector2.ZERO
 
 
 func _ready() -> void:
+	_atmosphere()
 	_frame($Camera, hero_target, hero_dist)
 	_hero_xf = ($Camera as Camera3D).transform
 	var turn := Basis(Vector3.UP, deg_to_rad(play_yaw)) * Basis(Vector3.RIGHT, deg_to_rad(play_pitch))
@@ -187,6 +197,25 @@ func _dress() -> void:
 		props.add_child(n)
 
 
+## Sun, ambient, fog and sky from the disaster's atmosphere (the same as its diorama set).
+func _atmosphere() -> void:
+	var d: Disaster = Game.disaster if Game.disaster and Game.disaster.atmosphere else load(DISASTER)
+	_atm = d.atmosphere
+	_atm.light($Sun, coast.basis)
+	_env = ($Env as WorldEnvironment).environment
+	_atm.environment(_env)
+	# the slab's body runs on deep down (coast_slab.py ZB) and sinks into the haze: no floating island
+	_env.fog_height = DEEP_FOG_Y
+	_env.fog_height_density = DEEP_FOG
+	_sky = ShaderMaterial.new()
+	_sky.shader = Game.shader_for(DIORAMA.SKY)
+	_sky.set_shader_parameter(&"tan_half", tan(deg_to_rad(FOV * 0.5)))
+	_sky.set_shader_parameter(&"top", _atm.sky_top)
+	_sky.set_shader_parameter(&"bottom", _atm.sky_bottom)
+	_sky.set_shader_parameter(&"haze", _atm.haze)
+	_env.sky.sky_material = _sky
+
+
 func _frame(cam: Camera3D, target: Vector3, dist: float) -> void:
 	cam.rotation_degrees = Vector3(-40.0, -22.0, 0.0)
 	cam.position = to_local(coast.to_global(target)) + cam.basis.z * dist
@@ -198,6 +227,12 @@ func _view(k: float) -> void:
 	var xf := _hero_xf.interpolate_with(_play_xf, e)
 	camera.transform = xf
 	camera.frustum_offset = _play_offset * e + _shake + _impact_shake() * camera.size
+	# fog depths follow the camera's distance to the slab, as they would in the diorama's orbit
+	var k_fog := lerpf(hero_dist, play_dist, e) / _atm.fog_ref
+	_env.fog_depth_begin = _atm.fog.x * k_fog
+	_env.fog_depth_end = _atm.fog.y * k_fog
+	_sky.set_shader_parameter(&"cam_up", camera.global_basis.y)
+	_sky.set_shader_parameter(&"cam_fwd", -camera.global_basis.z)
 
 
 ## Builds the grid for `skin`. rock_variant: cell index -> 0..2.
@@ -207,7 +242,10 @@ func setup(new_skin: ConnectSkin, rock_variant: Dictionary) -> void:
 	_build_grid(rock_variant)
 	_build_hit_fx()
 	for n in $Coast/Props.get_children():
-		if n.has_meta(&"sway") or n.has_meta(&"bob"):
+		if n.scene_file_path.get_file().begins_with("boat"):
+			_boats.append(n)
+			_boat_base.append(n.transform)
+		elif n.has_meta(&"sway") or n.has_meta(&"bob"):
 			_amb.append(n)
 			_amb_base.append(n.transform)
 	_setup = true
@@ -321,54 +359,66 @@ func _grid_mesh(rows: Array) -> ArrayMesh:
 	return st.commit()
 
 
+## The sea and everything the tsunami does are one water body (water.gdshader's height field, driven by
+## connect_wave.gd): a surface over the whole slab, from the left cut to the back of the land, and the
+## sections on the front and left cuts whose top rows follow it. Where the field lies under the land the
+## shader drops it, so the same mesh is the calm sea, the drawback, the wave and the flood over the town.
 func _build_sea() -> void:
 	var root := $Coast/Water
-	# section faces: front (z = 0, from the left edge to the beach) and the left cut (u = U0)
-	var front := []
-	for y in [0.0, 1.0]:  # UV.y 0 = top row (follows the level), 1 = seabed
-		var row := []
-		for i in 33:
-			var x := U0 + (BEACH_W - U0) * i / 32.0
-			row.append(Vector3(x, SEABED + (0.35 if x < -6.0 else 0.0) if y > 0.5 else 0.0, 0.002))
-		front.append(row)
+	# two column ranges sharing the column at the beach top: the sea (always drawn) and the land (only
+	# drawn while the flood is on it: a calm sea costs what it did before the tsunami was part of it)
+	for land_part in [false, true]:
+		var a: float = BEACH_W if land_part else U0
+		var b: float = U1 if land_part else BEACH_W
+		var n := roundi((b - a) / SEA_STEP)
+		var us: Array[float] = []
+		for i in n + 1:
+			us.append(a + (b - a) * i / n)
+		# front section (z = 0): UV.y 0 = top row (follows the surface), 1 = bottom (seabed, or the
+		# land surface where the flood stands on it)
+		var front := []
+		for y in [0.0, 1.0]:
+			var row := []
+			for u in us:
+				var bottom: float = (SEABED + (0.35 if u < -6.0 else 0.0)) if u <= 0.0 else beach_y(u) - 0.02
+				row.append(Vector3(u, bottom if y > 0.5 else 0.0, 0.002))
+			front.append(row)
+		# surface over the whole depth
+		var top := []
+		for j in SEA_ROWS + 1:
+			var row := []
+			for u in us:
+				row.append(ud(u, D * j / SEA_ROWS, 0.0))
+			top.append(row)
+		var fm := _water_mat(0)
+		var tm := _water_mat(1)
+		_sea_mats.append_array([fm, tm])
+		var box := AABB(ud(a, D, SEABED - 0.5), Vector3(b - a + K * D + 4.0, 24.0, D + 1.0))
+		for mi: MeshInstance3D in [_mesh_node(_grid_mesh(front), fm, root), _mesh_node(_grid_mesh(top), tm, root)]:
+			mi.custom_aabb = box
+			if land_part:
+				_flood_meshes.append(mi)
+	# left section (u = U0), same depth rows as the surface
 	var left := []
 	for y in [0.0, 1.0]:
 		var row := []
-		for i in 9:
-			row.append(ud(U0 - 0.002, D * i / 8.0, SEABED + 0.35 if y > 0.5 else 0.0))
+		for j in SEA_ROWS + 1:
+			row.append(ud(U0 - 0.002, D * j / SEA_ROWS, SEABED + 0.35 if y > 0.5 else 0.0))
 		left.append(row)
-	for rows in [front, left]:
-		var m := _water_mat(0)
-		_sea_mats.append(m)
-		_mesh_node(_grid_mesh(rows), m, root)
-	# surface: u from the left edge to the beach top, over the whole depth
-	var top := []
-	for j in 14:
-		var row := []
-		for i in 33:
-			row.append(ud(U0 + (BEACH_W - U0) * i / 32.0, D * j / 13.0, 0.0))
-		top.append(row)
-	_sea_top_mat = _water_mat(1)
-	_sea_mats.append(_sea_top_mat)
-	_mesh_node(_grid_mesh(top), _sea_top_mat, root)
-	# the tsunami crest (vertex-animated breaker + its spray, connect_wave.gd), turned like the side cuts
+	var lm := _water_mat(0)
+	_sea_mats.append(lm)
+	_mesh_node(_grid_mesh(left), lm, root).custom_aabb = AABB(ud(U0 - 1.0, D, SEABED - 0.5), Vector3(K * D + 2.0, 24.0, D + 1.0))
+	# the tsunami's state and spray (connect_wave.gd), turned like the side cuts
 	_wave = WAVE_SCRIPT.new()
 	_wave.name = "Wave"
 	_wave.rotation_degrees.y = 22.0
 	root.add_child(_wave)
-	_wave.build(D / cos(deg_to_rad(22.0)))
+	var houses: Array[Vector3] = []
+	for e in PROPS:
+		if (e[0] as String).contains("house") or e[0] == "mosque":
+			houses.append(Vector3(e[1], e[2], LAND + 1.6))
+	_wave.build(K, U1, D, houses)
 	_wave.impact.connect(_on_impact)
-	# run-up sheet over the beach and the first metres of land
-	var sheet := []
-	for j in 14:
-		var row := []
-		for i in 41:
-			var u := -0.5 + (SURGE_REACH_U + 1.0) * i / 40.0
-			row.append(ud(u, D * j / 13.0, beach_y(u) + 0.08))
-		sheet.append(row)
-	_surge_mat = _water_mat(4)
-	_surge_mat.set_shader_parameter(&"reach", -10.0)
-	_mesh_node(_grid_mesh(sheet), _surge_mat, root)
 
 
 func _build_grid(rock_variant: Dictionary) -> void:
@@ -648,12 +698,7 @@ func _build_life() -> void:
 	var sun := $Sun as DirectionalLight3D
 	_sun_energy = sun.light_energy
 	_sun_color = sun.light_color
-	var env := ($Env as WorldEnvironment).environment
-	_amb_energy = env.ambient_light_energy
-	_sky = env.sky.sky_material as ShaderMaterial
-	_sky_top = _sky.get_shader_parameter(&"top_color")
-	_sky_mid = _sky.get_shader_parameter(&"mid_color")
-	_sky_glow = _sky.get_shader_parameter(&"glow_color")
+	_amb_energy = _env.ambient_light_energy
 	# fish: tiny lit prisms, three schools
 	var fm := PrismMesh.new()
 	fm.size = Vector3(0.12, 0.34, 0.06)
@@ -727,9 +772,6 @@ func _build_life() -> void:
 		sm.position = ud(p.x, p.y, LAND + p.z)
 		$Coast/Props.add_child(sm)
 		_smokes.append(sm)
-	for c in $Coast/Debris.get_children():
-		_chunks.append(c)
-		_chunk_y.append(c.position.y)
 
 
 func _show_life(s: Node, t: float, calm: float) -> void:
@@ -764,9 +806,6 @@ func _show_life(s: Node, t: float, calm: float) -> void:
 		g.scale = Vector3.ONE * maxf(calm, 0.001)
 	for sm in _smokes:
 		sm.emitting = calm > 0.3
-	for i in _chunks.size():
-		_chunks[i].position.y = _chunk_y[i] + sin(t * 0.6 + i * 1.7) * 0.25
-		_chunks[i].rotate_y(0.0005 * (1.0 if i % 2 else -1.0))
 	# mood: the bright morning loses its warmth as the wave rises, back a little after the drain
 	var dark := clampf(1.0 - left / s.WAVE_LEAD, 0.0, 1.0)
 	if s._hit:
@@ -775,10 +814,11 @@ func _show_life(s: Node, t: float, calm: float) -> void:
 	var sun := $Sun as DirectionalLight3D
 	sun.light_energy = lerpf(_sun_energy, _sun_energy * 0.55, dark)
 	sun.light_color = _sun_color.lerp(Color(0.78, 0.84, 0.95), dark * 0.8)
-	($Env as WorldEnvironment).environment.ambient_light_energy = lerpf(_amb_energy, _amb_energy * 0.8, dark)
-	_sky.set_shader_parameter(&"top_color", _sky_top.lerp(_sky_top * 0.45, dark))
-	_sky.set_shader_parameter(&"mid_color", _sky_mid.lerp(Color(0.05, 0.07, 0.11), dark))
-	_sky.set_shader_parameter(&"glow_color", _sky_glow.lerp(Color(0.18, 0.2, 0.26), dark))
+	_env.ambient_light_energy = lerpf(_amb_energy, _amb_energy * 0.8, dark)
+	var low := _atm.sky_bottom.lerp(Color(0.05, 0.07, 0.11), dark)
+	_sky.set_shader_parameter(&"top", _atm.sky_top.lerp(_atm.sky_top * 0.45, dark))
+	_sky.set_shader_parameter(&"bottom", low)
+	_env.fog_light_color = _atm.haze.lerp(low, dark)  # the slab's far parts keep fading into the sky
 
 
 # --- per frame -------------------------------------------------------------------------------------
@@ -792,21 +832,14 @@ func show_state(s: Node) -> void:
 	_now = t
 	_view(clampf((t - INTRO_HOLD) / INTRO_GLIDE, 0.0, 1.0))
 	var flow: float = s._flow_t() if hit else -1.0
-	# sea level (2D rows -> metres: the 2D sea rose SEA_RISE logical px) and the surge behind the wave
+	# sea level (2D rows -> metres: the 2D sea rose SEA_RISE logical px); the wave is on top of it
 	var rise: float = (s.SEA_Y - s._sea_level()) * LOGICAL_M
-	var surge: float = s._surge()
-	var level: float = SEA_REST + rise + surge * s.SURGE_RISE * LOGICAL_M + s._bob() * LOGICAL_M * 0.5
+	var level: float = SEA_REST + rise + s._bob() * LOGICAL_M * 0.5
 	var calm: float = s._amb_k()
-	var red: bool = s._red and not hit
 	for m in _sea_mats:
 		m.set_shader_parameter(&"level", level)
 		m.set_shader_parameter(&"calm", calm)
-		m.set_shader_parameter(&"line_color", Color(1.0, 0.35, 0.22, 0.85) if red else Color(1, 1, 1, 0.55))
 	_show_wave(s, level)
-	var reach := -10.0
-	if hit:
-		reach = lerpf(beach_y(0.0), SURGE_REACH_U, surge) if surge > 0.01 else -10.0
-	_surge_mat.set_shader_parameter(&"reach", reach)
 	_show_tiles(s, flow)
 	_show_flow(s, flow)
 	_show_floods(s, flow)
@@ -816,30 +849,66 @@ func show_state(s: Node) -> void:
 
 
 func _show_wave(s: Node, level: float) -> void:
-	var lead: float = s.WAVE_LEAD
-	var left: float = s.skin.timer_seconds - s.elapsed
-	var brk: float = s.WAVE_BREAK_DUR
-	var u := WAVE_START_U
-	var ph := 0.0
-	var fade := 0.0
-	if not s._hit and left <= lead:
-		# the swell rises out of the sea and steepens toward the hit
-		var p := clampf(1.0 - left / lead, 0.0, 1.0)
-		var e := p * p * (3.0 - 2.0 * p)
-		u = lerpf(WAVE_START_U, WAVE_SEA_U, e)
-		ph = 0.98 * pow(p, 1.3)
-		fade = clampf(p * 4.0, 0.0, 1.0)
-	elif s._hit and s._hit_t() < brk + WAVE_FADE:
-		# curl, plunge, collapse into a bore running up the beach
-		var t: float = s._hit_t()
-		var q := clampf(t / brk, 0.0, 1.0)
-		u = lerpf(WAVE_SEA_U, WAVE_BEACH_U, 1.0 - (1.0 - q) * (1.0 - q)) + maxf(t - brk, 0.0) * 2.0
-		ph = 1.0 + 2.0 * q
-		fade = 1.0 - clampf((t - brk) / WAVE_FADE, 0.0, 1.0)
-		if t >= SHORE_HIT_T:
-			_wave.shore_hit(WAVE_SCRIPT.front_x(ph, WAVE_H), 0.9)
-	_wave.position = ud(u, 0.0, level - 0.03)  # the foot sits on the sea surface, the cap on the section
-	_wave.show_at(WAVE_H * lerpf(0.15, 1.0, clampf(ph, 0.0, 1.0)), ph, fade)
+	var tau: float = s.elapsed - s.skin.timer_seconds
+	var drain := clampf((s._hit_t() - s._drain_start()) / s.DRAIN, 0.0, 1.0) if s._hit else 0.0
+	_wave.reach = run_up_reach(s)
+	_wave.reach_y = beach_y(_wave.reach) if _wave.reach < U1 else LAND
+	_wave.update(tau, s.WAVE_LEAD, drain, level)
+	_wave.apply(_sea_mats)
+	var on_land: bool = _wave.p.ts_plat + _wave.p.ts_crest > 0.01 and _wave.front_at(0.0) > BEACH_W - 8.0 and _wave.reach > BEACH_W
+	for mi in _flood_meshes:
+		mi.visible = on_land
+	_show_boats(tau)
+
+
+## How far inland the tsunami runs (coast u) for the result: INF = the whole town (nothing saved), the beach
+## (all saved), else VILLAGE_KEEP short of the first saved community. Before the hit the result is open: INF.
+func run_up_reach(s: Node) -> float:
+	var saved: Array = s._saved
+	if not s._hit or not saved.has(true):
+		return INF
+	if not saved.has(false):
+		return BEACH_REACH
+	var r := INF
+	for v in mini(saved.size(), VILLAGE_UD.size()):
+		if saved[v]:
+			r = minf(r, VILLAGE_UD[v].x - VILLAGE_KEEP)
+	return maxf(r, BEACH_REACH)
+
+
+## Water depth over the ground at coast (u, d) (< 0: dry).
+func flood_depth(u: float, d: float) -> float:
+	return _wave.surface_y(u, d) - (beach_y(u) if u > 0.0 else SEABED)
+
+
+## Boats ride the field: the one at sea sinks into the drawback and climbs the wave's face, then the
+## bore picks them all up and leaves them in the town when the water drains back.
+func _show_boats(tau: float) -> void:
+	for i in _boats.size():
+		var b := _boats[i]
+		var base := _boat_base[i]
+		var d0 := -base.origin.z
+		var u0 := base.origin.x + K * d0
+		var to: Vector2 = BOAT_STRAND[i % BOAT_STRAND.size()]
+		var carry := 0.0
+		if tau > 0.0:
+			carry = smoothstep(0.0, 1.0, clampf((_wave.front_at(d0) - u0) / (1.7 * (to.x - u0) + 4.0), 0.0, 1.0))
+		var u := lerpf(u0, to.x, carry)
+		var d := lerpf(d0, to.y, carry)
+		var water: float = _wave.surface_y(u, d) - 0.12
+		var y := water
+		var afloat := 1.0
+		if u > 0.0:  # on the sand until the water lifts it, set down where the water leaves it
+			var ground := beach_y(u)
+			afloat = clampf((water - ground - 0.05) / 0.5, 0.0, 1.0)
+			y = lerpf(base.origin.y if carry <= 0.0 else ground, water, afloat)
+		y += sin(_now * 1.4 + i) * 0.06 * afloat
+		# pitch with the slope under it, roll; spin while the bore carries it
+		var slope: float = (_wave.surface_y(u + 0.6, d) - _wave.surface_y(u - 0.6, d)) / 1.2 * afloat
+		var tb := Basis(Vector3.UP, carry * (1.1 if i % 2 else -0.8)) * base.basis
+		tb = Basis(Vector3(0, 0, 1), clampf(atan(slope), -0.45, 0.45)) * tb
+		tb = Basis(Vector3(1, 0, 0), sin(_now * 1.1 + i) * (0.05 + 0.1 * carry) * afloat) * tb
+		b.transform = Transform3D(tb, ud(u, d, y))
 
 
 func _on_impact(kind: StringName) -> void:
@@ -1073,11 +1142,15 @@ func _show_floods(s: Node, flow: float) -> void:
 			f.visible = false
 			continue
 		var k := clampf((flow - at) / 0.6, 0.0, 1.0)
-		f.visible = true
+		var metres := maxf(k * 1.25 * (1.0 - drain), 0.01)
+		# while the tsunami's flood stands higher, this water is part of it: show it as the flood drops
+		var c := VILLAGE_UD[v]
+		var under := smoothstep(metres - 0.1, metres + 0.35, flood_depth(c.x, c.y))
+		f.visible = under < 1.0
 		var fm := _flood_mats[v]
-		fm.set_shader_parameter(&"level", maxf(k * 1.25 * (1.0 - drain), 0.01))
+		fm.set_shader_parameter(&"level", metres)
 		fm.set_shader_parameter(&"slosh", exp(-(flow - at) * 0.7))
-		fm.set_shader_parameter(&"alpha_mul", 1.0 - drain)
+		fm.set_shader_parameter(&"alpha_mul", (1.0 - drain) * (1.0 - under))
 		if not _splashes[v].has_meta(&"done"):
 			_splashes[v].set_meta(&"done", true)
 			_splashes[v].emitting = true
@@ -1089,13 +1162,13 @@ func _show_ambient(s: Node, t: float, calm: float) -> void:
 		var base := _amb_base[k]
 		if n.has_meta(&"sway"):
 			var a: float = n.get_meta(&"sway")
-			n.transform = base * Transform3D(Basis(Vector3(0, 0, 1), sin(t * 0.9 + k * 1.3) * a * calm).rotated(Vector3(1, 0, 0), sin(t * 0.7 + k) * a * 0.5 * calm), Vector3.ZERO)
-		elif n.has_meta(&"bob"):
-			var lvl: float = _sea_top_mat.get_shader_parameter(&"level")
-			n.transform = base
-			n.position.y = lvl + sin(t * 1.4 + k) * 0.06
-			n.rotation.z += sin(t * 1.1 + k) * 0.05
-			n.rotation.x += sin(t * 0.8 + k * 2.0) * 0.04
+			var sway := base * Transform3D(Basis(Vector3(0, 0, 1), sin(t * 0.9 + k * 1.3) * a * calm).rotated(Vector3(1, 0, 0), sin(t * 0.7 + k) * a * 0.5 * calm), Vector3.ZERO)
+			# the current bends it the way the water runs (inland, then back to the sea), shaking
+			var d := -base.origin.z
+			var depth := clampf(flood_depth(base.origin.x + K * d, d) / 1.5, 0.0, 1.0)
+			var flow: float = _wave.p.ts_flow
+			var bend := -clampf(flow / 9.0, -0.6, 1.0) * depth * (0.3 + 0.04 * sin(t * 11.0 + k * 2.0))
+			n.transform = Transform3D(Basis(Vector3(0, 0, 1), bend), base.origin) * Transform3D(sway.basis, Vector3.ZERO)
 
 
 ## Camera shake as a lens shift, `offset` in fractions of the view (the controller also shakes the HUD).

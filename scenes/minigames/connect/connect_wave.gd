@@ -1,99 +1,113 @@
 extends Node3D
-## Connect (#122): the tsunami crest and its water effects. connect_world.gd places this node (turned
-## like the side cuts, so the crest runs along local -z from the slab's front cut) and calls show_at()
-## every frame with the wave's state; everything is a function of that state, so seek() works.
-## Shape: wave.gdshader (vertex shader). prof() below is the same profile for the particle emitters.
+## Connect (#122): the tsunami. It is not a separate object: it is the sea's own height field, drawn by
+## water.gdshader on the sea and the flood meshes (eta()). This node turns the controller's clock into the
+## field's parameters (the ts_* uniforms, update()), mirrors the field for whatever rides it (surface_y():
+## boats, palms, spray) and owns the spray and whitewater. Everything is a function of the hit time, so
+## seek() works. connect_world.gd places this node at the slab origin, turned like the side cuts (+22 deg
+## in the slab frame), so its local -z runs along the coast's depth.
+## Timeline, hit time tau in seconds (0 = the timer runs out, the wave breaks on the beach):
+##   -lead .. -4   drawback: the sea is sucked off the beach, the reef wall dries
+##   -APPROACH .. 0  the swell comes in from the open sea at the left cut, grows and steepens as it shoals
+##   0             it breaks on the beach: crash spray, camera kick, lens splash
+##   0 .. RUN      the bore runs over the beach and the whole town, past the back of the slab
+##   .. +PEAK      the town stands in the water
+##   then BACKWASH the flood drains back into the sea (or with the controller's drain, if sooner); the
+##                 communities whose line failed keep their water (connect_world.gd floods)
+## Recede, not stay: the town under water for good would hide the result, which communities the player
+## saved; the backwash leaves exactly those dry, and the water running back to the sea is the 2004
+## footage people remember.
 
-signal impact(kind: StringName)  ## &"plunge": the lip hits the water; &"shore": the bore hits the beach
+signal impact(kind: StringName)  ## &"shore": the wave breaks on the beach
 
-const WAVE := preload("res://scenes/minigames/connect/wave.gdshader")
 const SOFT := preload("res://scenes/style/soft_particle.gdshader")
-const BACK_LEN := 7.0
-const PLUNGE_AT := 1.82  # phase where the lip lands
-const SEGS_S := 72
-const SEGS_W := 40
+const APPROACH := 9.0
+const RUN := 3.0
+const PEAK := 0.6
+const BACKWASH := 2.4
+const DRAWBACK := 2.6     # m the sea drops at the shore
+const FRONT_START := -14.5  # u of the front when the swell starts (out at sea, left of the slab)
+const FRONT_HIT := -0.6     # u of the front at the hit: the edge of the reef
+const CREST_HIT := 4.6
+const FLOOD := 3.1         # m the sea stands over its level at the peak (about 2.5 m over the town)
+const HELD_PLAT := 1.4     # m the sea stands at the peak when the run-up is held back (reach): a surge, no flood
+## Field parameters, same names and defaults as the water.gdshader uniforms (a calm sea).
+const CALM := {
+	"ts_front": -1000.0, "ts_crest": 0.0, "ts_plat": 0.0, "ts_back": 6.0, "ts_face": 2.0,
+	"ts_lean": 0.0, "ts_draw": 0.0, "ts_inland": 0.0, "ts_churn": 0.0, "ts_flow": 0.0, "ts_mud": 0.0,
+}
 
-var crest_len := 14.0
-var mat: ShaderMaterial
-var _mesh: MeshInstance3D
-var _spray: CPUParticles3D     # torn off the crest while it steepens and curls
-var _drips: CPUParticles3D     # falling from the lip
-var _plunge: CPUParticles3D    # the lip lands: droplets
-var _plunge_foam: CPUParticles3D
-var _shore: CPUParticles3D     # the bore hits the beach and the slab edge: droplets toward the camera
-var _shore_foam: CPUParticles3D
+var p := CALM.duplicate()
+var level := -0.6
+var k_skew := 0.40402622
+var u_end := 31.0        # back of the slab (land side)
+var depth := 13.0
+## How far inland the run-up goes (coast u), from the result (connect_world.gd): INF = over the whole town
+## (nothing saved), the beach (everything saved), short of the first saved community (some saved).
+## reach_y: the ground height there. The water stands over the land only on the sea side of it.
+var reach := INF
+var reach_y := 0.35
+var _held := false  # the bore front has stopped at the reach
+var _spray: CPUParticles3D     # torn off the head while it steepens
+var _crash: CPUParticles3D     # the wave breaks on the beach: droplets up and toward the camera
+var _crash_foam: CPUParticles3D
 var _mist: CPUParticles3D
+var _bore: CPUParticles3D      # whitewater rolling at the bore front
+var _hits: Array[CPUParticles3D] = []  # the bore hits a house
+var _hit_at: Array[Vector3] = []       # (u, d, top) of each house
 var _fired := {}
 
 
-func build(length: float) -> void:
-	crest_len = length
-	mat = ShaderMaterial.new()
-	mat.shader = WAVE
-	mat.set_shader_parameter(&"crest_len", crest_len)
-	mat.set_shader_parameter(&"back_len", BACK_LEN)
-	_mesh = MeshInstance3D.new()
-	_mesh.mesh = _grid()
-	_mesh.material_override = mat
-	_mesh.custom_aabb = AABB(Vector3(-BACK_LEN * 1.6, -1.0, -crest_len - 1.0), Vector3(BACK_LEN * 3.0, 12.0, crest_len + 2.0))
-	_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-	add_child(_mesh)
-	_spray = _emitter(420, 0.1, Color(0.9, 0.97, 1.0, 0.85), 0.4)
-	_spray.lifetime = 1.0
-	_spray.direction = Vector3(-0.6, 1.0, 0.0)
+## u_end, slab_depth: the slab's land end and depth; houses: (u, d, height) of each building the bore hits.
+func build(slab_k: float, slab_u_end: float, slab_depth: float, houses: Array[Vector3]) -> void:
+	k_skew = slab_k
+	u_end = slab_u_end
+	depth = slab_depth
+	var half_len := depth * 0.5 / cos(deg_to_rad(22.0))
+	_spray = _emitter(260, 0.12, Color(0.9, 0.97, 1.0, 0.85), 0.4)
+	_spray.lifetime = 0.9
+	_spray.direction = Vector3(-0.5, 1.0, 0.0)
 	_spray.spread = 30.0
-	_spray.initial_velocity_min = 1.0
-	_spray.initial_velocity_max = 3.0
-	_spray.gravity = Vector3(-1.5, -4.0, 0.0)  # wind off the crest throws it back
-	_drips = _emitter(200, 0.07, Color(0.75, 0.95, 1.0, 0.9), 0.7)
-	_drips.lifetime = 0.8
-	_drips.direction = Vector3(0.3, -1.0, 0.0)
-	_drips.spread = 15.0
-	_drips.initial_velocity_min = 0.2
-	_drips.initial_velocity_max = 1.0
-	_plunge = _emitter(1100, 0.13, Color(0.92, 0.98, 1.0, 0.9), 0.55, true)
-	_plunge.lifetime = 1.6
-	_plunge.direction = Vector3(0.6, 1.0, 0.1)
-	_plunge.spread = 40.0
-	_plunge.initial_velocity_min = 3.0
-	_plunge.initial_velocity_max = 8.5
-	_plunge_foam = _foam(140, 0.9)
-	_shore = _emitter(1000, 0.14, Color(0.92, 0.98, 1.0, 0.9), 0.55, true)
-	_shore.lifetime = 1.7
-	_shore.direction = Vector3(0.5, 1.0, 0.7)  # up and toward the camera
-	_shore.spread = 35.0
-	_shore.initial_velocity_min = 3.5
-	_shore.initial_velocity_max = 9.0
-	_shore_foam = _foam(160, 1.1)
-	_mist = _emitter(30, 2.2, Color(0.92, 0.96, 1.0, 0.09), 0.0, true)
+	_spray.initial_velocity_min = 1.5
+	_spray.initial_velocity_max = 4.0
+	_spray.gravity = Vector3(-2.0, -5.0, 0.0)  # wind off the crest throws it back
+	_spray.emission_box_extents = Vector3(0.4, 0.2, half_len)
+	_crash = _emitter(700, 0.14, Color(0.92, 0.98, 1.0, 0.9), 0.55, true)
+	_crash.lifetime = 1.6
+	_crash.direction = Vector3(0.5, 1.0, 0.6)  # up, inland and toward the camera
+	_crash.spread = 38.0
+	_crash.initial_velocity_min = 4.0
+	_crash.initial_velocity_max = 10.0
+	_crash.emission_box_extents = Vector3(0.8, 0.4, half_len)
+	_crash_foam = _foam(50, 0.8)
+	_crash_foam.emission_box_extents = Vector3(1.0, 0.5, half_len)
+	_mist = _emitter(24, 2.6, Color(0.92, 0.96, 1.0, 0.06), 0.0, true)
 	_mist.lifetime = 3.5
-	_mist.direction = Vector3(0.3, 1.0, 0.2)
+	_mist.direction = Vector3(0.4, 1.0, 0.2)
 	_mist.spread = 50.0
-	_mist.gravity = Vector3(0.2, 0.25, 0.0)
+	_mist.gravity = Vector3(0.4, 0.25, 0.0)
 	_mist.initial_velocity_min = 0.3
-	_mist.initial_velocity_max = 1.2
+	_mist.initial_velocity_max = 1.4
+	_mist.emission_box_extents = Vector3(1.5, 1.0, half_len)
 	(_mist.mesh.material as ShaderMaterial).set_shader_parameter(&"hardness", 0.0)
-	visible = false
-
-
-## (s, w) grid for the crest + a fan for the front section cap.
-func _grid() -> ArrayMesh:
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for j in SEGS_W:
-		for i in SEGS_S:
-			var q := [Vector2(i, j), Vector2(i + 1, j), Vector2(i + 1, j + 1), Vector2(i, j), Vector2(i + 1, j + 1), Vector2(i, j + 1)]
-			for v: Vector2 in q:
-				st.set_uv(Vector2(v.x / SEGS_S, v.y / SEGS_W))
-				st.set_uv2(Vector2.ZERO)
-				st.add_vertex(Vector3(v.x / SEGS_S, 0.0, -v.y / SEGS_W))
-	for i in SEGS_S:
-		for k in 3:
-			var s := 0.0 if k == 0 else float(i + k - 1) / SEGS_S
-			st.set_uv(Vector2(s, 0.0))
-			st.set_uv2(Vector2(1.0, 1.0 if k == 0 else 0.0))
-			st.add_vertex(Vector3(s, 0.0, 0.0))
-	return st.commit()
+	_bore = _foam(90, 0.6)
+	_bore.one_shot = false
+	_bore.explosiveness = 0.0
+	_bore.lifetime = 1.1
+	_bore.direction = Vector3(1.0, 0.8, 0.0)
+	_bore.initial_velocity_min = 1.5
+	_bore.initial_velocity_max = 4.0
+	_bore.emission_box_extents = Vector3(0.4, 0.4, half_len)
+	(_bore.mesh.material as ShaderMaterial).set_shader_parameter(&"tint", Color(0.92, 0.9, 0.84, 0.45))
+	for h in houses:
+		var e := _emitter(45, 0.16, Color(0.9, 0.95, 0.95, 0.9), 0.5, true)
+		e.lifetime = 1.2
+		e.direction = Vector3(-0.2, 1.0, 0.3)
+		e.spread = 35.0
+		e.initial_velocity_min = 2.5
+		e.initial_velocity_max = 6.0
+		e.emission_box_extents = Vector3(0.3, 0.3, 1.2)
+		_hits.append(e)
+		_hit_at.append(h)
 
 
 func _soft(col: Color, glow: float, hard: float) -> ShaderMaterial:
@@ -107,123 +121,168 @@ func _soft(col: Color, glow: float, hard: float) -> ShaderMaterial:
 
 
 func _emitter(amount: int, size: float, col: Color, hard: float, one_shot := false) -> CPUParticles3D:
-	var p := CPUParticles3D.new()
+	var e := CPUParticles3D.new()
 	var q := QuadMesh.new()
 	q.size = Vector2(size, size)
 	q.material = _soft(col, 0.9, hard)  # spray is lit from inside: it never goes grey in the dimmed light
-	p.mesh = q
-	p.amount = amount
-	p.one_shot = one_shot
-	p.explosiveness = 0.85 if one_shot else 0.0
-	p.emitting = false
-	p.local_coords = false
-	p.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
-	p.emission_box_extents = Vector3(0.25, 0.15, crest_len * 0.5)
-	p.gravity = Vector3(0.0, -9.8, 0.0)
-	p.scale_amount_min = 0.35
-	p.scale_amount_max = 1.8
+	e.mesh = q
+	e.amount = amount
+	e.one_shot = one_shot
+	e.explosiveness = 0.85 if one_shot else 0.0
+	e.emitting = false
+	e.local_coords = false
+	e.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	e.gravity = Vector3(0.0, -9.8, 0.0)
+	e.scale_amount_min = 0.35
+	e.scale_amount_max = 1.8
 	var shrink := Curve.new()  # droplets break up as they fly
 	shrink.add_point(Vector2(0.0, 1.0))
 	shrink.add_point(Vector2(1.0, 0.45))
-	p.scale_amount_curve = shrink
+	e.scale_amount_curve = shrink
 	var ramp := Gradient.new()
 	ramp.set_color(0, Color(1, 1, 1, 1))
 	ramp.set_color(1, Color(1, 1, 1, 0))
-	p.color_ramp = ramp
-	add_child(p)
-	return p
+	e.color_ramp = ramp
+	add_child(e)
+	return e
 
 
 ## Slow, growing foam puffs (whitewater) left behind by a burst.
 func _foam(amount: int, size: float) -> CPUParticles3D:
-	var p := _emitter(amount, size, Color(0.95, 0.98, 1.0, 0.75), 0.15, true)
-	p.lifetime = 2.4
-	p.direction = Vector3(0.7, 0.6, 0.0)
-	p.spread = 60.0
-	p.initial_velocity_min = 0.8
-	p.initial_velocity_max = 3.0
-	p.gravity = Vector3(0.6, -1.2, 0.0)
-	p.damping_min = 0.8
-	p.damping_max = 1.6
+	var e := _emitter(amount, size, Color(0.95, 0.98, 1.0, 0.75), 0.15, true)
+	e.lifetime = 2.4
+	e.direction = Vector3(0.7, 0.6, 0.0)
+	e.spread = 60.0
+	e.initial_velocity_min = 0.8
+	e.initial_velocity_max = 3.0
+	e.gravity = Vector3(0.6, -1.2, 0.0)
+	e.damping_min = 0.8
+	e.damping_max = 1.6
 	var curve := Curve.new()
 	curve.add_point(Vector2(0.0, 0.5))
 	curve.add_point(Vector2(1.0, 1.8))
-	p.scale_amount_curve = curve
-	return p
+	e.scale_amount_curve = curve
+	return e
 
 
-## Same profile as wave.gdshader prof(): x toward the shore, y up, for profile parameter s.
-static func prof(s: float, ph: float, h: float) -> Vector2:
-	var swell := clampf(ph, 0.0, 1.0)
-	var curl := clampf(ph - 1.0, 0.0, 1.0)
-	var col := clampf(ph - 2.0, 0.0, 1.0)
-	var r := h * lerpf(0.12, 0.36, curl) * (1.0 - 0.5 * col)
-	var sweep := lerpf(0.5, 1.2, swell) + curl * 3.0 + col * 1.2
-	var throw_x := h * (0.75 * curl + 0.5 * col)
-	var c := Vector2(0.0, h - r)
-	if s < 0.5:
-		var t := s / 0.5
-		return Vector2(-BACK_LEN * (1.0 - t) * (1.0 + 0.4 * col), h * pow(sin(t * PI / 2.0), 1.7))
-	var t := clampf((s - 0.5) / 0.3, 0.0, 1.0)
-	var a := PI / 2.0 - t * sweep
-	return c + r * Vector2(cos(a), sin(a)) + Vector2(throw_x * t * t, -col * h * 0.15 * t)
+# --- the field ------------------------------------------------------------------------------------
+
+## Sets the field for hit time `tau`. lead: seconds of warning before the hit (the drawback starts
+## there); drain: the controller's drain 0..1 (the backwash finishes no later than it).
+func update(tau: float, lead: float, drain: float, sea_level: float) -> void:
+	level = sea_level
+	p = CALM.duplicate()
+	_held = false
+	if tau >= -lead:
+		p.ts_draw = DRAWBACK * smoothstep(0.0, 0.7, (tau + lead) / lead)
+	if tau < 0.0:
+		var s := clampf((tau + APPROACH) / APPROACH, 0.0, 1.0)
+		if s > 0.0:
+			var grow := smoothstep(0.0, 0.15, s)
+			p.ts_front = lerpf(FRONT_START, FRONT_HIT, pow(s, 1.35))
+			p.ts_crest = lerpf(0.9, CREST_HIT, s * s) * grow
+			p.ts_back = lerpf(7.5, 4.2, s)
+			p.ts_face = lerpf(3.8, 1.1, pow(s, 1.5))
+			p.ts_lean = smoothstep(0.7, 1.0, s)
+			p.ts_plat = 0.8 * s * grow
+			p.ts_churn = 0.85 * smoothstep(0.6, 1.0, s)
+			p.ts_flow = 4.0 * s
+	else:
+		var r := clampf(tau / RUN, 0.0, 1.0)
+		# nearly steady: the bore reaches the first houses after ~1 s and the mosque after ~2 s
+		p.ts_front = lerpf(FRONT_HIT, u_end + 6.0, r * (1.15 - 0.15 * r))
+		p.ts_crest = lerpf(CREST_HIT, 2.2, smoothstep(0.0, 0.2, r)) - 1.4 * smoothstep(0.3, 1.0, r)
+		p.ts_back = lerpf(4.2, 5.5, r)
+		p.ts_face = lerpf(1.1, 1.5, smoothstep(0.0, 0.4, r))
+		p.ts_lean = lerpf(1.0, 0.4, smoothstep(0.05, 0.5, r)) + 0.8 * sin(PI * clampf(r / 0.12, 0.0, 1.0))
+		p.ts_plat = lerpf(0.8, FLOOD, smoothstep(0.0, 0.5, r))
+		p.ts_inland = 0.025
+		p.ts_churn = lerpf(1.0, 0.45, smoothstep(RUN * 0.8, RUN + PEAK, tau))
+		p.ts_flow = lerpf(9.0, 2.5, r)
+		p.ts_mud = smoothstep(0.0, 0.3, r)
+		# the flood sloshes at the peak, then drains back to the sea
+		p.ts_plat += 0.12 * sin(tau * 2.4) * smoothstep(RUN * 0.7, RUN + 0.3, tau)
+		var q := smoothstep(RUN + PEAK, RUN + PEAK + BACKWASH, tau)
+		q = maxf(q, drain * drain * (3.0 - 2.0 * drain))
+		if q > 0.0:
+			p.ts_plat = lerpf(p.ts_plat, 0.0, q)
+			p.ts_crest *= 1.0 - q
+			p.ts_inland = lerpf(0.025, 0.14, q)
+			p.ts_flow = lerpf(p.ts_flow, -4.5, smoothstep(0.0, 0.25, q)) * (1.0 - 0.6 * smoothstep(0.7, 1.0, q))
+			p.ts_churn = lerpf(p.ts_churn, 0.12, q)
+			p.ts_mud = lerpf(1.0, 0.35, smoothstep(0.5, 1.0, q))
+		_hold_back()
+	_show_spray(tau)
 
 
-## Local x of the bore's front foot (where it meets the beach) for phase ph.
-static func front_x(ph: float, h: float) -> float:
-	return prof(0.8, ph, h).x + h * 0.45
+## A held run-up (reach < u_end): the front stops at the reach, the surge is lower, and the surface over the
+## land tilts down so it meets the ground at the reach and stays under it beyond (the shader drops it there).
+func _hold_back() -> void:
+	_held = reach < u_end and p.ts_front >= reach
+	if reach >= u_end:
+		return
+	p.ts_front = minf(p.ts_front, reach)
+	p.ts_plat *= HELD_PLAT / FLOOD
+	var over: float = level + p.ts_plat + p.ts_crest * 1.16 - reach_y + 0.05  # 1.16: eta()'s crest wobble
+	if over > 0.0:
+		p.ts_inland = maxf(p.ts_inland, over / maxf(reach, 0.5))
 
 
-## Draws the wave. h: crest height (m), ph: phase 0..3, fade: 0..1 (0 hides the crest; bursts finish).
-func show_at(h: float, ph: float, fade: float) -> void:
-	visible = fade > 0.0 or _any_alive()
-	_mesh.visible = fade > 0.0
-	if ph < 0.5:
+## Pushes the field into the water materials.
+func apply(mats: Array[ShaderMaterial]) -> void:
+	for m in mats:
+		for k in p:
+			m.set_shader_parameter(k, p[k])
+
+
+func front_at(d: float) -> float:
+	return p.ts_front + 0.55 * sin(d * 0.47 + 1.1) + 0.3 * sin(d * 1.13 + 2.3) - 0.06 * d
+
+
+## Same as water.gdshader eta(): the surface over `level` at coast (u, d).
+func eta(u: float, d: float) -> float:
+	var x := u - front_at(d)
+	var face: float = p.ts_face
+	var ahead := exp(-x * x / (face * face)) if x > 0.0 else 1.0
+	var head := ahead if x > 0.0 else exp(-x * x / (p.ts_back * p.ts_back))
+	var crest: float = p.ts_crest * (1.0 + 0.1 * sin(d * 0.8 + 0.7) + 0.06 * sin(d * 2.1 + 1.9))
+	var plat: float = p.ts_plat - p.ts_inland * maxf(u, 0.0)
+	var draw: float = p.ts_draw * exp(-pow((u + 1.6) / 4.5, 2.0)) * smoothstep(-1.0, 3.0, x)
+	return crest * head + plat * ahead - draw
+
+
+## Sea / flood surface height (slab frame) at coast (u, d), without the chop.
+func surface_y(u: float, d: float) -> float:
+	return level + eta(u, d)
+
+
+## Slab-frame point of coast (u, d) at height y, in this node's frame (emitter positions).
+func _local(u: float, d: float, y: float) -> Vector3:
+	return transform.affine_inverse() * Vector3(u - k_skew * d, y, -d)
+
+
+func _show_spray(tau: float) -> void:
+	if tau < -1.0:
 		_fired.clear()  # a new wave (new run): re-arm the bursts
-	if fade <= 0.0:
-		_spray.emitting = false
-		_drips.emitting = false
-		return
-	mat.set_shader_parameter(&"height", h)
-	mat.set_shader_parameter(&"phase", ph)
-	mat.set_shader_parameter(&"alpha_mul", fade)
-	var mid := -crest_len * 0.5
-	var crest := prof(0.5, ph, h)
-	var lip := prof(0.8, ph, h)
-	_spray.position = Vector3(crest.x, crest.y, mid)
-	_spray.emitting = ph > 0.75 and ph < 2.3
-	_drips.position = Vector3(lip.x, lip.y, mid)
-	_drips.emitting = ph > 1.15 and ph < 1.95
-	_fire(PLUNGE_AT, ph, func() -> void:
-		var land := Vector3(lip.x + h * 0.15, 0.25, mid)
-		for p: CPUParticles3D in [_plunge, _plunge_foam, _mist]:
-			p.position = land
-			p.restart()
-			p.emitting = true
-		impact.emit(&"plunge"))
-
-
-## The bore hits the beach / slab edge at local x `front_x` (called by the world).
-func shore_hit(front_x: float, y: float) -> void:
-	if _fired.has(&"shore"):
-		return
-	_fired[&"shore"] = true
-	var pos := Vector3(front_x, y, -crest_len * 0.25)
-	for p: CPUParticles3D in [_shore, _shore_foam, _mist]:
-		p.position = pos
-		p.restart()
-		p.emitting = true
-	impact.emit(&"shore")
-
-
-func _fire(at: float, ph: float, fn: Callable) -> void:
-	if ph >= at and not _fired.has(str(at)):
-		_fired[str(at)] = true
-		fn.call()
-
-
-func _any_alive() -> bool:
-	for p: CPUParticles3D in [_plunge, _plunge_foam, _shore, _shore_foam, _mist]:
-		if p.emitting:
-			return true
-	return false
+	var mid := depth * 0.5
+	var f := front_at(mid)
+	var top := surface_y(f - 0.3, mid)
+	_spray.position = _local(f + p.ts_lean * 0.5 - 0.3, mid, top)
+	_spray.emitting = tau > -2.5 and tau < 0.5 and p.ts_crest > 1.5
+	_bore.position = _local(f - 0.4, mid, level + p.ts_plat * 0.8)
+	_bore.emitting = tau >= 0.0 and f < u_end - 1.5 and not _held
+	if tau >= 0.0 and not _fired.has(&"crash"):
+		_fired[&"crash"] = true
+		var at := _local(FRONT_HIT + 1.2, mid, level + 1.2)
+		for e: CPUParticles3D in [_crash, _crash_foam, _mist]:
+			e.position = at
+			e.restart()
+			e.emitting = true
+		impact.emit(&"shore")
+	for i in _hits.size():
+		var h := _hit_at[i]
+		if tau >= 0.0 and front_at(h.y) >= h.x - 0.6 and not _fired.has(i):
+			_fired[i] = true
+			_hits[i].position = _local(h.x - 1.0, h.y, h.z)
+			_hits[i].restart()
+			_hits[i].emitting = true

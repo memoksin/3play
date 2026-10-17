@@ -90,7 +90,7 @@ func _item(type: StringName, nth := 0) -> int:
 
 func _run() -> void:
 	TranslationServer.set_locale("en")  # message checks below are English; a saved user locale must not leak in
-	root.get_node("Game").ensure_disaster(&"citizen")
+	root.get_node("Game").disaster = _kahr_fit()
 	fit = load("res://scenes/minigames/fit.tscn").instantiate()
 	root.add_child(fit)
 	await _frames()
@@ -149,3 +149,11 @@ func _run() -> void:
 
 	print("test_fit_input ok" if ok else "test_fit_input FAIL")
 	quit(0 if ok else 1)
+
+
+## Kahramanmaras plays Fener now (#123): the Fit regression runs on a copy with its old Fit skin.
+static func _kahr_fit() -> Disaster:
+	var d: Disaster = (load("res://data/disasters/kahramanmaras.tres") as Disaster).duplicate()
+	d.minigame = &"fit"
+	d.skin = load("res://data/skins/kahramanmaras_fit.tres")
+	return d

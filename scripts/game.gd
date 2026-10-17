@@ -8,6 +8,7 @@ const SCENES := {
 	&"fit": "res://scenes/minigames/fit.tscn",
 	&"connect": "res://scenes/minigames/connect.tscn",
 	&"beam": "res://scenes/minigames/beam.tscn",
+	&"fener": "res://scenes/minigames/fener.tscn",
 	&"fire": "res://scenes/minigames/fire.tscn",
 	&"result": "res://scenes/result.tscn",
 }

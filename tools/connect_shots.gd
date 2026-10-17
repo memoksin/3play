@@ -77,12 +77,14 @@ func _run() -> void:
 			s.rots[i] = solved[i]
 
 	# the wave runs in real time from here (particles, splashes and the lens splash need real frames)
-	await _run_to(s, 60.5)
-	await _shot("connect_hit")  # the lip curls over
-	await _run_to(s, 60.95)
-	await _shot("connect_plunge")  # the lip lands: spray and whitewater
-	await _run_to(s, 61.32)
-	await _shot("connect_break")  # the bore hits the beach and the lens
+	await _run_to(s, 58.0)
+	await _shot("connect_drawback")  # the sea pulled off the beach, the swell rising out of it
+	await _run_to(s, 59.75)
+	await _shot("connect_hit")  # the sea stands up over the reef
+	await _run_to(s, 60.3)
+	await _shot("connect_break")  # it breaks on the beach: spray, camera kick, lens splash
+	await _run_to(s, 61.4)
+	await _shot("connect_bore")  # the bore runs through the town
 
 	# flow: water running through the pipes, broken lines spilling
 	await _run_to(s, 60.0 + 0.6 + 1.5)

@@ -1,0 +1,59 @@
+class_name FenerSkin
+extends Resource
+## Rules and art of the Fener minigame (Kahramanmaras, #123). Rules run in scenes/minigames/fener.gd,
+## the map in scripts/fener_map.gd, the look in scenes/minigames/fener/. New figures: set a *_scene
+## field or a person's `figure`; null = a plain box.
+
+@export var people: Array[FenerPerson] = []
+## Prefix of every tr() key of the minigame: <prefix>START, <prefix>MOM ...
+@export var text_prefix := "KAHR_FENER_"
+
+@export_group("Time")
+@export var time_seconds := 300.0
+## Story clock shown in the HUD (between the 04:17 and 13:24 quakes, still dark): starts here and
+## runs story_minutes over the whole game.
+@export var story_from := "04:38"
+@export var story_minutes := 50.0
+
+@export_group("Player")
+## Metres per second.
+@export var walk_speed := 4.6
+## Each injury slows you by this fraction (floor: min_speed_k).
+@export var injury_slow := 0.04
+@export var min_speed_k := 0.75
+## Walking with a slow or treated person behind you caps your speed at this.
+@export var slow_speed := 3.8
+@export var rough_k := 0.8
+
+@export_group("Flashlight")
+@export var lamp_range := 15.0
+## Half angle of the light cone, radians.
+@export var lamp_half := 0.5
+## Radius you always see around you.
+@export var ambient := 3.2
+## Battery % per second while the light is on.
+@export var drain := 0.75
+## Battery % a spare battery gives.
+@export var spare := 55.0
+@export var low_battery := 30.0
+
+@export_group("Aftershocks")
+## First shock: random seconds in this range; then every `shock_every` seconds (random in range).
+@export var shock_first := Vector2(40.0, 50.0)
+@export var shock_every := Vector2(45.0, 55.0)
+@export var shock_warn := 2.5
+@export var shock_shake := 1.8
+## No new shock this close to the end.
+@export var shock_tail := 25.0
+
+@export_group("Art")
+## Rigged figures (origin at the feet, front +Z) with the clips of tools/models/meshy/README.md: the player needs
+## idle + run (walk), a rescuer idle, walk, run, dig and wave. *_speeds: ground speed (m/s) of each moving clip.
+@export var player_scene: PackedScene
+@export var player_speeds := {&"walk": 0.86, &"walk_follow": 0.53, &"run": 3.8}
+@export var rescuer_scene: PackedScene
+@export var rescuer_speeds := {&"walk": 0.86, &"run": 3.8}
+
+
+func text(suffix: String) -> String:
+	return TranslationServer.translate(text_prefix + suffix)
