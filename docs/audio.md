@@ -213,8 +213,8 @@ Rotate satellites to route the solar beam into collectors, waves, a countdown, "
 | BM3 | Beam | The beam runs through the satellites | Laser Beam Firing | SecureSubset | https://freesound.org/people/SecureSubset/sounds/783986/ | CC0 | chosen | About 0.75 s. Repeat it back to back so it becomes a continuous sound while the beam runs. |
 | BM4 | Collector charged, city saved | A collector is charged | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | chosen (same as FN7) | The same success sound as FN7 and FR6. |
 | BM5 | City lost | A city is lost | power-down-01.wav | newagesoup | https://freesound.org/people/newagesoup/sounds/348249/ | CC0 | chosen | Use the part from 1 s onward. |
-| BM6 | Wave warning | A wave is coming | | | | | later | Empty for now, to search later. |
-| BM7 | Wave hits | The wave hits | | | | | later | Empty for now. |
+| BM6 | Wave warning | A wave is coming (briefing card, countdown start) |  |  |  |  | no sound | Burcu: silent for now. The countdown beeps (BM8) already cover it. Decide after a test in the game. |
+| BM7 | Wave hits | The shot (the beam travels) |  |  |  |  | no sound | Burcu: silent. The shot is already BM3 (beam) with BM4 and BM5. Optional later: a short low boom on wave 4. |
 | BM8 | Countdown | The countdown runs | Bomb Countdown Beeps | snakebarney | https://freesound.org/people/snakebarney/sounds/138108/ | CC0 | chosen |  |
 
 ## Pitch film (trailer, about 50 s, silent render, sounds added by the team)
