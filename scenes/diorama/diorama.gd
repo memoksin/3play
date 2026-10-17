@@ -18,6 +18,10 @@ const CARD_TOP := 0.48
 ## Atmosphere (scene colours, before the set's filmic tonemap): `haze` is the fog / set-rim
 ## colour (on screen, haze() is what the globe fades into); `sky` the background's
 ## [top, bottom] screen gradient; `fog` the depth fog [begin, end] in metres from the camera;
+## `dive_fog` (optional, default 1): how much the fog depths follow the camera's distance during the
+## opening dive (0 = the set's own depths: the far sea edge must stay in the haze); `exposure` (optional, default 1): the tonemap exposure, to tone down a set that glares;
+## `sun` (optional, default 1): scales the set's directional lights; `sea` (optional): shader colours
+## for the Sea (`shallow`, `deep`); `ground` (optional): shader colours per ground node, e.g. the Beach;
 ## `plain`: the ground runs on to the horizon (the Sun's corona glows behind the set, so a
 ## ground edge in front of it would show) instead of ending in a rim.
 const SETS := {
@@ -30,8 +34,11 @@ const SETS := {
 	&"indian_ocean": {
 		"scene": "res://scenes/diorama/set_indian_ocean.tscn",
 		"from": 170.0, "to": 50.0, "radius": 46.0, "elevation": [30.0, 12.0], "lift": 8.0,
-		"haze": Color(0.72, 0.8, 0.87), "sky": [Color(0.67, 0.79, 0.9), Color(0.78, 0.84, 0.88)],
-		"fog": [100.0, 330.0],
+		"haze": Color(0.66, 0.77, 0.86), "sky": [Color(0.5, 0.68, 0.86), Color(0.72, 0.81, 0.88)],
+		"fog": [100.0, 330.0], "exposure": 0.7, "dive_fog": 0.0, "sun": 0.85,
+		"sea": {"shallow": Color(0.2, 0.46, 0.5), "deep": Color(0.05, 0.19, 0.37)},
+		"ground": {"Beach": {"base_color": Color(0.84, 0.72, 0.52), "alt_color": Color(0.76, 0.65, 0.47),
+				"wet_color": Color(0.37, 0.31, 0.25)}},
 	},
 	&"solar_flare": {
 		"scene": "res://scenes/diorama/set_solar_flare.tscn",
@@ -51,9 +58,10 @@ const DIVE := 1.4
 const DIVE_RISE := 1.6
 const DIVE_ELEVATION := 72.0
 const VEIL := 0.1
-const CLEAR := [0.1, 0.95]
-const SKY_CLEAR := [0.75, 1.5]
-const DIVE_FOG := [0.02, 0.45]
+const FIRST_FRAME := 1.0 / 30.0
+const CLEAR := [0.05, 0.45]
+const SKY_CLEAR := [0.3, 0.8]
+const DIVE_FOG := [0.02, 0.7]
 ## Background: soft vertical gradient on screen, whatever the camera pitch (SCREEN_UV is not
 ## usable in Compatibility sky shaders, so the screen height comes from EYEDIR and the camera).
 const SKY := """shader_type sky;
@@ -140,6 +148,12 @@ void fragment() {
 const SKIRT_Y := 0.25
 const PLAIN := 1200.0
 
+## Set by Game before the scene enters the tree: Game builds and draws the scene off-screen ahead of
+## time (frozen: no processing, no tweens, no timers) and moves it into the tree when the globe ends,
+## which runs _begin() then. Otherwise _begin() runs at the end of _ready().
+var preview := false
+var _built := false
+var _begun := false
 var t := 0.0
 var _done := false
 var _cfg: Dictionary
@@ -165,11 +179,18 @@ var _veil: ColorRect
 @onready var _safety: Timer = $Safety
 
 
+func _enter_tree() -> void:
+	if _built and not _begun:
+		_begin.call_deferred()  # the children are not in the tree yet
+
+
 func _ready() -> void:
+	if preview:
+		process_mode = Node.PROCESS_MODE_DISABLED
 	Game.ensure_disaster(&"citizen")
 	var d := Game.disaster
 	_cfg = SETS.get(d.id, SETS[&"kahramanmaras"])
-	_set = load(_cfg.scene).instantiate()
+	_set = Game.packed_scene(_cfg.scene).instantiate()
 	_atmosphere()
 	add_child(_set)
 	var focus := _set.get_node_or_null("Focus") as Node3D
@@ -180,6 +201,14 @@ func _ready() -> void:
 	var sea := _set.get_node_or_null("Sea") as MeshInstance3D
 	if sea:
 		_sea = sea.material_override
+		for k: String in _cfg.get("sea", {}):
+			_sea.set_shader_parameter(k, _cfg.sea[k])
+	for node_name: String in _cfg.get("ground", {}):
+		var ground_mat := (_set.get_node(node_name) as MeshInstance3D).material_override as ShaderMaterial
+		for k: String in _cfg.ground[node_name]:
+			ground_mat.set_shader_parameter(k, _cfg.ground[node_name][k])
+	for l in _set.find_children("*", "DirectionalLight3D", false, false):
+		(l as DirectionalLight3D).light_energy *= float(_cfg.get("sun", 1.0))
 	for n in _set.find_children("Float", "Node3D", true, false):
 		for b in n.get_children():
 			_floats.append(b)
@@ -190,8 +219,7 @@ func _ready() -> void:
 		_flare.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_flare.set_anchors_preset(Control.PRESET_FULL_RECT)
 		var fm := ShaderMaterial.new()
-		fm.shader = Shader.new()
-		fm.shader.code = FLARE_GLOW
+		fm.shader = Game.shader_for(FLARE_GLOW)
 		_flare.material = fm
 		_ui.add_child(_flare)
 		_ui.move_child(_flare, 0)
@@ -213,13 +241,31 @@ func _ready() -> void:
 		typing += l.length() / TextFx.TYPE_CPS + LINE_PAUSE
 	_intro.auto_advance = maxf(1.0, LENGTH - typing)
 	_intro.show_text(d.text("PLACE"), d.text("YEAR"), lines)
+	_built = true
+	if not preview:
+		_begin()
+
+
+## For Game's off-screen warm-up: with `all`, an orthographic camera sees the whole set (the real
+## one starts far out and culls part of it, which would leave those parts' shaders uncompiled).
+func warm_view(all: bool) -> void:
+	_camera.projection = Camera3D.PROJECTION_ORTHOGONAL if all else Camera3D.PROJECTION_PERSPECTIVE
+	_camera.size = 700.0
+
+
+## The scene goes live: the intro card runs, the flow can advance.
+func _begin() -> void:
+	_begun = true
+	preview = false
+	process_mode = Node.PROCESS_MODE_INHERIT
 	_intro.done.connect(_advance)
 	_safety.timeout.connect(_advance)
 	_safety.start(SAFETY)
 
 
 func _process(delta: float) -> void:
-	t += delta
+	# the frame that follows the scene switch carries its load time: it must not eat the dive
+	t += minf(delta, FIRST_FRAME) if t == 0.0 else delta
 	_pose(t)
 
 
@@ -234,12 +280,13 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## On-screen haze colour of a disaster's set (the globe fades into it before the cut).
 static func haze(id: StringName) -> Color:
-	return filmic(SETS.get(id, SETS[&"kahramanmaras"]).haze)
+	var cfg: Dictionary = SETS.get(id, SETS[&"kahramanmaras"])
+	return filmic(cfg.haze, cfg.get("exposure", 1.0))
 
 
-## `c` as the sets' Environment shows it: Godot's filmic tonemap (white 1, exposure 1) in linear.
-static func filmic(c: Color) -> Color:
-	var lin := c.srgb_to_linear()
+## `c` as the sets' Environment shows it: Godot's filmic tonemap (white 1, `exposure`) in linear.
+static func filmic(c: Color, exposure := 1.0) -> Color:
+	var lin := c.srgb_to_linear() * exposure
 	var w := _filmic(1.0)
 	return Color(_filmic(lin.r) / w, _filmic(lin.g) / w, _filmic(lin.b) / w).linear_to_srgb()
 
@@ -257,10 +304,10 @@ func _atmosphere() -> void:
 		return
 	_env = we.environment.duplicate()
 	we.environment = _env
+	_env.tonemap_exposure = _cfg.get("exposure", 1.0)
 	_sky = ShaderMaterial.new()
 	var mat := _sky
-	mat.shader = Shader.new()
-	mat.shader.code = SKY
+	mat.shader = Game.shader_for(SKY)
 	mat.set_shader_parameter(&"tan_half", tan(deg_to_rad(_camera.fov / 2.0)))
 	mat.set_shader_parameter(&"top", _cfg.sky[0])
 	mat.set_shader_parameter(&"bottom", _cfg.sky[1])
@@ -289,9 +336,8 @@ func _atmosphere() -> void:
 			(m as MeshInstance3D).material_override = sm
 			sm.set_shader_parameter(&"void_color", _cfg.haze)
 			if sm.shader.code.contains(RIM_FROM):
-				sm.shader = sm.shader.duplicate()
-				sm.shader.code = sm.shader.code.replace("shader_type spatial;", "shader_type spatial;\n" + RIM_UNIFORMS) \
-						.replace(RIM_FROM, RIM_TO).replace("SPECULAR = 0.2;", "SPECULAR = 0.2 * (1.0 - rim);")
+				sm.shader = Game.shader_for(sm.shader.code.replace("shader_type spatial;", "shader_type spatial;\n" + RIM_UNIFORMS) \
+						.replace(RIM_FROM, RIM_TO).replace("SPECULAR = 0.2;", "SPECULAR = 0.2 * (1.0 - rim);"))
 				for p in [&"top", &"bottom", &"haze"]:
 					sm.set_shader_parameter(&"rim_" + p, mat.get_shader_parameter(p))
 				_rims.append(sm)
@@ -319,8 +365,7 @@ func _atmosphere() -> void:
 					_corona_power.append(cm.get_shader_parameter(&"power"))
 			return
 		var sm := ShaderMaterial.new()
-		sm.shader = Shader.new()
-		sm.shader.code = SKIRT
+		sm.shader = Game.shader_for(SKIRT)
 		for p in [&"top", &"bottom", &"tan_half", &"haze"]:
 			sm.set_shader_parameter(p, mat.get_shader_parameter(p))
 		sm.set_shader_parameter(&"radius", gm.get_shader_parameter(&"radius"))
@@ -353,10 +398,16 @@ func _pose(time: float) -> void:
 		_veil.visible = time < VEIL
 	if _env:
 		# thick at the start (the set hidden in the haze), back to the set's depths as the dive lands
-		var w := 1.0 - smoothstep(CLEAR[0], CLEAR[1], time)
+		# (ease-out: the haze opens at once, then settles)
+		var w := pow(1.0 - clampf(inverse_lerp(CLEAR[0], CLEAR[1], time), 0.0, 1.0), 2.0)
+		# the set's depths scale with the camera's distance while it is still far out, so the set
+		# is already clear of fog when the haze opens and reaches its own depths as the dive lands
+		var far := 1.0 + maxf(0.0, r / float(_cfg.radius) - 1.0) * float(_cfg.get("dive_fog", 1.0))
+		var fb: float = _cfg.fog[0] * far
+		var fe: float = _cfg.fog[1] * far
 		# geometric blend: the fog front sweeps outward evenly instead of lingering near the set
-		_env.fog_depth_begin = _cfg.fog[0] * pow(DIVE_FOG[0] * r / _cfg.fog[0], w)
-		_env.fog_depth_end = _cfg.fog[1] * pow(DIVE_FOG[1] * r / _cfg.fog[1], w)
+		_env.fog_depth_begin = fb * pow(DIVE_FOG[0] * r / fb, w)
+		_env.fog_depth_end = fe * pow(DIVE_FOG[1] * r / fe, w)
 		# the background lags the fog: fogged geometry always sits in the colour it fades to
 		var bw := 1.0 - smoothstep(SKY_CLEAR[0], SKY_CLEAR[1], time)
 		_sky.set_shader_parameter(&"veil", bw)
@@ -393,8 +444,7 @@ func _pose(time: float) -> void:
 ## Snow on every upward face: an overlay that whitens surfaces facing the sky.
 func _cover_with_snow(node: Node) -> void:
 	var mat := ShaderMaterial.new()
-	mat.shader = Shader.new()
-	mat.shader.code = SNOW_COVER
+	mat.shader = Game.shader_for(SNOW_COVER)
 	for m in node.find_children("*", "MeshInstance3D", true, false):
 		if not m.is_in_group(&"no_snow"):
 			(m as MeshInstance3D).material_overlay = mat
