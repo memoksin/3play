@@ -43,6 +43,8 @@ func _run() -> void:
 	await process_frame
 	if only in ["", "splash"]:
 		await _shot("res://scenes/splash.tscn", "splash", 2.2)
+	if only in ["", "title"]:
+		await _shot("res://scenes/title.tscn", "title", 2.6)
 	if only in ["", "prologue"]:
 		for t in [1.5, 6.0, 16.5, 18.3]:
 			await _shot("res://scenes/prologue.tscn", "prologue_%04.1fs" % t, t)

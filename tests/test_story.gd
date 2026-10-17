@@ -50,10 +50,11 @@ func _run() -> void:
 	# Story round trip
 	game.settings_path = path
 	_check("unseen at first", not story.prologue_seen())
-	_check("after_splash -> prologue", story.after_splash() == PROLOGUE)
+	_check("after_splash -> title", story.after_splash() == story.TITLE)
+	_check("after_title -> prologue", story.after_title() == PROLOGUE)
 	story.mark_prologue_seen()
 	_check("seen after mark", story.prologue_seen())
-	_check("after_splash -> main", story.after_splash() == main_path)
+	_check("after_title -> main", story.after_title() == main_path)
 	DirAccess.remove_absolute(abs_path)
 	game.settings_path = ""
 	story.mark_prologue_seen()
@@ -113,6 +114,23 @@ func _run() -> void:
 	panel.open()
 	_check("replay hidden outside the main menu", not replay.visible)
 	panel.close()
+
+	# Title screen: Start follows the seen flag, Badges comes back to the title
+	change_scene_to_file(story.TITLE)
+	await _wait_scene(story.TITLE)
+	var title := current_scene
+	for n in ["Start", "Badges", "Credits", "Quit"]:
+		_check("title has %s" % n, title.find_child(n, true, false) is Button)
+	_check("title shows the version", title.get_node("%Version").text.contains(title.VERSION))
+	title.get_node("%Badges").pressed.emit()
+	await _wait_scene(story.BADGES)
+	current_scene.back()
+	await _wait_scene(story.TITLE)
+	_check("badges back returns to the title", current_scene.scene_file_path == story.TITLE)
+	_check("badges return is cleared", story.badges_return == "")
+	current_scene.get_node("%Start").pressed.emit()
+	await _wait_scene(main_path)
+	_check("title start (prologue seen) -> main", current_scene.scene_file_path == main_path)
 
 	DirAccess.remove_absolute(abs_path)
 	game.settings_path = ""

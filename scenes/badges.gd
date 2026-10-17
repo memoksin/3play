@@ -4,8 +4,8 @@ extends Control
 ## without the badge = its silhouette, the place, the best score and how to earn it. Never played = the
 ## silhouette and "unknown mission" (the place would spoil the future glitch). Esc or Back = menu.
 
-const CARD_W := 300
-const BADGE_SIZE := Vector2(250, 200)  # the 2.5D medallion (BadgeView) at 720p
+const CARD_W := 260
+const BADGE_SIZE := Vector2(220, 176)  # the 2.5D medallion (BadgeView) at 720p
 
 ## Card per disaster id, for tests: {card, badge, place, status, earned}.
 var cards := {}
@@ -82,4 +82,6 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func back() -> void:
-	get_tree().change_scene_to_file(Game.scene_path(&"main"))
+	var target: String = Story.badges_return if Story.badges_return != "" else Game.scene_path(&"main")
+	Story.badges_return = ""
+	get_tree().change_scene_to_file(target)
