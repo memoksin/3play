@@ -29,13 +29,13 @@ func _check(name: String, cond: bool) -> void:
 func _run() -> void:
 	var game := root.get_node("Game")
 	var packed: PackedScene = load("res://scenes/diorama.tscn")
-	for path in ["res://data/disasters/kahramanmaras.tres", "res://data/disasters/indian_ocean.tres", "solar_flare", "unknown"]:
+	for path in ["res://data/disasters/kahramanmaras.tres", "res://data/disasters/indian_ocean.tres", "solar_flare", "black_saturday", "unknown"]:
 		var d: Disaster
-		if path == "solar_flare":
+		if path == "solar_flare" or path == "black_saturday":
 			d = Disaster.new()
-			d.id = &"solar_flare"
-			d.key_prefix = "SF"
-			d.role = &"state"
+			d.id = StringName(path)
+			d.key_prefix = "SF" if path == "solar_flare" else "FIRE"
+			d.role = &"state" if path == "solar_flare" else &"citizen"
 		elif path == "unknown":
 			d = (load("res://data/disasters/kahramanmaras.tres") as Disaster).duplicate()
 			d.id = &"nowhere"
