@@ -33,12 +33,9 @@ const SETS := {
 	},
 	&"indian_ocean": {
 		"scene": "res://scenes/diorama/set_indian_ocean.tscn",
-		"from": 170.0, "to": 50.0, "radius": 46.0, "elevation": [30.0, 12.0], "lift": 8.0,
-		"haze": Color(0.66, 0.77, 0.86), "sky": [Color(0.5, 0.68, 0.86), Color(0.72, 0.81, 0.88)],
-		"fog": [100.0, 330.0], "exposure": 0.7, "dive_fog": 0.0, "sun": 0.85,
-		"sea": {"shallow": Color(0.2, 0.46, 0.5), "deep": Color(0.05, 0.19, 0.37)},
-		"ground": {"Beach": {"base_color": Color(0.84, 0.72, 0.52), "alt_color": Color(0.76, 0.65, 0.47),
-				"wet_color": Color(0.37, 0.31, 0.25)}},
+		"from": -38.0, "to": 12.0, "radius": 42.0, "elevation": [26.0, 20.0], "lift": 5.0,
+		"haze": Color(0.07, 0.16, 0.24), "sky": [Color(0.07, 0.16, 0.24), Color(0.07, 0.16, 0.24)],
+		"fog": [48.0, 140.0], "exposure": 0.8, "dive_fog": 0.0, "sun": 0.8,
 	},
 	&"solar_flare": {
 		"scene": "res://scenes/diorama/set_solar_flare.tscn",
