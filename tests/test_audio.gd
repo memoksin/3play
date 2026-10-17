@@ -385,6 +385,69 @@ func _run() -> void:
 	g.queue_free()
 	await process_frame
 
+	# 10. Second sound batch (#126): files exist, C10 on a locked pipe, Beam hook.
+	var fresh: Array[StringName] = [&"G9", &"D1", &"C10", &"FN1", &"FN2", &"FN3a", &"FN3b", &"FN4", &"FN5", &"FN6", &"FN7", &"FN8", &"FN9",
+			&"FR1", &"FR2", &"FR3", &"FR4", &"FR5", &"FR6", &"FR7.1", &"FR7.2", &"FR8", &"FR9", &"FR11a", &"FR11b",
+			&"BM1", &"BM2", &"BM3", &"BM4", &"BM5", &"BM8"]
+	for id in fresh:
+		_check("cue %s file exists" % id, audio.CUES.has(id) and ResourceLoader.exists(audio.ROOT + audio.CUES[id].path))
+	_check("loop cues: FN2 FR5 FR8 FR9 BM3 loop", [&"FN2", &"FR5", &"FR8", &"FR9", &"BM3"].all(func(id: StringName) -> bool: return audio.CUES[id].get("loop", false)))
+	audio.stop_all()
+	audio.clear_injected()
+	for id in [&"D2", &"C1", &"C2", &"C10"]:
+		audio.inject_stream(id, _wav(1.0))
+	game.disaster = load("res://data/disasters/indian_ocean.tres")
+	con = load("res://scenes/minigames/connect.tscn").instantiate()
+	con.submit = false
+	root.add_child(con)
+	await process_frame
+	con.time_scale = 0.0
+	audio.reset_history()
+	con.sound_event.emit(&"locked", 0)
+	_check("connect: locked line plays C10", _log() == ["play:C10"])
+	con.queue_free()
+	await process_frame
+
+	audio.stop_all()
+	audio.clear_injected()
+	for id in [&"BM1", &"BM2", &"BM3", &"BM4", &"BM5", &"BM8"]:
+		audio.inject_stream(id, _wav(1.0))
+	game.disaster = load("res://data/disasters/solar_flare.tres")
+	var bm: Control = load("res://scenes/minigames/beam.tscn").instantiate()
+	bm.submit = false
+	bm.time_scale = 0.0
+	root.add_child(bm)
+	await process_frame
+	_check("beam: ambience BM1 loops", "loop:BM1" in _log())
+	audio.reset_history()
+	bm.satellite_turned.emit(0, 1)
+	_check("beam: satellite_turned plays BM2", _log() == ["play:BM2"])
+	audio.reset_history()
+	bm.sound_event.emit(&"charge", 0)
+	_check("beam: charge plays BM4", _log() == ["play:BM4"])
+	audio.reset_history()
+	bm.sound_event.emit(&"fire", 0)
+	_check("beam: fire loops BM3", _log() == ["loop:BM3"] and audio.is_playing(&"BM3"))
+	bm.sound_event.emit(&"reflect", 0)
+	bm.sound_event.emit(&"split", 0)
+	bm.sound_event.emit(&"overheat", 0)
+	_check("beam: reflect, split, overheat are silent", _log() == ["loop:BM3"])
+	bm.sound_event.emit(&"wave_good", 0)
+	_check("beam: wave_good stops BM3, no BM5", not audio.is_playing(&"BM3") and not "play:BM5" in _log())
+	audio.reset_history()
+	bm.sound_event.emit(&"fire", 0)
+	bm.sound_event.emit(&"wave_bad", 0)
+	_check("beam: wave_bad stops BM3 and plays BM5", _log() == ["loop:BM3", "stop:BM3", "play:BM5"])
+	audio.reset_history()
+	bm.sound_event.emit(&"tick", 0)
+	bm.sound_event.emit(&"tick", 1)
+	_check("beam: tick plays BM8 each time", _log() == ["play:BM8", "play:BM8"])
+	bm.queue_free()
+	await process_frame
+	_check("beam: leaving stops BM1", "stop:BM1" in _log())
+	audio.stop_all()
+	audio.clear_injected()
+
 	await create_timer(0.5).timeout  # the audio thread releases the stopped streams; quitting at once leaks them (flaky)
 	print("OK" if ok else "FAILED")
 	quit(0 if ok else 1)

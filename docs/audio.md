@@ -29,7 +29,7 @@ For whoever has the game on their computer (memoksin or sudeimete).
 | G6 | Time counter | Clock or year counter runs while time advances | | | | | no sound | Test it silent first. If it feels empty, add a short digital tick later. |
 | G7 | Glitch and jump to the future | Globe glitches and jumps to year 3000+ (Tier 2) | Glitch Corruption | dotY21 | https://freesound.org/people/dotY21/sounds/348585/ | CC0 | in repo | Tier 2. |
 | G8 | Riser, main menu to globe | The player leaves the menu and the globe appears |  |  |  |  | keep current | No riser for now: the current transition sound (the G1 swell, which plays when the globe appears) stays as it is. |
-| G9 | Globe ambience | While the globe is shown (space or Earth feel) | Quasi Drone | bassimat | https://freesound.org/people/bassimat/sounds/840934/ | CC0 | chosen | About 10 min, calm evolving drone. Loop, quiet, under the G1 swell and G2 spin sound. Expected file: `globe/earth_ambience.ogg`. No water. |
+| G9 | Globe ambience | While the globe is shown (space or Earth feel) | Quasi Drone | bassimat | https://freesound.org/people/bassimat/sounds/840934/ | CC0 | in repo | About 10 min, calm evolving drone. Loop, quiet, under the G1 swell and G2 spin sound. Expected file: `globe/earth_ambience.ogg`. No water. |
 
 ### Still to do for the globe
 
@@ -67,7 +67,7 @@ The diorama is the 3D intro (about 10 s): the camera orbits a small low-poly set
 
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
-| D1 | Kahramanmaras ambience | Diorama of Kahramanmaras (snow, wind) | G56-21-Winter Wind.wav | craigsmith | https://freesound.org/people/craigsmith/sounds/438876/ | CC0 | chosen | Replaces the martypinso snowstorm. Also used for FN1. Needs a soft fade at the loop ends. |
+| D1 | Kahramanmaras ambience | Diorama of Kahramanmaras (snow, wind) | G56-21-Winter Wind.wav | craigsmith | https://freesound.org/people/craigsmith/sounds/438876/ | CC0 | in repo | Replaces the martypinso snowstorm. Also used for FN1. Needs a soft fade at the loop ends. |
 | D2 | Indian Ocean ambience | Diorama of the Indian Ocean (waves on the shore) | Waves crashing on shore | jamgypsy | https://freesound.org/people/jamgypsy/sounds/795445/ | CC0 | in repo | Only waves (no birds, boats or people per the description). About 2 min. Also used as the base layer of C1 (Connect), see issue #95. |
 | D3 | Solar flare 3026 ambience | Diorama of the solar flare scenario | Solar Storm.wav | Puniho | https://freesound.org/s/151098/ | CC0 | in repo | Space ambience. |
 | D4 | Intro text typing | The intro lines type on, one after another | Computer keyboard typing snippet mono [loop] | cabled_mess | https://freesound.org/people/cabled_mess/sounds/361639/ | CC0 | in repo | Same file as G3, so all typed text in the game sounds the same. |
@@ -122,7 +122,7 @@ Timeline from `scenes/minigames/connect.gd`: a calm bay until about 6 s before t
 | C7 | Broken line spills | The water spills out of a broken line | Big Water Splash | qubodup | https://freesound.org/people/qubodup/sounds/442773/ | CC0 | in repo (to test) | Repeat the same splash several times, each starting before the previous ends, to build an overflow. Try it, replace the sound if it feels fake. Issue #95. |
 | C8 | Village floods | The spilled water floods the village | | | | | no sound (test) | Leave empty and test the game. Add a sound only if it feels empty. |
 | C9 | Water drains | The water drains back (1.5 s) | wavesound.wav | transitking | https://freesound.org/people/transitking/sounds/11505/ | CC0 | in repo | Use only the first 4 s of the file (waves wash over the rock and drain back through a crack). |
-| C10 | Pipeline locks | A pipeline is correct and locks (no more rotation) | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | chosen (same as FN7) | The shared success sound (FN7, FR6, BM4, C10). Memoksin added a `locked` sound_event kind in audio.gd (#162); Sude adds the cue. |
+| C10 | Pipeline locks | A pipeline is correct and locks (no more rotation) | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | in repo | The shared success sound (FN7, FR6, BM4, C10). Memoksin added a `locked` sound_event kind in audio.gd (#162); Sude adds the cue. |
 
 ## Result card
 
@@ -168,16 +168,16 @@ Dark snowy street, a flashlight with a battery, a whistle that shows the directi
 
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
-| FN1 | Snowstorm ambience | Whole minigame | G56-21-Winter Wind.wav | craigsmith | https://freesound.org/people/craigsmith/sounds/438876/ | CC0 | chosen (same as D1) | The same new snowstorm sound as D1. |
-| FN2 | Footsteps | The player walks | Footsteps Dirt Gravel | PotatokingXII | https://freesound.org/people/PotatokingXII/sounds/352870/ | CC0 | chosen | Normal footsteps (not snow). About 35 s, trim to a clean stride loop. |
-| FN3 | Flashlight on and off | The flashlight is turned on or off | Flashlight Clicking On and Off | deleted_user_7146007 | https://freesound.org/people/deleted_user_7146007/sounds/383659/ | CC0 | chosen | 0 to 1 s = turning on. 2 to 3 s = turning off. |
-| FN4 | Battery low | The flashlight battery is running out | Electronic Timer Beeping 4X | Rudmer_Rotteveel | https://freesound.org/people/Rudmer_Rotteveel/sounds/536420/ | CC0 | chosen | The file already holds 4 beeps ("bip bip"). Play it when the battery is low. |
-| FN5 | Whistle | The whistle that shows the direction | metal whistle | strongbot | https://freesound.org/people/strongbot/sounds/568995/ | CC0 | chosen | First 3 seconds of the file. |
-| FN6 | Found a family member | The player reaches a family member | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen (reuse of F2) | First second of the file. |
-| FN7 | Success | The family reaches the assembly point | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | chosen | One success sound for FN7, FR6 and BM4. |
-| FN8 | Aftershock | The aftershock hits | Cracking Earthquake | uagadugu | https://freesound.org/people/uagadugu/sounds/222521/ | CC0 | chosen (reuse of F6) | Trim to the shaking. |
+| FN1 | Snowstorm ambience | Whole minigame | G56-21-Winter Wind.wav | craigsmith | https://freesound.org/people/craigsmith/sounds/438876/ | CC0 | in repo (not wired yet; same as D1) | The same new snowstorm sound as D1. |
+| FN2 | Footsteps | The player walks | Footsteps Dirt Gravel | PotatokingXII | https://freesound.org/people/PotatokingXII/sounds/352870/ | CC0 | in repo (not wired yet) | Normal footsteps (not snow). About 35 s, trim to a clean stride loop. |
+| FN3 | Flashlight on and off | The flashlight is turned on or off | Flashlight Clicking On and Off | deleted_user_7146007 | https://freesound.org/people/deleted_user_7146007/sounds/383659/ | CC0 | in repo (not wired yet) | 0 to 1 s = turning on. 2 to 3 s = turning off. |
+| FN4 | Battery low | The flashlight battery is running out | Electronic Timer Beeping 4X | Rudmer_Rotteveel | https://freesound.org/people/Rudmer_Rotteveel/sounds/536420/ | CC0 | in repo (not wired yet) | The file already holds 4 beeps ("bip bip"). Play it when the battery is low. |
+| FN5 | Whistle | The whistle that shows the direction | metal whistle | strongbot | https://freesound.org/people/strongbot/sounds/568995/ | CC0 | in repo (not wired yet) | First 3 seconds of the file. |
+| FN6 | Found a family member | The player reaches a family member | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | in repo (not wired yet; reuse of F2) | First second of the file. |
+| FN7 | Success | The family reaches the assembly point | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | in repo (not wired yet) | One success sound for FN7, FR6 and BM4. |
+| FN8 | Aftershock | The aftershock hits | Cracking Earthquake | uagadugu | https://freesound.org/people/uagadugu/sounds/222521/ | CC0 | in repo (not wired yet; reuse of F6) | Trim to the shaking. |
 | FN8a | Building creak | Aftershock warning and the start of the aftershock |  |  |  |  | not found | No usable building creak was found. Left empty for now, test the game without it. |
-| FN9 | Hurt | The player is hurt near a building | Hurt_C_07 | cabled_mess | https://freesound.org/people/cabled_mess/sounds/350926/ | CC0 | chosen | Retro-style hurt sound, about 0.2 s. |
+| FN9 | Hurt | The player is hurt near a building | Hurt_C_07 | cabled_mess | https://freesound.org/people/cabled_mess/sounds/350926/ | CC0 | in repo (not wired yet) | Retro-style hurt sound, about 0.2 s. |
 
 ## Fire (Black Saturday, kangaroo farm, first person)
 
@@ -185,18 +185,18 @@ Spec: `docs/minigames/fire-farm.md`.
 
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
-| FR1 | Fire and wind ambience | Whole minigame | digital wildfire mixed with WIND BLOWING.mp3 | vekoN + Podcapocalipsis | https://freesound.org/people/vekoN/sounds/537530/ and https://freesound.org/people/Podcapocalipsis/sounds/521696/ | CC0 (checked by Sude) | chosen | Option B approved by Burcu by ear. Wind seconds 9 to 14, 10 s seamless loop. Option A (craigsmith Large Fire Burning) dropped. |
-| FR2 | Footsteps | The player walks | Footsteps Dirt Gravel | PotatokingXII | https://freesound.org/people/PotatokingXII/sounds/352870/ | CC0 | chosen | Same as FN2. Trim to a clean stride loop. |
-| FR3 | Jump and landing on debris | The player jumps over the debris | Human Impact on Ground | alegemaate | https://freesound.org/people/alegemaate/sounds/364690/ | CC0 | chosen | Short clip of a person landing after a jump. |
-| FR4 | Pick up the knife | The player picks up the knife | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | chosen (reuse of F2) | First second of the file. |
-| FR5 | Cut the fence | The knife rubs on the fence | Sanding_a_Piece_Of_Wood.wav | CapsLok | https://freesound.org/people/CapsLok/sounds/204948/ | CC0 | chosen | Use the part from 16 s to 19 s of the file. Plays while the knife rubs the fence. |
-| FR6 | Success | A task is done (fence cut, flame out) | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | chosen (same as FN7) | The same success sound as FN7 and BM4. |
-| FR7.1 | Hose attached | The hose is put on the valve | Door Lock.wav | nebulasnails | https://freesound.org/people/nebulasnails/sounds/405534/ | CC0 | chosen | About 0.75 s door latch. |
-| FR7.2 | Valve turn | The valve is turned | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | chosen | Use 0:58 to 1:03 of the file. |
-| FR8 | Water spray | The hose sprays | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | chosen | Use 1:07 to 1:18 of the file (confirmed). |
-| FR9 | Small flame | The small flame burns | fire crackling, fireplace, BBQ | AlexanderChe | https://freesound.org/people/AlexanderChe/sounds/410404/ | CC0 (checked by Sude) | chosen | Alone, no wind mix. Small wood fire, about 16 s, loop. Fades out when the flame is put out (FR10). |
+| FR1 | Fire and wind ambience | Whole minigame | digital wildfire mixed with WIND BLOWING.mp3 | vekoN + Podcapocalipsis | https://freesound.org/people/vekoN/sounds/537530/ and https://freesound.org/people/Podcapocalipsis/sounds/521696/ | CC0 (checked by Sude) | in repo (not wired yet) | Option B approved by Burcu by ear. Wind seconds 9 to 14, 10 s seamless loop. Option A (craigsmith Large Fire Burning) dropped. |
+| FR2 | Footsteps | The player walks | Footsteps Dirt Gravel | PotatokingXII | https://freesound.org/people/PotatokingXII/sounds/352870/ | CC0 | in repo (not wired yet) | Same as FN2. Trim to a clean stride loop. |
+| FR3 | Jump and landing on debris | The player jumps over the debris | Human Impact on Ground | alegemaate | https://freesound.org/people/alegemaate/sounds/364690/ | CC0 | in repo (not wired yet) | Short clip of a person landing after a jump. |
+| FR4 | Pick up the knife | The player picks up the knife | Game Pickup | IENBA | https://freesound.org/people/IENBA/sounds/698768/ | CC0 | in repo (not wired yet; reuse of F2) | First second of the file. |
+| FR5 | Cut the fence | The knife rubs on the fence | Sanding_a_Piece_Of_Wood.wav | CapsLok | https://freesound.org/people/CapsLok/sounds/204948/ | CC0 | in repo (not wired yet) | Use the part from 16 s to 19 s of the file. Plays while the knife rubs the fence. |
+| FR6 | Success | A task is done (fence cut, flame out) | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | in repo (not wired yet; same as FN7) | The same success sound as FN7 and BM4. |
+| FR7.1 | Hose attached | The hose is put on the valve | Door Lock.wav | nebulasnails | https://freesound.org/people/nebulasnails/sounds/405534/ | CC0 | in repo (not wired yet) | About 0.75 s door latch. |
+| FR7.2 | Valve turn | The valve is turned | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | in repo (not wired yet) | Use 0:58 to 1:03 of the file. |
+| FR8 | Water spray | The hose sprays | Hose Sounds | JazzyBay | https://freesound.org/people/JazzyBay/sounds/435052/ | CC0 | in repo (not wired yet) | Use 1:07 to 1:18 of the file (confirmed). |
+| FR9 | Small flame | The small flame burns | fire crackling, fireplace, BBQ | AlexanderChe | https://freesound.org/people/AlexanderChe/sounds/410404/ | CC0 (checked by Sude) | in repo (not wired yet) | Alone, no wind mix. Small wood fire, about 16 s, loop. Fades out when the flame is put out (FR10). |
 | FR10 | Flame goes out | The flame is put out | | | | | decided | No separate sound: the flame sound (FR9) fades out. |
-| FR11 | Kangaroos run out | 2 to 3 kangaroos run through the gap | Horse Gallop Loop.wav + Footsteps Dirt 01 | DeadxCreed + aglinder | https://freesound.org/people/DeadxCreed/sounds/322448/ and https://freesound.org/people/aglinder/sounds/264469/ | CC0 (verify both) | chosen (to test) | No kangaroo hop CC0 exists. Layer both and play the pair 2 to 3 times, each starting before the previous ends. Replace if it sounds fake. |
+| FR11 | Kangaroos run out | 2 to 3 kangaroos run through the gap | Horse Gallop Loop.wav + Footsteps Dirt 01 | DeadxCreed + aglinder | https://freesound.org/people/DeadxCreed/sounds/322448/ and https://freesound.org/people/aglinder/sounds/264469/ | CC0 (verify both) | in repo (not wired yet; to test) | No kangaroo hop CC0 exists. Layer both and play the pair 2 to 3 times, each starting before the previous ends. Replace if it sounds fake. |
 | FR12 | Smoke (cough, breath) | The smoke thickens | | | | | no sound | Not needed. |
 
 ## Beam network (Isin Agi, solar flare 3026, #124)
@@ -205,14 +205,14 @@ Rotate satellites to route the solar beam into collectors, waves, a countdown, "
 
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
-| BM1 | Space ambience | Whole minigame | Solar Storm.wav | Puniho | https://freesound.org/s/151098/ | CC0 | chosen (reuse of D3) | |
-| BM2 | Rotate a satellite | The player rotates a satellite | Servo motor | Burningmonkey | https://freesound.org/people/Burningmonkey/sounds/322021/ | CC0 | chosen | Use seconds 3 to 4 of the file. |
-| BM3 | Beam | The beam runs through the satellites | Laser Beam Firing | SecureSubset | https://freesound.org/people/SecureSubset/sounds/783986/ | CC0 | chosen | About 0.75 s. Repeat it back to back so it becomes a continuous sound while the beam runs. |
-| BM4 | Collector charged, city saved | A collector is charged | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | chosen (same as FN7) | The same success sound as FN7 and FR6. |
-| BM5 | City lost | A city is lost | power-down-01.wav | newagesoup | https://freesound.org/people/newagesoup/sounds/348249/ | CC0 | chosen | Use the part from 1 s onward. |
+| BM1 | Space ambience | Whole minigame | Solar Storm.wav | Puniho | https://freesound.org/s/151098/ | CC0 | in repo (reuse of D3) | |
+| BM2 | Rotate a satellite | The player rotates a satellite | Servo motor | Burningmonkey | https://freesound.org/people/Burningmonkey/sounds/322021/ | CC0 | in repo | Use seconds 3 to 4 of the file. |
+| BM3 | Beam | The beam runs through the satellites | Laser Beam Firing | SecureSubset | https://freesound.org/people/SecureSubset/sounds/783986/ | CC0 | in repo | About 0.75 s. Repeat it back to back so it becomes a continuous sound while the beam runs. |
+| BM4 | Collector charged, city saved | A collector is charged | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | in repo (same as FN7) | The same success sound as FN7 and FR6. |
+| BM5 | City lost | A city is lost | power-down-01.wav | newagesoup | https://freesound.org/people/newagesoup/sounds/348249/ | CC0 | in repo | Use the part from 1 s onward. |
 | BM6 | Wave warning | A wave is coming | | | | | later | Empty for now, to search later. |
 | BM7 | Wave hits | The wave hits | | | | | later | Empty for now. |
-| BM8 | Countdown | The countdown runs | Bomb Countdown Beeps | snakebarney | https://freesound.org/people/snakebarney/sounds/138108/ | CC0 | chosen |  |
+| BM8 | Countdown | The countdown runs | Bomb Countdown Beeps | snakebarney | https://freesound.org/people/snakebarney/sounds/138108/ | CC0 | in repo |  |
 
 ## Pitch film (trailer, about 50 s, silent render, sounds added by the team)
 
