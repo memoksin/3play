@@ -126,6 +126,7 @@ func _run() -> void:
 	await _settle()
 	_check("gear opens the panel", panel.visible)
 	_check("language row visible on the main menu", panel.get_node("%LangRow").visible)
+	_check("Quit in Settings on the main menu", panel.get_node("%Quit").visible and panel.get_node("%Quit").pressed.is_connected(quit))
 	_check("look rows hidden on the main menu", not panel.get_node("%SensRow").visible and not panel.get_node("%InvertY").visible)
 	_esc()
 	await _settle()
@@ -143,6 +144,7 @@ func _run() -> void:
 	await _settle()
 	_check("Settings button opens the panel", panel.visible)
 	_check("language row visible in a run", panel.get_node("%LangRow").visible)
+	_check("Quit in Settings in a run", panel.get_node("%Quit").visible)
 	var scene_before := current_scene
 	var other := "en" if TranslationServer.get_locale().substr(0, 2) == "tr" else "tr"
 	panel.get_node("%Langs/Box/" + other.to_upper()).pressed.emit()

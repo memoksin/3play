@@ -154,6 +154,20 @@ func _run() -> void:
 	current_scene.get_node("%Start").pressed.emit()
 	await _wait_scene(main_path)
 	_check("title start (prologue seen) -> main", current_scene.scene_file_path == main_path)
+	# the role select goes back to the title with Back and with Esc
+	current_scene.get_node("%Back").pressed.emit()
+	await _wait_scene(story.TITLE)
+	_check("role select Back -> title", current_scene.scene_file_path == story.TITLE)
+	current_scene.get_node("%Start").pressed.emit()
+	await _wait_scene(main_path)
+	var esc := InputEventAction.new()
+	esc.action = &"ui_cancel"
+	esc.pressed = true
+	Input.parse_input_event(esc)
+	await _wait_scene(story.TITLE)
+	_check("role select Esc -> title", current_scene.scene_file_path == story.TITLE)
+	current_scene.get_node("%Start").pressed.emit()
+	await _wait_scene(main_path)
 
 	DirAccess.remove_absolute(abs_path)
 	game.settings_path = ""
