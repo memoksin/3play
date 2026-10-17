@@ -17,7 +17,8 @@ Snowing, the grid is down. Your family and neighbours are scattered in the dark;
 - Darkness is real light: low moon and ambient, warm practicals (camp fires, tents, the bakery oven, work lights,
   beacons) and the torch (shadowed spot: walls cut it). Gameplay "seen" = torch cone with a clear line of sight
   (`FenerMap` solids >= 2.2 m block it) or the 2.4 m circle around you.
-- Time 5:00. Battery drains while the torch is on (about 130 s); two spare batteries lie in the map.
+- Time 5:00. Battery drains while the torch is on (about 130 s); two spare batteries are handed out in the rescue crew zones (only to a torch below `low_battery`).
+- Supplies are handed out by walking into a rescue crew zone (the orange ring on the ground, the same area trapped people are reported to), not by walking up to a rescuer, and only while needed: the kit while an injured person waits and you hold none, the blanket likewise for a cold person, a battery when the torch is low. Nothing is out otherwise and the errand banner / guide row / arrow only ever name what is needed and not in hand.
 - Beginner-friendly tuning (aim: a careful first run saves 4-5 of 6): slower aftershocks (first one after 40 s, 2.5 s warning),
   4 hidden holes, long invulnerability after a hit, the light finds people 1.3 m beyond their body, crews and the
   assembly area count a little beyond their edge, followers hurry to catch up (and snap back after 22 m).
@@ -32,8 +33,8 @@ Snowing, the grid is down. Your family and neighbours are scattered in the dark;
 | Mom, Elif (sister) | LOST | whistle | found -> follows |
 | Grandpa | SLOW | whistle | follows, everyone walks slower |
 | Mrs. Ayse | TRAPPED | taps | under rubble: do not dig, report her to a rescue crew (NW crew or the AFAD tent) |
-| Mr. Hasan | INJURED | "help!" | first aid kit (pharmacy or the crew), then follows slowly |
-| Little Can | COLD | "so cold..." | blanket, then follows |
+| Mr. Hasan | INJURED | "help!" | first aid kit (handed out in the rescue crew zone once he is found), then follows slowly |
+| Little Can | COLD | "so cold..." | blanket (handed out in a rescue crew zone once Can is found; the HUD points to the zone), then follows |
 
 Followers are safe once you walk into the assembly area with them. Score = safe + reported, of 6.
 Spots are random per run from `FenerMap.SPOTS` (each group in several regions).
@@ -43,6 +44,19 @@ Spots are random per run from `FenerMap.SPOTS` (each group in several regions).
 Four regions around a crossroads: collapsed apartments with the rescue crew (NW), market street (NE), old houses (SW),
 tent camp with the assembly area (SE). A toppled block lies across the north cross street, a fallen pole across the
 south one. Top-down check: `godot --headless --path . -s res://tools/fener_map_png.gd` -> `export/shots/fener_map.png`.
+
+## Walking and collisions
+
+The player is a circle (radius 0.35 m) on the ground plane. What stops him is `FenerMap.WALK`: per model, the part
+that is higher than a step (0.4 m) and lower than nothing a person walks under (1.8 m), measured from the mesh
+(`scripts/fener_footprint.gd`): boxes at the exact yaw of the place, discs for trunks and barrels. Stones, bricks,
+flat debris and rubble aprons are stepped over; eaves, balconies and branches hang overhead. `FenerMap.FOOT` stays
+the mass of a model for the light, the fade, the aftershock risk and the rescuers' routes.
+Movement is in steps of at most 12 cm, each pushed out of what it hit (`fener.gd` `_try_move`): he slides along
+walls and round corners and trunks; buildings, rubble piles, vehicles and the map edge still stop him.
+After changing a model or a placement, re-measure: `godot --headless --path . -s res://tools/fener_footprints.gd`
+(`-- gen=1` prints a first WALK table), then `tests/test_fener_walk.gd`. Top-down check of blockers vs models:
+`godot --path . -s res://tools/fener_coll_shots.gd -- map=1` (or `-- models=a,b`) -> `export/shots/fener_coll_*.png`.
 
 ## Hazards (all warn before they hurt)
 
@@ -110,5 +124,6 @@ Ambience: FN1 (same as D1) for the whole scene.
 ## Tools
 
 - Tests: `godot --headless --path . -s res://tests/test_fener.gd` (bot plays 4 full runs, every mechanic, the figures' clips and the crew run).
+- Walking: `godot --headless --path . -s res://tests/test_fener_walk.gd` (shapes vs meshes, walks round every blocker, slides, edges).
 - Frames: `godot --path . -s res://tools/fener_shots.gd` -> `export/shots/fener_*.png`.
 - Frame cost: `godot --path . -s res://tools/perf.gd -- --only=fener`.
