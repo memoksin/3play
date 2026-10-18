@@ -157,6 +157,7 @@ func _locks(events: Array) -> Array:
 
 func _new_scene() -> Control:
 	var s: Control = load("res://scenes/minigames/connect.tscn").instantiate()
+	s.intro = false
 	root.add_child(s)
 	return s
 

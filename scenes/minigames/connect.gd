@@ -61,6 +61,8 @@ var submit := true
 var saved_count := -1
 ## The puzzle was solved and the clock was cut to RUSH_TIME.
 var rushed := false
+## The how-to-play card is open: time stands still and the board takes no clicks. start_play() closes it.
+var intro := true
 
 var skin: ConnectSkin
 var _hit := false
@@ -82,6 +84,7 @@ var _next_event := 0
 var _rush_at := 0.0  # game time of the rush
 var _rush: Label
 var _sea_span := 60.0  # the original timer: the sea rises on this scale
+var _intro: Control
 
 @onready var _timer: Label = $Hud/Box/Row/Timer
 @onready var _bar: Control = $Hud/Box/Bar
@@ -109,10 +112,13 @@ func _ready() -> void:
 	_make_rush_label()
 	_update_hud()
 	_world.show_state(self)
+	if intro:
+		_build_intro()
 
 
 func _process(delta: float) -> void:
-	advance(delta * time_scale)
+	if not intro:
+		advance(delta * time_scale)
 	_world.show_state(self)  # every frame, also while time stands still (hover, turns, opening glide)
 	queue_redraw()  # the names follow the camera
 
@@ -357,7 +363,7 @@ func cell_center(c: Vector2i) -> Vector2:
 
 
 func _gui_input(event: InputEvent) -> void:
-	if locked:
+	if locked or intro:
 		return
 	if event is InputEventMouseMotion:
 		var c := _cell_at(event.position)
@@ -435,3 +441,323 @@ func _draw_names() -> void:
 		var col := Palette.DANGER if flooded else Palette.WHITE
 		draw_string_outline(font, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_SIZE, 6, Palette.BG)
 		draw_string(font, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_SIZE, col)
+
+
+# --- how-to-play card ----------------------------------------------------------------
+# Same look as the Solar Flare (Beam) title card: kicker, one-line title, the demo, one short rule line, one primary button.
+
+const SUN := Color("ffb347")
+
+
+## Closes the card (short fade) and starts game time from 0.
+func start_play() -> void:
+	if not intro:
+		return
+	intro = false
+	if _intro == null:
+		return
+	var card := _intro
+	_intro = null
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var tw := card.create_tween()
+	tw.tween_property(card, "modulate:a", 0.0, 0.2)
+	tw.tween_callback(func() -> void:
+		card.visible = false
+		card.queue_free())
+
+
+func _input(event: InputEvent) -> void:
+	if intro and _intro != null and event is InputEventKey and event.pressed and not event.echo \
+			and event.keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE]:
+		get_viewport().set_input_as_handled()
+		start_play()
+
+
+func _build_intro() -> void:
+	_intro = Control.new()
+	_intro.name = "Intro"
+	_intro.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_intro.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_intro)
+	var scrim := ColorRect.new()
+	scrim.color = Color(0.01, 0.02, 0.05, 0.55)
+	scrim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_intro.add_child(scrim)
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_intro.add_child(center)
+	var card := PanelContainer.new()
+	card.name = "Card"
+	card.custom_minimum_size = Vector2(620, 0)
+	# the same card as Fener's controls card (#252): the theme panel, opaque
+	var sb := (card.get_theme_stylebox(&"panel") as StyleBoxFlat).duplicate() as StyleBoxFlat
+	sb.bg_color = Color(0.05, 0.06, 0.1)
+	sb.content_margin_left = 40
+	sb.content_margin_right = 40
+	sb.content_margin_top = 28
+	sb.content_margin_bottom = 36
+	card.add_theme_stylebox_override(&"panel", sb)
+	center.add_child(card)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override(&"separation", 18)
+	card.add_child(box)
+
+	var title := Label.new()
+	title.name = "Title"
+	title.theme_type_variation = &"HudHeader"
+	title.text = TextFx.upper(tr("IO_HOWTO_TITLE"))
+	title.add_theme_font_size_override(&"font_size", 44)
+	box.add_child(title)
+	var demo := IntroDemo.new()
+	demo.name = "Demo"
+	demo.custom_minimum_size = Vector2(360, 156)
+	demo.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	demo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(demo)
+	var rule := Label.new()
+	rule.name = "Rule"
+	rule.text = tr("IO_HOWTO_RULE").replace(". ", ".\n")  # one sentence per line
+	rule.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rule.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	rule.theme_type_variation = &"HudData"
+	rule.add_theme_font_size_override(&"font_size", 32)
+	rule.add_theme_constant_override(&"line_spacing", 6)
+	box.add_child(rule)
+	var row := HBoxContainer.new()
+	row.name = "Buttons"
+	row.alignment = BoxContainer.ALIGNMENT_END
+	box.add_child(row)
+	var go := Button.new()
+	go.name = "Go"
+	go.text = TextFx.upper(tr("IO_HOWTO_START"))
+	go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	go.pressed.connect(start_play)
+	row.add_child(go)
+	go.grab_focus.call_deferred()
+
+	card.resized.connect(func() -> void: card.pivot_offset = card.size / 2.0)
+	card.scale = Vector2(0.97, 0.97)
+	card.modulate.a = 0.0
+	var tw := card.create_tween().set_parallel()
+	tw.tween_property(card, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(card, "modulate:a", 1.0, 0.25)
+
+
+## The looping demo in the game's own 3D art: sea inlet "1" -> pipe -> wrong pipe (clicked, turns) ->
+## basin "1" under a house; the water runs through like the game's flow and the basin glows. Own 3D
+## world in a SubViewport (transparent: the card shows through), same models, water shader, sun and
+## ambient as connect_world.gd. Runs on its own clock (t) and only while it is in the tree, so closing
+## the card ends it. The "1" badges and the hand are a 2D overlay.
+class IntroDemo extends Control:
+	const W := preload("res://scenes/minigames/connect/connect_world.gd")
+	const LOOP := 4.2
+	const CLICK := 0.3  # the hand presses the wrong pipe; the turn starts 0.05 s later
+	const TURN := 0.3  # the game's turn ease, slowed down so it reads
+	const FLOW0 := 0.7  # the water enters the inlet
+	const STEP := 0.3  # one tile fills (FLOW_STEP)
+	const RISE := 0.9  # the basin fills
+	const FADE := 0.4  # the water fades out before the loop starts again
+	const X0 := -3.0  # centre of the first tile (tiles are W.T = 2 m)
+	const OK := Color("4dffb8")
+	const SEA := Color("4fb3ff")
+	const WATER := Color(0.16, 0.74, 0.82)  # fluid.gdshader `water`
+	const GREEN := Color(0.25, 1.0, 0.55)
+	var t := 0.0
+	var _vp: SubViewport
+	var _cam: Camera3D
+	var _over: Control
+	var _wrong: Node3D
+	var _flow: Array[ShaderMaterial] = []  # inlet, pipe, wrong pipe
+	var _stub: ShaderMaterial
+	var _basin: MeshInstance3D
+	var _basin_mat: ShaderMaterial
+	var _pour: MeshInstance3D
+	var _glow_light: OmniLight3D
+
+	func _ready() -> void:
+		var box := SubViewportContainer.new()
+		box.stretch = true
+		box.set_anchors_preset(Control.PRESET_FULL_RECT)
+		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(box)
+		_vp = SubViewport.new()
+		_vp.own_world_3d = true
+		_vp.transparent_bg = true
+		_vp.msaa_3d = Viewport.MSAA_4X
+		_vp.gui_disable_input = true
+		box.add_child(_vp)
+		_build()
+		_over = Control.new()
+		_over.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_over.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_over.draw.connect(_draw_over)
+		add_child(_over)
+		apply()
+
+	func _process(delta: float) -> void:
+		t = fmod(t + delta, LOOP)
+		apply()
+
+	func _build() -> void:
+		var d: Disaster = Game.disaster if Game.disaster and Game.disaster.atmosphere else load(W.DISASTER)
+		var atm := d.atmosphere
+		var sun := DirectionalLight3D.new()
+		sun.shadow_enabled = true
+		sun.shadow_blur = 1.2
+		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
+		sun.directional_shadow_max_distance = 30.0
+		_vp.add_child(sun)
+		atm.light(sun)  # this world is the slab frame: the same light on the tiles as in the game
+		var env := Environment.new()
+		env.background_mode = Environment.BG_CLEAR_COLOR
+		atm.environment(env)
+		env.fog_enabled = false
+		env.glow_enabled = true
+		env.glow_intensity = 0.9
+		env.glow_bloom = 0.04
+		env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SCREEN
+		env.glow_hdr_threshold = 0.9
+		var we := WorldEnvironment.new()
+		we.environment = env
+		_vp.add_child(we)
+		_cam = Camera3D.new()
+		_cam.fov = W.FOV
+		_cam.rotation_degrees.x = -6.0
+		_cam.position = Vector3(0.0, 0.85, W.CUT_Z) + _cam.basis.z * 8.9
+		_vp.add_child(_cam)
+		var kinds := ["inlet", "straight", "straight", "basin"]
+		for i in 4:
+			var pivot := Node3D.new()
+			pivot.position = Vector3(X0 + W.T * i, 0.0, 0.0)
+			_vp.add_child(pivot)
+			pivot.add_child((W.TILE_SCENES[kinds[i]] as PackedScene).instantiate())
+			match i:
+				0:
+					var pts: Array[Vector2] = []
+					for k in 13:
+						pts.append(Vector2(-1.25 + 2.25 * k / 12.0, 0.0))
+					_flow.append(W._pipe_water(pivot, pts, 1.5))
+				1, 2:
+					var pts: Array[Vector2] = []
+					for k in 17:
+						pts.append(Vector2(-1.0 + 2.0 * k / 16.0, 0.0))
+					_flow.append(W._pipe_water(pivot, pts))
+					if i == 2:
+						_wrong = pivot
+				3:
+					var stub: Array[Vector2] = []
+					for k in 5:
+						stub.append(Vector2(-1.0 + 0.4 * k / 4.0, 0.0))
+					_stub = W._pipe_water(pivot, stub)
+					_basin_mat = W._fluid_mat(1)
+					var bx := BoxMesh.new()
+					bx.size = Vector3(1.46, 1.0, 0.86)
+					bx.subdivide_width = 14
+					bx.subdivide_depth = 4
+					_basin = W._mesh_node(bx, _basin_mat, pivot)
+					_basin.position = Vector3(0.12, -0.86, 0.47)
+					_basin.custom_aabb = AABB(Vector3(-0.8, -0.6, -0.5), Vector3(1.6, 2.4, 1.0))
+					_pour = W._mesh_node(W._strip_mesh([Vector3(-0.6, -0.02, 0.72), Vector3(-0.5, -0.4, 0.72), Vector3(-0.44, -0.86, 0.72)], 0.24), W._fluid_mat(2), pivot)
+					_glow_light = OmniLight3D.new()
+					_glow_light.light_color = OK
+					_glow_light.omni_range = 3.5
+					_glow_light.position = Vector3(0.1, -0.3, 1.4)
+					pivot.add_child(_glow_light)
+		# the village the basin saves, on a strip of the slab top
+		var top := X0 + W.T * 3.0
+		for layer in [[Color(0.36, 0.24, 0.15), 0.26, 1.09], [Color(0.3, 0.46, 0.22), 0.08, 1.26]]:  # earth, grass
+			var ground := MeshInstance3D.new()
+			var gm := BoxMesh.new()
+			gm.size = Vector3(3.0, layer[1], 2.6)
+			ground.mesh = gm
+			var mat := StandardMaterial3D.new()
+			mat.albedo_color = layer[0]
+			ground.material_override = mat
+			ground.position = Vector3(top - 0.2, layer[2], -0.9)
+			_vp.add_child(ground)
+		var house: Node3D = load(W.P + "aceh_house_a.glb").instantiate()
+		house.scale = Vector3.ONE * 0.4
+		house.position = Vector3(top, 1.3, -1.0)
+		house.rotation_degrees.y = 22.0  # front + left side, like the houses in the game
+		_vp.add_child(house)
+
+	## Puts the demo at its time t (also used by the art shots).
+	func apply() -> void:
+		var k := clampf((t - CLICK - 0.05) / TURN, 0.0, 1.0)
+		var left := 1.0 - k
+		var pop := sin(PI * k) if k > 0.0 and k < 1.0 else 0.0
+		var hover := 0.32 if t > 0.1 and t < CLICK + 0.05 else 0.0
+		_wrong.rotation.z = -(4.0 - left * left * left) * PI / 2.0  # starts at 3 turns (upright): wrong
+		_wrong.position.z = maxf(hover, 0.45 * pop)
+		_wrong.scale = Vector3.ONE * (1.0 + 0.12 * pop)
+		var flow := t - FLOW0
+		var fade := 1.0 - clampf((t - (LOOP - FADE)) / FADE, 0.0, 1.0)
+		for i in _flow.size():
+			_flow[i].set_shader_parameter(&"fill", clampf((flow - i * STEP) / STEP, 0.0, 1.0))
+			_flow[i].set_shader_parameter(&"alpha_mul", fade)
+		var d := flow - 3.0 * STEP
+		_stub.set_shader_parameter(&"fill", clampf(d / (STEP * 0.5), 0.0, 1.0))
+		_stub.set_shader_parameter(&"alpha_mul", fade)
+		var lv := clampf((d - STEP * 0.5) / RISE, 0.0, 1.0)
+		lv = lv * lv * (3.0 - 2.0 * lv)
+		var g := glow()
+		var metres := lv * 1.55
+		_basin.visible = lv > 0.0
+		_basin_mat.set_shader_parameter(&"level", maxf(metres, 0.02))
+		_basin_mat.set_shader_parameter(&"slosh", 1.0 if lv < 1.0 else exp(-(d - STEP * 0.5 - RISE) * 1.5))
+		_basin_mat.set_shader_parameter(&"water", WATER.lerp(GREEN, g))
+		_basin_mat.set_shader_parameter(&"glow", 0.45 + 0.3 * lv + 0.7 * g)
+		_basin_mat.set_shader_parameter(&"alpha_mul", fade)
+		var surface := -0.86 + metres
+		_pour.visible = d >= STEP * 0.5 and surface < -0.05 and fade >= 1.0
+		(_pour.material_override as ShaderMaterial).set_shader_parameter(&"fill", clampf(-surface / 0.86, 0.0, 1.0) * clampf((d - STEP * 0.5) / 0.25 + 0.2, 0.0, 1.0))
+		_glow_light.light_energy = 2.5 * g * (0.85 + 0.15 * sin(t * 9.0))
+		_glow_light.visible = g > 0.0
+		if _over:
+			_over.queue_redraw()
+
+	## 0..1: the basin is full and lights up green.
+	func glow() -> float:
+		var full := FLOW0 + 3.5 * STEP + RISE
+		return clampf((t - full + 0.15) / 0.3, 0.0, 1.0) * (1.0 - clampf((t - (LOOP - FADE)) / FADE, 0.0, 1.0))
+
+	## Overlay point of a point in the 3D demo world.
+	func _at(p: Vector3) -> Vector2:
+		var vs := Vector2(_vp.size)
+		if vs.x < 1.0:
+			return Vector2.ZERO
+		return _cam.unproject_position(p) * (_over.size / vs)
+
+	func _draw_over() -> void:
+		var font := get_theme_font(&"font", &"Label")
+		var g := glow()
+		_badge(font, _at(Vector3(X0 - 0.55, 0.62, W.CUT_Z)), SEA, 0.0)
+		_badge(font, _at(Vector3(X0 + W.T * 3.0 + 0.62, 0.62, W.CUT_Z)), OK, g)
+		# the hand: comes in, presses the wrong pipe, leaves
+		var target := _at(Vector3(X0 + W.T * 2.0, -0.1, W.CUT_Z))
+		var come := smoothstep(0.0, 1.0, clampf(t / 0.26, 0.0, 1.0))
+		var away := smoothstep(0.0, 1.0, clampf((t - 0.7) / 0.3, 0.0, 1.0))
+		if t > CLICK - 0.02 and t < CLICK + 0.55:
+			var r := clampf((t - CLICK + 0.02) / 0.55, 0.0, 1.0)
+			_over.draw_arc(target, 10.0 + 30.0 * r, 0.0, TAU, 40, Color(1, 1, 1, 0.9 * (1.0 - r)), 3.0, true)
+			_over.draw_circle(target, 9.0 * (1.0 - r), Color(1, 1, 1, 0.5 * (1.0 - r)))
+		if away < 1.0:
+			var a := 1.0 - away
+			var tip := target + Vector2(52.0, 46.0) * (1.0 - come) + Vector2(40.0, 40.0) * away
+			var sc := 1.15 if (t > CLICK - 0.03 and t < CLICK + 0.15) else 1.3
+			var shape := [Vector2(0, 0), Vector2(0, 26), Vector2(7, 20), Vector2(12, 31), Vector2(17, 29), Vector2(12, 18), Vector2(21, 18)]
+			var poly := PackedVector2Array()
+			for q: Vector2 in shape:
+				poly.append(tip + q * sc)
+			_over.draw_colored_polygon(poly, Color(1, 1, 1, a))
+			poly.append(poly[0])
+			_over.draw_polyline(poly, Color(0.03, 0.05, 0.1, a), 2.0, true)
+
+	func _badge(font: Font, c: Vector2, col: Color, lit: float) -> void:
+		if lit > 0.0:
+			_over.draw_circle(c, 22.0 + 4.0 * sin(t * 9.0), Color(col, 0.3 * lit))
+		_over.draw_circle(c, 15.0, Color(0.03, 0.05, 0.1, 0.92).lerp(Color(col, 0.95), lit * 0.8))
+		_over.draw_arc(c, 15.0, 0.0, TAU, 28, col, 2.5, true)
+		_over.draw_string(font, c + Vector2(-10.0, 8.0), "1", HORIZONTAL_ALIGNMENT_CENTER, 20.0, 24, Color.WHITE)

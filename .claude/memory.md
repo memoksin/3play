@@ -26,3 +26,5 @@ Shared by every agent. Loaded via CLAUDE.md. Hard cap 40 lines; one line per fac
 - After editing `locale/strings.csv`, run `godot --headless --path . --import` then `godot --headless --path . -s tools/audit_strings.gd` (exit 1 on a missing key, empty text, duplicate or %s mismatch). Always append a row on a new line: the file has no final newline.
 - Fener lights (#123): Compatibility lights a mesh with 8 omni + 8 spot max, paired by AABB (`scripts/fener_lights.gd`); a new light or big mesh must keep `tests/test_fener_lights.gd` green (ground splits itself into tiles, the slab is 8 m tiles via `tile=` in `tools/models/lib.py`).
 - Fener collision (#123): the player is blocked by `FenerMap.WALK` (per-model body-height shapes measured from the mesh, exact yaw), not by `FOOT` (mass for light/fade/shock/routes). New or moved model: `tools/fener_footprints.gd` (`gen=1` drafts the entry), keep `tests/test_fener_walk.gd` green.
+
+- Connect how-to card: `connect.gd` opens it at `_ready` (`intro := true`) and time + clicks wait until `start_play()`. A test/tool that drives connect.tscn right away sets `s.intro = false` before `add_child` (or calls `start_play()`).

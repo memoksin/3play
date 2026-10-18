@@ -44,6 +44,7 @@ func _run() -> void:
 	root.get_node("Game").ensure_disaster(&"state")
 	var s: Control = load("res://scenes/minigames/connect.tscn").instantiate()
 	s.submit = false
+	s.intro = false
 	root.add_child(s)
 	await process_frame
 	s.time_scale = 0.0

@@ -409,3 +409,6 @@ KAHR_FENER_CARD_WALK,"WASD: walk","WASD: yürü"
 KAHR_FENER_CARD_AIM,"Mouse: set your direction","Mouse: yönünü belirle"
 KAHR_FENER_CARD_TORCH,"Space: torch on/off","Space: feneri aç/kapa"
 KAHR_FENER_CARD_CLOSE,"Close (Enter)","Kapat (Enter)"
+IO_HOWTO_TITLE,"How to play","Nasıl oynanır"
+IO_HOWTO_RULE,"Click the pipes, solve the puzzle. Get ready before the tsunami hits.","Borulara tıkla, bulmacayı çöz. Tsunami gelmeden önlemini al."
+IO_HOWTO_START,Start,Başla

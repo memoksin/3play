@@ -249,6 +249,7 @@ func _run() -> void:
 	game.disaster = load("res://data/disasters/indian_ocean.tres")
 	var con: Control = load("res://scenes/minigames/connect.tscn").instantiate()
 	con.submit = false
+	con.intro = false
 	audio.reset_history()
 	root.add_child(con)
 	await process_frame
@@ -405,6 +406,7 @@ func _run() -> void:
 	root.add_child(vp)
 	var warm: Control = load("res://scenes/minigames/connect.tscn").instantiate()
 	warm.submit = false
+	warm.intro = false
 	vp.add_child(warm)
 	var warm_menu: Node = load("res://scenes/main.tscn").instantiate()
 	vp.add_child(warm_menu)
@@ -467,6 +469,7 @@ func _run() -> void:
 	game.disaster = load("res://data/disasters/indian_ocean.tres")
 	con = load("res://scenes/minigames/connect.tscn").instantiate()
 	con.submit = false
+	con.intro = false
 	root.add_child(con)
 	await process_frame
 	con.time_scale = 0.0

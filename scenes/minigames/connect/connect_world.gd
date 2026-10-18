@@ -324,7 +324,7 @@ func _water_mat(mode: int) -> ShaderMaterial:
 	return m
 
 
-func _mesh_node(mesh: Mesh, mat: Material, parent: Node3D, cast := false) -> MeshInstance3D:
+static func _mesh_node(mesh: Mesh, mat: Material, parent: Node3D, cast := false) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.material_override = mat
@@ -334,7 +334,7 @@ func _mesh_node(mesh: Mesh, mat: Material, parent: Node3D, cast := false) -> Mes
 
 
 ## Quad strip mesh: rows of points, UV.x along the rows, UV.y across (0 first row, 1 last).
-func _grid_mesh(rows: Array) -> ArrayMesh:
+static func _grid_mesh(rows: Array) -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var nr := rows.size()
@@ -528,7 +528,8 @@ func _build_grid(rock_variant: Dictionary) -> void:
 
 ## Water ribbon along `pts` (tile frame, metres) on the pipe's cut face, 5 rows across so it can
 ## bulge out of the cut like a running stream (fluid.gdshader mode 0); returns its material.
-func _pipe_water(pivot: Node3D, pts: Array, width_mul := 1.0) -> ShaderMaterial:
+## Static (like _fluid_mat, _strip_mesh): the how-to card demo (connect.gd IntroDemo) builds the same water.
+static func _pipe_water(pivot: Node3D, pts: Array, width_mul := 1.0) -> ShaderMaterial:
 	var rows := []
 	var w := PIPE_RI * 0.92 * width_mul
 	for j in 5:
@@ -549,7 +550,7 @@ func _pipe_water(pivot: Node3D, pts: Array, width_mul := 1.0) -> ShaderMaterial:
 	return m
 
 
-func _fluid_mat(mode: int) -> ShaderMaterial:
+static func _fluid_mat(mode: int) -> ShaderMaterial:
 	var m := ShaderMaterial.new()
 	m.shader = FLUID
 	m.set_shader_parameter(&"mode", mode)
@@ -558,7 +559,7 @@ func _fluid_mat(mode: int) -> ShaderMaterial:
 
 
 ## Ribbon of `width` through `pts` (tile frame, in the XY plane), UV.y along it, UV.x across.
-func _strip_mesh(pts: Array, width: float) -> ArrayMesh:
+static func _strip_mesh(pts: Array, width: float) -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var n := 12
