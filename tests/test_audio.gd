@@ -703,7 +703,7 @@ func _run() -> void:
 	# 13. Fener hook.
 	audio.stop_all()
 	audio.clear_injected()
-	var fn_ids: Array[StringName] = [&"FN1", &"FN2", &"FN3a", &"FN3b", &"FN4", &"FN5", &"FN6", &"FN7", &"FN8", &"FN8a", &"FN9"]
+	var fn_ids: Array[StringName] = [&"FN1", &"FN2", &"FN3a", &"FN3b", &"FN4", &"FN5", &"FN6", &"FN7", &"FN8", &"FN8a", &"FN9", &"FN10"]
 	for id in fn_ids:
 		_check("cue %s file exists" % id, ResourceLoader.exists(audio.ROOT + audio.CUES[id].path))
 		audio.inject_stream(id, _wav(1.0))
@@ -726,9 +726,16 @@ func _run() -> void:
 	fener.sound_event.emit(&"whistle", 1, Vector3(5, 0, 5))
 	_check("fener: whistle -> FN5", _log() == ["play:FN5"])
 	audio.reset_history()
-	for kind in [&"tap", &"call", &"cry", &"heartbeat", &"treat", &"report", &"spark", &"debris", &"all_saved"]:
+	fener.sound_event.emit(&"tap", 3, Vector3(5, 0, 5))
+	_check("fener: tap -> FN10", _log() == ["play:FN10"])
+	var tap_near: float = audio._players.get(&"FN10", [null])[-1].volume_db
+	fener.sound_event.emit(&"tap", 3, Vector3(500, 0, 500))
+	var tap_far: float = audio._players.get(&"FN10", [null])[-1].volume_db
+	_check("fener: a far tap is quieter than a near one (%.1f < %.1f dB)" % [tap_far, tap_near], tap_far < tap_near)
+	audio.reset_history()
+	for kind in [&"call", &"cry", &"heartbeat", &"treat", &"report", &"spark", &"debris", &"all_saved"]:
 		fener.sound_event.emit(kind, 0, Vector3.ZERO)
-	_check("fener: tap, call, cry, heartbeat, treat, report, spark, debris, all_saved are silent", _log().is_empty())
+	_check("fener: call, cry, heartbeat, treat, report, spark, debris, all_saved are silent", _log().is_empty())
 	audio.reset_history()
 	fener.sound_event.emit(&"lamp_on", -1, Vector3.ZERO)
 	fener.sound_event.emit(&"lamp_off", -1, Vector3.ZERO)

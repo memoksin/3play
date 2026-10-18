@@ -1,6 +1,6 @@
 extends Node3D
 ## Prologue: a burnt, ash-covered Earth in space while an unseen power (the Voice) speaks four
-## lines, then the main menu. Click / Space / Enter: finish the line, then next. Esc: skip all.
+## lines, then the main menu. Click / Space / Enter / the Skip button: finish the line, then next. Esc: skip all.
 ## Public API (tests): advance(), skip(), line_index(), signal finished.
 
 ## Emitted right before the scene change.
@@ -40,7 +40,7 @@ func _ready() -> void:
 	%Hint.text = tr("PROLOGUE_HINT")
 	%Hint.modulate = Palette.HUD_DIM
 	%SkipButton.text = TextFx.upper(tr("PROLOGUE_SKIP"))
-	%SkipButton.pressed.connect(skip)
+	%SkipButton.pressed.connect(advance)  # the button finishes the line, then the next one comes; Esc skips all
 	%GhostR.visible_characters_behavior = TextServer.VC_CHARS_AFTER_SHAPING
 	%GhostB.visible_characters_behavior = TextServer.VC_CHARS_AFTER_SHAPING
 	%Voice.add_theme_color_override("font_color", VOICE_COLOR)
