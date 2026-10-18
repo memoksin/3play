@@ -118,6 +118,7 @@ const CUES := {
 	&"FN8": {"path": F_CRACK, "bus": &"SFX", "volume_db": -8.0, "cut": true, "notes": "aftershock hit and collapse, same file as F6; hot source so -8 dB"},
 	&"FN8a": {"path": "fener/building_crack.ogg", "bus": &"SFX", "volume_db": -4.0, "cut": true, "notes": "building crack: aftershock warning and leaning wall"},
 	&"FN9": {"path": "fener/hurt.ogg", "bus": &"SFX", "volume_db": 4.0, "cut": true, "notes": "player hurt, about 0.2 s; short and quiet source so +4 dB"},
+	&"FN10": {"path": "fener/tap_knock.ogg", "bus": &"SFX", "volume_db": 4.0, "cut": true, "notes": "a trapped person knocks from under the rubble (tap); first second of Metal Knocking, low-passed in the file (muffled); level follows the distance (volume_of)"},
 	# Fire (Black Saturday, scenes/minigames/fire.gd), see _hook_fire.
 	&"FR1": {"path": "fire/wildfire_wind_loop.ogg", "bus": &"SFX", "volume_db": -8.0, "loop": true, "fade_in": 0.5, "notes": "fire and wind ambience, 10 s seamless loop"},
 	&"FR2": {"path": F_FOOT, "bus": &"SFX", "volume_db": 0.0, "loop": true, "notes": "footsteps, same file as FN2"},
@@ -894,10 +895,10 @@ func _hook_fener(f) -> void:
 					play(&"FN3b")
 				&"battery_low", &"battery_dead":
 					play(&"FN4")
-				&"whistle":
+				&"whistle", &"tap":
 					var g := instance_from_id(fid)
 					var near: float = g.volume_of(pos) if g else 1.0
-					play(&"FN5", {"volume_db": linear_to_db(near)})
+					play(&"FN5" if kind == &"whistle" else &"FN10", {"volume_db": linear_to_db(near)})
 				&"found", &"pickup":
 					play(&"FN6")
 				&"saved":
@@ -913,4 +914,4 @@ func _hook_fener(f) -> void:
 		f.finished.connect(func(_saved: int, _total: int, _extra: Dictionary) -> void:
 			stop(&"FN1", 0.5)
 			stop(&"FN2", 0.3))
-		_bind_exit(f, [&"FN1", &"FN2", &"FN3a", &"FN3b", &"FN4", &"FN5", &"FN6", &"FN7", &"FN8", &"FN8a", &"FN9"], 0.4))
+		_bind_exit(f, [&"FN1", &"FN2", &"FN3a", &"FN3b", &"FN4", &"FN5", &"FN6", &"FN7", &"FN8", &"FN8a", &"FN9", &"FN10"], 0.4))
