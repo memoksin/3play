@@ -1,7 +1,7 @@
 #!/bin/bash
 # Captures one Godot clip for the pitch film: export/video/clips/<name>/%05d.png (1920x1080, 60 fps) + clip.json
 # + clip.wav (the game's own sound of those frames, 48 kHz stereo, Music bus muted; Movie Maker writes f.wav).
-# usage: tools/video/capture.sh <kahr_diorama|fener_mini|globe_spin|globe_lock_io|io_mini|title|menu_roles|globe_spin2>
+# usage: tools/video/capture.sh <kahr_diorama|fener_mini|globe_full|io_mini|menu_roles|globe_spin2|fire_mini (also: globe_spin, globe_lock_io, title)>
 set -eu
 name=${1:?clip name}
 root=$(cd "$(dirname "$0")/../.." && pwd)

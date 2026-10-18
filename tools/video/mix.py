@@ -12,8 +12,9 @@ gain, for stems with sharp in-game clicks. Stems are the game's own sound captur
   python3 tools/video/mix.py                    # -> export/video/pitch_audio.wav and a loudness report
   python3 tools/video/mix.py --mux              # + export/video/pitch.mp4 (pitch_film.mp4 picture copied, AAC 256 kb/s)
   python3 tools/video/mix.py --mux --video other.mp4 --out other_with_sound.mp4
+  python3 tools/video/mix.py --mux --web        # + export/video/pitch_web.mp4: same picture and sound, ~45 MB for the web
 """
-import json, os, re, subprocess, sys
+import json, os, re, subprocess, sys, tempfile
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 VID = os.path.join(ROOT, "export", "video")
@@ -21,6 +22,7 @@ PARTS = os.path.join(VID, "mix")
 SR = 48000
 TARGET_LUFS = -14.0
 LIMIT_DBTP = -2.5  # leaves room for the AAC encoder overshoot (-1 dBTP or lower in the mp4)
+WEB_KBPS = 5800    # web export video bitrate (2-pass x264): ~45 MB for the 59 s film with 192 kb/s AAC
 
 
 def run(args, **kw):
@@ -163,6 +165,16 @@ def main():
              "-c:a", "aac", "-b:a", "256k", "-ar", str(SR), "-movflags", "+faststart", "-shortest", mp4])
         i, p, _ = loudness(mp4, true_peak=True)
         print(f"muxed: {mp4}  ({i:.1f} LUFS, true peak {p:.1f} dBTP after AAC)")
+        if "--web" in argv:  # smaller copy for the web: same 1080p60 picture at a fixed bitrate, AAC 192 kb/s
+            web = os.path.splitext(mp4)[0] + "_web.mp4"
+            log = os.path.join(tempfile.mkdtemp(), "x264")
+            enc = ["-c:v", "libx264", "-preset", "slow", "-tune", "grain", "-b:v", f"{WEB_KBPS}k", "-maxrate", f"{WEB_KBPS * 2}k",
+                   "-bufsize", f"{WEB_KBPS * 4}k", "-pix_fmt", "yuv420p", "-r", "60", "-passlogfile", log]
+            run(["ffmpeg", "-v", "error", "-y", "-i", video] + enc + ["-pass", "1", "-an", "-f", "null", "-"])
+            run(["ffmpeg", "-v", "error", "-y", "-i", video, "-i", out, "-map", "0:v:0", "-map", "1:a:0"] + enc +
+                ["-pass", "2", "-c:a", "aac", "-b:a", "192k", "-ar", str(SR), "-movflags", "+faststart", "-shortest", web])
+            i, p, _ = loudness(web, true_peak=True)
+            print(f"web:   {web}  ({os.path.getsize(web) / 1e6:.1f} MB, {i:.1f} LUFS, true peak {p:.1f} dBTP)")
 
 
 if __name__ == "__main__":

@@ -11,6 +11,7 @@ extends SceneTree
 
 const KAHR := "res://data/disasters/kahramanmaras.tres"
 const IO := "res://data/disasters/indian_ocean.tres"
+const FIRE := "res://data/disasters/black_saturday.tres"
 const FPS := 60
 
 var _mouse := Vector2(-100, -100)
@@ -36,10 +37,12 @@ func _run() -> void:
 		"fener_mini": await _fener_mini()
 		"globe_spin": await _globe_spin()
 		"globe_lock_io": await _globe_lock_io()
+		"globe_full": await _globe_full()
 		"io_mini": await _io_mini()
 		"title": await _title()
 		"menu_roles": await _menu_roles()
 		"globe_spin2": await _globe_spin2()
+		"fire_mini": await _fire_mini()
 		_:
 			push_error("capture: unknown clip '%s'" % clip)
 			quit(1)
@@ -202,8 +205,10 @@ func _fener_mini() -> void:
 	await _seconds(1.25)
 	f.toggle_lamp()  # click: the beam opens on her
 	await _seconds(2.4)
-	f.ov_move = Vector2(1.0, 0.18).normalized()
+	f.ov_move = Vector2(1.0, 0.18).normalized()  # on along the avenue, the three of them behind
 	await _seconds(2.6)
+	f.ov_move = dir
+	await _seconds(2.4)
 
 
 ## Free spin: the player's hand set it turning, friction would slow it, so the speed is driven here.
@@ -243,8 +248,60 @@ func _globe_lock_io() -> void:
 	await _seconds(7.5)
 
 
-## Indian Ocean, the last seconds: the sea draws back off the beach, the player turns the last pipes (two lines
-## lock), one line stays open, the swell rises into a wall and breaks over the whole town (all or nothing).
+## Indian Ocean, the last 13 seconds: the sea draws back off the beach, the player turns the last pipes (two lines
+## lock), one line stays open, so the swell rises into a wall and breaks over the whole town; the flood stands in it.
+## The game's whole globe animation from the launch: the spin (4 s), the lock on the Indian Ocean (1.5 s), the zoom
+## (2 s) and the fade into the haze (0.5 s). The flick comes 0.25 s after the clip start.
+func _globe_full() -> void:
+	var g := await _globe(IO)
+	await _seconds(0.25)
+	g.flick(7.0)
+	await _seconds(8.1)
+
+
+## Black Saturday fire, first person (citizen): holding the wire cutters on the pen fence, the six ties snip one by
+## one, the panel slams down into the yard, the player steps back and turns with the kangaroos as they run out
+## through the gap, the fire front behind. One capture, so it can be swapped when the first-person hands change.
+func _fire_mini() -> void:
+	_game.disaster = load(FIRE)
+	_game.role = &"citizen"
+	var s := await _open("res://scenes/minigames/fire.tscn")
+	s.submit = false
+	s.skip_overview()
+	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+	s.seek(36.0)  # past the controls line; the fire front has crept up behind the pen, the smoke is building
+	var props: Node3D = s.get_node("Props")
+	var fence: Node3D = props.get_node("FenceCut")
+	var n := fence.global_basis.z
+	n.y = 0.0
+	n = n.normalized()
+	var side := fence.global_basis.x
+	side.y = 0.0
+	side = side.normalized()
+	s.call("_act", &"cutters")
+	var stand := fence.global_position + n * 2.1
+	var look := fence.global_position + Vector3(0, 1.25, 0)
+	s.place_player(Vector3(stand.x, 0.0, stand.z))
+	s.aim_at(look)
+	await _frames(3)
+	await _begin()
+	await _seconds(0.1)
+	s.interact_press()  # hold: the ties snip one by one, the cut comes after skin.cut_seconds
+	await _seconds(s.skin.cut_seconds + 0.1)
+	s.interact_release()
+	# step back and to the side while the panel falls, looking at the gap the kangaroos come out of
+	var to := fence.global_position + n * 4.6 + side * 2.6
+	var aim_to := fence.global_position + n * 1.2 + Vector3(0, 0.8, 0)
+	var frames := roundi(1.3 * FPS)
+	for i in range(1, frames + 1):
+		var k := _ease(float(i) / frames)
+		var p := stand.lerp(to, k)
+		s.place_player(Vector3(p.x, 0.0, p.z))
+		s.aim_at(look.lerp(aim_to, k))
+		await process_frame
+	await _seconds(3.0)
+
+
 func _io_mini() -> void:
 	_disaster(IO)
 	var s := await _open("res://scenes/minigames/connect.tscn")
@@ -270,7 +327,7 @@ func _io_mini() -> void:
 		if ConnectLogic.rotatable(skin.tiles[i]) and ConnectLogic.open_sides(skin.tiles[i], (solved[i] + 1) % 4) != ConnectLogic.open_sides(skin.tiles[i], solved[i]):
 			s.rots[i] = (solved[i] + 1) % 4
 			break
-	s.seek(skin.timer_seconds - 11.0)  # the drawback is under way, the swell comes in at -9 s
+	s.seek(skin.timer_seconds - 13.0)  # the sea starts to draw back (from -15 s), the swell comes in at -9 s
 	await _frames(4)
 	await _begin()
 	var cell_pos := func(i: int) -> Vector2:
@@ -286,7 +343,7 @@ func _io_mini() -> void:
 		await _seconds(0.7)
 	await _glide(Vector2(1240, 700), 30)  # the pointer parks off the board
 	var left: float = skin.timer_seconds - s.elapsed
-	await _seconds(left + 4.5)
+	await _seconds(left + 6.5)  # the break, the run over the town, the flood standing in it
 
 
 ## Title screen: the logo and the menu fade in. The tagline is hidden: the film types it in its place.
