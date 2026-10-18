@@ -128,13 +128,13 @@ func _cutters() -> void:
 	await _frames(2)
 	var sk := _arms_common("cutters", m, ["idle", "walk", "snip", "raise", "lower"])
 	var gap0 := _bone_xf(sk, "RightHand").origin.distance_to(_bone_xf(sk, "LeftHand").origin)
-	var jaw0 := _bone_xf(sk, "CutR").basis.get_euler()
+	var jaw0 := _bone_xf(sk, "CutR").basis.get_rotation_quaternion()
 	for i in 20:
 		m.call("set_snip", 1.0)
 		await _frames(1)
 	var gap1 := _bone_xf(sk, "RightHand").origin.distance_to(_bone_xf(sk, "LeftHand").origin)
-	var jaw1 := _bone_xf(sk, "CutR").basis.get_euler()
-	_check("cutters: set_snip(1) closes the handles (%.3f rad)" % jaw0.distance_to(jaw1), jaw0.distance_to(jaw1) > 0.05)
+	var jaw1 := _bone_xf(sk, "CutR").basis.get_rotation_quaternion()
+	_check("cutters: set_snip(1) closes the handles (%.1f deg)" % rad_to_deg(jaw0.angle_to(jaw1)), rad_to_deg(jaw0.angle_to(jaw1)) > 3.0)
 	_check("cutters: the hands squeeze in with them (%.3f -> %.3f m)" % [gap0, gap1], gap1 < gap0 - 0.03)
 	for i in 20:
 		m.call("set_snip", 0.0)

@@ -177,6 +177,15 @@ class Hand:
         """Point and direction (hand space) of a handle of radius R_handle across the palm: through the palm
         at `along` of the wrist -> knuckle length, `diag` degrees toward the index side distally, touching the
         palm (the palm vertices just clear the handle)."""
+        key = (R_handle, along, diag, lift)
+        cache = self.__dict__.setdefault("_lines", {})
+        if key not in cache:
+            p, d = self._grip_line(R_handle, along, diag, lift)
+            cache[key] = (p.copy(), d.copy())
+        p, d = cache[key]
+        return p.copy(), d.copy()
+
+    def _grip_line(self, R_handle, along, diag, lift):
         d = Vector((self.index_side * math.cos(math.radians(diag)), math.sin(math.radians(diag)), 0.0))
         P = self.palm
         z = 0.0

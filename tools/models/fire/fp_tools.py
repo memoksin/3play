@@ -3,7 +3,9 @@ blender -b --factory-startup --python-exit-code 1 -P tools/models/fire/fp_tools.
 Out (default tools/models/meshy/work/fp_tools/, not game assets: fp_arms.py rigs them into fp_cutters.glb /
 fp_nozzle.glb):
   fp_cut_r, fp_cut_l   the two halves of the bolt cutters of cutters.py (the same tool as on the chopping block),
-                       rounder for close up: pivot at the origin, head toward -Y, handles toward +Y, pivot axis Z;
+                       rounder for close up, CUT_SCALE times bigger (0.92 m, a 36 in bolt cutter: the farmer's
+                       gloved hands are ~23 cm long) with the grips and handles a little slimmer than a plain
+                       scale-up (CUT_GR, CUT_HR): pivot at the origin, head toward -Y, handles toward +Y, pivot axis Z;
                        _r = the half whose handle is on Blender -X (the player's right once the tool points
                        away from the camera), _l = +X.
   fp_nozzle            pistol spray nozzle in hose.py's colours (green coated barrel, brass head and coupling,
@@ -16,6 +18,8 @@ fp_nozzle.glb):
 import math
 import os
 import sys
+
+from mathutils import Matrix
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.dirname(__file__))
@@ -30,6 +34,9 @@ GRIP_RAKE = 14.0                 # deg: the grip's foot is behind its top
 GRIP_C = (0.0, 0.034, -0.012)    # middle of the grip
 INLET = (0.0, 0.034 + math.sin(math.radians(14.0)) * 0.112, -0.012 - math.cos(math.radians(14.0)) * 0.112)
 HOSE_R = 0.022        # hose.py HR
+CUT_SCALE = 1.2       # fp_tool.py CUT_SCALE
+CUT_GR = 0.0235       # grip radius after the scale (fp_tool.py C_GR)
+CUT_HR = 0.015        # red handle tube radius after the scale
 HOSE_LEN = 1.1
 
 
@@ -47,7 +54,15 @@ def rounder(k=2):
 
 
 def cut_half(s):
-    C.half(s)
+    k = len(L.parts())
+    gr, hr = C.GR, C.HR
+    C.GR, C.HR = CUT_GR / CUT_SCALE, CUT_HR / CUT_SCALE
+    try:
+        C.half(s)
+    finally:
+        C.GR, C.HR = gr, hr
+    for o in L.since(k):
+        o.matrix_basis = Matrix.Scale(CUT_SCALE, 4) @ o.matrix_basis
 
 
 def nozzle_body():

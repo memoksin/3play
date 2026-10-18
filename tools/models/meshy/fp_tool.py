@@ -8,7 +8,8 @@ Every clip is a full pose of every bone, baked at 30 fps from parameters:
   open   cutters: half opening angle of the arms (deg); squeeze: fingers pressing in (0..1)
   trigger nozzle: trigger lever pulled (0..1); the index finger follows it
 """
-import bpy, json, math, os
+import bpy, bmesh, json, math, os, re
+from collections import Counter
 import numpy as np
 from pathlib import Path
 from mathutils import Matrix, Vector, Quaternion, Euler
@@ -21,8 +22,12 @@ PARTS = WORK / "fp_tools"
 FPS = 30
 X, Y, Z = Vector((1, 0, 0)), Vector((0, 1, 0)), Vector((0, 0, 1))
 
-# --- tool constants (tools/models/fire/cutters.py, fp_tools.py)
-C_ARM_Y, C_END_Y, C_GRIP_Y, C_GR = 0.12, 0.64, 0.40, 0.021
+# --- tool constants (tools/models/fire/cutters.py, fp_tools.py: the view model's cutters are CUT_SCALE times
+# cutters.py's, a 0.92 m / 36 in bolt cutter that fits the farmer's big gloves, with the grips a little slimmer)
+CUT_SCALE = 1.2
+C_ARM_Y, C_END_Y, C_GRIP_Y = 0.12 * CUT_SCALE, 0.64 * CUT_SCALE, 0.40 * CUT_SCALE
+C_GR = 0.0235                            # grip radius (fp_tools.py CUT_GR)
+C_RIB = C_GR * 1.12                      # over the grip's rings: what the palm and the fingers rest on
 N_TRIGGER_PIVOT = Vector((0.0, -0.03, 0.034))
 N_GRIP_RAKE = 14.0
 N_GRIP_C = Vector((0.0, 0.034, -0.012))
@@ -32,9 +37,10 @@ HOSE_R, HOSE_LEN, HOSE_BONES = 0.022, 1.1, 11
 
 
 def handle_x(s, y):
+    k = CUT_SCALE
     if y <= C_ARM_Y:
-        return s * 0.035 * y / C_ARM_Y
-    return s * (0.035 + 0.055 * (y - C_ARM_Y) / (C_END_Y - C_ARM_Y))
+        return s * 0.035 * k * y / C_ARM_Y
+    return s * k * (0.035 + 0.055 * (y - C_ARM_Y) / (C_END_Y - C_ARM_Y))
 
 
 def rot(x=0.0, y=0.0, z=0.0):
@@ -109,6 +115,8 @@ class ViewModel:
     """Arms rig + one tool; subclasses set up the tool and the hold pose and give the clip parameters."""
     name = ""
     REACH_WARN = 0.97
+    SHOULDER = Vector((0.0, 0.0, 0.0))       # the arms' roots moved by this (camera space) for this tool
+    SPLIT_FINGERS = False                    # cut the glove where two fingers touch in the rest mesh (split_fingers)
 
     def __init__(self):
         bpy.ops.wm.open_mainfile(filepath=str(WORK / "fp_rig.blend"))
@@ -119,10 +127,64 @@ class ViewModel:
         self.arms_ob = bpy.data.objects["fp_arms"]
         self.report = {"name": self.name, "clips": {}}
         self.setup_tool()
+        if self.SPLIT_FINGERS:
+            self.split_fingers()
         self.R = FP.Rig(self.rig, self.arms_ob)
         self.arms = FP.Arms(self.R)
         self.hands = {s: FP.Hand(self.R, s) for s in ("Left", "Right")}
         self.solve_grips()
+
+    def split_fingers(self):
+        """In the Meshy glove the thumb tip is fused to the side of the index finger, and the index tip to the
+        middle one; the fused patch takes weights from both, so once the fingers part (a power grip) it pulls
+        out into a long needle. Splits the mesh between faces of two different fingers (where either side is a
+        middle or end phalanx: the webs at the knuckles stay joined) and leaves each side only its own finger's
+        weights."""
+        ob = self.arms_ob
+        names = [g.name for g in ob.vertex_groups]
+        finger = {}
+        for i, n in enumerate(names):
+            m = re.match(r"(Left|Right)Hand(Thumb|Index|Middle|Ring|Pinky)(\d)$", n)
+            if m:
+                finger[i] = (m.group(1) + m.group(2), int(m.group(3)))
+        bm = bmesh.new()
+        bm.from_mesh(ob.data)
+        dl = bm.verts.layers.deform.verify()
+
+        def dom(v):
+            d = v[dl]
+            return finger.get(max(d.keys(), key=lambda g: d[g])) if len(d) else None
+
+        face_f = {}
+        for f in bm.faces:
+            ids = [dom(v) for v in f.verts]
+            fid = Counter(i[0] if i else None for i in ids).most_common(1)[0][0]
+            face_f[f] = (fid, max((i[1] for i in ids if i and i[0] == fid), default=0))
+        cut = []
+        for e in bm.edges:
+            if len(e.link_faces) == 2:
+                (fa, ka), (fb, kb) = (face_f[f] for f in e.link_faces)
+                if fa and fb and fa != fb and max(ka, kb) >= 2:
+                    cut.append(e)
+        bmesh.ops.split_edges(bm, edges=cut)
+        cleaned = 0
+        for v in bm.verts:
+            fs = {face_f[f][0] for f in v.link_faces if f in face_f}
+            if len(fs) != 1 or None in fs:
+                continue
+            fid = fs.pop()
+            d = v[dl]
+            drop = [g for g in d.keys() if g in finger and finger[g][0] != fid]
+            if drop:
+                for g in drop:
+                    del d[g]
+                tot = sum(d.values())
+                for g in d.keys():
+                    d[g] = d[g] / tot
+                cleaned += 1
+        bm.to_mesh(ob.data)
+        bm.free()
+        self.report["split_fingers"] = {"edges": len(cut), "vertices_cleaned": cleaned}
 
     # subclasses: setup_tool(), solve_grips(), tool_world(world, p), hand_targets(world, p), fingers(p), extra(world, p)
     def pose(self, p):
@@ -130,7 +192,7 @@ class ViewModel:
         R = self.R
         world = {}
         V = p.get("view", Matrix.Identity(4))
-        world["View"] = R.rest["View"] @ V
+        world["View"] = R.rest["View"] @ V @ Matrix.Translation(self.SHOULDER)
         self.tool_world(world, p)
         rep = self.report.setdefault("ik", {})
         for s, (hand, pole) in self.hand_targets(world, p).items():
@@ -173,7 +235,7 @@ class ViewModel:
                         a = 2 * math.pi * k / 24
                         pref = e1 * math.cos(a) + e2 * math.sin(a)
                         hm, line = self.hands[s].place_axis(pt, d, pref, radius, sign=sign, along=along, diag=diag)
-                        world = {"View": R.rest["View"].copy()}
+                        world = {"View": self.view_rest()}
                         rep = {}
                         E = self.arms.solve(world, s, hm, pole, rep)
                         tw = abs(rep["twist_deg"][s])
@@ -188,6 +250,62 @@ class ViewModel:
                                     [round(x, 2) for x in hm.to_3x3() @ Vector((0, 0, 1))])
         self.report.setdefault("grip_choice", {})[s] = {"twist": best[4], "wrist": best[5], "sign": best[6],
                                                         "diag": best[7], "palm": best[8], "pole": list(best[3])}
+        return best[1], best[2], best[3]
+
+    def view_rest(self):
+        return self.R.rest["View"] @ Matrix.Translation(self.SHOULDER)
+
+    def view0(self, world):
+        """The camera-space frame the tool is placed in (the View bone without the shoulder offset)."""
+        return world["View"] @ Matrix.Translation(-self.SHOULDER)
+
+    def wrist(self, s, hm, E):
+        """Wrist angles (deg) of hand matrix hm with the elbow at E: extension (+, the hand bent toward its
+        back) / flexion (-), ulnar (+, toward the little finger) / radial (-) deviation."""
+        f = hm.to_3x3().transposed() @ (hm.translation - E).normalized()        # the forearm in hand space
+        ext = math.degrees(math.atan2(f.z, f.y))
+        uln = math.degrees(math.atan2(f.x * self.hands[s].index_side, f.y))
+        return ext, uln
+
+    def anat_grip(self, s, pt, d, radius, poles, palm, along=0.72, diags=(30.0, 40.0, 50.0, 60.0), palm_tol=30.0):
+        """Like best_grip, by the wrist's own ranges: forearm twist about neutral (palm toward the body's midline
+        with the elbow bent), wrist extension -15..45 deg (a power grip likes ~15), ulnar / radial deviation
+        -10..30 (likes ~10), the thumb side up, the palm within palm_tol deg of `palm` (the side it holds the
+        handle from), the hand within reach. Searches hand turns about the handle, palm diagonals, elbow poles."""
+        R = self.R
+        H = self.hands[s]
+        best = None
+        d = d.normalized()
+        e1 = d.orthogonal().normalized()
+        e2 = d.cross(e1)
+        palm = palm.normalized()
+        for pole in poles:
+            for diag in diags:
+                for k in range(36):
+                    a = 2 * math.pi * k / 36
+                    pref = e1 * math.cos(a) + e2 * math.sin(a)
+                    hm, line = H.place_axis(pt, d, pref, radius, sign=1.0, along=along, diag=diag)
+                    n = hm.to_3x3() @ Vector((0, 0, 1))
+                    off = math.degrees(n.angle(palm))
+                    if off > palm_tol + 30:
+                        continue
+                    world = {"View": self.view_rest()}
+                    rep = {}
+                    E = self.arms.solve(world, s, hm, pole, rep)
+                    tw = abs(rep["twist_deg"][s])
+                    ext, uln = self.wrist(s, hm, E)
+                    thumb_up = (hm.to_3x3() @ Vector((H.index_side, 0, 0))).z
+                    cost = (tw / 90.0 + max(0.0, tw - 60.0) / 15.0
+                            + ((ext - 15.0) / 35.0) ** 2 + max(0.0, ext - 45.0) / 6.0 + max(0.0, -15.0 - ext) / 6.0
+                            + ((uln - 10.0) / 30.0) ** 2 + max(0.0, uln - 30.0) / 5.0 + max(0.0, -10.0 - uln) / 5.0
+                            + max(0.0, off - palm_tol) / 10.0 + max(0.0, 0.3 - thumb_up) * 3.0
+                            + max(0.0, rep["reach"] - 0.95) * 50.0)
+                    if best is None or cost < best[0]:
+                        best = (cost, hm, line, pole, dict(twist=round(tw, 1), ext=round(ext, 1), uln=round(uln, 1),
+                                                           diag=diag, palm=[round(x, 2) for x in n],
+                                                           reach=round(rep["reach"], 3), pole=list(pole),
+                                                           cost=round(cost, 3)))
+        self.report.setdefault("grip_choice", {})[s] = best[4]
         return best[1], best[2], best[3]
 
     def bake(self, clip, params, loop):
@@ -255,11 +373,16 @@ class ViewModel:
 # ---------------------------------------------------------------- the bolt cutters
 class Cutters(ViewModel):
     name = "cutters"
-    PIVOT = Vector((0.0, 1.04, -0.285))     # the tool's pivot bolt, camera space (the head just under the prompt)
-    PITCH = -7.5                             # head down (deg)
+    PIVOT = Vector((0.0, 1.2, -0.15))        # the tool's pivot bolt, camera space (the jaws just under the crosshair)
+    PITCH = 11.0                             # head up (deg): the handles rise from the hands to the head
     OPEN = 7.0                               # half opening of the arms, jaws open (deg)
     CLOSED = 0.6
-    GRIP_Y = 0.618                           # hand centre along each handle (tool space): the end cap in the fist
+    SPLIT_FINGERS = True
+    GRIP_Y = 0.725                           # hand centre along each handle (tool space), the end cap under the heel
+    # the arms' roots a little forward and up (the farmer's arms are short for a first-person view): the hands
+    # reach the handles with the arms still bent; the upper-arm cut and the elbows stay out of frame
+    SHOULDER = Vector((0.0, 0.03, 0.12))
+    ALONG = 0.72                             # the handle crosses the palm at this share of wrist -> middle knuckle
 
     def t0(self):
         return Matrix.Translation(self.PIVOT) @ rot(x=self.PITCH) @ rot(z=180.0)
@@ -279,26 +402,31 @@ class Cutters(ViewModel):
     def grip_line(self, half_w, s):
         y = self.GRIP_Y
         p = Vector((handle_x(s, y), y, 0.0))
-        d = Vector((s * 0.055 / (C_END_Y - C_ARM_Y), 1.0, 0.0)).normalized()
+        d = Vector((s * 0.055 * CUT_SCALE / (C_END_Y - C_ARM_Y), 1.0, 0.0)).normalized()
         return half_w @ p, (half_w.to_3x3() @ -d).normalized()             # toward the head
 
     def solve_grips(self):
-        R = self.R
-        world = {"View": R.rest["View"].copy()}
+        world = {"View": self.view_rest()}
         world["Tool"] = self.t0()
         self.G = {}
         self.ang = {}
         self.pole = {}
+        self.grips_c = Vector((0, 0, 0))                # between the hands: pivot of the tool's sway
         for s, side, sgn in (("Right", -1, 1.0), ("Left", 1, -1.0)):
             hw = self.half_world(world, side, self.OPEN)
             pt, d = self.grip_line(hw, side)
-            poles = [Vector(v) for v in ((sgn * 0.7, -0.25, -1.0), (sgn, -0.2, -0.3), (sgn * 0.3, -1.0, -0.6),
-                                        (sgn * 0.8, -0.8, -0.5), (0.0, -0.2, -1.0))]
-            hm, (p_h, d_h), self.pole[s] = self.best_grip(s, pt, d, C_GR, poles, along=0.72, diags=(20.0, 30.0, 40.0))
+            # elbows down and out to the side, never up: the arms push the handles together
+            poles = [Vector((sgn * x, y, z)) for x in (0.2, 0.5, 1.0) for y in (-0.6, -0.2) for z in (-1.0, -0.5, 0.0)]
+            # each hand holds its handle from the outside: the palm on its outer, upper side (facing in and down),
+            # the fingers close round under it to the inner side, the thumb over the top
+            hm, (p_h, d_h), self.pole[s] = self.anat_grip(s, pt, d, C_RIB, poles, Vector((-sgn, 0.0, -0.5)),
+                                                          along=self.ALONG, diags=(40.0, 45.0, 50.0, 55.0),
+                                                          palm_tol=35.0)
             self.G[s] = hw.inverted() @ hm
-            axes = [(p_h, d_h, C_GR + 0.001, 0.12)]
+            self.grips_c += pt / 2
+            axes = [(p_h, d_h, C_RIB + 0.001, 0.12)]
             fing = FP.close_fingers(self.hands[s], axes)
-            tgt = p_h + Vector((0, 0, 1)) * (C_GR + 0.006) + d_h * 0.022
+            tgt = p_h + Vector((0, 0, 1)) * (C_RIB + 0.006) + d_h * 0.022
             th = FP.thumb_wrap(self.hands[s], axes, tgt)
             fing["Thumb"] = list(th)
             tight = FP.close_fingers(self.hands[s], axes, squeeze=0.003, start=fing)
@@ -307,7 +435,7 @@ class Cutters(ViewModel):
             self.report.setdefault("grip", {})[s] = {k: [round(float(x), 1) for x in v] for k, v in fing.items()}
 
     def tool_world(self, world, p):
-        world["Tool"] = world["View"] @ p.get("tool", Matrix.Identity(4)) @ self.t0()
+        world["Tool"] = self.view0(world) @ p.get("tool", Matrix.Identity(4)) @ self.t0()
         op = p.get("open", self.OPEN)
         world["CutR"] = self.half_world(world, -1, op)
         world["CutL"] = self.half_world(world, 1, op)
@@ -338,21 +466,21 @@ class Cutters(ViewModel):
         n = FPS
         out.append(("walk", [self.walk_p(i / n) for i in range(n + 1)], True))
         out.append(("snip", [self.snip_p(i / FPS) for i in range(FPS + 1)], False))
-        out.append(("raise", raise_params(self.idle_p(0.0), GRIPS_C, 12), False))
-        out.append(("lower", raise_params(self.idle_p(0.0), GRIPS_C, 9)[::-1], False))
+        out.append(("raise", raise_params(self.idle_p(0.0), self.grips_c, 12, whole=True), False))
+        out.append(("lower", raise_params(self.idle_p(0.0), self.grips_c, 9, whole=True)[::-1], False))
         return out
 
     def idle_p(self, t):
-        p = {"view": breath(t), "tool": about(GRIPS_C, rot(z=0.35 * math.sin(2 * math.pi * t / 4 + 0.8),
+        p = {"view": breath(t), "tool": about(self.grips_c, rot(z=0.35 * math.sin(2 * math.pi * t / 4 + 0.8),
                                                              x=0.25 * math.sin(2 * math.pi * 2 * t / 4)))}
         # the hands work the grips now and then: the right one closes harder, the left one eases and takes hold
-        p["curl"] = {"Right": 6.0 * pulse(t, 2.2, 2.9), "Left": -9.0 * pulse(t, 0.7, 1.35)}
+        p["curl"] = {"Right": 3.0 * pulse(t, 2.2, 2.9), "Left": -9.0 * pulse(t, 0.7, 1.35)}
         p["squeeze"] = 0.35 * pulse(t, 2.2, 2.9)
         return p
 
     def walk_p(self, ph):
         p = {"view": step_bob(ph)}
-        p["tool"] = about(GRIPS_C, rot(x=1.3 * math.sin(4 * math.pi * ph - 0.6), y=1.4 * math.sin(2 * math.pi * ph + 0.4)))
+        p["tool"] = about(self.grips_c, rot(x=1.3 * math.sin(4 * math.pi * ph - 0.6), y=1.4 * math.sin(2 * math.pi * ph + 0.4)))
         p["open"] = self.OPEN + 0.5 * math.sin(4 * math.pi * ph - 1.2)
         return p
 
@@ -360,13 +488,10 @@ class Cutters(ViewModel):
         p = self.idle_p(0.0)
         p["open"] = self.OPEN + (self.CLOSED - self.OPEN) * u
         p["squeeze"] = u
-        p["curl"] = {"Right": 3.0 * u, "Left": 3.0 * u}
-        p["tool"] = about(GRIPS_C, rot(x=0.8 * u)) @ Matrix.Translation(Vector((0, 0.008 * u, 0.004 * u)))
+        p["curl"] = {"Right": 1.0 * u, "Left": 1.0 * u}
+        p["tool"] = about(self.grips_c, rot(x=0.8 * u)) @ Matrix.Translation(Vector((0, 0.008 * u, 0.004 * u)))
         p["view"] = breath(0.0) @ rot(x=-0.4 * u)
         return p
-
-
-GRIPS_C = Vector((0.0, 0.43, -0.2))         # between the hands: pivot of the tool's sway
 
 
 def pulse(t, a, b):
@@ -402,9 +527,10 @@ def step_bob(ph):
                                                        x=0.9 * math.sin(2 * w - 1.1))
 
 
-def raise_params(hold, c, n, left_c=None):
+def raise_params(hold, c, n, left_c=None, whole=False):
     """n+1 frames from the tool down out of view to the hold pose (frame n = hold). left_c: a free left hand
-    (the nozzle's, under the hose) comes up with it, a beat behind."""
+    (the nozzle's, under the hose) comes up with it, a beat behind. whole: the arms' roots go down with the tool
+    (the View bone moves; for a tool held far from the shoulders, which it would pull out of the hands)."""
     out = []
     for i in range(n + 1):
         u = i / n
@@ -412,12 +538,12 @@ def raise_params(hold, c, n, left_c=None):
         k = 1 - e
         p = dict(hold)
         low = about(c, rot(x=-38 * k, y=14 * k, z=-8 * k), Vector((0.03 * k, -0.06 * k, -0.30 * k)))
-        p["tool"] = low @ hold.get("tool", Matrix.Identity(4))
+        p["tool"] = hold.get("tool", Matrix.Identity(4)) if whole else low @ hold.get("tool", Matrix.Identity(4))
         if left_c is not None:
             kl = (1 - max(0.0, u - 0.15) / 0.85) ** 3             # starts a beat later, same settle
             low_l = about(left_c, rot(x=-30 * kl, y=-12 * kl, z=10 * kl), Vector((-0.02 * kl, -0.14 * kl, -0.28 * kl)))
             p["left"] = low_l @ hold.get("left", Matrix.Identity(4))
-        p["view"] = hold.get("view", Matrix.Identity(4))
+        p["view"] = (low if whole else Matrix.Identity(4)) @ hold.get("view", Matrix.Identity(4))
         out.append(p)
     return out
 

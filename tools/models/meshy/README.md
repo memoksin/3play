@@ -77,6 +77,19 @@ godot --path . -s res://tools/fire_shots.gd -- only=cutters,snip,attached,spray 
   contact solver against the glove's own vertices, the thumb by a small search. Clips (camera space, 30 fps):
   cutters `idle` `walk` `snip` `raise` `lower`; nozzle `idle` `walk` `spray` `spray_start` `raise` `lower`.
   Reach and twist per clip in `work/fp_report.json`.
+- Cutters grip (`Cutters` in `fp_tool.py`): each hand holds its handle from the outside, as with real long-handled
+  bolt cutters: the palm on the handle's outer, upper side, the fingers closing round under it to the inner side,
+  the thumb over the top, so squeezing brings the handles together. `anat_grip` searches hand roll, palm diagonal
+  (40-55 deg, the handle from the heel of the hand to the index knuckle) and elbow pole by the wrist's own ranges
+  (forearm twist about neutral, extension / flexion, ulnar / radial deviation, `wrist`), the palm within 35 deg of
+  inward-and-down and the hand within reach (`grip_choice` in the report: twist ~41, extension ~3, ulnar ~27 deg,
+  reach 0.94). The view model's cutters are 1.2x the chopping-block ones (0.92 m, a 36 in bolt cutter, against
+  the farmer's ~23 cm gloved hands; `CUT_SCALE` here and in `fp_tools.py`), held with the head pitched up 11 deg
+  just under the crosshair and the arms' roots 3 cm forward / 12 cm up (`SHOULDER`: the farmer's arms are short
+  for a first-person view; the upper-arm cut and the elbows stay out of frame at the running FOV). `raise` /
+  `lower` move the whole View bone so the hands never leave the grips. `split_fingers` cuts the glove where the
+  thumb tip and the index / middle tips are fused in the Meshy mesh (they pulled out into needles once the
+  fingers part); cutters only, the nozzle export is unchanged.
 - In game: `fp_arms.gd` (AnimationTree: idle / walk by `set_move`, the tool action, raise / lower one-shots),
   `hand_cutters.gd` (`set_snip` 0..1 seeks `snip`), `hand_nozzle.gd` (`set_spray`), `viewmodel.gdshader` (drawn in
   front of the world by squeezing the depth, so walls never cut the arms; glove grain / sleeve weave detail).
