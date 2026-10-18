@@ -218,7 +218,13 @@ func _show_title() -> void:
 	load_wave(0)
 	_open_card()
 	_kick(_t("TITLE_KICK"))
-	_heading(_t("TITLE"), true)
+	var head := Label.new()  # the same heading as the other how-to cards (Connect, fire, Fener)
+	head.name = "Heading"
+	head.text = TextFx.upper(_t("HOWTO_TITLE"))
+	head.theme_type_variation = &"HudHeader"
+	head.autowrap_mode = TextServer.AUTOWRAP_OFF
+	head.add_theme_font_size_override(&"font_size", 44)
+	_box.add_child(head)
 	_box.add_child(TUTORIAL.new())
 	var tog := CheckBox.new()
 	tog.name = "Preview"
