@@ -1,0 +1,127 @@
+key;en;tr;durum;not
+KAHR_PLACE;Kahramanmaras, Turkey;Kahramanmaraş, Türkiye;mevcut;
+KAHR_YEAR;6 February 2023;6 Şubat 2023;mevcut;
+KAHR_INTRO_1;04:17. A magnitude 7.8 earthquake has just hit southeast Turkey.;04:17. Türkiye’nin güneydoğusunu az önce 7,8 büyüklüğünde bir deprem vurdu.;mevcut;
+KAHR_INTRO_2;It is snowing and below freezing. Help is hours away.;Kar yağıyor, hava buz gibi. Yardımın gelmesi saatler sürecek.;mevcut;
+KAHR_TASK;Keep everyone warm and comfortable until help arrives.;Yardım gelene kadar herkesi sıcak ve rahat tut.;mevcut;
+KAHR_CARD_SCORE;%d/8 safe;%d/8 güvende;mevcut;
+KAHR_CARD_COLD;%d people left in the cold;%d kişi soğukta kaldı;mevcut;
+KAHR_CARD_NUMBERS;More than 50,000 people died in Turkey in the 2023 earthquakes.;2023 depremlerinde Türkiye'de 50.000'den fazla kişi hayatını kaybetti.;mevcut;
+KAHR_CARD_FACT;At 13:24, about 9 hours later, a second major quake (magnitude 7.5) hit near Elbistan. Many people had gone back into damaged buildings.;Yaklaşık 9 saat sonra, 13:24'te Elbistan yakınlarında ikinci büyük deprem (7,5) oldu. Birçok kişi hasarlı binalara geri dönmüştü.;mevcut;
+KAHR_CARD_HELP;What would have helped: never go back into a damaged building after a big quake.;Ne yardımcı olurdu: büyük bir depremden sonra hasarlı binaya asla geri girmemek.;mevcut;
+KAHR_CARD_CO;A stove in a closed car or tent can cause carbon monoxide poisoning.;Kapalı bir arabada ya da çadırda yakılan soba karbonmonoksit zehirlenmesine yol açabilir.;mevcut;
+KAHR_SOURCE;"Sources: USGS Pazarcik M 7.8 https://earthquake.usgs.gov/earthquakes/eventpage/us6000jllz ; USGS Elbistan M 7.5 https://earthquake.usgs.gov/earthquakes/eventpage/us6000jlqa . Deaths: Turkey's official toll is about 53,500 (reported by news, AFAD primary release not checked), so the card says 'more than 50,000'.";"Kaynaklar: USGS Pazarcık M 7,8 https://earthquake.usgs.gov/earthquakes/eventpage/us6000jllz ; USGS Elbistan M 7,5 https://earthquake.usgs.gov/earthquakes/eventpage/us6000jlqa . Ölü sayısı: Türkiye'nin resmî sayısı yaklaşık 53.500 (haberlerden, AFAD'ın birincil açıklaması kontrol edilmedi), kartta '50.000'den fazla' yazıyor.";mevcut;
+IO_PLACE;Indian Ocean, Indonesia;Hint Okyanusu, Endonezya;mevcut;
+IO_YEAR;26 December 2004;26 Aralık 2004;mevcut;
+IO_INTRO_1;A magnitude 9.1 earthquake has struck off Sumatra.;Sumatra açıklarında 9,1 büyüklüğünde bir deprem oldu.;mevcut;
+IO_INTRO_2;There is no tsunami warning system in the Indian Ocean. A giant wave is coming.;Hint Okyanusu'nda tsunami uyarı sistemi yok. Dev bir dalga geliyor.;mevcut;
+IO_TASK;Send the water into the basins before the wave hits.;Dalga vurmadan suyu havuzlara yönlendir.;mevcut;
+IO_CARD_SCORE;%d/4 communities saved;%d/4 topluluk kurtuldu;mevcut;
+IO_CARD_NUMBERS;The 2004 tsunami killed or left missing about 228,000 people in more than a dozen countries.;2004 tsunamisi, bir düzineden fazla ülkede yaklaşık 228.000 kişinin ölümüne ya da kaybolmasına yol açtı.;mevcut;
+IO_CARD_FACT;Many coasts were hit hours after the quake, with no siren and no warning.;Birçok kıyıya, depremden saatler sonra, siren ve uyarı olmadan dalga ulaştı.;mevcut;
+IO_CARD_HELP;What would have helped: a warning system. InaTEWS, Indonesia's tsunami warning system, was built after 2004.;Ne yardımcı olurdu: bir uyarı sistemi. Endonezya'nın tsunami uyarı sistemi InaTEWS, 2004'ten sonra kuruldu.;mevcut;
+IO_SOURCE;"Sources: USGS (magnitude 9.1) https://www.usgs.gov/news/featured-story/indian-ocean-tsunami-remembered-scientists-reflect-2004-indian-ocean-killed ; NOAA (227,899 dead or missing, 15 countries listed, Indonesia worst hit) https://sos.noaa.gov/Datasets/dataset.php?id=598; GFZ/GITEWS papers (InaTEWS, built after 2004). Estimates vary by source (some count more); the card says about 228,000.";"Kaynaklar: USGS (büyüklük 9,1) https://www.usgs.gov/news/featured-story/indian-ocean-tsunami-remembered-scientists-reflect-2004-indian-ocean-killed ; NOAA (227.899 ölü veya kayıp, 15 ülke listeli, en çok Endonezya) https://sos.noaa.gov/Datasets/dataset.php?id=598; GFZ/GITEWS makaleleri (InaTEWS, 2004'ten sonra kuruldu). Tahminler kaynağa göre değişir (bazıları daha yüksek); kartta yaklaşık 228.000 yazıyor.";mevcut;
+CLOSING_LINE;life has dimensions we cannot see;hayatın göremediğimiz boyutları vardır;mevcut;
+GAME_TITLE;3play;3play;yeni;Oyun adı, çevrilmez
+MENU_PROMPT;Who are you when disaster strikes?;Felaket anında kimsin?;yeni;
+ROLE_STATE;State;Devlet;yeni;
+ROLE_STATE_DESC;Lead a country. Prepare before it hits.;Bir ülkeyi yönet. Felaket gelmeden hazırlan.;yeni;
+ROLE_CITIZEN;Citizen;Vatandaş;yeni;
+ROLE_CITIZEN_DESC;Live through it. Every second counts.;Hayatta kal. Her saniye önemli.;yeni;
+HUD_TIME;TIME;SÜRE;yeni;Büyük harf, kısa
+RESULT_REPLAY;Play again;Tekrar oyna;yeni;
+RESULT_MENU;Main menu;Ana menü;yeni;
+FIT_WARM;Warm;Sıcak;yeni;Rozet, kısa olmalı
+FIT_COLD;Cold;Soğuk;yeni;Rozet, kısa olmalı
+FIT_FULL;%s is full: %s needs %d slots, %d free.;%s dolu: %s için %d yer gerek, %d boş.;yeni;Sıra: bölge, eşya, gereken, boş. Sıra değişemez
+FIT_FULL_1;%s is full: %s needs 1 slot, %d free.;%s dolu: %s için 1 yer gerek, %d boş.;yeni;Sıra: bölge, eşya, boş
+FIT_SLOTS;%d slots;%d yer;yeni;Chip içinde, kısa olmalı
+KAHR_FIT_CREAK;The building creaks...;Bina çatırdıyor…;yeni;
+KAHR_FIT_QUAKE;13:24 - Mw 7.5 Elbistan earthquake;13:24 - Mw 7,5 Elbistan depremi;yeni;
+KAHR_FIT_ZONE_BUILDING;Building;Bina;yeni;
+KAHR_FIT_ZONE_CAR;Car;Araba;yeni;
+KAHR_FIT_ZONE_TENT;Tent;Çadır;yeni;
+KAHR_FIT_ITEM_PERSON;Person;İnsan;yeni;
+KAHR_FIT_ITEM_STOVE;Stove;Soba;yeni;
+KAHR_FIT_ITEM_BLANKET;Blanket;Battaniye;yeni;
+KAHR_FIT_ITEM_WATER;Water;Su;yeni;
+KAHR_FIT_ITEM_MEDICINE;Medicine;İlaç;yeni;
+KAHR_FIT_P_AYSE;Grandma Ayse;Ayşe Nine;yeni;Chip adı, ~13 karakter sığar
+KAHR_FIT_R_AYSE;elder, uses a cane;yaşlı, bastonlu;yeni;Chip rolü, ~18 karakter sığar
+KAHR_FIT_P_ELIF;Baby Elif;Elif Bebek;yeni;
+KAHR_FIT_R_ELIF;infant, 8 months;bebek, 8 aylık;yeni;
+KAHR_FIT_P_MEHMET;Mehmet;Mehmet;yeni;
+KAHR_FIT_R_MEHMET;your father;baban;yeni;
+KAHR_FIT_P_ZEYNEP;Zeynep;Zeynep;yeni;
+KAHR_FIT_R_ZEYNEP;your mother;annen;yeni;
+KAHR_FIT_P_CAN;Can;Can;yeni;
+KAHR_FIT_R_CAN;boy, age 9;erkek, 9 yaşında;yeni;
+KAHR_FIT_P_SELIN;Selin;Selin;yeni;
+KAHR_FIT_R_SELIN;your sister, 15;kız kardeşin, 15;yeni;
+KAHR_FIT_P_HASAN;Hasan;Hasan;yeni;
+KAHR_FIT_R_HASAN;neighbor, bad knee;komşu, dizi ağrıyor;yeni;
+KAHR_FIT_P_FATMA;Fatma;Fatma;yeni;
+KAHR_FIT_R_FATMA;neighbor, pregnant;komşu, hamile;yeni;
+KAHR_FIT_R_STOVE;gives heat;ısıtır;yeni;
+KAHR_FIT_R_BLANKET;keeps warm;sıcak tutar;yeni;
+KAHR_FIT_R_WATER;drinking water;içme suyu;yeni;
+KAHR_FIT_R_MEDICINE;first aid;ilk yardım;yeni;
+GLOBE_HINT;Drag to spin the world;Dünyayı döndürmek için sürükle;yeni;
+IO_COMMUNITY_1;Banda Aceh;Banda Aceh;yeni;Yer adı, çevrilmez
+IO_COMMUNITY_2;Sabang;Sabang;yeni;Yer adı, çevrilmez
+IO_COMMUNITY_3;Meulaboh;Meulaboh;yeni;Yer adı, çevrilmez
+IO_COMMUNITY_4;Lhoknga;Lhoknga;yeni;Yer adı, çevrilmez
+IO_CONNECT_WAVE;The wave is here!;Dalga geldi!;yeni;
+INTRO_NEXT;Continue;Devam;mevcut;
+SF_PLACE;Earth, dayside;Dünya, gündüz;yeni;
+SF_YEAR;14 March 3026;14 Mart 3026;yeni;
+SF_INTRO_1;14 March 3026. A solar flare is racing toward Earth. Impact in 8 minutes.;14 Mart 3026. Bir güneş patlaması Dünya'ya doğru geliyor. Çarpmaya 8 dakika var.;yeni;
+SF_INTRO_2;The shuttle and the bunker have few safe seats. You are head of state: you choose who goes.;Gemide ve sığınakta az sayıda güvenli yer var. Devlet başkanısın: kimin gideceğine sen karar ver.;yeni;
+SF_TASK;Fill the safe seats before 14:00. Not everyone can go.;14:00'ten önce güvenli yerleri doldur. Herkes gidemez.;yeni;
+SF_CARD_SCORE;%d/12 safe;%d/12 güvende;yeni;
+SF_CARD_COLD;%d survivors without clean water;%d kişi temiz sudan yoksun kaldı;yeni;Alternatif: 'temiz suya erişemeyen %d kişi'
+SF_CARD_NUMBERS;PLACEHOLDER: a real flare data point goes here (burcubaran22, #17).;YER TUTUCU: buraya gerçek bir güneş patlaması verisi gelecek (burcubaran22, #17).;yeni;EN metni de yer tutucu, #17 bekliyor
+SF_CARD_FACT;PLACEHOLDER: the 1859 Carrington Event burned telegraph lines worldwide.;YER TUTUCU: 1859 Carrington Olayı dünya çapında telgraf hatlarını yaktı.;yeni;EN metni de yer tutucu, #17 bekliyor
+SF_CARD_HELP;PLACEHOLDER: what would have helped: early warning from solar monitoring satellites.;YER TUTUCU: Ne yardımcı olurdu: güneşi izleyen uydulardan erken uyarı.;yeni;EN metni de yer tutucu, #17 bekliyor
+SF_FIT_RADIO_1;Radio: flare erupted. 8 min.;Telsiz: patlama başladı. 8 dk.;yeni;
+SF_FIT_RADIO_2;Radio: power grid failing.;Telsiz: elektrik şebekesi çöküyor.;yeni;
+SF_FIT_RADIO_3;Radio: last call! Seal up.;Telsiz: son çağrı! Kapıları kapatın.;yeni;
+SF_FIT_IMPACT;14:00 - flare impact;14:00 - patlama çarptı;yeni;
+SF_FIT_ZONE_SURFACE;Surface;Yüzey;yeni;
+SF_FIT_ZONE_SHUTTLE;Shuttle;Mekik;yeni;
+SF_FIT_ZONE_BUNKER;Bunker;Sığınak;yeni;
+SF_FIT_LIFE_OK;life support;yaşam desteği;yeni;Rozet, kısa olmalı
+SF_FIT_LIFE_NO;no water;su yok;yeni;Rozet, kısa olmalı
+SF_FIT_ITEM_PERSON;Person;Kişi;yeni;
+SF_FIT_ITEM_VAULT;Seeds;Tohumlar;yeni;
+SF_FIT_ITEM_RECYCLER;Recycler;Arıtıcı;yeni;
+SF_FIT_P_AMARA;Dr. Amara;Dr. Amara;yeni;
+SF_FIT_R_AMARA;doctor;doktor;yeni;
+SF_FIT_P_KENJI;Kenji;Kenji;yeni;
+SF_FIT_R_KENJI;engineer;mühendis;yeni;
+SF_FIT_P_LIA;Lia;Lia;yeni;
+SF_FIT_R_LIA;child, 7;çocuk, 7;yeni;
+SF_FIT_P_TOMAS;Tomas;Tomas;yeni;
+SF_FIT_R_TOMAS;farmer;çiftçi;yeni;
+SF_FIT_P_NOOR;Grandma Noor;Noor Nine;yeni;
+SF_FIT_R_NOOR;elder;yaşlı;yeni;
+SF_FIT_P_RAVI;Ravi;Ravi;yeni;
+SF_FIT_R_RAVI;pilot;pilot;yeni;
+SF_FIT_P_OKAFOR;Ms. Okafor;Okafor Hanım;yeni;
+SF_FIT_R_OKAFOR;teacher;öğretmen;yeni;
+SF_FIT_P_SOL;Sol;Sol;yeni;
+SF_FIT_R_SOL;child, 10;çocuk, 10;yeni;
+SF_FIT_P_YUKI;Yuki;Yuki;yeni;
+SF_FIT_R_YUKI;botanist;botanikçi;yeni;
+SF_FIT_P_DMITRI;Dmitri;Dmitri;yeni;
+SF_FIT_R_DMITRI;technician;teknisyen;yeni;
+SF_FIT_P_INES;Ines;Ines;yeni;
+SF_FIT_R_INES;midwife;ebe;yeni;
+SF_FIT_P_BEN;Ben;Ben;yeni;
+SF_FIT_R_BEN;cook;aşçı;yeni;
+SF_FIT_R_VAULT;seed vault;tohum deposu;yeni;
+SF_FIT_R_RECYCLER;water recycler;su arıtıcı;yeni;
+GLOBE_SKIP;SPACE · SKIP;BOŞLUK · ATLA;yeni anahtar;YENİ ANAHTAR: şu an globe.gd'de sabit yazı
+GLOBE_SKIP_CLICK;CLICK / SPACE · SKIP;TIKLA / BOŞLUK · ATLA;yeni anahtar;YENİ ANAHTAR: şu an globe.gd'de sabit yazı
+GLOBE_YEAR;YEAR;YIL;yeni anahtar;YENİ ANAHTAR: yıl sayacının küçük etiketi
+GLOBE_LOCKED;LOCKED;KİLİTLENDİ;yeni anahtar;YENİ ANAHTAR: hedefe kilitlenince yanıp söner

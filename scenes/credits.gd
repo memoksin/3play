@@ -23,9 +23,9 @@ func _ready() -> void:
 	%Back.text = TextFx.upper(tr("CREDITS_BACK"))
 	%Back.pressed.connect(back)
 	var any_photo := false
-	for m: Array in TEAM:
-		_add_card(m[0], m[1])
-		any_photo = any_photo or ResourceLoader.exists("%s%s.png" % [PHOTO_DIR, m[0]])
+	for i in TEAM.size():
+		_add_card(TEAM[i][0], TEAM[i][1], i)
+		any_photo = any_photo or ResourceLoader.exists("%s%s.png" % [PHOTO_DIR, TEAM[i][0]])
 	%AiNote.visible = any_photo  # the portraits are AI-made (Gemini): say so as soon as they are shown
 	TextFx.fade_in(%Title, 0.0, 0.4)
 	TextFx.fade_in(%Cards, 0.3, 0.5)
@@ -50,7 +50,7 @@ func _notification(what: int) -> void:
 		%Back.text = TextFx.upper(tr("CREDITS_BACK"))
 
 
-func _add_card(id: StringName, full_name: String) -> void:
+func _add_card(id: StringName, full_name: String, index: int) -> void:
 	var card := PanelContainer.new()
 	card.custom_minimum_size = Vector2(CARD_W, 0)
 	var box := VBoxContainer.new()
@@ -64,8 +64,11 @@ func _add_card(id: StringName, full_name: String) -> void:
 	name_label.theme_type_variation = &"HudData"
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	name_label.size_flags_vertical = Control.SIZE_EXPAND_FILL  # one- and two-line names: patches line up
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(name_label)
+	box.add_child(FabricPatch.new(index))  # "Agent N" sewn patch, numbered in card order
 	%Cards.add_child(card)
 
 

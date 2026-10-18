@@ -77,10 +77,12 @@ const RISE_ESCAPE := Vector2(0.15, 5.0)
 const RISE_LOSE := Vector2(1.1, 5.6)
 const END_FADE := 1.3
 const END_SKIP_AFTER := 1.0
-## Out of the gate the figure runs down the track to the slab's south edge (the way the kangaroos went), slowing
-## into a held stride: the point it runs to, the time constant of the slow-down (s), metres per run pose.
+## Out of the gate the figure runs straight down the track (the way the kangaroos went), flat out at the run clip's
+## foot speed (m/s, so the feet do not slide), and fades out past the slab's edge: the point it runs at, metres it
+## takes to fade once it is past that point.
 const RUN_TO := Vector3(6.3, 0.0, 17.1)
-const RUN_TAU := 1.7
+const RUN_FADE := 2.5
+const RUN_SPEED := 4.228
 const STRIDE := 0.55
 ## Air in the ending shot: fog density and screen smoke at the hero view (escape, lose).
 const END_FOG := Vector2(0.0042, 0.0105)
@@ -908,7 +910,7 @@ func _end(escaped: bool) -> void:
 		_end_dur = skin.escape_seconds
 		var to := RUN_TO - _end_feet
 		to.y = 0.0
-		_end_run_len = maxf(to.length() - 0.6, 0.5)
+		_end_run_len = to.length()
 		_end_run_dir = to.normalized() if to.length() > 0.01 else Vector3.BACK
 		_farmer.rotation = Vector3(0.0, atan2(_end_run_dir.x, _end_run_dir.z), 0.0)
 		sound_event.emit(&"exit", 0)
@@ -1670,11 +1672,17 @@ func _pose_ending() -> void:
 	# the figure
 	var fig := _end_feet
 	if esc:
-		var run := _end_run_len * (1.0 - exp(-t / RUN_TAU)) / (1.0 - exp(-_end_dur / RUN_TAU))
-		fig = _end_feet + _end_run_dir * (0.6 + run)
+		# a flat-out run at the run clip's own foot speed (the feet do not slide), from the first frame to the fade
+		var run := RUN_SPEED * t
+		var d := 0.6 + run
+		fig = _end_feet + _end_run_dir * d
+		var fade := clampf((d - _end_run_len) / RUN_FADE, 0.0, 1.0)
+		for g: GeometryInstance3D in _farmer.find_children("*", "GeometryInstance3D", true, false):
+			g.transparency = fade
+		_farmer.visible = fade < 1.0
 		var m := _farmer.get_node_or_null("Model")
-		if m and m.has_method(&"set_run"):
-			m.call(&"set_run", run / STRIDE)
+		if m and m.has_method(&"run_to_metres"):
+			m.call(&"run_to_metres", run, RUN_SPEED)
 	_farmer.global_position = fig
 	# the camera: a cubic curve from the head, up and back over the player, down the hero view's line
 	var p0 := _end_cam_from.origin

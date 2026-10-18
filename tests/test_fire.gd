@@ -504,8 +504,16 @@ func _walkthrough() -> void:
 	_check("ending: not over yet, the figure runs out", got.is_empty() and ov.current and farmer.visible)
 	s.advance(skin.escape_seconds * 0.6 - 1.5)
 	var run_to: Vector3 = s.RUN_TO
-	_check("ending: the figure ran down the track (%.2f m)" % farmer.global_position.distance_to(f0),
-			farmer.global_position.distance_to(run_to) < f0.distance_to(run_to) - 0.3 and farmer.global_position.z < 18.0)
+	var went := farmer.global_position - f0
+	var aim := run_to - f0
+	_check("ending: the figure ran straight down the track, no turn (%.2f m)" % went.length(),
+			went.length() > 5.0 and Vector2(went.x, went.z).angle_to(Vector2(aim.x, aim.z)) < 0.2)
+	var fg: Dictionary = farmer.get_node("Model").call("gait")
+	var dom: StringName = &"idle"
+	for gk: StringName in fg:
+		if float(fg[gk]) > float(fg[dom]):
+			dom = gk
+	_check("ending: the farmer runs (dominant clip %s, %s)" % [dom, fg], dom == &"run" and float(fg[&"run"]) > 0.9)
 	_check("ending: hero view (rot %s, fov %.1f)" % [ov.global_rotation_degrees.snapped(Vector3.ONE * 0.1), ov.fov],
 			ov.global_position.distance_to(s.hero_transform().origin) < 0.05 and absf(ov.fov - 26.0) < 0.05 \
 			and ov.global_rotation_degrees.distance_to(Vector3(-40, -22, 0)) < 0.2)

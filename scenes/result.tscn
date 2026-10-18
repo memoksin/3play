@@ -23,16 +23,16 @@ anchor_bottom = 1.0
 
 [node name="Card" type="PanelContainer" parent="Center"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(600, 0)
+custom_minimum_size = Vector2(690, 0)
 layout_mode = 2
 
 [node name="Box" type="VBoxContainer" parent="Center/Card"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 6
 
 [node name="Place" type="Label" parent="Center/Card/Box"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(540, 0)
+custom_minimum_size = Vector2(630, 0)
 layout_mode = 2
 theme_type_variation = &"HudData"
 uppercase = true
@@ -41,7 +41,7 @@ autowrap_mode = 3
 
 [node name="Score" type="Label" parent="Center/Card/Box"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(540, 0)
+custom_minimum_size = Vector2(630, 0)
 layout_mode = 2
 theme_type_variation = &"HudScore"
 horizontal_alignment = 1
@@ -49,7 +49,7 @@ autowrap_mode = 3
 
 [node name="Numbers" type="Label" parent="Center/Card/Box"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(540, 0)
+custom_minimum_size = Vector2(630, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9764706, 0.7607843, 0.16862746, 1)
 horizontal_alignment = 1
@@ -78,34 +78,44 @@ theme_override_constants/separation = 12
 [node name="Cold" type="Label" parent="Center/Card/Box/Scroll/Body"]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(540, 0)
+custom_minimum_size = Vector2(630, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.3529412, 0.23529412, 1)
 autowrap_mode = 3
 
-[node name="Partner" type="VBoxContainer" parent="Center/Card/Box"]
+[node name="Partner" type="PanelContainer" parent="Center/Card/Box"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-theme_override_constants/separation = 4
 
-[node name="PartnerText" type="Label" parent="Center/Card/Box/Partner"]
+[node name="Inner" type="VBoxContainer" parent="Center/Card/Box/Partner"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="PartnerRole" type="Label" parent="Center/Card/Box/Partner/Inner"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(540, 0)
 layout_mode = 2
 theme_type_variation = &"HudHeader"
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 84
+horizontal_alignment = 1
+
+[node name="PartnerText" type="Label" parent="Center/Card/Box/Partner/Inner"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(630, 0)
+layout_mode = 2
+theme_type_variation = &"HudHeader"
+theme_override_font_sizes/font_size = 52
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="Cta" type="Control" parent="Center/Card/Box/Partner"]
+[node name="Cta" type="Control" parent="Center/Card/Box/Partner/Inner"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(300, 92)
+custom_minimum_size = Vector2(480, 108)
 layout_mode = 2
 size_flags_horizontal = 4
 script = ExtResource("4")
 
-[node name="PartnerPlay" type="Button" parent="Center/Card/Box/Partner/Cta"]
+[node name="PartnerPlay" type="Button" parent="Center/Card/Box/Partner/Inner/Cta"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -117,7 +127,7 @@ offset_right = -16.0
 offset_bottom = -6.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_font_sizes/font_size = 56
+theme_override_font_sizes/font_size = 70
 
 [node name="Buttons" type="HBoxContainer" parent="Center/Card/Box"]
 unique_name_in_owner = true

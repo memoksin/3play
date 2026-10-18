@@ -77,6 +77,15 @@ func set_run(phase: float) -> void:
 	_apply()
 
 
+## Runs to `metres` at a known ground speed (m/s): the gait follows `speed` at once, not the wall clock (the ending).
+func run_to_metres(metres: float, speed: float) -> void:
+	_metres = metres
+	_speed = speed
+	_last_ms = Time.get_ticks_msec()
+	_crouch = false
+	_apply()
+
+
 func set_pose(pose: StringName) -> void:
 	_crouch = pose == &"crouch"
 	if not _crouch:
