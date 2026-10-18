@@ -28,3 +28,4 @@ Shared by every agent. Loaded via CLAUDE.md. Hard cap 40 lines; one line per fac
 - Fener collision (#123): the player is blocked by `FenerMap.WALK` (per-model body-height shapes measured from the mesh, exact yaw), not by `FOOT` (mass for light/fade/shock/routes). New or moved model: `tools/fener_footprints.gd` (`gen=1` drafts the entry), keep `tests/test_fener_walk.gd` green.
 
 - Connect how-to card: `connect.gd` opens it at `_ready` (`intro := true`) and time + clicks wait until `start_play()`. A test/tool that drives connect.tscn right away sets `s.intro = false` before `add_child` (or calls `start_play()`).
+- A test with a GDScript parse error does NOT fail: Godot prints "Failed to load script" and exits 0. Before trusting a green test you edited, run `godot --headless --path . --check-only -s tests/<file>.gd` (or grep the output for SCRIPT ERROR).
