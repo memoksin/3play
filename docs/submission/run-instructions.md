@@ -29,7 +29,7 @@ A run takes about 3 minutes. Which disaster you get depends on your role and on 
 | Indian Ocean (Connect) | Click a pipe tile to rotate it 90 degrees. Mouse only. |
 | Solar flare 3026 (Beam) | Click a satellite = turn +45 degrees. Right-click or Shift+click = back. Mouse wheel turns either way. Countdown phase keyboard: Tab / Shift+Tab or arrows pick, E / Space / Enter turn, Q turns back, F fires. |
 | Black Saturday (Fire, first person) | W A S D or arrows move, mouse looks (arrow keys Left/Right also turn), Shift run, Space jump, E / F / Enter interact (pick up, cut, attach, turn). |
-| Kahramanmaras (Fener) | `CHECK` controls of the new Fener build (memoksin). |
+| Kahramanmaras (Fener) | W A S D or arrows walk, the mouse aims the torch, hold the left mouse button to walk to the pointer, Space or F turns the torch on and off. |
 | Settings (main menu) | Language, master / music / effects volume, mouse sensitivity, invert Y, fullscreen, replay the prologue, Back, Quit. |
 
 ## Known issues
