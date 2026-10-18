@@ -307,7 +307,7 @@ func _playthrough(sd: int, label := "") -> void:
 			_check(tag + "a %s is at a crew" % need, it != null)
 			if it == null:
 				return
-			_check(tag + "the %s lies by a rescue crew" % need, FenerMap.CREWS.any(func(c: Vector3) -> bool: return Vector2(c.x, c.y).distance_to(it.pos) < 4.0))
+			_check(tag + "the %s lies in a rescue crew zone" % need, FenerMap.CREWS.any(func(c: Vector3) -> bool: return Vector2(c.x, c.y).distance_to(it.pos) < c.z))
 			# the zone is the pickup: walk to where the HUD points and stop at its edge
 			_walk_to(g[0], func() -> bool: return it.taken)
 			_check(tag + "picked up the %s" % need, it.taken)
@@ -559,7 +559,7 @@ func _supplies() -> void:
 	# inside the zone, but away from the rescuer at its centre and from the supplies
 	var inside := zone + Vector2(-4.5, 0.0)
 	var near_crew := func(it) -> bool:
-		return FenerMap.CREWS.any(func(cc: Vector3) -> bool: return Vector2(cc.x, cc.y).distance_to(it.pos) < 4.0)
+		return FenerMap.CREWS.any(func(cc: Vector3) -> bool: return Vector2(cc.x, cc.y).distance_to(it.pos) < cc.z)
 	_check("kit and batteries belong to a crew zone from the start", kit != null and near_crew.call(kit) and fener.items.filter(func(it) -> bool: return it.kind == &"battery").all(near_crew))
 	_check("the blanket is not out yet", blanket != null and not blanket.active)
 	_check("inside the zone, away from the figure and the supplies", fener.in_crew(0) == false and inside.distance_to(zone) > 4.0 and inside.distance_to(kit.pos) > fener.REACH and inside.distance_to(bat.pos) > fener.REACH)

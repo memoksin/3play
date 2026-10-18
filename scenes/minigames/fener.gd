@@ -1470,7 +1470,7 @@ func _guide_chip(n: CanvasItem, font: Font, ps: Vector2, pending: bool, gl: Arra
 		n.draw_colored_polygon(PackedVector2Array([Vector2(17, 0), Vector2(-12, -13), Vector2(-5, 0), Vector2(-12, 13)]), col)
 		n.draw_set_transform(Vector2.ZERO, 0.0)
 		var txt := "%s · %d m" % [r[2], roundi(tp.distance_to(ppos))]
-		if r[2].length() > 20:  # an errand: two small lines
+		if font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 24).x > 266.0:  # an errand: two small lines
 			n.draw_multiline_string(font, Vector2(box.position.x + 54, y + 17), txt, HORIZONTAL_ALIGNMENT_LEFT, 266.0, 17, 2, col)
 		else:
 			n.draw_string(font, Vector2(box.position.x + 54, y + 25), txt, HORIZONTAL_ALIGNMENT_LEFT, 266.0, 24, col)
