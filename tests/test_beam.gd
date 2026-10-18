@@ -458,6 +458,7 @@ func _scene_flow() -> void:
 	await _key(KEY_LEFT)
 	_check("keys: arrows move the focus between satellites", s.focus >= 0 and s.focus < s.level.sats.size())
 
+	var at_solve: float = s.time_left
 	var n := await _solve_by_mouse(s)
 	_check("wave 1: solved with %d clicks, route safe" % n, s.perfect and s.sim.hit.is_empty())
 	_check("wave 1: forecast SAFE, safe toast, ready cue", s.get_node("%Forecast").text == tr("SF_BEAM_SAFE")
@@ -465,15 +466,15 @@ func _scene_flow() -> void:
 	_check("wave 1: the solved route cuts the clock to 5 s (rush cue)", s.rushed and s.time_left == s.RUSH_TIME and events.has([&"rush", 0]))
 	s.advance(1.0)
 	await _key(KEY_F)
-	_check("keys: F fires early", s.phase == P.FIRE and s.fired_at == 4.0 and events.has([&"charge", 0]))
+	_check("keys: F fires early, the time left counts from the solve", s.phase == P.FIRE and absf(s.fired_at - at_solve) < 1.0 and events.has([&"charge", 0]))
 	_check("fire: no turning during the shot", not s.rotate_sat(0, 1))
 	s.advance(0.3)
 	_check("fire: charging first, beam not out yet", s.fire_t < 0.0 and not events.has([&"fire", 0]))
 	_run_until_not(s, P.FIRE)
 	_check("fire: beam left the Sun, reached the collector", events.has([&"fire", 0]) and events.any(func(e: Array) -> bool: return e[0] == &"collect"))
 	var res: Dictionary = s.last_result
-	_check("wave 1 result: 10/10, 3 stars, 100%% energy, 4 s left", s.phase == P.RESULT and res.saved == 10 and res.total == 10
-		and res.stars == 3 and res.energy == 100 and res.early == 4 and s.dark.is_empty())
+	_check("wave 1 result: 10/10, 3 stars, 100%% energy, the time left at the solve", s.phase == P.RESULT and res.saved == 10 and res.total == 10
+		and res.stars == 3 and res.energy == 100 and res.early == floori(s.fired_at) and res.early > 4 and s.dark.is_empty())
 	_check("wave 1 result card shows 10/10", (s.get_node("%CardBox").find_child("Score", true, false) as Label).text == "10/10")
 	_check("wave 1: good cue", events.has([&"wave_good", 0]))
 
@@ -567,6 +568,7 @@ func _scene_blind_and_timeout() -> void:
 	# blind, but solved: no safe toast, the flare still comes (rush), and the timeout shot is clean
 	_check("blind: retry -> countdown", _press(s, "Retry") and _press(s, "Go") and s.phase == P.PLAN)
 	events.clear()
+	var blind_left: float = s.time_left
 	s.solve()
 	_check("blind: no safe toast, no ready cue", not events.has([&"ready", 0]) and s.get_node("%Toast").text != tr("SF_BEAM_TOAST_SAFE"))
 	_check("blind: a solved route still cuts the clock", s.rushed and s.time_left == s.RUSH_TIME and events.has([&"rush", 0]))
@@ -574,9 +576,9 @@ func _scene_blind_and_timeout() -> void:
 		s.advance(0.05)
 		if s.phase != P.PLAN:
 			break
-	_check("blind: the shot fires at 0", s.phase == P.FIRE and s.fired_at == 0.0)
+	_check("blind: the shot fires at 0, counting the time left at the solve", s.phase == P.FIRE and s.time_left == 0.0 and s.fired_at == blind_left)
 	_run_until_not(s, P.FIRE)
-	_check("blind timeout shot: 10/10, 0 s left", s.last_result.saved == 10 and s.last_result.early == 0)
+	_check("blind timeout shot: 10/10, the time left at the solve", s.last_result.saved == 10 and s.last_result.early == floori(blind_left))
 	s.queue_free()
 	await process_frame
 
@@ -654,6 +656,7 @@ func _scene_rush() -> void:
 	_check("rush: a wrong turn does not rush", not s.perfect and not s.rushed and s.time_left == 45.0 and not events.has([&"rush", 0]))
 	await _mouse(s.sat_screen(0), MOUSE_BUTTON_RIGHT)
 	s.advance(5.0)
+	var before: float = s.time_left
 	var n := await _solve_by_mouse(s)
 	_check("rush: solved by %d clicks -> clock is 5 s, cue, alarm text in the language" % n, s.perfect and s.rushed and s.time_left == 5.0
 		and events.filter(func(e: Array) -> bool: return e[0] == &"rush").size() == 1 and rush.visible
@@ -676,7 +679,8 @@ func _scene_rush() -> void:
 		s.advance(0.05)
 		if s.phase != P.PLAN:
 			break
-	_check("rush: the flare fires by itself when the 5 s are up (last ticks hard)", s.phase == P.FIRE and s.fired_at == 0.0 and not rush.visible
+	_check("rush: the flare fires by itself when the 5 s are up, counting the time left at the solve (%.2f s)" % s.fired_at,
+		s.phase == P.FIRE and s.fired_at > 5.0 and absf(s.fired_at - before) < 1.0 and not rush.visible
 		and events.filter(func(e: Array) -> bool: return e[0] == &"tick").slice(-3).all(func(e: Array) -> bool: return e[1] == 1) and tick3.size() >= 1)
 	_run_until_not(s, P.FIRE)
 	_check("rush: shot is clean, 10/10", s.last_result.saved == 10 and s.last_result.stars == 3)

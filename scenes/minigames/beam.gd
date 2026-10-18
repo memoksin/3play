@@ -76,6 +76,8 @@ var fire_t := 0.0
 var fired_at := 0.0
 ## The route was found this countdown and the clock was cut to RUSH_TIME.
 var rushed := false
+## Seconds left on the clock when the route was found (before the cut to RUSH_TIME): the time the result counts.
+var solved_left := 0.0
 ## Best run per wave: {saved, total, energy, stars, early, lost} or null.
 var best: Array = []
 ## Last wave result shown.
@@ -194,6 +196,7 @@ func load_wave(i: int) -> void:
 	fire_t = 0.0
 	_last_sec = 99
 	rushed = false
+	solved_left = 0.0
 	hover = -1
 	focus = -1
 	board.build(level, wave, skin, AREA, get_viewport_rect().size)
@@ -266,6 +269,7 @@ func start_countdown() -> void:
 	time_left = time_total
 	_last_sec = 99
 	rushed = false
+	solved_left = 0.0
 	_toast_text(_t("TOAST_WAVE") % (wave_index + 1), Color("ffd27a"))
 	_refresh_view()
 	_update_hud()
@@ -276,7 +280,7 @@ func fire() -> void:
 	if phase != Phase.PLAN:
 		return
 	phase = Phase.FIRE
-	fired_at = time_left
+	fired_at = solved_left if rushed else time_left
 	sim = BeamLogic.simulate(level, rots)
 	fire_t = -skin.charge
 	_ev_i = 0
@@ -534,6 +538,7 @@ func _rush_clock() -> void:
 	if phase != Phase.PLAN or rushed or time_left <= RUSH_TIME:
 		return
 	rushed = true
+	solved_left = time_left
 	time_left = RUSH_TIME
 	_shake = maxf(_shake, RUSH_SHAKE)
 	_flash_now(0.3, FLASH_HIT)
