@@ -53,6 +53,8 @@ const INTRO_GLIDE := 1.8
 const SLOWMO_TIME := 0.45
 const SLOWMO_K := 0.22
 const HUD_TOP := 12.0
+## The errand banner's top edge sits this far above the bottom of the screen.
+const BANNER_UP := 150.0
 
 const C_COOL := Color("6fd3c4")
 const C_HOT := Color("ff5a36")
@@ -1409,10 +1411,18 @@ func _draw_overlay() -> void:
 func _goal_banner(n: CanvasItem, font: Font, vr: Rect2, txt: String, t: float) -> void:
 	var fs := 34
 	var w := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-	var box := Rect2(Vector2(vr.get_center().x - w * 0.5 - 28.0, vr.end.y - 150.0), Vector2(w + 56.0, 60.0))
+	var box := Rect2(Vector2(vr.get_center().x - w * 0.5 - 28.0, vr.end.y - BANNER_UP), Vector2(w + 56.0, 60.0))
 	n.draw_rect(box, Color(0.03, 0.03, 0.06, 0.82))
 	n.draw_rect(box, Color(C_AMBER, 0.6 + 0.4 * sin(t * 4.0)), false, 2.0)
 	n.draw_string(font, box.position + Vector2(28.0, 42.0), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, C_AMBER)
+
+
+## Screen y where the HUD at the bottom (errand banner, messages) begins: the world below it is covered.
+func hud_floor() -> float:
+	var y := size.y - BANNER_UP
+	if n_toast and n_toast.visible:
+		y = minf(y, n_toast.position.y)
+	return y
 
 
 ## Index of the rescue crew whose post is nearest to `p`.

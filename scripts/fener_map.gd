@@ -275,7 +275,7 @@ const SPOTS := {
 const ITEMS := {
 	&"battery": [Vector2(-28.1, -12.0), Vector2(28.2, 23.6)],
 	&"kit": [Vector2(-28.1, -9.0)],
-	&"blanket": [Vector2(-28.0, -10.6), Vector2(28.4, 26.2)],
+	&"blanket": [Vector2(-28.0, -10.6), Vector2(27.6, 26.4)],  # the camp one 1 m clear of the park fence: the model spins
 }
 const ITEM_COUNT := {&"battery": 2, &"kit": 1, &"blanket": 1}
 
