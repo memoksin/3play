@@ -30,45 +30,66 @@ const INTRO_FILE_LEN = 8.0;           // approved intro file (export/video/appro
 const INTRO_CUT = 2.0;                // its first seconds are cut off in the final film (assemble.sh INTRO_CUT)
 const INTRO_LEN = INTRO_FILE_LEN - INTRO_CUT;   // intro length in the final film
 const SCENARIO_COUNT = 3;             // step 16: number of disaster scenarios
+// The cuts sit on the music's grid: the bed (MUSIC, t33_music_bed.ogg) is 96 BPM, a beat every 0.625 s, its first
+// downbeat at final 0.9 s, a bar every 4 beats (final 0.9, 3.4, ... 25.9 the drums come in, ... 53.4 the logo).
+// B(k) = film seconds of beat k (k % 4 == 0: a bar). Rebuild the bed when the logo moves (tools/video/README.md).
+const GRID = { first: 0.9, beat: 0.625 };   // final-film seconds
+const B = (k) => +(GRID.first + k * GRID.beat - INTRO_LEN).toFixed(4);
+const span = (a, b) => ({ start: B(a), len: +(B(b) - B(a)).toFixed(4) });   // a row from beat a to beat b
+const FILM_LEN = 53.95;               // film.mp4 length: 6.0 s intro + 53.95 s = 59.95 s (the limit is 60)
+// moments inside the Godot clips (clip seconds) that the grid places
+const LAMP_CLIP = 1.25;               // fener_mini: the lamp clicks on
+const LOCK_CLIP = 4.92;               // globe_full: the game's crosshair closes on the Indian Ocean
+const HIT_CLIP = 13.15;               // io_mini: the wave breaks over the town
+const CUT_CLIP = 1.083;               // fire_mini: the last tie snaps, the fence panel is cut
+const OUT_CLIP = 7.6;                 // fire_mini: the flame goes out
+const GLOBE_IN = +(LOCK_CLIP - (B(36) - B(29)) * 1.1).toFixed(4);           // the crosshair closes on bar 9 (beat 36)
+const IO_B = { in: 9.45, speed: 1.25 };
+const IO_B_START = +(B(52) - (HIT_CLIP - IO_B.in) / IO_B.speed).toFixed(4);  // the wave breaks on bar 13 (beat 52)
 const TL = [
-  // step id             start   len   clip / text
-  { step: 5,  id: "dark",       start: 0.0,  len: 4.2 },
-  { step: 5,  id: "s_hayat",    start: 1.8,  len: 2.35, text: "Hayatın *göremediğimiz* boyutları vardır" },
-  { step: 6,  id: "diorama",    start: 4.2,  len: 3.9,  clip: "kahr_diorama", in: 0.9 },          // past the game's fly-in, orbiting
-  { step: 7,  id: "c_tahmin",   start: 5.9,  len: 2.2,  text: "TAHMİN ET" },
-  { step: 8,  id: "fener",      start: 8.1,  len: 6.8,  clip: "fener_mini", in: 0.45 },           // a whistle in the dark, the lamp clicks on (+0.8), "ANNE" found, the family follows
+  // step id             start / len (beats)   clip / text
+  { step: 5,  id: "dark",       start: 0.0, len: B(15) },
+  { step: 5,  id: "s_hayat",    start: 1.8,  len: 2.35, text: "Hayatın *göremediğimiz* boyutları vardır" },   // beat 11 is 1.775
+  { step: 6,  id: "diorama",    ...span(15, 21), clip: "kahr_diorama", in: 0.9 },          // past the game's fly-in, orbiting
+  { step: 7,  id: "c_tahmin",   ...span(18, 21), text: "TAHMİN ET" },
+  { step: 8,  id: "fener",      ...span(21, 29), clip: "fener_mini", in: +(LAMP_CLIP - B(22) + B(21)).toFixed(4) },   // a whistle in the dark, the lamp clicks on on beat 22, "ANNE" found, the family follows
   // the game's whole globe animation at 1.1x in one take: the spin (globe), then the lock and the zoom (lock), same clip
-  { step: 9,  id: "globe",      start: 14.9, len: 3.8,  clip: "globe_full", in: 0.15, speed: 1.1 },
-  { step: 9,  id: "c_kesfet",   start: 15.5, len: 2.2,  text: "KEŞFET" },
+  { step: 9,  id: "globe",      start: B(29), len: 3.8, clip: "globe_full", in: GLOBE_IN, speed: 1.1 },
+  { step: 9,  id: "c_kesfet",   start: B(30), len: 2.2, text: "KEŞFET" },
   // lock: the HUD locks `lock` s after start (the game's crosshair closes), extra push + flash from `zoom` s.
   // target = screen point (clip px) of the Indian Ocean when locked. hud: "brackets" (the game draws its own crosshair
   // and readout) or "full" (our own crosshair, rings and readout, for a clip without the game's lock UI).
-  { step: 10, id: "lock",       start: 18.7, len: 3.0,  clip: "globe_full", in: 4.33, speed: 1.1, lock: 0.54, zoom: 2.6, target: [960, 540], hud: "brackets" },
-  { step: 11, id: "c_mudahale", start: 21.7, len: 1.8,  text: "MÜDAHALE ET" },
+  { step: 10, id: "lock",       start: B(29) + 3.8, len: +(B(40) - B(29) - 3.8).toFixed(4), clip: "globe_full", in: +(GLOBE_IN + 3.8 * 1.1).toFixed(4), speed: 1.1,
+    lock: +(B(36) - B(29) - 3.8).toFixed(4), zoom: +(B(40) - B(29) - 3.8 - 0.4).toFixed(4), target: [960, 540], hud: "brackets" },
+  { step: 11, id: "c_mudahale", ...span(40, 43), text: "MÜDAHALE ET" },                    // bar 10: the drums come in
   // the tsunami in one take: the drawback and the rising wall sped up (io_a), then the break and the flood (io_b)
-  { step: 12, id: "io_a",       start: 23.5, len: 2.5,  clip: "io_mini", in: 2.2, speed: 2.9 },   // the pipes lock, the sea pulls back
-  { step: 12, id: "io_b",       start: 26.0, len: 5.1,  clip: "io_mini", in: 9.45, speed: 1.25, hit: 2.96 },  // the wall; breaks at +hit (clip 13.15 s), the town floods
-  { step: 13, id: "black",      start: 31.1, len: 0.6 },
-  { step: 14, id: "menu",       start: 31.7, len: 4.3,  clip: "menu_roles", in: 1.7 },           // opens like the eye; "Devlet" hovers ~32.8, "Vatandaş" ~34.8
-  { step: 14, id: "s_fark",     start: 32.0, len: 2.5,  text: "Farkındalık *tek taraflı* değildir" },   // typed by 33.0, held ~1 s to read
-  { step: 14, id: "c_tercih",   start: 34.45, len: 1.55, text: "TERCİH ET" },
-  { step: 15, id: "globe2",     start: 36.0, len: 3.2,  clip: "globe_spin2", in: 0.3, speed: 1.1 },
-  { step: 15, id: "s_dunya",    start: 36.3, len: 2.9,  text: "Dünyanın *dört bir yanından*" },
-  { step: 16, id: "s_count",    start: 37.4, len: 1.8,  text: `*${SCENARIO_COUNT}* afet senaryosu` },
-  // Black Saturday, first person: the wire cutters snip the fence (fire_a), cut to the kangaroos running out (fire_b)
-  { step: 16, id: "fire_a",     start: 39.2, len: 1.0,  clip: "fire_mini", in: 0.35, speed: 1.15 },
-  { step: 16, id: "fire_b",     start: 40.2, len: 1.2,  clip: "fire_mini", in: 3.55, speed: 1.15 },
-  { step: 17, id: "bunny",      start: 41.4, len: 3.1, burst: 0.97 },                            // the egg bursts at +burst (1.4 s at normal speed), the bunny at normal speed
-  { step: 18, id: "s_easter",   start: 42.45, len: 2.05, text: "Belki bir de *easter egg*, kim bilir…" },
-  { step: 19, id: "c_aaa",      start: 44.5, len: 2.45, text: "AAA" },                           // calm, like an "AAA game" label, GAME under it; it settles before "yok yok"
-  { step: 19, id: "s_yok",      start: 45.95, len: 1.0, text: "yok yok" },
-  { step: 19, id: "logo",       start: 46.95, len: 2.9 },                                         // "3play" lands (the game's logo), the same GAME under it, held
-  { step: 19, id: "c_fark",     start: 49.85, len: 3.6, text: "FARK ET" },                       // held; the CRT power-off closes it in its last CRT s
-  { step: 19, id: "end",        start: 53.45, len: 0.5 },   // pure black tail
+  { step: 12, id: "io_a",       start: B(43), len: +(IO_B_START - B(43)).toFixed(4), clip: "io_mini", in: +(IO_B.in - (IO_B_START - B(43)) * 2.9).toFixed(4), speed: 2.9 },   // the pipes lock, the sea pulls back
+  { step: 12, id: "io_b",       start: IO_B_START, len: +(B(54) - IO_B_START).toFixed(4), clip: "io_mini", in: IO_B.in, speed: IO_B.speed, hit: +(B(52) - IO_B_START).toFixed(4) },  // the wall; breaks at +hit (clip 13.15 s), the town floods
+  { step: 13, id: "black",      ...span(54, 55) },
+  { step: 14, id: "menu",       ...span(55, 62), clip: "menu_roles", in: 1.7 },           // opens like the eye; "Devlet" hovers ~+1.1, "Vatandaş" ~+3.2 (under TERCİH ET)
+  { step: 14, id: "s_fark",     start: B(56), len: +(B(60) - B(56) + 0.05).toFixed(4), text: "Farkındalık *tek taraflı* değildir" },   // typed in 1.0 s, held ~1 s to read
+  { step: 14, id: "c_tercih",   ...span(60, 62), text: "TERCİH ET" },
+  { step: 15, id: "globe2",     ...span(62, 67), clip: "globe_spin2", in: 0.3, speed: 1.1 },
+  { step: 15, id: "s_dunya",    ...span(63, 67), text: "Dünyanın *dört bir yanından*" },
+  { step: 16, id: "s_count",    ...span(64, 67), text: `*${SCENARIO_COUNT}* afet senaryosu` },
+  // Black Saturday, first person: the wire cutters cut the fence (fire_a, the cut on bar 17), cut to the kangaroos
+  // running out (fire_b), cut to the hose on the flame in the way out (fire_c, the flame goes out on beat 74)
+  { step: 16, id: "fire_a",     ...span(67, 69), clip: "fire_mini", in: +(CUT_CLIP - (B(68) - B(67)) * 1.15).toFixed(4), speed: 1.15 },
+  { step: 16, id: "fire_b",     ...span(69, 71), clip: "fire_mini", in: 3.55, speed: 1.15 },
+  { step: 16, id: "fire_c",     ...span(71, 75), clip: "fire_mini", in: +(OUT_CLIP - (B(74) - B(71)) * 1.1).toFixed(4), speed: 1.1 },
+  { step: 17, id: "bunny",      ...span(75, 80), burst: +(B(77) - B(75)).toFixed(4) },     // the egg bursts on beat 77 (1.4 s at normal speed), the bunny at normal speed
+  { step: 18, id: "s_easter",   start: B(76), len: +(B(80) - B(76) + 0.05).toFixed(4), text: "Belki bir de *easter egg*, kim bilir…" },
+  { step: 19, id: "c_aaa",      ...span(80, 84), text: "AAA" },                           // bar 20; calm, like an "AAA game" label, GAME under it; it settles before "yok yok"
+  { step: 19, id: "s_yok",      ...span(82, 84), text: "yok yok" },
+  { step: 19, id: "logo",       ...span(84, 88), },                                        // bar 21: "3play" lands on the music's strongest beat, the same GAME under it, held
+  { step: 19, id: "c_fark",     start: B(88), len: 0, text: "FARK ET" },                                  // bar 22; held; the CRT power-off (beat 93) closes it, len set below
+  { step: 19, id: "end",        start: 0, len: 0 },                                        // pure black tail to FILM_LEN
 ];
 const R = Object.fromEntries(TL.map((r) => [r.id, r]));
 const end = (r) => r.start + r.len;
 const CRT = 0.65;                     // the CRT power-off: the last seconds of FARK ET
+R.c_fark.len = +(B(93) + CRT - B(88)).toFixed(4);
+R.end.start = end(R.c_fark); R.end.len = +(FILM_LEN - R.end.start).toFixed(4);
 const EGG_BURST = 1.4;                    // scene seconds of the burst (cracks at 0.55 and 1.0); the picture is sped up to it
 const EGG_SND = { file: "assets/audio/trailer/t27_egg_crack.ogg", c1: 0.34, c2: 0.58, burst: 1.08 };   // the cracks in the sound (s)
 const eggBurstAt = () => R.bunny.burst;   // row seconds of the burst
@@ -93,12 +114,22 @@ function cardHit(T, r, note) {                             // title card: low bo
   return [{ T, at: r.start, file: T11, lu: -22, ceil: -7, fade: [0, 1.2], dur: 3.2, note }, { T, at: r.start, file: G7, dur: 0.45, lu: -27, fade: [0, 0.12], note: note + " (glitch layer)" }];
 }
 function typing(T, r, dur, lu = -28, note = "typing") { return { T, at: r.start, file: G3, dur, lu, fade: [0.01, 0.06], note }; }
-const MUSIC = {                                           // one bed: M1 Title.mp3 (menu music), 129.8 s into the file at film 0, so
-  file: A + "menu/title.ogg", from: 129.8, lu: -24,        // its own swells peak as the lamp finds the mother (9.3) and at 45.3 (under "yok yok"; the logo lands at 46.95)
-  keys: [[0, -14], [3.8, -6], [4.6, 0], [R.io_a.start, 0], [R.io_a.start + 0.6, -5], [end(R.io_b) - 0.02, -5], [end(R.io_b), -80],
-    [R.menu.start, -80], [R.menu.start + 0.7, 0], [R.c_aaa.start - 0.2, 0], [R.logo.start - 0.1, -3], [R.logo.start + 1.3, -1],
-    [R.c_fark.start, 0], [R.c_fark.start + 0.6, 0], [R.c_fark.start + 1.4, 3], [end(R.c_fark) - CRT, 3], [end(R.c_fark) - 0.05, -80]],
-  // [film s, dB]: in from the dark, under the tsunami, out at the black cut, back as the menu opens, up under FARK ET, out with the CRT
+// One bed: t33_music_bed.ogg, built for this film from Opening Theme V2 (nene, CC0) and the drums of Mountain Emperor
+// (Kevin MacLeod, CC BY 4.0) on the GRID above (tools/video/README.md, "Music bed"). It starts with the intro (final
+// 0 s): the theme's quiet opening until bar 10 (final 25.9, MÜDAHALE ET), then the drums, a half-beat break and its
+// strongest hit on the logo (bar 21, final 53.4). Its first 0.9 s (before the first downbeat) stay muted.
+const MUSIC = {
+  file: A + "trailer/t33_music_bed.ogg", final: 0, from: 0, lu: -19.5,
+  keys: [[-INTRO_LEN, -80], [GRID.first - INTRO_LEN, -80], [GRID.first - INTRO_LEN + 0.6, -2], [0, 4], [B(15), 2], [B(39), 2], [B(40), 0],
+    [B(54) - 0.02, 0], [B(54), -80], [B(55) - 0.01, -80], [B(55), -12], [B(56), 0],
+    [B(93), 0], [B(93) + 0.6, -80]],
+  // [film s, dB]: under the intro's storm, the quiet opening raised until the drums, out on the hard cut to black and
+  // back as the menu opens, out with the CRT
+  // ducks [film s, hold s, dB]: the bed steps back 2-3 dB while a key game sound plays, then comes back (0.06 s in,
+  // 0.35 s out); in between, music and effects sit about level (tools/video/mix.py prints both buses)
+  duck: [[R.fener.start + LAMP_CLIP - R.fener.in, 0.8, -2.5], [R.lock.start + R.lock.lock, 0.5, -2.5],
+    [R.io_b.start + R.io_b.hit, 1.0, -3], [R.fire_a.start, end(R.fire_c) - R.fire_a.start - 0.4, -2.5],
+    [R.c_aaa.start - 0.2, 0.9, -2], [R.s_yok.start, 0.6, -2.5]],
 };
 const STEMS = [                                           // row id, loudness, fades [in, out]
   { T: "T14b", row: "fener", lu: -21, ceil: -12, fade: [0.03, 0.3], note: "Fener in-game sound: wind, footsteps, the mother's whistle, lamp click (FN3), found (FN6)" },
@@ -109,7 +140,8 @@ const STEMS = [                                           // row id, loudness, f
   { T: "T22", row: "menu", lu: -27, ceil: -14, fade: [0.3, 0.2], note: "role menu in-game sound: hover (M2) on Devlet, then on Vatandaş" },
   { T: "T25b", row: "globe2", lu: -28, fade: [0.03, 0.2], note: "second globe in-game sound at 1.1x (G9)" },
   { T: "T25f", row: "fire_a", lu: -22, ceil: -10, fade: [0.03, 0.03], note: "fire in-game sound: wind and fire (FR1), the cutters (FR5, FR5.2), the fence cut (FR6)" },
-  { T: "T25g", row: "fire_b", lu: -22, ceil: -10, fade: [0.03, 0.3], note: "fire in-game sound: wind and fire (FR1), the kangaroos run (FR11)" },
+  { T: "T25g", row: "fire_b", lu: -22, ceil: -10, fade: [0.03, 0.03], note: "fire in-game sound: wind and fire (FR1), the kangaroos run (FR11)" },
+  { T: "T25h", row: "fire_c", lu: -22, ceil: -10, fade: [0.03, 0.3], note: "fire in-game sound at 1.1x: the flame (FR9), the hose sprays (FR8), the flame goes out (FR6)" },
 ];
 const IC = INTRO_CUT;                                     // intro cue times are in the intro file's seconds
 const SFX = [
@@ -144,13 +176,13 @@ const SFX = [
   typing("T25d", R.s_count, typeLen(R.s_count)),
   { T: "T25e", at: R.s_count.start + 0.45, file: A + "menu/ui_hover.ogg", peak: -17, note: "the digit 3 settles" },
   { T: "T14", at: R.fire_a.start, file: G7, dur: 0.45, lu: -24, fade: [0, 0.1], note: "glitch cut: Black Saturday fire" },
-  { T: "T26", at: end(R.fire_b) - 0.4, file: G7, ss: 0.6, dur: 0.75, lu: -23, fade: [0.05, 0.2], note: "pixelate into the bunny scene" },
+  { T: "T26", at: end(R.fire_c) - 0.4, file: G7, ss: 0.6, dur: 0.75, lu: -23, fade: [0.05, 0.2], note: "pixelate into the bunny scene" },
   { T: "T27", at: R.bunny.start + eggBurstAt() - EGG_SND.burst, file: EGG_SND.file, lu: -21, ceil: -8, fade: [0, 0.4], note: "egg cracks at normal speed: its two small cracks on the picture's, the big crack on the burst" },
   { T: "T28", at: R.s_easter.start, file: T11, dur: 1.6, lu: -27, ceil: -10, fade: [0, 0.8], note: "statement sting: Belki bir de easter egg" },
   typing("T28b", R.s_easter, typeLen(R.s_easter)),
   { T: "T29", at: R.c_aaa.start - 0.2, file: A + "globe/guitar_swell_trim.ogg", lu: -22, fade: [0, 0.3], note: "AAA GAME appears: calm swell (R1), no hit" },
   typing("T29b", R.s_yok, typeLen(R.s_yok, 0.07), -27, "yok yok types on"),
-  { T: "T29c", at: R.logo.start, file: T11, dur: 4.0, lu: -19, ceil: -6, fade: [0, 1.6], note: "3play lands" },
+  { T: "T29c", at: R.logo.start, file: T11, dur: 4.0, lu: -22, ceil: -6, fade: [0, 1.6], note: "3play lands, under the bed's own hit" },
   ...cardHit("T30", R.c_fark, "FARK ET"),
   { T: "T31", at: end(R.c_fark) - CRT - 0.05, file: A + "trailer/t31_tv_off.ogg", peak: -9, note: "CRT power-off on FARK ET, at the very end" },
 ];
@@ -981,8 +1013,9 @@ function drawScene(t) {
   // 16: Black Saturday, first person (glitch cut in); a hard cut inside it; ends in the pixelate into the bunny
   if (inRow(R.fire_a, t)) drawClip(R.fire_a, t, { scale: 1.05 - 0.03 * easeOut((t - R.fire_a.start) / R.fire_a.len) });
   if (inRow(R.fire_b, t)) drawClip(R.fire_b, t, { scale: 1.02 + 0.03 * smooth(R.fire_b.start, end(R.fire_b), t) });
-  if (t >= R.fire_a.start && t < end(R.fire_b))
-    drawCaption(t, R.fire_a.start + 0.15, end(R.fire_b) - 0.05, [["VICTORIA, AVUSTRALYA", 52, PAL.fg], ["37.53°G  145.35°D  ·  2009", 40, PAL.amber]], H - 236);
+  if (inRow(R.fire_c, t)) drawClip(R.fire_c, t, { scale: 1.04 - 0.03 * easeOut((t - R.fire_c.start) / R.fire_c.len) });
+  if (t >= R.fire_a.start && t < end(R.fire_c))
+    drawCaption(t, R.fire_a.start + 0.15, end(R.fire_c) - 0.05, [["VICTORIA, AVUSTRALYA", 52, PAL.fg], ["37.53°G  145.35°D  ·  2009", 40, PAL.amber]], H - 236);
   // 17: bunny
   if (inRow(R.bunny, t)) drawBunnyScene(t);
   // 19: "AAA GAME", "yok yok", the logo lands with the same GAME; FARK ET on the same stage
@@ -1027,7 +1060,7 @@ function postState(t) {
   const fe = t < end(R.lock) ? smooth(end(R.lock) - 0.35, end(R.lock), t) : Math.exp(-(t - end(R.lock)) * 4.5);
   if (t > end(R.lock) - 0.35 && t < R.c_mudahale.start + 1.2) { P.flash = Math.max(P.flash, 0.42 * fe); P.flashCol = [0.62, 0.95, 0.9]; }
   // pixelate: the fire -> the bunny (pixel world)
-  const g2 = end(R.fire_b);
+  const g2 = end(R.fire_c);
   if (t >= g2 - 0.4 && t < g2) P.pix = Math.round(lerp(1, 40, easeIn((t - g2 + 0.4) / 0.4))) || 1;
   if (t >= g2 && t < g2 + 0.35) P.pix = Math.max(1, Math.round(lerp(40, 1, easeOut((t - g2) / 0.35))));
   if (P.pix > 1 && P.pix < 2) P.pix = 1;
@@ -1068,11 +1101,12 @@ async function renderAt(t) {
 // ---------------------------------------------------------------- cue sheet for the audio team (final-film seconds = INTRO_LEN + film seconds)
 function cues() {
   const c = HEART.map(([t], i) => ({ film: t, what: `heartbeat (${i % 2 ? "dub" : "lub"})` }));
-  c.push({ film: R.diorama.start, what: "darkness tears open: snowy Kahramanmaraş diorama" }, { film: R.fener.start + 0.8, what: "Fener: the lamp clicks on, the mother is found" },
+  c.push({ film: R.diorama.start, what: "darkness tears open: snowy Kahramanmaraş diorama" }, { film: R.fener.start + LAMP_CLIP - R.fener.in, what: "Fener: the lamp clicks on, the mother is found" },
     { film: R.globe.start - 0.3, what: "zoom-blur whip to the globe" }, { film: R.lock.start + R.lock.lock, what: "target lock (Indian Ocean)" },
     { film: R.io_b.start + R.io_b.hit, what: "the wave breaks over the town" }, { film: R.black.start, what: "hard cut to black" },
     { film: R.menu.start, what: "role menu opens (eye again)" }, { film: R.fire_a.start, what: "Black Saturday fire: cut the fence" },
-    { film: R.fire_b.start, what: "the kangaroos run out" }, { film: end(R.fire_b) - 0.4, what: "pixelate into the bunny scene" },
+    { film: R.fire_b.start, what: "the kangaroos run out" }, { film: R.fire_c.start, what: "the hose on the flame" },
+    { film: R.fire_c.start + (OUT_CLIP - R.fire_c.in) / R.fire_c.speed, what: "the flame goes out" }, { film: end(R.fire_c) - 0.4, what: "pixelate into the bunny scene" },
     { film: R.logo.start, what: "3play lands" });
   c.push({ film: VOICE.t, len: VOICE.len, what: `voice, echoing: "${VOICE.text}" (dropped: no voice, the rings stay)` });
   for (const r of TL) if (r.text) c.push({ film: r.start, len: r.len, what: `${r.id.startsWith("c_") ? "title card" : "statement"}: ${r.text.replace(/\*/g, "")}` });
@@ -1084,11 +1118,24 @@ function cues() {
 }
 
 // ---------------------------------------------------------------- boot
+// the bed's volume curve with the ducks added: both are piecewise linear, so their sum is exact at the union of the
+// breakpoints (a duck: 0.06 s down, `hold` s at `db`, 0.35 s back)
+function duckKeys(keys, ducks) {
+  const at = (pts, t) => {
+    if (t <= pts[0][0]) return pts[0][1];
+    for (let i = 1; i < pts.length; i++) if (t <= pts[i][0]) return pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * (t - pts[i - 1][0]) / Math.max(pts[i][0] - pts[i - 1][0], 1e-6);
+    return pts[pts.length - 1][1];
+  };
+  const shapes = ducks.map(([t, hold, db]) => [[t - 0.06, 0], [t, db], [t + hold, db], [t + hold + 0.35, 0]]);
+  const ts = [...new Set([...keys.map((k) => k[0]), ...shapes.flat().map((k) => k[0])])].sort((a, b) => a - b);
+  return ts.map((t) => { const base = at(keys, t); return [t, base <= -79 ? base : base + shapes.reduce((s, d) => s + at(d, t), 0)]; });
+}
 function audioPlan() {                                   // final-film seconds for tools/video/mix.py
   const fin = (c) => +((c.final ?? c.at + INTRO_LEN)).toFixed(3);
   return {
     intro: INTRO_LEN, length: +(INTRO_LEN + DURATION).toFixed(3),
-    music: { ...MUSIC, start: INTRO_LEN, keys: MUSIC.keys.map(([t, db]) => [+(t + INTRO_LEN).toFixed(3), db]) },
+    music: { file: MUSIC.file, from: MUSIC.from, lu: MUSIC.lu, start: MUSIC.final, grid: GRID,
+      keys: duckKeys(MUSIC.keys, MUSIC.duck).map(([t, db]) => [+(t + INTRO_LEN - MUSIC.final).toFixed(3), +db.toFixed(2)]) },
     stems: STEMS.map((s) => { const r = R[s.row]; return { ...s, clip: r.clip, in: r.in, speed: r.speed || 1, at: +(r.start + INTRO_LEN).toFixed(3), len: r.len }; }),
     sfx: SFX.map((c) => ({ ...c, at: fin(c), final: undefined })).sort((a, b) => a.at - b.at),
   };

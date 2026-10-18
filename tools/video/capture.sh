@@ -28,3 +28,6 @@ if [ -f "$out/f.wav" ]; then
 fi
 printf '{"frames": %d, "notes": "%s"}\n' "$frames" "captured by tools/video/capture.sh, locale tr, 1920x1080 60 fps" > "$out/clip.json"
 echo "$name: $frames frames"
+# a covered window stops drawing and Movie Maker repeats the last frame: report runs of 6+ identical frames
+md5 -q "$out"/[0-9]*.png | awk '$0 == last { run++; next } { if (run >= 5) printf "WARNING: frames %05d-%05d identical (window not drawing?)\n", NR - 2 - run, NR - 2; run = 0; last = $0 }
+  END { if (run >= 5) printf "WARNING: frames %05d-%05d identical (window not drawing?)\n", NR - 1 - run, NR - 1 }'

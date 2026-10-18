@@ -131,15 +131,24 @@ def main():
         print(f"{c['T']:6} {at:6.2f}  {os.path.basename(c['file'])}: {how}")
 
     # sum: every layer at its time, then pad / trim to the film length
-    args = ["ffmpeg", "-v", "error", "-y"]
-    fl = []
-    for n, (wav, at, g, extra, _) in enumerate(layers):
-        args += ["-i", wav]
-        chain = [f"volume={g:.2f}dB"] + ([extra] if extra else []) + [f"adelay=delays={round(at * 1000)}:all=1"]
-        fl.append(f"[{n}:a]{','.join(chain)}[l{n}]")
-    fl.append("".join(f"[l{n}]" for n in range(len(layers))) + f"amix=inputs={len(layers)}:normalize=0:duration=longest,apad,atrim=0:{length:.4f}[m]")
-    pre = os.path.join(PARTS, "premaster.wav")
-    run(args + ["-filter_complex", ";".join(fl), "-map", "[m]", "-c:a", "pcm_f32le", pre])
+    def mixdown(sel, path):
+        args = ["ffmpeg", "-v", "error", "-y"]
+        fl = []
+        for n, (wav, at, g, extra, _) in enumerate(sel):
+            args += ["-i", wav]
+            chain = [f"volume={g:.2f}dB"] + ([extra] if extra else []) + [f"adelay=delays={round(at * 1000)}:all=1"]
+            fl.append(f"[{n}:a]{','.join(chain)}[l{n}]")
+        fl.append("".join(f"[l{n}]" for n in range(len(sel))) + f"amix=inputs={len(sel)}:normalize=0:duration=longest,apad=whole_dur={length:.4f},atrim=0:{length:.4f}[m]")
+        run(args + ["-filter_complex", ";".join(fl), "-map", "[m]", "-c:a", "pcm_f32le", path])
+        return path
+
+    pre = mixdown(layers, os.path.join(PARTS, "premaster.wav"))
+    # the two buses on their own (same gains): the music bed against everything else (game sound, effects, text sounds)
+    bus = {}
+    for name, sel in (("music", [l for l in layers if l[4] == "music bed"]), ("effects", [l for l in layers if l[4] != "music bed"])):
+        bus[name] = loudness(mixdown(sel, os.path.join(PARTS, f"bus_{name}.wav")))[0]
+    print(f"buses before the master: music {bus['music']:.1f} LUFS, effects {bus['effects']:.1f} LUFS "
+          f"(music {bus['music'] - bus['effects']:+.1f} LU against the effects)")
 
     # master: gain to the target and a true-peak limiter (4x oversampled), no compressor: the balance is set per cue, so
     # only the transients of the hits touch the limiter. Further passes correct what the limiter took off.

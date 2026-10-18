@@ -26,6 +26,13 @@ func _initialize() -> void:
 func _run() -> void:
 	var args := OS.get_cmdline_user_args()
 	var clip: String = args[0] if args.size() > 0 else ""
+	if OS.get_environment("PF_OFFSCREEN") == "1":
+		# the ~/bin/godot wrapper opens every offscreen window near the top left of the render screen; a window that
+		# others cover completely stops drawing (Movie Maker then repeats the last frame), so this one goes to the
+		# free bottom right corner of the same screen
+		var scr := DisplayServer.window_get_current_screen()
+		DisplayServer.window_set_position(DisplayServer.screen_get_position(scr) + DisplayServer.screen_get_size(scr)
+				- DisplayServer.window_get_size())
 	_game = root.get_node("Game")
 	_game.store_path = ""  # play counts stay untouched
 	_game.settings_path = ""  # no saved language is read or written
@@ -171,8 +178,6 @@ func _fener_mini() -> void:
 	for p in f.people:
 		if p.def.id == &"mom":
 			mom = p
-		elif p.def.id == &"hasan":
-			p.pos = Vector2(-42.0, 21.8)  # another of his spots: only the mother is found in this shot
 	var start := Vector2(-21.0, -0.6)
 	var dir := Vector2.RIGHT
 	mom.pos = Vector2(-7.5, 1.4)
@@ -261,7 +266,9 @@ func _globe_full() -> void:
 
 ## Black Saturday fire, first person (citizen): holding the wire cutters on the pen fence, the six ties snip one by
 ## one, the panel slams down into the yard, the player steps back and turns with the kangaroos as they run out
-## through the gap, the fire front behind. One capture, so it can be swapped when the first-person hands change.
+## through the gap, the fire front behind. Then a jump cut (clip ~5.5 s): the hose is already on the open valve, the
+## player faces the flame on the way out and sprays it until it is out (steam, the banner). One capture, so it can be
+## swapped when the first-person hands change.
 func _fire_mini() -> void:
 	_game.disaster = load(FIRE)
 	_game.role = &"citizen"
@@ -300,6 +307,23 @@ func _fire_mini() -> void:
 		s.aim_at(look.lerp(aim_to, k))
 		await process_frame
 	await _seconds(3.0)
+	# jump cut: hose picked up, attached and the valve open (off camera), the flame in front at spraying range
+	s.call("_act", &"hose")
+	s.call("_act", &"valve")
+	s.call("_act", &"valve")
+	var flame: Node3D = props.get_node("Flame")
+	var flame_pt := flame.global_position + Vector3(0, 0.8, 0)
+	var feet := Vector3(flame.global_position.x, 0.0, flame.global_position.z - 5.0)
+	s.place_player(feet)
+	s.aim_at(flame_pt + Vector3(0, 0.6, 0))
+	await _seconds(0.5)
+	s.interact_press()  # the water jet; the flame shrinks and goes out after skin.douse_seconds of water
+	var spray := roundi((s.skin.douse_seconds + 0.6) * FPS)
+	for i in spray:
+		s.aim_at(flame_pt + Vector3(0, 0.6 * (1.0 - _ease(float(i) / 30.0)), 0))
+		await process_frame
+	s.interact_release()
+	await _seconds(1.6)
 
 
 func _io_mini() -> void:

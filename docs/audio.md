@@ -234,8 +234,13 @@ Source: the `SFX`, `STEMS` and `MUSIC` tables in `tools/video/film.html` (every 
 `tools/video/mix.py` (levels, -14 LUFS master). Times are final-film seconds (the approved intro from its 2.0 s, so
 6.0 s of intro, then the film). On-screen text is Turkish. Files, trims and levels: `assets/audio/trailer/README.md`.
 The game clips are recorded with the game's own sound (Godot Movie Maker), so in-clip sounds (whistle, lamp, wave,
-hovers, the fence, the kangaroos) come from the game itself. The intro cues keep their places on the intro picture;
-the ones in its first 2.0 s are gone or start part-way.
+hovers, the fence, the kangaroos, the hose) come from the game itself. The intro cues keep their places on the intro
+picture; the ones in its first 2.0 s are gone or start part-way.
+
+The picture is cut to the music bed (T33, 96 BPM, a beat every 0.625 s, bars from 0.9 s): cuts, card entries, the
+logo and FARK ET sit on beats or bars. Music and game sound sit about level over the film (bus report of `mix.py`:
+music +0.8 LU against the effects); the bed steps back 2 to 3 dB under the key game sounds (lamp, globe lock, wave
+break, fence cut, kangaroos, hose, the AAA swell, "yok yok").
 
 | # | Time (s) | What happens | Sound | Status |
 |---|---|---|---|---|
@@ -246,35 +251,35 @@ the ones in its first 2.0 s are gone or start part-way.
 | T5 | 2.45 to 3.3 | "STACK PRESENTS" types on | Keyboard typing (G3) | in mix |
 | T6 | 3.5 | Last far strike | Same as T2 | in mix |
 | T7 | 4.05 to 5.65 | The camera pushes into the logo's eye | noise riser (reathance) https://freesound.org/people/reathance/sounds/503796/ | in mix |
-| T8 | 5.75 to 6.0 | Pure black | Silence | no sound |
+| T8 | 5.75 to 6.0 | Pure black | The music bed's quiet opening only | in mix |
 | T9 | 6.22 / 6.67, 7.32 / 7.77 | Darkness with a heartbeat glow (lub / dub) | SLOW HEARTBEAT (daandraait) https://freesound.org/s/249716/ , one lub-dub per beat | in mix |
 | T10 | 6.8 to 8.0 | Echo rings of a faint voice ("Sesimi duyan var mı?") | Dropped by Burcu: no voice recording | no sound |
 | T11 | 7.8 to 10.15 | "Hayatın göremediğimiz boyutları vardır" types on | Cinematic Low Pitch Impact (Jofae) https://freesound.org/people/Jofae/sounds/408141/ + typing (G3) | in mix |
-| T12 | 10.2 | The darkness tears open into the snowy Kahramanmaras diorama | Winter Wind (D1) | in mix |
-| T13 | 11.9 to 14.1 | Title card "TAHMİN ET" | Title card hit: low boom (T11) + the start of Glitch Corruption (G7), the same for all cards | in mix |
-| T14 | 14.1, 29.5, 42.0, 45.2 | Glitch cuts: Fener, Indian Ocean, second globe, Black Saturday fire | Glitch Corruption (G7), first 0.45 s | in mix |
-| T14b | 14.1 to 20.9 | Fener (Kahramanmaras) at night: a whistle in the dark, the lamp clicks on (14.9), the mother is found, the family follows to the ambulance | Game sound of the clip: wind (FN1), footsteps (FN2), whistle (FN5), lamp (FN3), found (FN6); the music bed swells with the lamp (T33) | in mix |
-| T15 | 18.8 to 20.9 | Zoom-blur whip to the globe | Whoosh (G5), peak on the cut; the globe's own sound (G1, G9) after it | in mix |
-| T16 | 21.5 to 23.7 | Title card "KEŞFET" over the spinning globe (the game's whole globe animation, one take at 1.1x, 20.9 to 27.7) | Title card hit (T13) | in mix |
-| T17 | 25.24 | The crosshair locks on the Indian Ocean | Target Lock (G4) + the clip's own sound (coordinates typing G3, zoom whoosh G5) | in mix |
-| T18 | 27.35 | Zoom flash into the ocean | The clip's own zoom whoosh (G5) | in mix (game sound) |
-| T19 | 27.7 to 29.5 | Title card "MÜDAHALE ET" | Title card hit (T13) | in mix |
-| T20 | 29.5 to 37.1 | Indian Ocean (Connect): the pipes lock, the sea draws back (sped up), the wall rises and breaks over the town (34.96), the town floods | Game sound of the clip (2.9x, then 1.25x): pipes lock (C10), wave rising (C3), the wave hits (C4), water + a low boom (T11) on the break; hard cut | in mix |
-| T21 | 37.1 to 37.7 | Hard cut to black | Silence with one heartbeat (lub 37.16, dub 37.61) | in mix |
-| T22 | 37.7 to 42.0 | The role menu opens (eye): hover on Devlet (38.8), then Vatandaş (40.8, under TERCİH ET) | Music bed back (T33), hovers (M2) from the menu clip | in mix |
-| T23 | 38.0 to 40.5 | "Farkındalık tek taraflı değildir" types on over the menu (typed by 39.0, held to read) | Statement sting (T11, soft) + typing (G3) | in mix |
-| T24 | 40.45 | Title card "TERCİH ET" | Title card hit (T13) | in mix |
-| T25 | 42.0 to 45.2 | The globe spins again (1.1x), "Dünyanın dört bir yanından", "3 afet senaryosu" | Globe spin ambience (G2), typing (G3), a hover tick (M2) when the 3 settles | in mix |
-| T25f | 45.2 to 47.4 | Black Saturday (Victoria, Australia), first person as the citizen: the wire cutters cut the fence, hard cut (46.2) to the kangaroos running out | Game sound of the clip: fire and wind (FR1), the fence cut (FR5, FR5.2, FR6), the kangaroos (FR11) | in mix |
-| T26 | 47.0 | Pixelate into the Easter bunny scene | Glitch Corruption (G7), 0.6 to 1.35 s | in mix |
-| T27 | 47.63, 47.87, 48.37 | The egg cracks twice and bursts (picture sped up), the bunny pops out | Egg cracking.wav (FngerSounds) https://freesound.org/s/250133/ at normal speed, from 47.29: its cracks set the picture's | in mix |
-| T28 | 48.45 | "Belki bir de easter egg, kim bilir…" | Statement sting (T11, soft) + typing (G3) | in mix |
-| T29 | 50.5 to 52.95 | "AAA" with a small "GAME" under it, calm like a game label; it settles, then "yok yok" types on (51.95) | Guitar swell (R1, from 50.3), no hit; typing (G3) | in mix |
-| T29c | 52.95 to 55.85 | "3play" lands (the game's logo), the same small "GAME" under it, held | Low boom (T11), just after the bed's own swell (T33, 51.3) | in mix |
-| T30 | 55.85 to 59.45 | Title card "FARK ET", held, closed by the CRT power-off | Title card hit (T13); the music bed rises 3 dB under it | in mix |
-| T31 | 58.8 | CRT power-off on FARK ET: the end of the film | Turning the TV off (Cloud-10) https://freesound.org/people/Cloud-10/sounds/648174/ | in mix |
-| T33 | 6.0 to 59.45 | Music under the film | Menu music M1 (Title.mp3, SRG774), from 129.8 s so its swells peak on Fener's lamp and at 51.3 (under "yok yok", before the logo). Ducked under the tsunami, out at the black cut, back as the menu opens, out with the CRT power-off. | in mix |
-| T34 | 59.45 to 59.95 | Black | Silence | no sound |
+| T12 | 10.275 | The darkness tears open into the snowy Kahramanmaras diorama | Winter Wind (D1) | in mix |
+| T13 | 12.15 to 14.025 | Title card "TAHMİN ET" | Title card hit: low boom (T11) + the start of Glitch Corruption (G7), the same for all cards | in mix |
+| T14 | 14.025, 27.775, 39.65, 42.775 | Glitch cuts: Fener, Indian Ocean, second globe, Black Saturday fire | Glitch Corruption (G7), first 0.45 s | in mix |
+| T14b | 14.025 to 19.025 | Fener (Kahramanmaras) at night, five people (HUD 0/5): a whistle in the dark, the lamp clicks on (14.65), the mother is found, the family follows | Game sound of the clip: wind (FN1), footsteps (FN2), whistle (FN5), lamp (FN3), found (FN6) | in mix |
+| T15 | 16.9 to 19.025 | Zoom-blur whip to the globe | Whoosh (G5), peak on the cut; the globe's own sound (G1, G9) after it | in mix |
+| T16 | 19.65 to 21.85 | Title card "KEŞFET" over the spinning globe (the game's whole globe animation, one take at 1.1x, 19.025 to 25.9) | Title card hit (T13) | in mix |
+| T17 | 23.4 | The crosshair locks on the Indian Ocean (a bar) | Target Lock (G4) + the clip's own sound (coordinates typing G3, zoom whoosh G5) | in mix |
+| T18 | 25.55 | Zoom flash into the ocean | The clip's own zoom whoosh (G5) | in mix (game sound) |
+| T19 | 25.9 to 27.775 | Title card "MÜDAHALE ET"; the music's drums come in on the same bar | Title card hit (T13) | in mix |
+| T20 | 27.775 to 34.65 | Indian Ocean (Connect): the pipes lock, the sea draws back (sped up), the wall rises and breaks over the town (33.4, a bar), the town floods | Game sound of the clip (2.9x, then 1.25x): pipes lock (C10), wave rising (C3), the wave hits (C4), water + a low boom (T11) on the break; hard cut | in mix |
+| T21 | 34.65 to 35.275 | Hard cut to black | The music stops for the beat; one heartbeat (lub 34.71, dub 35.16) | in mix |
+| T22 | 35.275 to 39.65 | The role menu opens (eye): hover on Devlet (36.4), then Vatandaş (38.5, under TERCİH ET) | Music bed back, hovers (M2) from the menu clip | in mix |
+| T23 | 35.9 to 38.45 | "Farkındalık tek taraflı değildir" types on over the menu (typed by 36.9, held to read) | Statement sting (T11, soft) + typing (G3) | in mix |
+| T24 | 38.4 | Title card "TERCİH ET" | Title card hit (T13) | in mix |
+| T25 | 39.65 to 42.775 | The globe spins again (1.1x), "Dünyanın dört bir yanından", "3 afet senaryosu" | Globe spin ambience (G2), typing (G3), a hover tick (M2) when the 3 settles | in mix |
+| T25f | 42.775 to 47.775 | Black Saturday (Victoria, Australia), first person as the citizen: the wire cutters cut the fence (the cut on the bar at 43.4), hard cut (44.025) to the kangaroos running out, hard cut (45.275) to the hose on the flame in the way out, the flame goes out (47.15) | Game sound of the clip: fire and wind (FR1), the fence cut (FR5, FR5.2, FR6), the kangaroos (FR11), the flame (FR9), the hose spray (FR8), success (FR6) | in mix |
+| T26 | 47.375 | Pixelate into the Easter bunny scene | Glitch Corruption (G7), 0.6 to 1.35 s | in mix |
+| T27 | 48.29, 48.53, 49.025 | The egg cracks twice and bursts (picture sped up), the bunny pops out | Egg cracking.wav (FngerSounds) https://freesound.org/s/250133/ at normal speed, from 47.945: its cracks set the picture's | in mix |
+| T28 | 48.4 | "Belki bir de easter egg, kim bilir…" | Statement sting (T11, soft) + typing (G3) | in mix |
+| T29 | 50.9 to 53.4 | "AAA" with a small "GAME" under it, calm like a game label; it settles, then "yok yok" types on (52.15) into the music's half-beat break | Guitar swell (R1, from 50.7), no hit; typing (G3) | in mix |
+| T29c | 53.4 to 55.9 | "3play" lands (the game's logo) on the music's strongest hit, the same small "GAME" under it, held | Low boom (T11) under the bed's own hit (T33) | in mix |
+| T30 | 55.9 to 59.675 | Title card "FARK ET", held, closed by the CRT power-off | Title card hit (T13) | in mix |
+| T31 | 59.025 | CRT power-off on FARK ET: the end of the film | Turning the TV off (Cloud-10) https://freesound.org/people/Cloud-10/sounds/648174/ | in mix |
+| T33 | 0.9 to 59.65 | Music under the film | Music bed `t33_music_bed.ogg`, made for the film: Opening Theme [Action/Suspense] V2 (nene, OpenGameArt, CC0) opens it, on the bar at 25.9 the drums of Mountain Emperor (Kevin MacLeod, incompetech.com, CC BY 4.0) take over, a half-beat break before the logo, its strongest hit on the logo (53.4). Under the intro's storm, out on the hard cut to black for a beat, out with the CRT power-off. | in mix |
+| T34 | 59.675 to 59.95 | Black | Silence | no sound |
 
 
 ### Notes from Burcu (pitch film and game)
