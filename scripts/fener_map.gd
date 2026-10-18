@@ -265,7 +265,6 @@ const SPOTS := {
 	&"lost_b": [Vector2(-38.0, 23.2), Vector2(46.0, -21.0), Vector2(-9.0, -26.0), Vector2(-4.5, 33.0)],
 	&"slow": [Vector2(-48.0, 23.0), Vector2(-4.4, 25.0), Vector2(18.0, -24.6), Vector2(46.0, 33.0)],
 	&"trapped": [Vector2(-24.2, -23.4), Vector2(34.5, -23.6), Vector2(-15.6, 21.4)],
-	&"injured": [Vector2(-6.6, -1.4), Vector2(12.4, -16.2), Vector2(-42.0, 21.8)],
 	&"cold": [Vector2(-30.0, 30.0), Vector2(-14.0, 3.9), Vector2(40.0, -4.8)],
 }
 ## Pickups belong to a rescue crew zone (CREWS: the nearest one to the spot) and are taken by walking into
@@ -273,10 +272,14 @@ const SPOTS := {
 ## first ITEM_COUNT spots are used. The first battery and the kit belong to the crew near the start, the
 ## second battery to the camp crew. The blanket belongs to the crew that is the shorter detour from the
 ## player when a person who needs one is found. Nothing is out before it is needed (see Fener.needs()).
+## The zone is a place, not a person: each spot lies on open ground of its zone, at least 2 m from every
+## rescuer and 1.5 m inside the ring (east of the chief by the street, north of the camp rescuer), clear of
+## props and the park fence (the model spins), so a supply never reads as held by a rescuer
+## (tests/test_fener_items.gd).
 const ITEMS := {
-	&"battery": [Vector2(-28.1, -12.0), Vector2(28.2, 23.6)],
-	&"kit": [Vector2(-28.1, -9.0)],
-	&"blanket": [Vector2(-28.0, -10.6), Vector2(28.4, 26.2)],
+	&"battery": [Vector2(-26.8, -11.4), Vector2(25.9, 22.0)],
+	&"kit": [Vector2(-26.8, -9.2)],
+	&"blanket": [Vector2(-26.4, -10.3), Vector2(27.3, 22.0)],
 }
 const ITEM_COUNT := {&"battery": 2, &"kit": 1, &"blanket": 1}
 

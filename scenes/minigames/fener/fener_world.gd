@@ -27,6 +27,11 @@ const DIST := 40.0
 const HERO_DIST := 178.0
 const HERO_TARGET := Vector3(2.0, -6.0, 4.0)
 const LOOK_AHEAD := 3.0
+## Extra lead when the player faces the camera. Seen from 40 degrees up, the ground toward the camera runs out about
+## 11 m below the centre of the screen (against about 20 m away from it), and the bottom of the screen is the HUD
+## (errand banner, messages): without this, what you walk up to from the north (the camp crew's blanket) stays
+## under the errand banner until the crew zone hands it out (tests/test_fener_items.gd).
+const LOOK_TOWARD := 5.0
 ## Camera target stays inside this (the void shows a little at the edges of the slab).
 const CAM_BOX := Rect2(-44, -30, 88, 66)
 const CHUNK := 8.0
@@ -1598,7 +1603,9 @@ func _clear(g: AStarGrid2D, a: Vector2, b: Vector2) -> bool:
 
 func _camera(dt: float) -> void:
 	var pp: Vector2 = ctrl.ppos
-	var ahead: Vector2 = Vector2.from_angle(ctrl.aim) * LOOK_AHEAD
+	var dir := Vector2.from_angle(ctrl.aim)
+	var back := -cam_forward()
+	var ahead: Vector2 = dir * LOOK_AHEAD + back * maxf(0.0, dir.dot(back)) * LOOK_TOWARD
 	var want := Vector3(clampf(pp.x + ahead.x, CAM_BOX.position.x, CAM_BOX.end.x), 0.8,
 			clampf(pp.y + ahead.y, CAM_BOX.position.y, CAM_BOX.end.y))
 	if _cam_target == Vector3.ZERO:

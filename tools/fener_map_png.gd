@@ -52,7 +52,7 @@ func _initialize() -> void:
 		if e[3] != null:
 			_disc(e[3][1], 1.2, Color(1, 0, 1, 0.6))
 	var spot_cols := {&"lost_a": Color("ff8fa3"), &"lost_b": Color("7bd88f"), &"slow": Color("8fb8ff"),
-			&"trapped": Color("ffb347"), &"injured": Color("ff4040"), &"cold": Color("c58bff")}
+			&"trapped": Color("ffb347"), &"cold": Color("c58bff")}
 	for g in FenerMap.SPOTS:
 		for p in FenerMap.SPOTS[g]:
 			_disc(p, 0.9, spot_cols[g])

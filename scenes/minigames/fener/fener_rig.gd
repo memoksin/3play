@@ -100,7 +100,7 @@ func loco(v: float, dt: float, slow := &"walk_follow", fast := &"run") -> String
 		&"slow":
 			play(slow, clampf(speed / s_slow, 0.4, 2.8))
 		&"fast":
-			play(fast, clampf(speed / s_fast, 0.5, 1.8))
+			play(fast, clampf(speed / s_fast, 0.5, 2.6))
 		_:
 			play(&"idle")
 	return clip
