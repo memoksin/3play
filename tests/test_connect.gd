@@ -338,14 +338,10 @@ func _scene() -> void:
 	s._rush_clock()
 	_check("rush: never extends again", is_equal_approx(s.skin.timer_seconds, 15.0))
 	var bc: Vector2i = broken_cells[0]
-	s.rotate_cell(bc.x, bc.y)
-	_check("rush: breaking a line afterwards does not lengthen the clock, no flapping",
-		L.complete_lines(skin, s.rots) == 3 and s.rushed and is_equal_approx(s.skin.timer_seconds, 15.0))
-	for k in 3:
-		s.rotate_cell(bc.x, bc.y)
-	_check("rush: fixing it again changes nothing either", L.complete_lines(skin, s.rots) == 4 and is_equal_approx(s.skin.timer_seconds, 15.0))
+	_check("rush: the solved board is frozen, a late click cannot break a line",
+		s.frozen and not s.rotate_cell(bc.x, bc.y) and L.complete_lines(skin, s.rots) == 4 and is_equal_approx(s.skin.timer_seconds, 15.0))
 	s.seek(14.0)
-	_check("rush: still playable before the 5 s are up", not s.locked and not s._hit)
+	_check("rush: the wave has not hit before the 5 s are up", not s.locked and not s._hit)
 	s.seek(15.5)
 	_check("rush: wave hits when the 5 s end", s.locked and s._hit and not s._rush.visible)
 	s.seek(200.0)
@@ -409,6 +405,7 @@ func _scene() -> void:
 	s.submit = false
 	var events := []
 	s.sound_event.connect(func(kind: StringName, index: int) -> void: events.append([kind, index]))
+	s.freeze_on_solve = false  # these checks fix and break lines of a full board again and again
 	s.solve()
 	_check("lock: solve() sounds nothing", s._glint_at.is_empty() and events.is_empty())
 	var solved := L.solved_rotations(skin)
@@ -457,6 +454,7 @@ func _scene() -> void:
 	s.submit = false
 	events = []
 	s.sound_event.connect(func(kind: StringName, index: int) -> void: events.append([kind, index]))
+	s.freeze_on_solve = false  # each flick makes the board whole again
 	s.solve()
 	s.seek(10.0)
 	var flick := func() -> void:  # break line 0 and fix it again
