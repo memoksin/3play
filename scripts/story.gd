@@ -3,6 +3,7 @@ class_name Story
 ## Game.settings_path = "" (tests, shots): nothing is read or written, the prologue counts as unseen.
 
 const SPLASH := "res://scenes/splash.tscn"
+const NOTICE := "res://scenes/notice.tscn"
 const TITLE := "res://scenes/title.tscn"
 const PROLOGUE := "res://scenes/prologue.tscn"
 const CREDITS := "res://scenes/credits.tscn"
@@ -31,14 +32,19 @@ static func mark_prologue_seen() -> void:
 		push_warning("Story: cannot save %s (error %d)" % [path, err])
 
 
-## Where the splash goes: the title screen.
+## True once the launch notice (play both sides) was closed in this launch. Not saved: it shows on
+## every launch, and only once per launch.
+static var notice_shown := false
+
+
+## Where the splash goes: the launch notice the first time in a launch, the title screen after.
 static func after_splash() -> String:
-	return TITLE
+	return TITLE if notice_shown else NOTICE
 
 
-## Where Start on the title screen goes: the prologue on the first run, the main menu after.
+## Where Start on the title screen goes: always the prologue (the story plays after every Start).
 static func after_title() -> String:
-	return Game.scene_path(&"main") if prologue_seen() else PROLOGUE
+	return PROLOGUE
 
 
 ## Scene the badges screen goes back to; "" = the main menu. The title screen sets it, the screen
@@ -55,9 +61,9 @@ static var progress_path := "user://progress.cfg"
 const BADGES := "res://scenes/badges.tscn"
 
 
-## The mission's badge is earned by saving at least half (the result card shows less in red).
+## The mission's badge is earned only by saving everyone / doing every task (saved == total).
 static func earns_badge(saved: int, total: int) -> bool:
-	return total <= 0 or saved * 2 >= total
+	return total <= 0 or saved >= total
 
 
 ## {done, saved, total, badge} for a disaster id; an unplayed one is all false / 0.
@@ -72,11 +78,12 @@ static func progress(id: StringName) -> Dictionary:
 
 
 ## Saves a finished run (the result screen calls it once). Keeps the best score (highest share
-## saved, then most saved) and the badge once earned. True when this run earned the badge for the
-## first time: the result screen shows the badge moment.
+## saved, then most saved) and the badge once earned. True when this run earned the badge
+## (every successful run, not only the first): the result screen shows the badge moment.
 static func record(d: Disaster, saved: int, total: int) -> bool:
 	var before := progress(d.id)
-	var new_badge: bool = earns_badge(saved, total) and not before.badge
+	var earned := earns_badge(saved, total)
+	var new_badge: bool = earned
 	if progress_path == "":
 		return new_badge
 	var cfg := _read_progress()
@@ -88,7 +95,7 @@ static func record(d: Disaster, saved: int, total: int) -> bool:
 	if better:
 		cfg.set_value(d.id, "saved", saved)
 		cfg.set_value(d.id, "total", total)
-	cfg.set_value(d.id, "badge", before.badge or earns_badge(saved, total))
+	cfg.set_value(d.id, "badge", before.badge or earned)
 	var err := cfg.save(progress_path)
 	if err != OK:
 		push_warning("Story: cannot save %s (error %d)" % [progress_path, err])

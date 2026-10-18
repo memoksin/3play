@@ -77,13 +77,10 @@ func _run() -> void:
 func _flow(game: Node, key: String) -> void:
 	var role: String = RUNS[key][0]
 	var path: String = RUNS[key][1]
-	# play counts that make `path` the pick (a temp file, never the real one)
-	var cfg := ConfigFile.new()
-	for list: Array in game.POOL.values():
-		for p: String in list:
-			cfg.set_value("played", p.get_file().get_basename(), 0 if p == path else 99)
-	game.store_path = "user://flow_frames.cfg"
-	cfg.save(game.store_path)
+	# the launch path that makes `path` the pick (a chosen path: no first-pick notice); counts go nowhere
+	game.store_path = ""
+	game.reset_launch()
+	game.launch_path = game.path_of(path)
 	print("== ", key, " (", path.get_file(), ")")
 	game.start(StringName(role))
 	var last := Time.get_ticks_usec()

@@ -1,6 +1,6 @@
 extends Control
 ## Team splash: the Stack logo and "STACK PRESENTS" fade in on black, hold, fade out, then
-## Story.after_splash() (the title screen). Any key or click skips. The logo is assets/sprites/ui/stack_logo.png;
+## Story.after_splash() (the launch notice, then the title). Any key or click skips. The logo is assets/sprites/ui/stack_logo.png;
 ## until that file exists a text wordmark stands in.
 
 const LOGO := "res://assets/sprites/ui/stack_logo.png"

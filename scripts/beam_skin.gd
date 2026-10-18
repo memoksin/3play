@@ -14,6 +14,8 @@ extends Resource
 @export var hold := 1.5
 ## Last seconds of the countdown: the timer pulses and ticks.
 @export var warn_seconds := 10.0
+## Mission summary card after the last wave (Beam.show_final). Off: the last wave's result goes straight on to the game's result card.
+@export var show_summary := false
 ## Route preview on at start (the player can turn it off on the title card).
 @export var preview := true
 ## Prefix of every tr() key of the minigame: <prefix>FIRE, <prefix>W1_TITLE, <prefix>CITY_IST...
