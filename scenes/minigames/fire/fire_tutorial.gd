@@ -52,13 +52,11 @@ func _ready() -> void:
 	card.add_child(box)
 	var head := Label.new()
 	head.name = "Heading"
-	head.text = tr("FIRE_TUT_TITLE")
-	head.theme_type_variation = &"HudTitle"
+	head.text = TextFx.upper(tr("FIRE_TUT_TITLE"))  # the same heading as the Connect how-to card (#254)
+	head.theme_type_variation = &"HudHeader"
 	head.autowrap_mode = TextServer.AUTOWRAP_OFF
-	head.add_theme_font_size_override(&"font_size", 34)
-	head.add_theme_color_override(&"font_color", SUN)
+	head.add_theme_font_size_override(&"font_size", 44)
 	box.add_child(head)
-	box.add_child(HSeparator.new())
 
 	var font: Font = ThemeDB.fallback_font
 	var pt := ThemeDB.get_project_theme()

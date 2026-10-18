@@ -926,7 +926,7 @@ func _tutorial() -> void:
 	if t == null:
 		await _free(s)
 		return
-	_check("tutorial: heading, rows and start text", (t.find_child("Heading", true, false) as Label).text == tr("FIRE_TUT_TITLE") \
+	_check("tutorial: heading, rows and start text", (t.find_child("Heading", true, false) as Label).text == TextFx.upper(tr("FIRE_TUT_TITLE")) \
 			and t.find_child("Move", true, false) != null and t.find_child("Use", true, false) != null \
 			and (t.find_child("Start", true, false) as Button).text == tr("FIRE_TUT_START").to_upper())
 	s.advance(30.0)
