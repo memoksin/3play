@@ -1,7 +1,7 @@
 extends Control
-## Title screen, between the Stack splash and the prologue: logo, the line "Awareness is not
+## Title screen, after the Stack splash and the launch notice: logo, the line "Awareness is not
 ## one-sided", Start / Badges / Credits / Quit, the Settings gear, the build version.
-## Start goes to Story.after_title() (the prologue on the first run, else the main menu).
+## Start goes to Story.after_title() (the prologue, every time).
 ## Badges comes back here; Credits stays dimmed until its scene exists (#188); Quit is hidden on web.
 
 const VERSION := "0.1"

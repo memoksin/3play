@@ -1,7 +1,7 @@
 extends SceneTree
 ## Language: settings round trip, Turkish default, boot flow (splash, prologue, menu), menu switch.
 
-const MAX_FRAMES := 900
+const MAX_FRAMES := 1800
 
 var ok := true
 var frames := 0
@@ -62,8 +62,11 @@ func _run() -> void:
 	await _settle(6)
 	_check("boot goes to the splash", current_scene.scene_file_path == "res://scenes/splash.tscn")
 	current_scene.skip()
+	await _wait_scene("res://scenes/notice.tscn")
+	_check("splash -> launch notice", current_scene.scene_file_path == "res://scenes/notice.tscn")
+	current_scene.confirm_box.pressed.emit()
 	await _wait_scene("res://scenes/title.tscn")
-	_check("splash -> title", current_scene.scene_file_path == "res://scenes/title.tscn")
+	_check("notice -> title", current_scene.scene_file_path == "res://scenes/title.tscn")
 	current_scene.get_node("%Start").pressed.emit()
 	await _wait_scene("res://scenes/prologue.tscn")
 	_check("first run: title -> prologue", current_scene.scene_file_path == "res://scenes/prologue.tscn")
@@ -86,15 +89,18 @@ func _run() -> void:
 	_check("menu still shown", current_scene.scene_file_path == game.scene_path(&"main"))
 	game.settings_panel.close()
 
-	# prologue seen: splash -> title -> menu
+	# second boot in the same launch: the notice was shown, the boot reaches the title; Start still plays the prologue
 	change_scene_to_file("res://scenes/language.tscn")
 	await _settle(6)
 	_check("second boot goes to the splash", current_scene.scene_file_path == "res://scenes/splash.tscn")
 	current_scene.skip()
 	await _wait_scene("res://scenes/title.tscn")
 	current_scene.get_node("%Start").pressed.emit()
+	await _wait_scene("res://scenes/prologue.tscn")
+	_check("prologue seen: Start still plays the prologue", current_scene.scene_file_path == "res://scenes/prologue.tscn")
+	current_scene.skip()
 	await _wait_scene(game.scene_path(&"main"))
-	_check("prologue seen: splash -> title -> menu", current_scene.scene_file_path == game.scene_path(&"main"))
+	_check("prologue seen: splash -> title -> prologue -> menu", current_scene.scene_file_path == game.scene_path(&"main"))
 	game.load_locale()
 	_check("a saved English does not carry over: every launch is Turkish", TranslationServer.get_locale().begins_with("tr"))
 
