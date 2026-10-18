@@ -200,6 +200,7 @@ func _fener(game: Node, name: String, walk: bool) -> void:
 	game.disaster = load("res://data/disasters/kahramanmaras.tres")
 	var s: Control = load("res://scenes/minigames/fener.tscn").instantiate()
 	s.submit = false
+	s.intro = false
 	root.add_child(s)
 	await process_frame
 	s.intro_left = 0.0

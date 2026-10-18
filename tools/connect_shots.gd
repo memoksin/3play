@@ -49,6 +49,30 @@ func _run() -> void:
 	root.add_child(s)
 	await process_frame
 	s.time_scale = 0.0
+	await _shot("connect_intro")  # the how-to-play card, coast behind the scrim
+	# the card's demo at three moments: the click on the wrong pipe, water half way, the basin full
+	var demo: Control = s.get_node("Intro").find_child("Demo", true, false)
+	demo.set_process(false)
+	for e in [[0.3, "a"], [1.5, "b"], [3.0, "c"]]:
+		demo.t = e[0]
+		demo.apply()
+		await _shot("connect_intro_" + e[1])
+	# the card in a 1280x720 window
+	var mode := DisplayServer.window_get_mode()
+	var size := DisplayServer.window_get_size()
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+	DisplayServer.window_set_size(Vector2i(1280, 720))
+	for i in 10:
+		await process_frame
+	await _shot("connect_intro_720")
+	DisplayServer.window_set_size(size)
+	DisplayServer.window_set_mode(mode)
+	for i in 10:
+		await process_frame
+	demo.set_process(true)
+	s.start_play()
+	for i in 20:  # the fade
+		await process_frame
 	print("start min clicks: ", ConnectLogic.min_clicks(s.skin, s.rots))
 	await _shot("connect_start")  # opening: hero angle
 	s.seek(1.25)
