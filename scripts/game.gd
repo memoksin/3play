@@ -119,7 +119,10 @@ var _prepared_vp: SubViewport
 var _prepared_mini: Node
 var _prepared_mini_vp: SubViewport
 var _mini_scene_file := ""
-var _warm_keep: Array[SubViewport] = []
+## The globe drawn once at start-up in its own tiny viewport and kept for the whole process: its shaders
+## (macOS GL caches no program binaries: ~0.4 s of compiles) stay compiled for every run's globe.
+var _globe_warm: SubViewport
+## The globe's textures (4K maps, every patch), decoded at start-up and kept: a run's globe loads them from cache.
 var _textures: Array[Resource] = []
 ## The pool's disasters, loaded at start-up and kept.
 var _disasters: Array[Resource] = []
@@ -141,6 +144,7 @@ func _ready() -> void:
 	apply_fullscreen()
 	apply_audio_settings.call_deferred()  # the Audio autoload makes its buses in its own _ready
 	if DisplayServer.get_name() != "headless":
+		_warm_globe_once()
 		_preload_mini_assets()
 
 
@@ -155,6 +159,9 @@ func _exit_tree() -> void:
 	_disasters.clear()
 	_shaders.clear()
 	_release_prepared()
+	if _globe_warm:
+		_globe_warm.free()
+		_globe_warm = null
 	for n in _retired:
 		if is_instance_valid(n):
 			n.free()
@@ -448,18 +455,14 @@ func _count_play(path: String) -> void:
 func _begin_run() -> void:
 	disaster = load(_pick)
 	_count_play(_pick)
-	_loaded.clear()
-	_textures.clear()
+	# _loaded is kept for the launch: a scene's shaders stay compiled while its materials live, so a
+	# disaster's second run (replay, path partner) warms up in a fraction of the first
 	_release_prepared()
 	_release_prepared_mini()
 	preload_for(disaster)
-	# the globe's big textures decode on loader threads while the globe warms up
-	if DisplayServer.get_name() != "headless":
-		for dep in ResourceLoader.get_dependencies(scene_path(&"globe")):
-			var file: String = dep.split("::")[-1]
-			if file.get_extension() in ["jpg", "png"]:
-				ResourceLoader.load_threaded_request(file)
-				_pending[file] = true
+	for path in mini_assets(disaster):  # its own models too; most are loaded at start-up (_preload_mini_assets)
+		if not _kept_assets.has(path):
+			preload_scene(path)
 
 
 ## Loads the scenes' scripts once at start-up (they are small): a script first loaded by a loader
@@ -584,7 +587,7 @@ func _keep_asset(path: String) -> void:
 
 
 func preload_scene(path: String) -> void:
-	if _pending.has(path) or not ResourceLoader.exists(path):
+	if _pending.has(path) or _loaded.has(path) or not ResourceLoader.exists(path):
 		return
 	_load_scripts_of(path)  # normally cached already (see _cache_scripts)
 	var err := ResourceLoader.load_threaded_request(path)
@@ -628,7 +631,7 @@ func _go(step: StringName) -> void:
 	if step == &"minigame" and is_instance_valid(_prepared_mini):
 		var mini := _prepared_mini
 		mini.get_parent().remove_child(mini)
-		mini.scene_file_path = _mini_scene_file  # back in the audio hooks' sight (see _warm_up)
+		mini.scene_file_path = _mini_scene_file  # back in the audio hooks' sight (see _warm_minigame)
 		mini.process_mode = Node.PROCESS_MODE_INHERIT
 		_release_prepared_mini()
 		get_tree().change_scene_to_node.call_deferred(mini)
@@ -641,6 +644,7 @@ func _go(step: StringName) -> void:
 		_prepared_vp = null
 		_prepared = null
 		_swap_scene.call_deferred(node)
+		_uncover.call_deferred()  # after the swap: the cover of prepare_next hides it
 		return
 	var path := scene_path(step)
 	var scene: PackedScene = null
@@ -651,6 +655,12 @@ func _go(step: StringName) -> void:
 		get_tree().change_scene_to_packed.call_deferred(scene)
 	else:
 		get_tree().change_scene_to_file.call_deferred(path)
+
+
+func _uncover() -> void:
+	if _cover and _cover.visible:
+		_loader.disarm(0.0)  # gone before the cover thins: it must not show over the diorama
+		await _fade_cover(0.0, COVER_OUT)
 
 
 ## Switches to `node`; the old scene is taken out of the tree and freed later, a piece per frame.
@@ -688,9 +698,11 @@ func _retire(node: Node) -> void:
 	_retiring = false
 
 
-## Role picked: the click frame only starts the cover. Nothing runs until the cover is fully opaque
-## (not even the loader threads, which compete with the frames); then the run is set up and warmed up,
-## and the globe opens from under the cover once it has drawn a few stable frames.
+## Role picked: the click frame only starts the cover. Nothing runs until the cover is fully opaque;
+## then the run is set up (its scenes start loading on the loader threads) and the globe opens from under
+## the cover once it has drawn a few stable frames. Its shaders and textures are warm since start-up
+## (_warm_globe_once), so this takes a few frames; the diorama and the minigame are built and drawn
+## later, on the globe's solid veil (prepare_next).
 func _open_run() -> void:
 	_warm_gen += 1
 	var gen := _warm_gen
@@ -698,9 +710,7 @@ func _open_run() -> void:
 	_loader.arm()  # fades in only when the wait lasts
 	await get_tree().process_frame
 	_begin_run()
-	_loader.progress(0.08)
-	await _warm_up(gen)
-	_loader.progress(1.0)
+	_loader.progress(0.3)
 	if gen != _warm_gen:
 		return
 	var before := get_tree().current_scene  # the real scenario picked on the egg card leaves a globe for a globe
@@ -719,38 +729,32 @@ func _open_run() -> void:
 		stable = stable + 1 if up and ms < STABLE_MS else 0
 		if stable >= STABLE:
 			break
-	_free_warm_keep()  # still covered: its cost must not show
+	_loader.progress(1.0)
 	for i in 3:
 		await get_tree().process_frame
 	await _fade_cover(0.0, COVER_OUT)
 
 
-## The first frames of the globe (its glitch run, dive), of a set and of the diorama are slow (the GPU
-## compiles shaders, uploads meshes). Behind the cover: wait for the background loads, run the globe
-## through its timeline, draw the set and then the diorama into tiny off-screen viewports with their
-## own world, so the real first frames are cheap. The loaded scenes and the warm-up copies stay
-## referenced until the real ones run, or their GPU data would be freed and built again.
-func _warm_up(gen: int) -> void:
+## The first frames of a set, of the diorama and of the minigame are slow (the GPU compiles shaders,
+## uploads meshes): 0.5 s each, in one frame, and nothing on screen can move meanwhile. The globe awaits
+## this on its solid veil (globe.gd `_hand_over`), where nothing is meant to move: wait for the background
+## loads, draw the set and the diorama, then the minigame, into off-screen viewports with their own world,
+## so the real first frames are cheap. The loaded scenes and the warm-up copies stay referenced until the
+## real ones run, or their GPU data would be freed and built again. Returns at once when headless.
+func prepare_next() -> void:
+	if DisplayServer.get_name() == "headless" or disaster == null or is_instance_valid(_prepared):
+		return
+	var gen := _warm_gen
 	var set_path := SET_SCENE % disaster.id
-	# the globe first: the set and diorama load in the background meanwhile
-	var globe := packed_scene(scene_path(&"globe"))
-	for file: String in _pending.keys():  # the textures, decoded by now: take them (nothing stays pending)
-		if file.get_extension() in ["jpg", "png"]:
-			_pending.erase(file)
-			_textures.append(ResourceLoader.load_threaded_get(file))
-	# the minigame's own models load on the loader threads while the globe warms up (asked only now: they
-	# would hold up the globe's load)
 	var assets := mini_assets(disaster)
-	for path in assets:
-		if not _kept_assets.has(path):  # most are loaded at start-up already (_preload_mini_assets)
-			preload_scene(path)
-	if globe:
-		_loaded[scene_path(&"globe")] = globe
-		await _warm_globe(globe, gen)
-		_loader.progress(0.4)
-		if gen != _warm_gen:
-			return
 	var mini_path := scene_path(&"minigame")
+	# the loading cover over the veil (1-3 s of stalls: a bare veil would read as a hang); it comes down
+	# once the diorama is in (_go)
+	await _fade_cover(1.0, COVER_IN)
+	_loader.arm(0.0)
+	await get_tree().create_timer(CoverLoader.FADE_IN).timeout  # the mark is fully in before the first stall
+	if gen != _warm_gen:
+		return
 	if not await _wait_loads([scene_path(&"diorama"), set_path, mini_path], gen):
 		return
 	if ResourceLoader.exists(set_path):
@@ -769,13 +773,14 @@ func _warm_up(gen: int) -> void:
 		await _draw_once(_prepared_vp, gen, false)
 		_prepared.warm_view(false)
 		_prepared_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
-		_loader.progress(0.7)
+		_loader.progress(0.5)
 	if not await _wait_loads(Array(assets), gen):  # loading meanwhile, behind the globe and the diorama
 		return
 	for path in assets:  # taken and kept: the minigame's own load() then finds them cached
 		if not _kept_assets.has(path):
 			_keep_asset(path)
 	await _warm_minigame(mini_path, gen)
+	_loader.progress(1.0)
 
 
 ## Waits (a frame at a time) until none of `paths` is still loading on the loader threads; false when the
@@ -824,28 +829,48 @@ func _warm_minigame(path: String, gen: int) -> void:
 	_prepared_mini_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 
 
-## Runs the globe through its timeline off-screen: the glitch run, the flash and the dive draw things
-## the idle globe does not, and their first frames are slow.
-func _warm_globe(globe: PackedScene, gen: int) -> void:
-	var vp := _warm_viewport()
+## Start-up, before the first scene draws (the boot splash lasts ~0.7 s longer): decodes the globe's
+## textures (4 parallel loader threads) and runs a solar-flare globe (every layer: the glitch ring, tear,
+## flare, dive) through its timeline off-screen, so each first draw's shader compiles happen now. The
+## copy is kept for the whole process (shaders loaded by path are only cached while something uses them),
+## frozen: a run's globe then opens in a few cheap frames.
+func _warm_globe_once() -> void:
+	var globe_path := scene_path(&"globe")
+	var files: Array[String] = []
+	for dep in ResourceLoader.get_dependencies(globe_path):
+		files.append(dep.split("::")[-1])
+	for d: Disaster in _disasters:
+		for suffix in ["", "_lights"]:
+			files.append("res://assets/globe/patch_%s%s.jpg" % [d.id, suffix])
+	for file in files:
+		if file.get_extension() in ["jpg", "png"] and ResourceLoader.exists(file) \
+				and ResourceLoader.load_threaded_request(file) == OK:
+			_pending[file] = true
+	for file in files:
+		if _pending.erase(file):
+			_textures.append(ResourceLoader.load_threaded_get(file))  # blocks until decoded
+	var globe := packed_scene(globe_path)
+	if globe == null:
+		return
+	_loaded[globe_path] = globe
+	disaster = load(EASTER_EGG)  # the glitch run builds every layer
+	_globe_warm = _warm_viewport()
 	var g := globe.instantiate()
 	g.set(&"paused", true)
-	vp.add_child(g)
-	add_child(vp)
+	_globe_warm.add_child(g)
+	add_child(_globe_warm)
+	disaster = null
 	var at: float = g.GLITCH_AT
-	var times: Array[float] = [0.0, g.SPIN + 0.5, g.TOTAL - g.FADE, g.TOTAL]
-	if disaster.glitch:
-		times.append_array([0.5, at + 0.05, at + 0.4, at + g.GLITCH_SWAP + 0.03, at + 1.0, at + g.GLITCH_LEN + 0.1])
+	var times: Array[float] = [0.0, 0.5, at + 0.05, at + 0.4, at + g.GLITCH_SWAP + 0.03, at + 1.0,
+			at + g.GLITCH_LEN + 0.1, g.SPIN + 0.5, g.TOTAL - g.FADE, g.TOTAL]
 	for time in times:
 		g.seek(time)
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
-		if gen != _warm_gen:
-			break
-	# kept until the real globe runs: shaders it loaded by path (the glitch ring, tear...) are only
-	# cached while something uses them, and would be compiled again by the real globe
-	vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
-	_warm_keep.append(vp)
+		if not is_inside_tree():
+			return
+	_globe_warm.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	g.process_mode = Node.PROCESS_MODE_DISABLED
 
 
 func _warm_viewport(size := WARM_SIZE) -> SubViewport:
@@ -868,12 +893,6 @@ func _draw_once(vp: SubViewport, gen: int, free_it := true) -> void:
 		vp.queue_free()
 
 
-func _free_warm_keep() -> void:
-	for vp in _warm_keep:
-		vp.free()
-	_warm_keep.clear()
-
-
 ## True while a scene change is fading in or out.
 func is_busy() -> bool:
 	return _cover != null and _cover.visible
@@ -890,7 +909,6 @@ func quit_to_menu() -> void:
 
 ## Frees the diorama that was built ahead and not used.
 func _release_prepared() -> void:
-	_free_warm_keep()
 	if _prepared_vp:
 		_prepared_vp.free()
 	_prepared_vp = null

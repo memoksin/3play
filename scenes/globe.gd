@@ -353,9 +353,11 @@ func _open_egg_card() -> void:
 			egg_card = null)
 
 
-## The veil is solid now. Hide what is under it and let the GPU drain a frame or two before the scene
-## switch: `_exit_tree` changes the window's MSAA, which waits for the frames in flight, and a globe
-## frame on a 4K window is slow (the solar flare's most). The hold shows the veil's own colour.
+## The veil is solid now. Hide what is under it, let the diorama and the minigame be built and drawn
+## off-screen (Game.prepare_next, under its loading cover: their first draws stall for 1-3 s, which
+## nothing on screen can show) and let the GPU drain a frame or two before the scene switch: `_exit_tree` changes the window's
+## MSAA, which waits for the frames in flight, and a globe frame on a 4K window is slow (the solar flare's
+## most). The hold shows the veil's own colour.
 func _hand_over() -> void:
 	if DisplayServer.get_name() != "headless":
 		_fade.color.a = 1.0
@@ -364,6 +366,11 @@ func _hand_over() -> void:
 		for child in $Hud.get_children():
 			if child != _fade:
 				child.visible = false
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw  # the veil is on screen before the stalls
+		if not is_inside_tree():
+			return
+		await Game.prepare_next()
 		for i in HAND_OVER_FRAMES:
 			await get_tree().process_frame
 			await RenderingServer.frame_post_draw
