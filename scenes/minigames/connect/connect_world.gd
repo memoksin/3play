@@ -26,8 +26,7 @@ const VILLAGE_R := 1.7
 ## Run-up limit (connect_wave.gd reach) when every community is saved: the water stops on the beach.
 const BEACH_REACH := 4.2
 const HOVER_LIFT := 0.32
-const LOCK_COLOR := Color(1.0, 0.82, 0.35)  # warm gold: the frame glint of a line that just locked
-const DENY_TILT := 0.14  # rad, peak of the "locked" wiggle
+const LOCK_COLOR := Color(1.0, 0.82, 0.35)  # warm gold: the frame glint of a line that just turned correct
 const TILE_SCENES := {
 	"straight": preload("res://assets/3d/indian_ocean/pipe_straight.glb"),
 	"corner": preload("res://assets/3d/indian_ocean/pipe_corner.glb"),
@@ -943,9 +942,6 @@ func _show_tiles(s: Node, flow: float) -> void:
 		var lift := HOVER_LIFT if (c == hover and not s._hit) else 0.0
 		lift = maxf(lift, HOVER_LIFT * 1.4 * pop)
 		pivot.rotation.z = -turns * PI / 2.0
-		var deny: float = s._deny.get(i, 0.0) / s.DENY_DUR
-		if deny > 0.0:  # clicked while locked: a short wiggle, the pipe does not turn
-			pivot.rotation.z += sin((1.0 - deny) * TAU * 3.0) * DENY_TILT * deny
 		_show_lock_glint(s, i, c)
 		pivot.position.z = lerpf(pivot.position.z, lift, 0.45) if left <= 0.0 else lift
 		pivot.scale = Vector3.ONE * (1.0 + s.POP * pop + (0.04 if lift > 0.0 and left <= 0.0 else 0.0))
@@ -962,10 +958,10 @@ func _show_tiles(s: Node, flow: float) -> void:
 		hover_light.visible = false
 
 
-## Short glint on a pipe whose line just locked: a gold frame that fades over LOCK_FLASH.
+## Short glint on a pipe whose line just turned correct: a gold frame that fades over LOCK_FLASH.
 func _show_lock_glint(s: Node, i: int, c: Vector2i) -> void:
-	var age: float = _now - s._lock_at.get(i, -100.0)
-	var on: bool = s._lock_at.has(i) and age >= 0.0 and age < s.LOCK_FLASH
+	var age: float = _now - s._glint_at.get(i, -100.0)
+	var on: bool = s._glint_at.has(i) and age >= 0.0 and age < s.LOCK_FLASH
 	if not _lock_frames.has(i):
 		if not on:
 			return
