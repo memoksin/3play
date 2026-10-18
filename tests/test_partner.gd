@@ -245,9 +245,14 @@ func _run() -> void:
 	await _to_result()
 	_check("after IO twice the block still shows", (current_scene.get_node("%Partner") as Control).visible)
 
-	# 8. later runs from the role menu follow the path
+	# 8. every pick on the role menu rolls a new path and starts the launch over
+	game.pick_rng.seed = _seed_for(1)
 	game.start(&"citizen")
-	_check("role menu after the first run: the path's citizen game", await _at(&"globe") and game.disaster.resource_path == KAHR)
+	_check("role menu after an Indian Ocean run: a new roll can give Black Saturday", await _at(&"globe") and game.disaster.resource_path == BS)
+	_check("role menu pick: the earlier run no longer counts as played", game.played_ids.is_empty() and game.launch_path[&"state"] == SF)
+	game.pick_rng.seed = _seed_for(0)
+	game.start(&"citizen")
+	_check("role menu pick again: a new roll gives Kahramanmaras", await _at(&"globe") and game.disaster.resource_path == KAHR)
 
 	game.reset_launch()
 	print("test_partner ok" if ok else "test_partner FAIL")

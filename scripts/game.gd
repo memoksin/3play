@@ -310,8 +310,8 @@ func _save_settings(section: String, values: Dictionary) -> void:
 		push_warning("Game: cannot save settings to %s (error %d)" % [settings_path, err])
 
 
-## Starts a run. Without `path` the role's disaster comes from the launch path (the first run of a launch
-## picks the path); with one (replay, path partner) exactly that disaster is played, no notice.
+## Starts a run. Without `path` (a pick on the role menu) a new path is rolled every time and the launch
+## starts over (nothing counts as played); with one (replay, path partner) exactly that disaster is played, no notice.
 ## `auto_spin`: the globe spins by itself (the path partner run).
 func start(new_role: StringName, path := "", auto_spin := false) -> void:
 	role = new_role
@@ -327,9 +327,9 @@ func start(new_role: StringName, path := "", auto_spin := false) -> void:
 			launch_path = path_of(path)
 		_launch()
 		return
-	var first := launch_path.is_empty()
+	reset_launch()
 	_pick = pick_for(new_role)
-	egg_pending = first and _pick == EASTER_EGG
+	egg_pending = _pick == EASTER_EGG
 	_launch()
 
 
@@ -382,7 +382,7 @@ static func path_of(disaster_path: String) -> Dictionary:
 	return {}
 
 
-## Forgets the launch: the next run picks a path again, nothing counts as played. Tests.
+## Forgets the launch: the next run picks a path again, nothing counts as played (every role menu pick).
 func reset_launch() -> void:
 	launch_path = {}
 	played_ids = {}
