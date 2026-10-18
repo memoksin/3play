@@ -337,17 +337,24 @@ func start(new_role: StringName, path := "", auto_spin := false) -> void:
 	_launch()
 
 
-## Same disaster again (a disaster made on the fly has no file: it gets a new pick).
-func replay() -> void:
-	start(role, disaster.resource_path if disaster else "")
-
-
 func _launch() -> void:
 	if DisplayServer.get_name() == "headless":
 		_begin_run()
 		next()  # nothing to warm up, nothing to cover
 	else:
 		_open_run()
+
+
+## Plays the same disaster's minigame again (the result card's Replay), skipping globe and diorama.
+func replay() -> void:
+	if disaster == null:
+		start(role)
+		return
+	saved = 0
+	total = 0
+	extra = {}
+	_step = FLOW.find(&"minigame") - 1
+	next()
 
 
 ## The egg card (scenes/egg_notice.gd, shown by the globe) is answered. `real` swaps the easter egg for the

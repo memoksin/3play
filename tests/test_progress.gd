@@ -77,9 +77,9 @@ func _run() -> void:
 	for d: Resource in bl:
 		_check("%s has a badge model" % d.id, d.badge is PackedScene)
 
-	# badge rule: at least half saved
-	_check("4/8 earns", story.earns_badge(4, 8))
-	_check("3/8 does not", not story.earns_badge(3, 8))
+	# badge rule: every task done
+	_check("8/8 earns", story.earns_badge(8, 8))
+	_check("7/8 does not", not story.earns_badge(7, 8))
 	_check("0/0 earns (no count)", story.earns_badge(0, 0))
 
 	# round trip
@@ -89,10 +89,10 @@ func _run() -> void:
 	var p: Dictionary = story.progress(&"indian_ocean")
 	_check("3/8: done, best 3/8, no badge", p.done and p.saved == 3 and p.total == 8 and not p.badge)
 	_check("2/8 keeps the best 3/8", not story.record(io, 2, 8) and story.progress(&"indian_ocean").saved == 3)
-	_check("6/8: new badge", story.record(io, 6, 8))
+	_check("6/8: new badge", story.record(io, 8, 8))
 	p = story.progress(&"indian_ocean")
-	_check("6/8 saved as best, badge on", p.saved == 6 and p.total == 8 and p.badge)
-	_check("8/8 again: not new", not story.record(io, 8, 8))
+	_check("8/8 saved as best, badge on", p.saved == 8 and p.total == 8 and p.badge)
+	_check("8/8 again: shown again", story.record(io, 8, 8))
 	_check("1/8 later keeps the badge and best 8/8", not story.record(io, 1, 8)
 			and story.progress(&"indian_ocean").badge and story.progress(&"indian_ocean").saved == 8)
 	_check("other disasters untouched", not story.progress(&"kahramanmaras").done)
@@ -102,9 +102,11 @@ func _run() -> void:
 	_check("no path: a badge run still reports new", story.record(io, 8, 8))
 	_check("no path: nothing written", not FileAccess.file_exists(abs_path) and not story.progress(&"indian_ocean").done)
 
-	# a fire run: saving 5 of 8 earns the fire badge, the result card shows the badge moment
+	# fire needs all 3 tasks: 2 of 3 earns nothing, 3 of 3 earns the badge and its moment
+	_check("fire 2/3 does not earn", not story.record(fire, 2, 3) and not story.progress(&"black_saturday").badge)
+	DirAccess.remove_absolute(abs_path)
 	story.progress_path = path
-	var fres: Node = await _open_result(game, fire, 5, 8)
+	var fres: Node = await _open_result(game, fire, 3, 3)
 	await create_timer(fres.BADGE_DELAY + 0.3).timeout
 	_check("fire run saved as done with the badge", story.progress(&"black_saturday").done and story.progress(&"black_saturday").badge)
 	_check("fire: badge moment shown", fres.badge_moment != null)
@@ -116,11 +118,11 @@ func _run() -> void:
 	_check("result records the run", story.progress(&"kahramanmaras").done)
 	await create_timer(res.BADGE_DELAY + 0.3).timeout
 	_check("2/10: no badge moment", res.badge_moment == null)
-	res = await _open_result(game, km, 7, 10)
+	res = await _open_result(game, km, 10, 10)
 	_check("no moment before the delay", res.badge_moment == null)
 	await create_timer(res.BADGE_DELAY + 0.3).timeout
 	var bm = res.badge_moment
-	_check("7/10: badge moment shown", bm != null and bm.is_inside_tree())
+	_check("10/10: badge moment shown", bm != null and bm.is_inside_tree())
 	_check("badge saved", story.progress(&"kahramanmaras").badge)
 	_check("moment shows this disaster's badge, turning", bm != null and bm._badge.spin and not bm._badge.locked
 			and bm._badge.model() != null and bm._badge.model().scene_file_path == km.badge.resource_path)
@@ -135,9 +137,9 @@ func _run() -> void:
 	bm._gui_input(click)
 	await create_timer(0.5).timeout
 	_check("a click closes the moment", closed[0] and not is_instance_valid(bm))
-	res = await _open_result(game, km, 9, 10)
+	res = await _open_result(game, km, 10, 10)
 	await create_timer(res.BADGE_DELAY + 0.3).timeout
-	_check("badge already earned: no moment", res.badge_moment == null)
+	_check("badge already earned: moment shown again", res.badge_moment != null)
 	# the 3026 mission gets its own moment: the glitching time gyroscope, its own caption
 	res = await _open_result(game, sf, 8, 8)
 	await create_timer(res.BADGE_DELAY + 0.3).timeout
@@ -165,6 +167,7 @@ func _run() -> void:
 	_check("played card is a silhouette", not c_io.earned and c_io.badge.locked and c_io.badge.material != null)
 	_check("played card names the place", (c_io.place as Label).text.contains(TextFx.upper(io.text("PLACE"))))
 	_check("played card shows best 1/8", (c_io.status as Label).text.contains("1") and (c_io.status as Label).text.contains("8"))
+	_check("earned card shows no best line", not (c_km.status as Label).visible)
 	_check("unplayed card is a silhouette", not c_sf.earned and c_sf.badge.locked and c_sf.badge.material != null)
 	_check("3026 card glitches even locked", c_sf.badge.glitchy and not c_io.badge.glitchy)
 	_check("unplayed card hides the place", not (c_sf.place as Label).text.contains(TextFx.upper(sf.text("PLACE"))))
