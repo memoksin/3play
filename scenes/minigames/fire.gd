@@ -401,6 +401,61 @@ func _model_call(prop: Node, method: StringName, value: float) -> bool:
 	return false
 
 
+## Shows a hand tool (picked up): its model raises it into view when it can (raise()).
+func _take_out(prop: Node3D) -> void:
+	var m := _away_model(prop)
+	prop.visible = true
+	if m and m.has_method(&"raise"):
+		m.call(&"raise")
+
+
+## Puts a hand tool away: the prop is hidden at once (the game's state); a model that can (put_away) lowers out
+## of view first, from a holder beside the props (Hand/Away), and goes back into its prop when it is gone.
+func _put_away(prop: Node3D) -> void:
+	if not prop.visible:
+		return
+	prop.visible = false
+	var m := prop.get_node_or_null("Model") as Node3D
+	if m == null or not m.has_method(&"put_away"):
+		return
+	var away := _hand.get_node_or_null("Away") as Node3D
+	if away == null:
+		away = Node3D.new()
+		away.name = "Away"
+		_hand.add_child(away)
+	var xf := prop.transform * m.transform
+	prop.remove_child(m)
+	away.add_child(m)
+	m.transform = xf
+	m.set_meta(&"home", prop)
+	m.call(&"put_away", _away_model.bind(prop))
+
+
+## Brings a tool's model back from Hand/Away into its prop (when it is gone, or the tool is taken out again).
+func _away_model(prop: Node3D) -> Node3D:
+	var away := _hand.get_node_or_null("Away")
+	if away:
+		for m: Node3D in away.get_children():
+			if m.get_meta(&"home", null) == prop:
+				var xf := prop.transform.affine_inverse() * m.transform
+				away.remove_child(m)
+				m.name = "Model"
+				prop.add_child(m)
+				m.transform = xf
+				m.remove_meta(&"home")
+	return prop.get_node_or_null("Model") as Node3D
+
+
+## A point that moves with a hand tool's model (its point(name), e.g. the nozzle's Muzzle), else the prop's marker.
+func _tool_point(prop: Node3D, name: StringName, marker: String) -> Node3D:
+	var m := prop.get_node_or_null("Model")
+	if m and m.has_method(&"point"):
+		var p := m.call(&"point", name) as Node3D
+		if p:
+			return p
+	return prop.get_node_or_null(marker) as Node3D
+
+
 func _own_flame_materials() -> void:
 	for mi in _flame.find_children("*", "MeshInstance3D", true, false):
 		var sm := (mi as MeshInstance3D).material_override as ShaderMaterial
@@ -560,7 +615,8 @@ func _pose_jet(delta: float) -> void:
 	_jet.visible = _spraying and _hand_nozzle.visible
 	if not _jet.visible:
 		return
-	var p0 := (_hand_nozzle.get_node("Tip") as Node3D).global_position
+	var p0 := _tool_point(_hand_nozzle, &"Muzzle", "Tip").global_position
+	_water.global_transform = Transform3D(_camera.global_basis, p0)
 	var v := -_camera.global_basis.z * JET_SPEED + Vector3(0, 1.2, 0)
 	var g := Vector3(0, -9.8, 0)
 	# time to reach the ground (or 0.75 s, ~9 m)
@@ -944,6 +1000,11 @@ func _pose_camera(delta: float) -> void:
 	_hand_lag = _hand_lag.lerp((turn * 0.006).limit_length(0.035), 1.0 - exp(-10.0 * delta))
 	_hand.position = _hand_rest + Vector3(sin(_bob_t) * 0.012 * k + _hand_lag.x,
 			-absf(cos(_bob_t)) * 0.014 * k - _dip * 0.3 - _hand_lag.y, 0.0)
+	# the arms' own walk (fp_arms.gd): the same step phase as the bob
+	for prop: Node3D in [_hand_cutters, _hand_nozzle]:
+		var m := prop.get_node_or_null("Model")
+		if prop.visible and m and m.has_method(&"set_move"):
+			m.call(&"set_move", k, _bob_t)
 
 
 ## 0..1 wind gust strength (grows with the smoke).
@@ -1080,7 +1141,7 @@ func _act(id: StringName) -> void:
 			if logic.pick_cutters():
 				if not _model_state(_cutters, &"taken"):
 					_cutters.visible = false
-				_hand_cutters.visible = true
+				_take_out(_hand_cutters)
 				sound_event.emit(&"cutters", 0)
 		&"fence":
 			if logic.cut_fence():
@@ -1089,8 +1150,8 @@ func _act(id: StringName) -> void:
 			if logic.pick_hose():
 				if not _model_state(_hose, &"held"):
 					_hose.visible = false
-				_hand_cutters.visible = false
-				_hand_nozzle.visible = true
+				_put_away(_hand_cutters)
+				_take_out(_hand_nozzle)
 				sound_event.emit(&"hose", 0)
 		&"valve":
 			if logic.hose_held and not logic.hose_attached:
@@ -1110,7 +1171,7 @@ func _act(id: StringName) -> void:
 
 
 func _on_fence_cut() -> void:
-	_hand_cutters.visible = false
+	_put_away(_hand_cutters)
 	_marker_a.visible = false
 	_disable_body(_fence)
 	if not _model_state(_fence, &"cut"):
@@ -1131,7 +1192,7 @@ func _on_flame_out() -> void:
 	_set_spray(false)
 	_disable_body(_flame)
 	_marker_b.visible = false
-	_hand_nozzle.visible = false
+	_put_away(_hand_nozzle)
 	_hose_line.visible = false
 	if not _model_state(_hose, &"down"):
 		var nozzle := _hose.get_node_or_null("Model/Nozzle") as Node3D
@@ -1173,6 +1234,7 @@ func _set_spray(on: bool) -> void:
 		return
 	_spraying = on
 	_water.emitting = on
+	_model_call(_hand_nozzle, &"set_spray", 1.0 if on else 0.0)
 	sound_event.emit(&"water_on" if on else &"water_off", 0)
 
 
@@ -1423,7 +1485,7 @@ func _update_props(dt: float) -> void:
 ## into the nozzle in the hand (a chain of short tubes on a cubic curve).
 func _pose_hose_line() -> void:
 	var a := (_valve.get_node("Outlet") as Node3D).global_position
-	var inlet := _hand_nozzle.get_node_or_null("Inlet") as Node3D
+	var inlet := _tool_point(_hand_nozzle, &"Inlet", "Inlet")
 	if inlet == null:
 		inlet = _hand_nozzle.get_node("Tip") as Node3D
 	var b := inlet.global_position if _hand_nozzle.visible else _hose.global_position
