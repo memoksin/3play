@@ -241,6 +241,27 @@ func _scene(name: String) -> PackedScene:
 	return _scenes[name]
 
 
+## Every model file _scene() loads (setup, rebuild, hazards, events). They are not dependencies of fener.tscn,
+## so Game's threaded preload of the scene misses them: Game.preload_for requests these too (on loader
+## threads), or setup() loads them here on the main thread (~70 files, ~5 s of one frame).
+static func scene_paths() -> PackedStringArray:
+	var names: Array[String] = [SLAB, PLAYER_FIGURE, RESCUER_FIGURE, "manhole_open", "earth_chunk", "asphalt_hole"]
+	for e in FenerMap.PLACES:
+		names.append(e[0])
+	for c in FenerMap.CABLES + FenerMap.CRACKS:
+		names.append(c[0])
+	for ev in FenerMap.EVENTS:
+		names.append(ev[4])
+	for kind in FenerMap.ITEM_COUNT:
+		names.append("item_" + String(kind))
+	var out := PackedStringArray()
+	for n in names:
+		var path := P + n + ".glb"
+		if path not in out and ResourceLoader.exists(path):
+			out.append(path)
+	return out
+
+
 func _inst(name: String, parent: Node, pos: Vector3, yaw := 0.0) -> Node3D:
 	var s := _scene(name)
 	var n: Node3D = s.instantiate() if s else _placeholder(name)

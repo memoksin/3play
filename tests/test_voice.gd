@@ -151,8 +151,7 @@ func _run() -> void:
 func _real_run() -> void:
 	done_count = 0
 	game.reset_launch()
-	game.launch_path = game.PATHS[1]  # a chosen path: no first-pick notice
-	game.start(&"state")
+	game.start(&"state", game.PATHS[1][&"state"])  # a chosen disaster: no easter-egg card
 	game.disaster = load("res://data/disasters/solar_flare.tres")
 	game.role = &"state"
 	var globe_path: String = game.scene_path(&"globe")

@@ -124,8 +124,7 @@ func _run() -> void:
 		for role: StringName in [&"citizen", &"state"]:
 			win = not win
 			game.reset_launch()
-			game.launch_path = entry  # a chosen path: no first-pick notice before the globe
-			game.start(role)
+			game.start(role, entry[role])  # a chosen disaster: no easter-egg card on the globe
 			_check("%s disaster is from its pool" % role, game.disaster.role == role)
 			_check("%s disaster is the path's" % role, game.disaster.resource_path == entry[role])
 			played[game.disaster.id] = true

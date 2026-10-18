@@ -215,7 +215,7 @@ func _run() -> void:
 
 	# 5. Tekrar oyna: the same disaster, no new pick, no notice
 	card.get_node("%Replay").pressed.emit()
-	_check("replay: on to the globe", await _at(&"globe"))
+	_check("replay: straight back into the minigame", await _at(&"minigame"))
 	_check("replay: same disaster", game.disaster.resource_path == KAHR and game.role == &"citizen")
 
 	# 6. partner flow from a Vatandaş game on the other path: Black Saturday -> Devlet -> Solar Flare, no notice
@@ -234,20 +234,26 @@ func _run() -> void:
 	_check("solar flare result card reached", await _to_result())
 	_check("both played: the block is gone", not (current_scene.get_node("%Partner") as Control).visible)
 	current_scene.get_node("%Replay").pressed.emit()
-	_check("replay of the easter egg: globe, same disaster, no card", await _at(&"globe") and game.disaster.resource_path == SF and not game.egg_pending)
+	_check("replay of the easter egg: its minigame again, same disaster, no card", await _at(&"minigame") and game.disaster.resource_path == SF and not game.egg_pending)
 
 	# 7. a replay alone does not count as the partner: IO twice keeps the block
 	_first_run(0, &"state")
 	await _to_result()
 	current_scene.get_node("%Replay").pressed.emit()
-	await _at(&"globe")
+	await _at(&"minigame")
 	_check("replay keeps Indian Ocean", game.disaster.resource_path == IO)
-	await _to_result()
+	game.finish_minigame(3, 4)
+	await _at(&"result")
 	_check("after IO twice the block still shows", (current_scene.get_node("%Partner") as Control).visible)
 
-	# 8. later runs from the role menu follow the path
+	# 8. every pick on the role menu rolls a new path and starts the launch over
+	game.pick_rng.seed = _seed_for(1)
 	game.start(&"citizen")
-	_check("role menu after the first run: the path's citizen game", await _at(&"globe") and game.disaster.resource_path == KAHR)
+	_check("role menu after an Indian Ocean run: a new roll can give Black Saturday", await _at(&"globe") and game.disaster.resource_path == BS)
+	_check("role menu pick: the earlier run no longer counts as played", game.played_ids.is_empty() and game.launch_path[&"state"] == SF)
+	game.pick_rng.seed = _seed_for(0)
+	game.start(&"citizen")
+	_check("role menu pick again: a new roll gives Kahramanmaras", await _at(&"globe") and game.disaster.resource_path == KAHR)
 
 	# 9. Vatandaş first on the main path: Kahramanmaras offers Devlet (Indian Ocean)
 	_first_run(0, &"citizen")
