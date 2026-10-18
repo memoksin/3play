@@ -52,6 +52,8 @@ const RUSH_SHAKE_DUR := 0.5
 
 ## Debug/test hooks.
 var time_scale := 1.0
+## false: a solved board stays turnable (tests of the per-line lock sound and glint).
+var freeze_on_solve := true
 var elapsed := 0.0
 var locked := false
 var clicks := 0
@@ -61,6 +63,9 @@ var submit := true
 var saved_count := -1
 ## The puzzle was solved and the clock was cut to RUSH_TIME.
 var rushed := false
+## Every line is correct: the pipes freeze so a last-second click cannot flood a village (the rush puts the
+## player under time pressure; a solved board must not be lost by accident).
+var frozen := false
 ## The how-to-play card is open: time stands still and the board takes no clicks. start_play() closes it.
 var intro := true
 
@@ -172,10 +177,10 @@ func seek(time: float) -> void:
 	advance(maxf(time - elapsed, 0.0))
 
 
-## Debug and click target: turns pipe (c, r) one quarter turn clockwise. Nothing is locked: pipes of a
-## correct line turn too (and break it).
+## Debug and click target: turns pipe (c, r) one quarter turn clockwise. While solving nothing is locked:
+## pipes of a correct line turn too (and break it). Once every line is correct the board is frozen.
 func rotate_cell(c: int, r: int, animate := false) -> bool:
-	if locked or c < 0 or r < 0 or c >= skin.cols or r >= skin.rows:
+	if locked or frozen or c < 0 or r < 0 or c >= skin.cols or r >= skin.rows:
 		return false
 	var i := skin.index(c, r)
 	if not ConnectLogic.rotatable(skin.tiles[i]):
@@ -210,6 +215,7 @@ func _check_lines(was: Array[Dictionary]) -> void:
 				_glint_at[skin.index(cell.x, cell.y)] = elapsed
 			sound_event.emit(&"locked", li)
 	if all_ok:
+		frozen = freeze_on_solve
 		_rush_clock()
 
 

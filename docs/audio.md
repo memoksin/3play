@@ -189,6 +189,7 @@ Dark snowy street, a flashlight with a battery, a whistle that shows the directi
 | FN8 | Aftershock | The aftershock hits | Cracking Earthquake | uagadugu | https://freesound.org/people/uagadugu/sounds/222521/ | CC0 | in repo (reuse of F6) | Trim to the shaking. |
 | FN8a | Building crack | Aftershock warning and the start of the aftershock | breaking_concrete | zatar | https://freesound.org/people/zatar/sounds/755522/ | CC0 (verify) | in repo | Burcu picked it: a hammer breaking concrete, for the building body cracking. Plays with FN8 (Cracking Earthquake). Trim to the first crack by ear. |
 | FN9 | Hurt | The player is hurt near a building | Hurt_C_07 | cabled_mess | https://freesound.org/people/cabled_mess/sounds/350926/ | CC0 | in repo | Retro-style hurt sound, about 0.2 s. |
+| FN10 | Trapped person taps | Mrs. Ayse under the rubble taps (event `tap`, repeats every 1.8 s close to 6 s far, volume and pan by distance) | Metal Knocking | BenjaminNelan | https://freesound.org/people/BenjaminNelan/sounds/410362/ | CC0 (verify) | chosen | Burcu: use only the first second of the file. Sude: add the file, the cue, and the CREDITS row, with a slight low-pass so it sounds muffled from behind the rubble. |
 
 ## Fire (Black Saturday, kangaroo farm, first person)
 
