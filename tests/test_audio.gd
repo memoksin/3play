@@ -531,7 +531,7 @@ func _run() -> void:
 	_check("cue FN8a file exists", ResourceLoader.exists(audio.ROOT + audio.CUES[&"FN8a"].path))
 	audio.stop_all()
 	audio.clear_injected()
-	for id in [&"FR1", &"FR2", &"FR3", &"FR4", &"FR5", &"FR5.1", &"FR5.1b", &"FR5.2", &"FR6", &"FR7.1", &"FR7.2", &"FR8", &"FR9", &"FR11a", &"FR11b"]:
+	for id in [&"FR1", &"FR2", &"FR3", &"FR4", &"FR5", &"FR5.1", &"FR5.1b", &"FR5.2", &"FR6", &"FR7.1", &"FR7.2", &"FR8", &"FR9", &"FR11a", &"FR11b", &"FR11c"]:
 		audio.inject_stream(id, _wav(1.0))
 	game.disaster = load("res://data/disasters/black_saturday.tres")
 	var fire: Node3D = load("res://scenes/minigames/fire.tscn").instantiate()
@@ -602,7 +602,8 @@ func _run() -> void:
 	fire.sound_event.emit(&"kangaroo", 0)
 	fire.sound_event.emit(&"kangaroo", 2)
 	audio.tick(1.0)
-	_check("fire: kangaroos play FR11b once and FR11a 3 times offset", _times(&"play", &"FR11b").size() == 1
+	_check("fire: kangaroos play FR11b and FR11c once and FR11a 3 times offset", _times(&"play", &"FR11b").size() == 1
+			and _times(&"play", &"FR11c").size() == 1
 			and _times(&"play", &"FR11a").size() == 3 and _times(&"play", &"FR11a")[1] > _times(&"play", &"FR11a")[0])
 	fire.queue_free()
 	await process_frame

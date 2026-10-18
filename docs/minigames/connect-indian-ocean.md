@@ -20,6 +20,8 @@ Prompt (one line, `tr()` key): "Send the water into the basins before the wave h
 
 Click a tile to rotate it 90 degrees clockwise. Mouse only. Rotation is instant (a 0.1 s tween is fine).
 
+**Pairing rule.** A line is correct only when it reaches its own basin: inlet i (from the top) must end in basin i. A line that ends in another basin is wrong: no success sound, no glint, not saved, and at the hit its water stops at the last pipe and spills like an open line. Nothing is ever locked: correct lines can still be turned (that breaks them). Each time a line becomes correct it plays the success sound (`locked` sound_event, C10) and a short gold glint (`LOCK_FLASH`); the same line does not repeat either within 1 s (`LOCK_REPEAT`). **Rush:** when all 4 lines are correct the clock drops to 5 s (only if more is left); it starts only then, and once started it never lengthens, even if the player breaks a line afterwards.
+
 ## Grid and tiles
 
 **7 columns x 6 rows**, 16 px tiles (112x96 logical px).
@@ -56,15 +58,15 @@ The shipped level starts with every pipe tile rotated randomly. The **seed is fi
 - **60 s** total, tunable in the disaster `.tres`. The sea level in the top view rises during the 60 s. The bar or water mark turns red in the last 15 s.
 - The player rotates tiles during the 60 s. Pipes stay empty while the player works.
 - At 60 s the **tsunami hits**. Water pours into the 4 inlets and flows along the pipelines.
-- A **completed line** carries the water to its basin. The basin fills.
-- An **incomplete line** stops at the break and the water spills out.
+- A **correct line** carries the water to its own basin. The basin fills.
+- An **incomplete or wrong line** stops at the break (for a wrong basin: at the last pipe before it) and the water spills out.
 - Only when every line is complete does the town stay dry. One open line and the wave floods the **whole town** (the picture); the score still counts the completed lines.
 - After the flow, the wave drains back to the ocean (short animation), then the result card.
 
 ## Score: how X/Y is computed
 
 - `Y = 4` (one line, one basin, one community each).
-- `X` = number of completed lines at the moment the wave hits.
+- `X` = number of correct lines (each inlet in its own basin) at the moment the wave hits. A line in the wrong basin does not count.
 - Shown as "X/4 communities saved". Example: 3 lines done, 1 not = "3/4 saved" (the town is still shown flooded; the lost community's name is red).
 - No separate win or lose line.
 
