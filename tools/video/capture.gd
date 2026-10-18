@@ -266,17 +266,22 @@ func _globe_full() -> void:
 
 ## Black Saturday fire, first person (citizen): holding the wire cutters on the pen fence, the six ties snip one by
 ## one, the panel slams down into the yard, the player steps back and turns with the kangaroos as they run out
-## through the gap, the fire front behind. Then a jump cut (clip ~5.5 s): the hose is already on the open valve, the
+## through the gap, the fire front behind. Then a jump cut (clip ~6.4 s): the hose is already on the open valve, the
 ## player faces the flame on the way out and sprays it until it is out (steam, the banner). One capture, so it can be
-## swapped when the first-person hands change.
+## swapped when the first-person hands change. The how-to modal is off (tutorial = false).
 func _fire_mini() -> void:
 	_game.disaster = load(FIRE)
 	_game.role = &"citizen"
 	var s := await _open("res://scenes/minigames/fire.tscn")
 	s.submit = false
+	s.tutorial = false  # no how-to modal
 	s.skip_overview()
 	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
 	s.seek(36.0)  # past the controls line; the fire front has crept up behind the pen, the smoke is building
+	# the bottom task plate stays out of the film: it covers the hands and the tools, and the film puts its own place
+	# caption there (the clock, the prompts, the alerts and the done banner stay)
+	for path in ["Hud/TaskPlate", "Hud/Info/Hint", "Hud/Info/Task"]:
+		(s.get_node(path) as CanvasItem).self_modulate.a = 0.0
 	var props: Node3D = s.get_node("Props")
 	var fence: Node3D = props.get_node("FenceCut")
 	var n := fence.global_basis.z
@@ -306,17 +311,31 @@ func _fire_mini() -> void:
 		s.place_player(Vector3(p.x, 0.0, p.z))
 		s.aim_at(look.lerp(aim_to, k))
 		await process_frame
+	# the game's arrow to the next task (the hose, off screen left) would sit on the film's place caption, bottom
+	# left: the crosshair layer is off while the kangaroos run (back for the spray, with its progress ring)
+	var reticle: CanvasItem = s.get_node("Hud/Reticle")
+	reticle.visible = false
 	await _seconds(3.0)
-	# jump cut: hose picked up, attached and the valve open (off camera), the flame in front at spraying range
-	s.call("_act", &"hose")
-	s.call("_act", &"valve")
-	s.call("_act", &"valve")
+	reticle.visible = true
+	# jump cut: hose picked up, attached and the valve open (off camera: the end states of the game's pickup, attach
+	# and valve clips at once), the nozzle comes up, the flame in front at spraying range
+	var hose: Node3D = props.get_node("Hose")
+	var valve: Node3D = props.get_node("Valve")
+	s.logic.pick_hose()
+	s.call("_model_state", hose, &"held")
+	s.logic.attach_hose()
+	s.call("_show_attached")
+	s.logic.open_valve()
+	s.set("_valve_turn", 1.0)
+	s.call("_model_state", valve, &"open")
+	s.call("_take_out", s.get_node("Player/Head/Camera/Hand/Nozzle"))
+	s.call("_update_hint")
 	var flame: Node3D = props.get_node("Flame")
 	var flame_pt := flame.global_position + Vector3(0, 0.8, 0)
 	var feet := Vector3(flame.global_position.x, 0.0, flame.global_position.z - 5.0)
 	s.place_player(feet)
 	s.aim_at(flame_pt + Vector3(0, 0.6, 0))
-	await _seconds(0.5)
+	await _seconds(0.9)  # the nozzle up and settled before the water
 	s.interact_press()  # the water jet; the flame shrinks and goes out after skin.douse_seconds of water
 	var spray := roundi((s.skin.douse_seconds + 0.6) * FPS)
 	for i in spray:

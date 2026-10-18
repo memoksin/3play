@@ -41,8 +41,9 @@ const FILM_LEN = 53.95;               // film.mp4 length: 6.0 s intro + 53.95 s 
 const LAMP_CLIP = 1.25;               // fener_mini: the lamp clicks on
 const LOCK_CLIP = 4.92;               // globe_full: the game's crosshair closes on the Indian Ocean
 const HIT_CLIP = 13.15;               // io_mini: the wave breaks over the town
-const CUT_CLIP = 1.083;               // fire_mini: the last tie snaps, the fence panel is cut
-const OUT_CLIP = 7.6;                 // fire_mini: the flame goes out
+const CUT_CLIP = 2.0;                 // fire_mini: the strained cut snaps through, the fence panel drops (frame 120)
+const ROO_IN = 4.4;                   // fire_mini: the kangaroos run out through the gap (~4.3-6.1 s)
+const OUT_CLIP = 8.9;                 // fire_mini: the flame goes out (frame 534; the jump cut to the hose is at 6.42 s)
 const GLOBE_IN = +(LOCK_CLIP - (B(36) - B(29)) * 1.1).toFixed(4);           // the crosshair closes on bar 9 (beat 36)
 const IO_B = { in: 9.45, speed: 1.25 };
 const IO_B_START = +(B(52) - (HIT_CLIP - IO_B.in) / IO_B.speed).toFixed(4);  // the wave breaks on bar 13 (beat 52)
@@ -75,7 +76,7 @@ const TL = [
   // Black Saturday, first person: the wire cutters cut the fence (fire_a, the cut on bar 17), cut to the kangaroos
   // running out (fire_b), cut to the hose on the flame in the way out (fire_c, the flame goes out on beat 74)
   { step: 16, id: "fire_a",     ...span(67, 69), clip: "fire_mini", in: +(CUT_CLIP - (B(68) - B(67)) * 1.15).toFixed(4), speed: 1.15 },
-  { step: 16, id: "fire_b",     ...span(69, 71), clip: "fire_mini", in: 3.55, speed: 1.15 },
+  { step: 16, id: "fire_b",     ...span(69, 71), clip: "fire_mini", in: ROO_IN, speed: 1.15 },
   { step: 16, id: "fire_c",     ...span(71, 75), clip: "fire_mini", in: +(OUT_CLIP - (B(74) - B(71)) * 1.1).toFixed(4), speed: 1.1 },
   { step: 17, id: "bunny",      ...span(75, 80), burst: +(B(77) - B(75)).toFixed(4) },     // the egg bursts on beat 77 (1.4 s at normal speed), the bunny at normal speed
   { step: 18, id: "s_easter",   start: B(76), len: +(B(80) - B(76) + 0.05).toFixed(4), text: "Belki bir de *easter egg*, kim bilir…" },
@@ -90,6 +91,15 @@ const end = (r) => r.start + r.len;
 const CRT = 0.65;                     // the CRT power-off: the last seconds of FARK ET
 R.c_fark.len = +(B(93) + CRT - B(88)).toFixed(4);
 R.end.start = end(R.c_fark); R.end.len = +(FILM_LEN - R.end.start).toFixed(4);
+// the music credit (Mountain Emperor is CC BY 4.0): final 56.6 s to the end, over FARK ET, the CRT and the black; drawn
+// after the post pass (no bloom, grain or CRT on it), centred at the bottom, VT323 on a translucent black band
+const CREDIT = {
+  start: +(56.6 - INTRO_LEN).toFixed(4), fade: 0.4, px: 32, lh: 36, base: 958, band: [920, 1047], padX: 19,
+  col: "rgb(216,221,230)", bandA: 150 / 255, thin: 0.2,
+  lines: ['Music: "Mountain Emperor" by Kevin MacLeod (incompetech.com), licensed under CC BY 4.0',
+    '(creativecommons.org/licenses/by/4.0). Edited: cut, time-stretched, layered.',
+    '"Opening Theme V2" by nene (opengameart.org), CC0.'],
+};
 const EGG_BURST = 1.4;                    // scene seconds of the burst (cracks at 0.55 and 1.0); the picture is sped up to it
 const EGG_SND = { file: "assets/audio/trailer/t27_egg_crack.ogg", c1: 0.34, c2: 0.58, burst: 1.08 };   // the cracks in the sound (s)
 const eggBurstAt = () => R.bunny.burst;   // row seconds of the burst
@@ -249,6 +259,8 @@ const out = document.getElementById("out");
 const fg = document.createElement("canvas"); fg.width = W; fg.height = H;
 const fx = fg.getContext("2d");
 fx.imageSmoothingEnabled = true; fx.imageSmoothingQuality = "high";
+const ov = document.createElement("canvas"); ov.width = W; ov.height = H;   // the music credit, laid over the post
+const ox = ov.getContext("2d");
 
 // draw a clip row (or its placeholder) at the current transform
 function drawClip(r, t, o = {}) {
@@ -860,6 +872,33 @@ function drawLogo(t) {
   }
 }
 
+// ---------------------------------------------------------------- the music credit (CREDIT): drawn on `ov`, returns its opacity
+function drawCredit(t) {
+  const a = t >= CREDIT.start ? clamp((t - CREDIT.start) / CREDIT.fade) : 0;   // a linear fade-in
+  ox.setTransform(1, 0, 0, 1, 0, 0); ox.clearRect(0, 0, W, H);
+  if (a <= 0) return 0;
+  ox.font = `${CREDIT.px}px VT323`; ox.textAlign = "center"; ox.textBaseline = "alphabetic";
+  const w = Math.max(...CREDIT.lines.map((l) => ox.measureText(l).width));
+  const [y0, y1] = CREDIT.band, x0 = Math.round(W / 2 - w / 2 - CREDIT.padX), x1 = Math.round(W / 2 + w / 2 + CREDIT.padX);
+  ox.globalAlpha = a;
+  ox.fillStyle = `rgba(0,0,0,${CREDIT.bandA})`; ox.fillRect(x0, y0, x1 - x0, y1 - y0);
+  // the lines are drawn SS times larger and scaled down: plain coverage edges, without the glyph dilation that the
+  // browser applies to small text (they would read heavier than the reference credit)
+  const SS = 4, top = y0, tw = x1 - x0, th = y1 - y0;
+  if (!drawCredit.c) { drawCredit.c = document.createElement("canvas"); drawCredit.c.width = W * SS; drawCredit.c.height = th * SS; }
+  const cc = drawCredit.c, cx = cc.getContext("2d");
+  cx.setTransform(1, 0, 0, 1, 0, 0); cx.clearRect(0, 0, cc.width, cc.height);
+  cx.font = `${CREDIT.px * SS}px VT323`; cx.textAlign = "center"; cx.textBaseline = "alphabetic"; cx.fillStyle = CREDIT.col;
+  CREDIT.lines.forEach((l, i) => cx.fillText(l, W / 2 * SS, (CREDIT.base + i * CREDIT.lh - top) * SS));
+  cx.globalCompositeOperation = "destination-out"; cx.lineWidth = CREDIT.thin * 2 * SS; cx.strokeStyle = "#000";   // thinner strokes
+  CREDIT.lines.forEach((l, i) => cx.strokeText(l, W / 2 * SS, (CREDIT.base + i * CREDIT.lh - top) * SS));
+  cx.globalCompositeOperation = "source-over";
+  ox.imageSmoothingEnabled = true; ox.imageSmoothingQuality = "high";
+  ox.drawImage(cc, x0 * SS, 0, tw * SS, th * SS, x0, top, tw, th);
+  ox.globalAlpha = 1;
+  return a;
+}
+
 // ---------------------------------------------------------------- WebGL post (bloom, CA, zoom blur, glitch, pixelate, CRT off, grain, vignette)
 const gl = out.getContext("webgl", { preserveDrawingBuffer: true, antialias: false, premultipliedAlpha: false });
 const VS = "attribute vec2 p; varying vec2 v; void main(){ v = p * 0.5 + 0.5; gl_Position = vec4(p, 0.0, 1.0); }";
@@ -884,8 +923,8 @@ void main(){
   gl_FragColor = vec4(c, 1.0);
 }`;
 const FS_FINAL = COMMON + `
-uniform sampler2D uScene, uB1, uB2; uniform vec2 uShake, uZC; uniform vec3 uFlashCol;
-uniform float uCA, uZoomBlur, uFade, uFrame, uGlitch, uPix, uCRT, uFlash, uBloom, uVig;
+uniform sampler2D uScene, uB1, uB2, uOver; uniform vec2 uShake, uZC; uniform vec3 uFlashCol;
+uniform float uCA, uZoomBlur, uFade, uFrame, uGlitch, uPix, uCRT, uFlash, uBloom, uVig, uOverOn;
 void main(){
   vec2 uv = v;
   // CRT power-off: squeeze to a horizontal line, then to a dot
@@ -923,7 +962,9 @@ void main(){
   float l = dot(col, vec3(0.3, 0.59, 0.11));
   float g = hash(floor(v * vec2(1920.0, 1080.0)) + vec2(fract(uFrame * 0.6180339) * 311.0, fract(uFrame * 0.4142135) * 173.0)) - 0.5;
   col += g * 0.055 * (0.6 + 0.4 * (1.0 - l));
-  gl_FragColor = vec4(clamp(col, 0.0, 1.0) * uFade, 1.0);
+  col = clamp(col, 0.0, 1.0) * uFade;
+  if (uOverOn > 0.0) { vec4 o = texture2D(uOver, v); col = mix(col, o.rgb, o.a); }   // the credit, untouched by the post
+  gl_FragColor = vec4(col, 1.0);
 }`;
 function prog(fs) {
   const mk = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
@@ -943,7 +984,7 @@ function tex(w, h) {
 }
 function target(w, h) { const t = tex(w, h), f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0); return { t, f, w, h }; }
 const P = { bright: prog(FS_BRIGHT), blur: prog(FS_BLUR), final: prog(FS_FINAL) };
-const fgTex = tex();
+const fgTex = tex(), ovTex = tex(W, H);
 const RT = { a1: target(480, 270), b1: target(480, 270), a2: target(240, 135), b2: target(240, 135) };
 gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
@@ -1083,6 +1124,8 @@ async function renderAt(t) {
   gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
   gl.bindTexture(gl.TEXTURE_2D, fgTex);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, fg);
+  const credit = drawCredit(t);
+  if (credit > 0) { gl.bindTexture(gl.TEXTURE_2D, ovTex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, ov); }
   const scene = { t: fgTex, w: W, h: H };
   pass(P.bright, RT.a1, { uSrc: scene.t }, { uTexel: [1 / W * 2, 1 / H * 2], uThr: S.thr });
   blur(RT.a1, RT.b1, RT.a1, 1.6);
@@ -1090,9 +1133,9 @@ async function renderAt(t) {
   pass(P.blur, RT.a2, { uSrc: RT.a1.t }, { uDir: [0, 0] });
   blur(RT.a2, RT.b2, RT.a2, 2.0);
   blur(RT.a2, RT.b2, RT.a2, 4.0);
-  pass(P.final, null, { uScene: fgTex, uB1: RT.a1.t, uB2: RT.a2.t }, {
+  pass(P.final, null, { uScene: fgTex, uB1: RT.a1.t, uB2: RT.a2.t, uOver: ovTex }, {
     uShake: S.shake, uZC: S.zc, uCA: S.ca, uZoomBlur: S.zb, uFade: S.fade, uFrame: Math.round(t * FPS), uGlitch: S.glitch,
-    uPix: S.pix, uCRT: S.crt, uFlash: S.flash, uFlashCol: S.flashCol, uBloom: S.bloom, uVig: S.vig,
+    uPix: S.pix, uCRT: S.crt, uFlash: S.flash, uFlashCol: S.flashCol, uBloom: S.bloom, uVig: S.vig, uOverOn: credit > 0 ? 1 : 0,
   });
   gl.finish();
   return Math.round(t * FPS);
@@ -1114,6 +1157,7 @@ function cues() {
   c.push({ film: end(R.lock) - 0.35, what: "zoom flash into the ocean" });
   c.push({ film: R.bunny.start + eggBurstAt(), what: "egg bursts, bunny pops out" });
   c.push({ film: end(R.c_fark) - CRT, what: "CRT power-off on FARK ET" }, { film: R.end.start, what: "black (end)" });
+  c.push({ film: CREDIT.start, len: FILM_LEN - CREDIT.start, what: "music credit (CC BY 4.0), fades in over 0.4 s, to the end" });
   return c.map((x) => ({ ...x, film: +x.film.toFixed(2), final: +(x.film + INTRO_LEN).toFixed(2) })).sort((a, b) => a.film - b.film);
 }
 
