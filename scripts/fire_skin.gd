@@ -17,8 +17,9 @@ extends Resource
 
 ## Total time (s): the player must be out of the gate before it runs out.
 @export var timer_seconds := 90.0
-## Seconds after the start before the "Overview" camera hands over to first person.
-@export var overview_seconds := 3.8
+## Seconds of the opening shot (fire.gd _pose_overview: the hero view, down to the farmer's face, round his head
+## into first person) before play starts.
+@export var overview_seconds := 5.4
 
 @export_group("Smoke")
 ## Smoke follows the clock: clear for clear_seconds, thickens to ramp_level until dense_seconds before

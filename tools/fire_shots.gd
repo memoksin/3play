@@ -1,9 +1,12 @@
 extends SceneTree
 ## Fire minigame (#125) shots: plays scenes/minigames/fire.tscn through its tasks in one run and saves
 ## first-person frames at 1920x1080 (or size=WxH) into export/shots/fire_<name>.png. Needs a window (not --headless):
-##   godot --path . -s res://tools/fire_shots.gd -- [only=pen,flame] [wait=1.2] [prefix=fire_] [size=1280x720]
+##   godot --path . -s res://tools/fire_shots.gd -- [only=pen,flame] [wait=1.2] [prefix=fire_] [size=1280x720] [locale=tr]
 ## The scene renders in a SubViewport (the shot size does not depend on the window). Game time is driven
-## with advance()/seek(); particles and shaders run on real time while each shot waits.
+## with advance()/seek(); particles and shaders run on real time while each shot waits. The HUD is laid out at the
+## project's 1280x720 and scaled to the shot size, as the game's canvas_items stretch does in a bigger window.
+## The opening shot: intro_0 .. intro_7 (shares INTRO of it). intro=gif renders only the opening shot (and a second
+## of play after it) at 25 fps into export/shots/<prefix>intro_frames/ and quits; tools/fire_intro_gif.sh makes the GIF.
 
 const OUT := "res://export/shots/"
 const FRAME_CAP := 20000
@@ -15,6 +18,11 @@ var only: PackedStringArray = []
 var wait := 1.2
 var prefix := "fire_"
 var size := Vector2i(1920, 1080)
+var intro_gif := false
+var locale := "en"
+## Shares of the opening shot for the intro_N shots: the hero view, the dive, the face, the turn, first person.
+const INTRO: Array[float] = [0.06, 0.3, 0.45, 0.6, 0.72, 0.8, 0.88, 0.97]
+const GIF_FPS := 25.0
 var vp: SubViewport
 var s: Node3D
 
@@ -28,6 +36,8 @@ func _initialize() -> void:
 			"only": only = kv[1].split(",")
 			"wait": wait = float(kv[1])
 			"prefix": prefix = kv[1]
+			"intro": intro_gif = kv[1] == "gif"
+			"locale": locale = kv[1]
 			"size":
 				var wh := kv[1].split("x")
 				size = Vector2i(int(wh[0]), int(wh[1]))
@@ -50,7 +60,7 @@ func _run() -> void:
 		return
 	var game := root.get_node("Game")
 	game.store_path = ""
-	TranslationServer.set_locale("en")
+	TranslationServer.set_locale(locale)
 	game.disaster = load(DISASTER)
 	var svc := SubViewportContainer.new()
 	svc.size = Vector2(size)
@@ -58,6 +68,11 @@ func _run() -> void:
 	vp.size = size
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	vp.msaa_3d = Viewport.MSAA_4X
+	var base := Vector2i(ProjectSettings.get_setting("display/window/size/viewport_width"),
+			ProjectSettings.get_setting("display/window/size/viewport_height"))
+	if size != base:
+		vp.size_2d_override = base
+		vp.size_2d_override_stretch = true
 	svc.add_child(vp)
 	root.add_child(svc)
 	s = (load(SCENE) as PackedScene).instantiate()
@@ -79,10 +94,14 @@ func _run() -> void:
 	var flame: Node3D = props.get_node("Flame")
 	var gate: Node3D = props.get_node("Gate")
 
+	if intro_gif:
+		await _intro_frames()
+		return
 	s.advance(0.4)
 	await _shot("overview")
-	s.advance(s.skin.overview_seconds * 0.75)
-	await _shot("swoop")
+	for k in INTRO.size():
+		s.advance(INTRO[k] * s.skin.overview_seconds - float(s.get("_intro_t")))
+		await _shot("intro_%d" % k)
 	s.skip_overview()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE  # a free mouse does not steer the view (a real mouse may be moving)
 	s.advance(1.5)
@@ -188,6 +207,24 @@ func _run() -> void:
 		s.advance(t - float(s.get("_end_t")))
 		await _shot("lose_%s" % str(t).replace(".", "_"))
 	print("fire_shots done")
+	quit(0)
+
+
+## The opening shot frame by frame (game time GIF_FPS steps), then a second of first person.
+func _intro_frames() -> void:
+	var dir := OUT + prefix + "intro_frames/"
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir))
+	var n := ceili((s.skin.overview_seconds + 1.0) * GIF_FPS)
+	for i in n:
+		s.advance(1.0 / GIF_FPS)
+		await process_frame
+		await RenderingServer.frame_post_draw
+		var path := dir + "%04d.png" % i
+		if vp.get_texture().get_image().save_png(path) != OK:
+			push_error("fire_shots: could not save " + path)
+			quit(1)
+			return
+	print("frames %d in %s" % [n, ProjectSettings.globalize_path(dir)])
 	quit(0)
 
 
