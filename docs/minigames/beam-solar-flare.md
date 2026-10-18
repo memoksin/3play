@@ -31,9 +31,11 @@ Cities per wave: columns + 3 (W, E ring, Parker) + habitats. Waves: 10, 11, 11, 
 
 Title card (four rule cards without numbers, route preview toggle) > per wave: briefing (class, time, new piece diagrams, tip) > countdown
 (turn satellites; solve the puzzle and the clock drops to 5 s, then the flare fires by itself) > the shot (0.58 s charge, the beam travels at 9.5 cells/s, events play on
-time) > result card (saved/total, stars, lost cities, energy, time left; retry or next) > summary (sum of the best
-run per wave, rank, stars, mean energy; play again or **Continue**) > `Game.finish_minigame(saved, 44,
-{stars, energy, rank})` > the game's result card (`SF_CARD_SCORE`, "%d/44").
+time) > result card (saved/total, stars, lost cities, energy, time left; retry or next; after the last wave the
+button says Continue) > `Game.finish_minigame(saved, 44, {stars, energy, rank})` > the game's result card
+(`SF_CARD_SCORE`, "%d/44"). The mission summary card (sum of the best run per wave, rank, stars, mean energy; play
+again or **Continue**) is gated off: `BeamSkin.show_summary` (default false) brings it back between the last
+result card and `Game.finish_minigame`.
 
 | Wave | Class | Time | New |
 |---|---|---|---|

@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="FenerSkin" load_steps=13 format=3]
+[gd_resource type="Resource" script_class="FenerSkin" load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/fener_skin.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/fener_person.gd" id="2"]
@@ -52,15 +52,6 @@ spot_group = &"trapped"
 color = Color(1, 0.7, 0.28, 1)
 figure = ExtResource("3")
 
-[sub_resource type="Resource" id="hasan"]
-script = ExtResource("2")
-id = &"hasan"
-name_key = "HASAN"
-kind = 3
-spot_group = &"injured"
-color = Color(1, 0.42, 0.42, 1)
-figure = ExtResource("5")
-
 [sub_resource type="Resource" id="can"]
 script = ExtResource("2")
 id = &"can"
@@ -77,6 +68,10 @@ figure_speeds = {
 
 [resource]
 script = ExtResource("1")
-people = Array[ExtResource("2")]([SubResource("mom"), SubResource("sister"), SubResource("grandpa"), SubResource("ayse"), SubResource("hasan"), SubResource("can")])
+people = Array[ExtResource("2")]([SubResource("mom"), SubResource("sister"), SubResource("grandpa"), SubResource("ayse"), SubResource("can")])
 player_scene = ExtResource("6")
 rescuer_scene = ExtResource("7")
+time_seconds = 240.0
+story_minutes = 40.0
+walk_speed = 5.2
+shock_first = Vector2(55, 65)

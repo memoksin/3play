@@ -25,7 +25,18 @@ const PICK := {
 	&"state": "res://data/disasters/indian_ocean.tres",
 }
 const STORE_SECTION := "played"
-const LAST_SECTION := "last"
+## The two-game paths of a launch: the disaster each role plays, one long and one short level per path.
+## The first run of a launch picks a path (MAIN_ODDS the first, else the second); its partner game is
+## offered on the result card and every later run of a role plays that role's game of the path.
+const PATHS := [
+	{&"state": "res://data/disasters/indian_ocean.tres", &"citizen": "res://data/disasters/kahramanmaras.tres"},
+	{&"state": "res://data/disasters/solar_flare.tres", &"citizen": "res://data/disasters/black_saturday.tres"},
+]
+const MAIN_ODDS := 0.65
+## The easter egg: a first Devlet pick that lands on it gets the notice card in the globe's glitch run
+## (scenes/globe.gd holds the globe at EGG_AT, after the world has burnt and before the lock coordinates type).
+const EASTER_EGG := "res://data/disasters/solar_flare.tres"
+const NOTICE := "res://scenes/egg_notice.tscn"
 const SET_SCENE := "res://scenes/diorama/set_%s.tscn"
 ## Off-screen warm-up viewport size.
 const WARM_SIZE := Vector2i(128, 72)
@@ -45,10 +56,22 @@ const SENS_MIN := 0.25
 const SENS_MAX := 3.0
 const SENS_DEFAULT := 1.0
 
-## Play counts per disaster id, kept on this machine so every scenario shows up before any repeats.
-## Tests set it to "" (nothing read or written, picks are random) or a temp path: never the real user file.
+## Play counts per disaster id, kept on this machine (stats only: the pick does not use them).
+## Tests set it to "" (nothing read or written) or a temp path: never the real user file.
 var store_path := "user://played.cfg"
-var _last := {}  # role -> last id, when there is no store (tests)
+## The path of this launch (one of PATHS), {} until the first run picks it.
+var launch_path := {}
+## Disaster ids whose result card was shown in this launch.
+var played_ids := {}
+## Rolls the first pick; tests seed it.
+var pick_rng := RandomNumberGenerator.new()
+## The disaster the run being set up plays (a res:// path).
+var _pick := ""
+## The run plays the easter egg and its notice card is still to be shown (the globe shows it and clears this).
+var egg_pending := false
+## The globe of this run starts its spin by itself (no waiting for the player's drag): the path partner run
+## and the real scenario picked on the egg card.
+var autolaunch_globe := false
 ## Chosen UI language ([ui] locale). Tests set it to "" (nothing read or written) or a temp path.
 var settings_path := "user://settings.cfg"
 ## Multiplier on the fire scene's own base look speed ([input] mouse_sensitivity).
@@ -287,12 +310,35 @@ func _save_settings(section: String, values: Dictionary) -> void:
 		push_warning("Game: cannot save settings to %s (error %d)" % [settings_path, err])
 
 
-func start(new_role: StringName) -> void:
+## Starts a run. Without `path` the role's disaster comes from the launch path (the first run of a launch
+## picks the path); with one (replay, path partner) exactly that disaster is played, no notice.
+## `auto_spin`: the globe spins by itself (the path partner run).
+func start(new_role: StringName, path := "", auto_spin := false) -> void:
 	role = new_role
 	saved = 0
 	total = 0
 	extra = {}
 	_step = -1
+	egg_pending = false
+	autolaunch_globe = auto_spin
+	if path != "":
+		_pick = path
+		if launch_path.is_empty():
+			launch_path = path_of(path)
+		_launch()
+		return
+	var first := launch_path.is_empty()
+	_pick = pick_for(new_role)
+	egg_pending = first and _pick == EASTER_EGG
+	_launch()
+
+
+## Same disaster again (a disaster made on the fly has no file: it gets a new pick).
+func replay() -> void:
+	start(role, disaster.resource_path if disaster else "")
+
+
+func _launch() -> void:
 	if DisplayServer.get_name() == "headless":
 		_begin_run()
 		next()  # nothing to warm up, nothing to cover
@@ -300,9 +346,86 @@ func start(new_role: StringName) -> void:
 		_open_run()
 
 
-## Picks the disaster and starts loading its scenes in the background.
+## The egg card (scenes/egg_notice.gd, shown by the globe) is answered. `real` swaps the easter egg for the
+## real scenario: the path becomes Indian Ocean + Kahramanmaras and the run starts over on its globe, which
+## spins by itself. Otherwise nothing changes here: the globe lets the 3026 run go on.
+func answer_notice(real: bool) -> void:
+	egg_pending = false
+	if not real:
+		return
+	launch_path = PATHS[0]
+	_pick = launch_path[role]
+	_step = -1
+	autolaunch_globe = true
+	_launch()
+
+
+## The disaster of the run being set up: the launch path's for the role, picking the path first when this is
+## the first run of the launch (MAIN_ODDS for the first path).
+func pick_for(for_role: StringName) -> String:
+	if launch_path.is_empty():
+		launch_path = path_for_roll(pick_rng.randf())
+	return launch_path[for_role]
+
+
+## Pure: the path a roll in [0, 1) picks.
+static func path_for_roll(roll: float) -> Dictionary:
+	return PATHS[0] if roll < MAIN_ODDS else PATHS[1]
+
+
+## The path (one of PATHS) a disaster file belongs to, {} when none.
+static func path_of(disaster_path: String) -> Dictionary:
+	for entry: Dictionary in PATHS:
+		for r: StringName in entry:
+			if _id_of(entry[r]) == _id_of(disaster_path):
+				return entry
+	return {}
+
+
+## Forgets the launch: the next run picks a path again, nothing counts as played. Tests.
+func reset_launch() -> void:
+	launch_path = {}
+	played_ids = {}
+
+
+## The result card of `d` is up: it counts as played in this launch.
+func mark_played(d: Disaster) -> void:
+	played_ids[String(d.id)] = true
+
+
+## The other game of `d`'s path (a res:// path), "" when `d` is in no path.
+func partner_of(d: Disaster) -> String:
+	var entry := path_of(d.resource_path if d.resource_path != "" else "res://data/disasters/%s.tres" % d.id)
+	if entry.is_empty():
+		return ""
+	return entry[&"citizen" if d.role == &"state" else &"state"]
+
+
+## True while the other game of `d`'s path has not been played in this launch.
+func partner_pending(d: Disaster) -> bool:
+	var partner := partner_of(d)
+	return partner != "" and not played_ids.has(_id_of(partner))
+
+
+## Starts the path partner of the current disaster (the other role), straight into its run (its globe spins by itself).
+func play_partner() -> void:
+	var partner := partner_of(disaster)
+	if partner != "":
+		start(&"citizen" if disaster.role == &"state" else &"state", partner, true)
+
+
+## Counts the run on this machine.
+func _count_play(path: String) -> void:
+	var counts := load_counts()
+	var id := _id_of(path)
+	counts[id] = int(counts.get(id, 0)) + 1
+	save_counts(counts)
+
+
+## Loads the disaster of the run and starts loading its scenes in the background.
 func _begin_run() -> void:
-	disaster = load(pick_for(role))
+	disaster = load(_pick)
+	_count_play(_pick)
 	_loaded.clear()
 	_textures.clear()
 	_release_prepared()
@@ -337,35 +460,6 @@ func _load_scripts_of(path: String) -> void:
 			load(file)
 
 
-## The least played disaster of the role on this machine (ties: random), never the one this machine
-## played last for the role; counts it as played.
-func pick_for(for_role: StringName) -> String:
-	var counts := load_counts()
-	var last := load_last(for_role)
-	var pool: Array = (POOL[for_role] as Array).filter(func(p: String) -> bool: return _id_of(p) != last)
-	if pool.is_empty():
-		pool = POOL[for_role]
-	var path: String = choose(pool, counts, RandomNumberGenerator.new())
-	var id := _id_of(path)
-	counts[id] = int(counts.get(id, 0)) + 1
-	save_counts(counts, for_role, id)
-	return path
-
-
-## Pure: the candidate paths with the lowest count (id -> plays; missing = 0), random among ties.
-static func choose(paths: Array, counts: Dictionary, rng: RandomNumberGenerator) -> String:
-	var best := []
-	var low := -1
-	for path: String in paths:
-		var n := int(counts.get(_id_of(path), 0))
-		if low < 0 or n < low:
-			low = n
-			best = []
-		if n == low:
-			best.append(path)
-	return best[rng.randi_range(0, best.size() - 1)]
-
-
 func load_counts() -> Dictionary:
 	var counts := {}
 	var cfg := ConfigFile.new()
@@ -375,25 +469,11 @@ func load_counts() -> Dictionary:
 	return counts
 
 
-## Id of the disaster this machine played last for the role ("" = none yet).
-func load_last(for_role: StringName) -> String:
-	if store_path == "":
-		return _last.get(for_role, "")
-	var cfg := ConfigFile.new()
-	if cfg.load(store_path) != OK:
-		return ""
-	return str(cfg.get_value(LAST_SECTION, String(for_role), ""))
-
-
-func save_counts(counts: Dictionary, for_role := &"", last_id := "") -> void:
-	if for_role != &"":
-		_last[for_role] = last_id
+func save_counts(counts: Dictionary) -> void:
 	if store_path == "":
 		return
 	var cfg := ConfigFile.new()
-	cfg.load(store_path)  # keeps the last-played section; a missing file is fine
-	if for_role != &"":
-		cfg.set_value(LAST_SECTION, String(for_role), last_id)
+	cfg.load(store_path)  # keeps any other section; a missing file is fine
 	for id: String in counts:
 		cfg.set_value(STORE_SECTION, id, counts[id])
 	var err := cfg.save(store_path)
@@ -559,6 +639,7 @@ func _open_run() -> void:
 	await _warm_up(gen)
 	if gen != _warm_gen:
 		return
+	var before := get_tree().current_scene  # the real scenario picked on the egg card leaves a globe for a globe
 	next()
 	# the globe's first frames can still be slow: stay covered until it has drawn STABLE of them in a row
 	var globe_path := scene_path(&"globe")
@@ -569,7 +650,8 @@ func _open_run() -> void:
 		var now := Time.get_ticks_usec()
 		var ms := (now - last) / 1000.0
 		last = now
-		var up := get_tree().current_scene != null and get_tree().current_scene.scene_file_path == globe_path
+		var up := get_tree().current_scene != null and get_tree().current_scene != before \
+				and get_tree().current_scene.scene_file_path == globe_path
 		stable = stable + 1 if up and ms < STABLE_MS else 0
 		if stable >= STABLE:
 			break
