@@ -26,13 +26,14 @@ const PICK := {
 }
 const STORE_SECTION := "played"
 ## The two-game paths of a launch: the disaster each role plays, one long and one short level per path.
-## The first run of a launch picks a path (MAIN_ODDS the first, else the second); its partner game is
+## The first run of a launch picks a path (MAIN_ODDS per role for the first, else the second); its partner game is
 ## offered on the result card and every later run of a role plays that role's game of the path.
 const PATHS := [
 	{&"state": "res://data/disasters/indian_ocean.tres", &"citizen": "res://data/disasters/kahramanmaras.tres"},
 	{&"state": "res://data/disasters/solar_flare.tres", &"citizen": "res://data/disasters/black_saturday.tres"},
 ]
-const MAIN_ODDS := 0.65
+## The citizen side plays Kahramanmaras and Black Saturday equally often.
+const MAIN_ODDS := {&"state": 0.65, &"citizen": 0.5}
 ## The easter egg: a first Devlet pick that lands on it gets the notice card in the globe's glitch run
 ## (scenes/globe.gd holds the globe at EGG_AT, after the world has burnt and before the lock coordinates type).
 const EASTER_EGG := "res://data/disasters/solar_flare.tres"
@@ -375,13 +376,13 @@ func answer_notice(real: bool) -> void:
 ## the first run of the launch (MAIN_ODDS for the first path).
 func pick_for(for_role: StringName) -> String:
 	if launch_path.is_empty():
-		launch_path = path_for_roll(pick_rng.randf())
+		launch_path = path_for_roll(pick_rng.randf(), for_role)
 	return launch_path[for_role]
 
 
-## Pure: the path a roll in [0, 1) picks.
-static func path_for_roll(roll: float) -> Dictionary:
-	return PATHS[0] if roll < MAIN_ODDS else PATHS[1]
+## Pure: the path a roll in [0, 1) picks for a role.
+static func path_for_roll(roll: float, for_role: StringName = &"state") -> Dictionary:
+	return PATHS[0] if roll < MAIN_ODDS.get(for_role, MAIN_ODDS[&"state"]) else PATHS[1]
 
 
 ## The path (one of PATHS) a disaster file belongs to, {} when none.

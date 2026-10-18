@@ -62,7 +62,7 @@ extends Resource
 @export_group("Tasks")
 ## Hand reach (m) for picking up, cutting, attaching and turning.
 @export var reach := 2.6
-@export var cut_seconds := 1.0
+@export var cut_seconds := 1.9
 ## Holding the valve this long turns it open: the arms' valve clip (fp_nozzle.glb, 2.6 s) plays over the hold.
 @export var valve_seconds := 2.6
 ## The hose sprays this far (m); the flame is out after douse_seconds of water, and grows back at

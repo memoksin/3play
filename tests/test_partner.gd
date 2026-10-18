@@ -50,18 +50,18 @@ func _at(step: StringName) -> bool:
 
 
 ## A seed whose first roll lands on the given path (0 = Indian Ocean, 1 = Solar Flare).
-func _seed_for(path_index: int) -> int:
+func _seed_for(path_index: int, role: StringName = &"state") -> int:
 	var rng := RandomNumberGenerator.new()
 	for s in 500:
 		rng.seed = s
-		if game.path_for_roll(rng.randf()) == game.PATHS[path_index]:
+		if game.path_for_roll(rng.randf(), role) == game.PATHS[path_index]:
 			return s
 	return 0
 
 
 func _first_run(path_index: int, role: StringName) -> void:
 	game.reset_launch()
-	game.pick_rng.seed = _seed_for(path_index)
+	game.pick_rng.seed = _seed_for(path_index, role)
 	game.start(role)
 
 
@@ -247,11 +247,11 @@ func _run() -> void:
 	_check("after IO twice the block still shows", (current_scene.get_node("%Partner") as Control).visible)
 
 	# 8. every pick on the role menu rolls a new path and starts the launch over
-	game.pick_rng.seed = _seed_for(1)
+	game.pick_rng.seed = _seed_for(1, &"citizen")
 	game.start(&"citizen")
 	_check("role menu after an Indian Ocean run: a new roll can give Black Saturday", await _at(&"globe") and game.disaster.resource_path == BS)
 	_check("role menu pick: the earlier run no longer counts as played", game.played_ids.is_empty() and game.launch_path[&"state"] == SF)
-	game.pick_rng.seed = _seed_for(0)
+	game.pick_rng.seed = _seed_for(0, &"citizen")
 	game.start(&"citizen")
 	_check("role menu pick again: a new roll gives Kahramanmaras", await _at(&"globe") and game.disaster.resource_path == KAHR)
 
