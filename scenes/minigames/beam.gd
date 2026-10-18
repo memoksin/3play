@@ -217,7 +217,6 @@ func _show_title() -> void:
 	phase = Phase.TITLE
 	load_wave(0)
 	_open_card()
-	_kick(_t("TITLE_KICK"))
 	var head := Label.new()  # the same heading as the other how-to cards (Connect, fire, Fener)
 	head.name = "Heading"
 	head.text = TextFx.upper(_t("HOWTO_TITLE"))
