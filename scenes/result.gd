@@ -11,7 +11,7 @@ signal closing_typing_started
 signal closing_typing_finished
 
 const MARGIN := 32  # free space above and below the card
-const PARTNER_DELAY := 1.5  # the partner block enters last, after the score has landed
+const PARTNER_DELAY := 0.05  # the partner block comes at once: it must catch the eye before anything else
 const PARTNER_SIZES := Vector3(60, 42, 56)  # font sizes of role word, prompt and button at full size
 const PARTNER_CTA_H := 80.0
 const PARTNER_MIN := 0.5  # smallest scale of the above on a short screen
@@ -149,7 +149,7 @@ func _partner_look(accent: Color) -> void:
 	sb.border_color = accent
 	sb.set_content_margin_all(10)
 	sb.content_margin_top = 6
-	sb.content_margin_bottom = 4
+	sb.content_margin_bottom = 22  # room for the Oyna glow (cta_glow GLOW_SIZE), so it stays inside the block
 	sb.shadow_color = Color(accent, 0.35)
 	sb.shadow_size = 14
 	%Partner.add_theme_stylebox_override("panel", sb)
@@ -165,7 +165,7 @@ func _partner_reveal() -> void:
 	block.scale = Vector2(0.8, 0.8)
 	var tw := create_tween().set_parallel()  # dies with the scene
 	tw.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.tween_callback(func() -> void: block.pivot_offset = block.size / 2.0).set_delay(PARTNER_DELAY - 0.05)
+	tw.tween_callback(func() -> void: block.pivot_offset = block.size / 2.0).set_delay(maxf(PARTNER_DELAY - 0.05, 0.0))
 	tw.tween_property(block, "modulate:a", 1.0, 0.25).set_delay(PARTNER_DELAY)
 	tw.tween_property(block, "scale", Vector2.ONE, 0.55).set_delay(PARTNER_DELAY)
 

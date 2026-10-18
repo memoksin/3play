@@ -51,6 +51,13 @@ func setup(style: StringName, accent: Color) -> void:
 	button.add_theme_stylebox_override("normal", button.get_theme_stylebox("hover"))
 	button.add_theme_stylebox_override("hover", button.get_theme_stylebox("pressed"))
 	button.add_theme_color_override("font_color", Palette.WHITE)
+	# the chevrons and the shine stay inside the button's border, not over it
+	var sb := button.get_theme_stylebox("normal") as StyleBoxFlat
+	if sb:
+		_fx.offset_left = sb.border_width_left
+		_fx.offset_top = sb.border_width_top
+		_fx.offset_right = -sb.border_width_right
+		_fx.offset_bottom = -sb.border_width_bottom
 
 
 func _pivot() -> void:
