@@ -4,6 +4,7 @@ config_version=5
 
 config/name="3play"
 run/main_scene="res://scenes/language.tscn"
+config/icon="res://icon.png"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
 [display]
