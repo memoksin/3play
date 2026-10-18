@@ -77,7 +77,7 @@ func _run() -> void:
 	for d: Resource in bl:
 		_check("%s has a badge model" % d.id, d.badge is PackedScene)
 
-	# badge rule: at least half saved
+	# badge rule: every task done
 	_check("8/8 earns", story.earns_badge(8, 8))
 	_check("7/8 does not", not story.earns_badge(7, 8))
 	_check("0/0 earns (no count)", story.earns_badge(0, 0))
@@ -167,6 +167,7 @@ func _run() -> void:
 	_check("played card is a silhouette", not c_io.earned and c_io.badge.locked and c_io.badge.material != null)
 	_check("played card names the place", (c_io.place as Label).text.contains(TextFx.upper(io.text("PLACE"))))
 	_check("played card shows best 1/8", (c_io.status as Label).text.contains("1") and (c_io.status as Label).text.contains("8"))
+	_check("earned card shows no best line", not (c_km.status as Label).visible)
 	_check("unplayed card is a silhouette", not c_sf.earned and c_sf.badge.locked and c_sf.badge.material != null)
 	_check("3026 card glitches even locked", c_sf.badge.glitchy and not c_io.badge.glitchy)
 	_check("unplayed card hides the place", not (c_sf.place as Label).text.contains(TextFx.upper(sf.text("PLACE"))))
