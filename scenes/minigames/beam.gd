@@ -22,6 +22,7 @@ enum Phase { TITLE, BRIEF, PLAN, FIRE, RESULT, FINAL }
 
 const BOARD := preload("res://scenes/minigames/beam/board.tscn")
 const MINI := preload("res://scenes/minigames/beam/mini.gd")
+const TUTORIAL := preload("res://scenes/minigames/beam/tutorial.gd")
 ## Board area between the HUD columns (the Sun and the Earth reach across the whole screen).
 const AREA := Rect2(300, 4, 680, 690)
 
@@ -215,8 +216,7 @@ func _show_title() -> void:
 	_open_card()
 	_kick(_t("TITLE_KICK"))
 	_heading(_t("TITLE"), true)
-	for i in 4:
-		_rule_card(i + 1, _t("TITLE_RULE_%d" % (i + 1)))
+	_box.add_child(TUTORIAL.new())
 	var tog := CheckBox.new()
 	tog.name = "Preview"
 	tog.text = _t("PREVIEW_TOGGLE")

@@ -17,6 +17,7 @@ const TYPE_CPS := 15.0        # slow enough to read along (#128 playtest)
 const FADE_IN := 0.4
 const FADE_OUT := 0.6
 const GLITCH_LINE := &"VOICE_SF_LIMITS"
+const GLITCH_CPS := 30.0  # the glitch line types twice as fast: urgent, not read-along
 const GLITCH_HOLD := 1.5  # after the typing; the globe dives on when the line fades
 const BAND_ALPHA := 0.82      # dark band behind the line, so it reads over the bright globe
 
@@ -107,7 +108,7 @@ func say(key: StringName, hold := 3.5) -> void:
 	_box_tween = create_tween().set_parallel()
 	_box_tween.tween_property(_box, "modulate:a", 1.0, FADE_IN)
 	_box_tween.tween_property(_tag, "modulate:a", 1.0, FADE_IN)
-	_type_tween = TextFx.type_on(_voice, 0.3, TYPE_CPS, _typing_on, _on_typed.bind(hold))
+	_type_tween = TextFx.type_on(_voice, 0.3, GLITCH_CPS if key == GLITCH_LINE else TYPE_CPS, _typing_on, _on_typed.bind(hold))
 
 
 func is_speaking() -> bool:

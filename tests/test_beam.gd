@@ -411,10 +411,12 @@ func _scene_flow() -> void:
 	var P = s.Phase
 	_check("scene: opens on the title card with the preview toggle", s.phase == P.TITLE and s.get_node("%Overlay").visible
 		and s.get_node("%CardBox").find_child("Preview", true, false) != null)
-	var rules := s.get_node("%CardBox").get_children().filter(func(c: Node) -> bool: return c.name.begins_with("Rule"))
-	_check("title: four rule cards, no number badges (just the text)", rules.size() == 4 and rules.all(func(c: Node) -> bool:
-		return c.find_children("*", "Label", true, false).is_empty() and c.find_children("*", "RichTextLabel", true, false).size() == 1))
-	_check("title: no rule talks about a Fire button", not tr("SF_BEAM_TITLE_RULE_3").to_lower().contains("fire it yourself") and not tr("SF_BEAM_TITLE_RULE_4").contains("F fires"))
+	var tut: Node = s.get_node("%CardBox").get_node_or_null("Tutorial")
+	_check("title: animated how-to-play, no text rule cards", tut != null and s.get_node("%CardBox").get_children().filter(func(c: Node) -> bool: return c.name.begins_with("Rule")).is_empty())
+	var texts: Array = tut.find_children("*", "Label", true, false).map(func(l: Label) -> String: return l.text) if tut else []
+	_check("title: click / turn / aim / warn lines, translated", texts.size() == 4 and ["SF_BEAM_TUT_CLICK", "SF_BEAM_TUT_TURN", "SF_BEAM_TUT_AIM", "SF_BEAM_TUT_WARN"].all(func(k: String) -> bool: return tr(k) != k and texts.has(tr(k))))
+	_check("title: two demos and the red ! badge", tut != null and tut.find_children("*", "Control", true, false).filter(func(c: Control) -> bool: return c.get_script() != null and c.get_script().get_global_name() == &"" and c.has_method(&"advance")).size() == 2
+		and tut.find_children("*", "Node2D", true, false).any(func(n: Node) -> bool: return n.get_script() != null and n.get_script().resource_path.ends_with("sf/alerts.gd")))
 	_check("scene: title -> briefing 1", _press(s, "Go") and s.phase == P.BRIEF and s.wave_index == 0)
 	_check("scene: briefing shows the mirror diagrams", s.get_node("%CardBox").find_children("*", "Control", true, false)
 		.filter(func(c: Control) -> bool: return c.get_script() == preload("res://scenes/minigames/beam/mini.gd")).size() == 3)

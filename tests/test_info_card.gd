@@ -151,6 +151,10 @@ func _hover_check() -> void:
 	for i in 6:
 		await process_frame
 	var cta: Button = current_scene.get_node("%PartnerPlay")
+	_check("cta: has the keyboard focus on entry", cta.has_focus())
+	cta.release_focus()  # focus grows it too; check the resting look without
+	for i in 30:
+		await process_frame
 	_check("cta: rests at scale 1", cta.scale.x < 1.01)
 	_check("cta: citizen colour after a Devlet game", cta.theme_type_variation == &"CitizenButton")
 	var ev := InputEventMouseMotion.new()
