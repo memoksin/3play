@@ -187,6 +187,10 @@ var ptr_touch := false
 var ptr_t := -9.0
 
 var toast_left := 0.0
+## The controls card is up at the start: nothing moves until its close button (or Enter) shuts it.
+var card_open := false
+var n_card: PanelContainer
+var n_card_dim: ColorRect
 var _hud_cache := {}
 
 @onready var world: Node3D = $World
@@ -220,6 +224,7 @@ func _ready() -> void:
 	_index_solids()
 	overlay.draw.connect(_draw_overlay)
 	_build_hud()
+	_build_card()
 	reset()
 	world.setup(self)
 	intro_left = INTRO_HOLD + INTRO_GLIDE
@@ -489,6 +494,68 @@ func _build_hud() -> void:
 	n_toast.visible = false
 	n_banner.visible = false
 	n_region.modulate.a = 0.0
+
+
+## The controls card in the middle of the screen, a close (X) button in its top-right corner.
+func _build_card() -> void:
+	# the screen behind is dimmed: the card is the first thing to read
+	n_card_dim = ColorRect.new()
+	n_card_dim.color = Color(0.0, 0.0, 0.02, 0.6)
+	n_card_dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(n_card_dim)
+	n_card = PanelContainer.new()
+	n_card.name = "ControlsCard"
+	n_card.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	n_card.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	n_card.grow_vertical = Control.GROW_DIRECTION_BOTH
+	n_card.custom_minimum_size = Vector2(620, 0)
+	var sb := (n_card.get_theme_stylebox(&"panel") as StyleBoxFlat).duplicate() as StyleBoxFlat
+	sb.bg_color = Color(0.05, 0.06, 0.1)  # opaque: the snowy street must not show through
+	sb.content_margin_left = 40
+	sb.content_margin_right = 28
+	sb.content_margin_top = 28
+	sb.content_margin_bottom = 36
+	n_card.add_theme_stylebox_override(&"panel", sb)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override(&"separation", 18)
+	n_card.add_child(box)
+	var top := HBoxContainer.new()
+	box.add_child(top)
+	var title := Label.new()
+	title.theme_type_variation = &"HudHeader"
+	title.text = TextFx.upper(_t("CARD_TITLE"))
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override(&"font_size", 44)
+	top.add_child(title)
+	var close := Button.new()
+	close.name = "Close"
+	close.text = "✕"
+	close.custom_minimum_size = Vector2(56, 56)
+	close.add_theme_font_size_override(&"font_size", 30)
+	close.focus_mode = Control.FOCUS_NONE
+	close.tooltip_text = _t("CARD_CLOSE")
+	close.pressed.connect(close_card)
+	top.add_child(close)
+	for suffix in ["CARD_WALK", "CARD_AIM", "CARD_TORCH"]:
+		var row := Label.new()
+		row.theme_type_variation = &"HudData"
+		row.text = _t(suffix)
+		row.add_theme_font_size_override(&"font_size", 32)
+		box.add_child(row)
+	add_child(n_card)
+	card_open = true
+
+
+func close_card() -> void:
+	if not card_open:
+		return
+	card_open = false
+	ptr_down = false
+	n_card.queue_free()
+	n_card = null
+	n_card_dim.queue_free()
+	n_card_dim = null
 
 
 func _box(bg: Color, border: Color, bw: int) -> StyleBoxFlat:
@@ -776,6 +843,13 @@ func pointer_event(pos: Vector2, pressed: Variant, touch: bool) -> void:
 
 
 func _input(e: InputEvent) -> void:
+	if card_open:
+		if e is InputEventKey and e.pressed and not e.echo 				and (e.physical_keycode == KEY_ENTER or e.physical_keycode == KEY_KP_ENTER):
+			close_card()
+			get_viewport().set_input_as_handled()
+		elif e is InputEventMouseMotion:
+			pointer_event(e.position, null, e.device == InputEvent.DEVICE_ID_EMULATION)
+		return  # the card's own button takes the click; no walking, no torch until it is shut
 	if intro_left > 0.0 and ((e is InputEventKey and e.pressed) or (e is InputEventMouseButton and e.pressed)):
 		intro_left = minf(intro_left, 0.3)  # skip the opening glide
 	if e is InputEventMouseMotion:
@@ -814,7 +888,7 @@ func _process(delta: float) -> void:
 		d *= SLOWMO_K
 	if intro_left > 0.0:
 		intro_left = maxf(0.0, intro_left - delta)
-	elif not manual:
+	elif not manual and not card_open:
 		step(d)
 	world.show_state(self, d)
 	overlay.queue_redraw()
