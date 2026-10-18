@@ -480,7 +480,7 @@ func _build_intro() -> void:
 	_intro.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_intro)
 	var scrim := ColorRect.new()
-	scrim.color = Color(0.01, 0.02, 0.05, 0.55)
+	scrim.color = Color(0, 0, 0, 0.55)
 	scrim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_intro.add_child(scrim)
@@ -491,17 +491,20 @@ func _build_intro() -> void:
 	var card := PanelContainer.new()
 	card.name = "Card"
 	card.custom_minimum_size = Vector2(620, 0)
-	# the same card as Fener's controls card (#252): the theme panel, opaque
-	var sb := (card.get_theme_stylebox(&"panel") as StyleBoxFlat).duplicate() as StyleBoxFlat
-	sb.bg_color = Color(0.05, 0.06, 0.1)
-	sb.content_margin_left = 40
-	sb.content_margin_right = 40
-	sb.content_margin_top = 28
-	sb.content_margin_bottom = 36
+	# the same card as FireTutorial / FenerTutorial (#255, #256)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.035, 0.055, 0.11, 0.96)
+	sb.border_color = Color(0.47, 0.67, 1.0, 0.22)
+	sb.set_border_width_all(1)
+	sb.border_width_left = 3
+	sb.set_corner_radius_all(4)
+	sb.set_content_margin_all(28)
+	sb.shadow_color = Color(0, 0, 0, 0.6)
+	sb.shadow_size = 40
 	card.add_theme_stylebox_override(&"panel", sb)
 	center.add_child(card)
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override(&"separation", 18)
+	box.add_theme_constant_override(&"separation", 22)
 	card.add_child(box)
 
 	var title := Label.new()
