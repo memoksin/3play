@@ -8,7 +8,7 @@ sound is mixed afterwards by `mix.py` from the cue tables in `film.html`.
 | Segment | Length | Output |
 |---|---|---|
 | `intro_stack` | 6.5 s, 390 frames | `export/video/intro_stack.mp4` |
-| `film` | 53.95 s, 3237 frames | `export/video/film.mp4` (storyboard steps 5-20, plays after the approved intro) |
+| `film` | 53.95 s, 3237 frames | `export/video/film.mp4` (storyboard steps 5-19, plays after the approved intro) |
 
 ## The whole pitch film, start to finish
 
@@ -102,7 +102,7 @@ sound of exactly those frames (48 kHz stereo, the Music bus muted: the film has 
 
 `globe_spin`, `globe_lock_io` and `title` can still be captured (older cut); the film no longer uses them.
 
-## Film body: `film.html` (storyboard steps 5-20)
+## Film body: `film.html` (storyboard steps 5-19)
 
 `film.html` is the rest of the pitch film after the approved intro. It works like `intro_stack`, with one difference:
 `renderAt(t)` returns a Promise, because it loads Godot gameplay frames on demand. `render.mjs` waits for it.
@@ -112,13 +112,13 @@ card with `calm: true`: all amber, a soft arrival, no jitter, no chroma split, n
 look like another letter is coming). The side rules sit at the same distance left and right of the text. A small
 teal "GAME" (`GAME`) sits under "AAA" and stays, unchanged, under "3play". Statements (`s_*` rows) are
 smaller, in the fg colour, and `*stars*` mark the amber words. The `logo` row draws the game's logo (`ui/logo.tscn`:
-VT323 "3play", a red copy left and a blue copy right) landing with a soft flash. The `team` row is the developers part:
-the four portraits from `assets/sprites/ui/team/` with the names exactly as in `scenes/credits.gd` (`TEAM`). The post
-pass matches the intro: bloom, chromatic aberration, grain, vignette. On top of that it adds glitch cuts, zoom blur,
-pixelation and the CRT power-off that ends the film (`CRT`, the last 0.65 s of the developers part).
+VT323 "3play", a red copy left and a blue copy right) landing with a soft flash. The film has no developers part: it
+ends on FARK ET, which does not fade but is closed by the CRT power-off. The post pass matches the intro: bloom,
+chromatic aberration, grain, vignette. On top of that it adds glitch cuts, zoom blur, pixelation and the CRT power-off
+that ends the film (`CRT`, the last 0.65 s of FARK ET).
 
 ```sh
-node tools/video/render.mjs film --still 9.5,19.0,28.8,32.5,38.6,44.5   # stills in export/video/stills/film/
+node tools/video/render.mjs film --still 9.5,19.0,28.8,33.6,39.6,51.5   # stills in export/video/stills/film/
 node tools/video/render.mjs film                                 # ~1 h: export/video/film.mp4 (+ film_cues.json, film_audio.json)
 node tools/video/render.mjs film --resume                        # only the frames missing in export/video/frames/film/
 node tools/video/render.mjs film --clips /abs/path/to/clips      # clips from another folder (served at /__clips/)
@@ -153,20 +153,20 @@ the rows, so changing a row retimes everything tied to it. `SCENARIO_COUNT` (ste
 | 12 | `io_a` | 23.50 | 29.50 | 2.5 | `io_mini` from 2.2 s at 2.9x (glitch cut in), slow push to the beach: the pipes lock, the sea draws back |
 | 12 | `io_b` | 26.00 | 32.00 | 5.1 | the same take from 9.45 s at 1.25x: the wall rises, breaks over the town at 34.96 (`hit`), the town floods; hard cut out |
 | 13 | `black` | 31.10 | 37.10 | 0.6 | black, one faint heartbeat |
-| 14 | `menu`, `s_fark`, `c_tercih` | 31.70 | 37.70 | 3.3 | `menu_roles` from 1.7 s opens like the eye; "Farkındalık tek taraflı değildir" at 38.0; TERCİH ET at 39.45 ("Devlet" hovered at 38.8, "Vatandaş" at 40.8) |
-| 15-16 | `globe2`, `s_dunya`, `s_count` | 35.00 | 41.00 | 3.2 | `globe_spin2` at 1.1x (glitch cut in); "Dünyanın dört bir yanından" + "3 afet senaryosu" (digit slot-roll) |
-| 16 | `fire_a`, `fire_b` | 38.20 | 44.20 | 2.2 | `fire_mini` (glitch cut in): the cutters cut the fence (from 0.35 s at 1.15x), hard cut to the kangaroos running out (from 3.55 s at 1.15x) at 45.2; caption VICTORIA, AVUSTRALYA · 2009 |
-| 17-18 | `bunny`, `s_easter` | 40.40 | 46.40 | 3.1 | pixelate into the pixel-art egg; it cracks faster than before (its cracks on the normal-speed sound), the bunny pops out (47.37); "Belki bir de easter egg, kim bilir…" |
-| 19 | `c_aaa`, `s_yok`, `logo` | 43.50 | 49.50 | 3.65 | "AAA" with a small "GAME" under it, calm; "yok yok" types on (50.25); "3play" lands (51.25), the same "GAME" under it |
-| 19 | `c_fark` | 47.15 | 53.15 | 2.0 | FARK ET, fades to black |
-| 20 | `team`, `end` | 49.25 | 55.25 | 4.7 | EMEĞİ GEÇENLER, the four portraits and names (Mehmet Yiğit Keskin, Sude İlayda Mete, Burcu Baran, İrem Altunsöğüt); CRT power-off at 58.8, black from 59.45 |
+| 14 | `menu`, `s_fark`, `c_tercih` | 31.70 | 37.70 | 4.3 | `menu_roles` from 1.7 s opens like the eye; "Farkındalık tek taraflı değildir" at 38.0 (typed by 39.0, held to 40.5); TERCİH ET at 40.45 ("Devlet" hovered at 38.8, "Vatandaş" at 40.8) |
+| 15-16 | `globe2`, `s_dunya`, `s_count` | 36.00 | 42.00 | 3.2 | `globe_spin2` at 1.1x (glitch cut in); "Dünyanın dört bir yanından" + "3 afet senaryosu" (digit slot-roll) |
+| 16 | `fire_a`, `fire_b` | 39.20 | 45.20 | 2.2 | `fire_mini` (glitch cut in): the cutters cut the fence (from 0.35 s at 1.15x), hard cut to the kangaroos running out (from 3.55 s at 1.15x) at 46.2; caption VICTORIA, AVUSTRALYA · 2009 |
+| 17-18 | `bunny`, `s_easter` | 41.40 | 47.40 | 3.1 | pixelate into the pixel-art egg; it cracks faster than before (its cracks on the normal-speed sound), the bunny pops out (48.37); "Belki bir de easter egg, kim bilir…" |
+| 19 | `c_aaa`, `s_yok` | 44.50 | 50.50 | 2.45 | "AAA" with a small "GAME" under it, calm; it settles, then "yok yok" types on (51.95) |
+| 19 | `logo` | 46.95 | 52.95 | 2.9 | "3play" lands, the same "GAME" under it, held |
+| 19 | `c_fark`, `end` | 49.85 | 55.85 | 4.1 | FARK ET, held; CRT power-off at 58.8, black from 59.45 |
 
 Final film: 6.0 s intro + 53.95 s film = 59.95 s.
 
 ### Sound
 
 `film.html` also holds the mix plan, next to the picture it belongs to: `MUSIC` (one bed: the menu music M1 from
-129.8 s, so its own swells land on Fener's lamp and on the logo, with a dB curve), `STEMS` (the game sound recorded
+129.8 s, so its own swells land on Fener's lamp and at 51.3 under "yok yok", with a dB curve), `STEMS` (the game sound recorded
 with a clip, placed under its row) and `SFX` (one row per cue, T numbers as in `docs/audio.md`). Every time is derived
 from the `TL` rows. `render.mjs` writes the plan in final-film seconds to `export/video/film_audio.json` (also on a
 `--still` run). `mix.py` cuts every sound (trim, loop, tempo for the sped-up clips, fades), measures it (EBU R128)
@@ -201,12 +201,12 @@ for a clip without the game's lock UI.
 Current in-points: the diorama starts at 0.9 s (after the game's fly-in). `fener_mini` starts at 0.45 s, so the
 whistle is heard in the dark before the lamp clicks on. `io_mini` plays twice from one take: `io_a` 2.2-9.45 s fast,
 `io_b` from 9.45 s near real speed; the wave breaks at clip 13.15 s (`hit: 2.96`). In `menu_roles` (from 1.7 s),
-"Devlet" is hovered under the statement and "Vatandaş" at the end of the row.
+"Devlet" is hovered under the statement and "Vatandaş" under TERCİH ET.
 
 The fire shot is one capture, `fire_mini`, so it can be swapped alone (for example once the first-person hands are
 improved): `bash tools/video/capture.sh fire_mini`, check that the fence cut is still in `fire_a` (clip 0.35-1.5 s)
-and the kangaroos in `fire_b` (clip 3.55-4.93 s), adjust the two `in` values if not, delete frames 02280-02423 of
-`export/video/frames/film/` (film 38.0-40.4 s: the glitch cut in to the pixelate out), render with `--resume`, then
+and the kangaroos in `fire_b` (clip 3.55-4.93 s), adjust the two `in` values if not, delete frames 02340-02483 of
+`export/video/frames/film/` (film 39.0-41.4 s: the glitch cut in to the pixelate out), render with `--resume`, then
 `assemble.sh` and `mix.py --mux --web`.
 
 The 3026 solar flare stays out of the film: it is the easter egg the bunny step teases.
