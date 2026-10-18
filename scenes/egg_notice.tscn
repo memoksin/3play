@@ -1,10 +1,9 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scenes/egg_notice.gd" id="1"]
 [ext_resource type="Theme" path="res://ui/space_theme.tres" id="2"]
-[ext_resource type="PackedScene" path="res://scenes/ui/space_bg.tscn" id="3"]
 
-[node name="Notice" type="Control"]
+[node name="EggNotice" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -12,14 +11,19 @@ anchor_bottom = 1.0
 theme = ExtResource("2")
 script = ExtResource("1")
 
-[node name="SpaceBg" parent="." instance=ExtResource("3")]
+[node name="Dim" type="ColorRect" parent="."]
 layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.01, 0.012, 0.03, 0.55)
 
 [node name="Center" type="CenterContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+mouse_filter = 2
 
 [node name="Card" type="PanelContainer" parent="Center"]
 unique_name_in_owner = true

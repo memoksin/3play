@@ -64,7 +64,7 @@ func _run() -> void:
 	current_scene.skip()
 	await _wait_scene("res://scenes/notice.tscn")
 	_check("splash -> launch notice", current_scene.scene_file_path == "res://scenes/notice.tscn")
-	current_scene.confirm_box.button_pressed = true
+	current_scene.confirm_box.pressed.emit()
 	await _wait_scene("res://scenes/title.tscn")
 	_check("notice -> title", current_scene.scene_file_path == "res://scenes/title.tscn")
 	current_scene.get_node("%Start").pressed.emit()

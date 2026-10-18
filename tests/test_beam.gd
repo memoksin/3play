@@ -57,13 +57,16 @@ func _run() -> void:
 		return
 	game = root.get_node("Game")
 	game.store_path = ""
+	_check("the mission summary card is off by default", not skin.show_summary)
 	_data()
 	_rules()
 	_golden()
 	_solvable()
 	_difficulty()
 	_labels()
+	skin.show_summary = true  # the flow test walks through the summary card; the real path test runs with the default (off)
 	await _scene_flow()
+	skin.show_summary = false
 	await _scene_blind_and_timeout()
 	await _scene_alerts()
 	await _scene_rush()
@@ -521,6 +524,7 @@ func _scene_flow() -> void:
 	_check("wave 4: the planned overheat locks its thermal satellite", over.size() > 0 and s.board.sat(over[0]).locked)
 
 	# summary -> finished
+	_check("summary on: the last wave's button says Summary", (s.get_node("%CardBox").find_child("Next", true, false) as Button).text == TextFx.upper(tr("SF_BEAM_SUMMARY")))
 	_check("last result -> summary", _press(s, "Next") and s.phase == P.FINAL)
 	var sum: Dictionary = s.summary()
 	_check("summary: 44/44, 12 stars, top rank, 100%% energy", sum.saved == 44 and sum.total == 44 and sum.stars == 12 and sum.rank == 3 and sum.energy == 100)
@@ -707,9 +711,10 @@ func _scene_real_path() -> void:
 			await process_frame
 			guard += 1
 		_press(s, "Next")
-	_check("real path: summary reached via _process", s.phase == P.FINAL)
-	game.saved = -1
-	_press(s, "Continue")
+	_check("real path: summary hidden, the game goes straight on", s.phase != P.FINAL and s.phase == P.RESULT)
+	_check("real path: the last wave's button says Continue", (s.get_node("%CardBox").find_child("Next", true, false) as Button).text == TextFx.upper(tr("SF_BEAM_CONTINUE")))
+	_check("real path: no summary card in the overlay", s.get_node("%CardBox").find_child("Continue", true, false) == null
+		and s.get_node("%CardBox").find_child("Again", true, false) == null)
 	_check("real path: Game.finish_minigame(%d, 44), %d stars" % [expected, stars], game.saved == expected and game.total == 44
 		and game.extra.get("stars", -1) == stars)
 	_check("real path: extra has stars, energy, rank", game.extra.has("stars") and game.extra.has("energy") and game.extra.has("rank"))

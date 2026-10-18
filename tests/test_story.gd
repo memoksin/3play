@@ -127,7 +127,7 @@ func _run() -> void:
 	Input.parse_input_event(click)
 	await _wait_scene(story.NOTICE)
 	_check("mouse click skips the splash (notice first)", current_scene.scene_file_path == story.NOTICE)
-	current_scene.confirm_box.button_pressed = true
+	current_scene.confirm_box.pressed.emit()
 	await _wait_scene(story.TITLE)
 	_check("notice -> title", current_scene.scene_file_path == story.TITLE)
 	await _start_to_main(story, main_path)

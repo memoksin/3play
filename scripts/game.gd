@@ -33,7 +33,8 @@ const PATHS := [
 	{&"state": "res://data/disasters/solar_flare.tres", &"citizen": "res://data/disasters/black_saturday.tres"},
 ]
 const MAIN_ODDS := 0.65
-## The easter egg: a first Devlet pick that lands on it gets the notice screen before the globe.
+## The easter egg: a first Devlet pick that lands on it gets the notice card in the globe's glitch run
+## (scenes/globe.gd holds the globe at EGG_AT, after the world has burnt and before the lock coordinates type).
 const EASTER_EGG := "res://data/disasters/solar_flare.tres"
 const NOTICE := "res://scenes/egg_notice.tscn"
 const SET_SCENE := "res://scenes/diorama/set_%s.tscn"
@@ -66,6 +67,11 @@ var played_ids := {}
 var pick_rng := RandomNumberGenerator.new()
 ## The disaster the run being set up plays (a res:// path).
 var _pick := ""
+## The run plays the easter egg and its notice card is still to be shown (the globe shows it and clears this).
+var egg_pending := false
+## The globe of this run starts its spin by itself (no waiting for the player's drag): the path partner run
+## and the real scenario picked on the egg card.
+var autolaunch_globe := false
 ## Chosen UI language ([ui] locale). Tests set it to "" (nothing read or written) or a temp path.
 var settings_path := "user://settings.cfg"
 ## Multiplier on the fire scene's own base look speed ([input] mouse_sensitivity).
@@ -306,12 +312,15 @@ func _save_settings(section: String, values: Dictionary) -> void:
 
 ## Starts a run. Without `path` the role's disaster comes from the launch path (the first run of a launch
 ## picks the path); with one (replay, path partner) exactly that disaster is played, no notice.
-func start(new_role: StringName, path := "") -> void:
+## `auto_spin`: the globe spins by itself (the path partner run).
+func start(new_role: StringName, path := "", auto_spin := false) -> void:
 	role = new_role
 	saved = 0
 	total = 0
 	extra = {}
 	_step = -1
+	egg_pending = false
+	autolaunch_globe = auto_spin
 	if path != "":
 		_pick = path
 		if launch_path.is_empty():
@@ -320,10 +329,8 @@ func start(new_role: StringName, path := "") -> void:
 		return
 	var first := launch_path.is_empty()
 	_pick = pick_for(new_role)
-	if first and _pick == EASTER_EGG:
-		_show_notice()
-	else:
-		_launch()
+	egg_pending = first and _pick == EASTER_EGG
+	_launch()
 
 
 ## Same disaster again (a disaster made on the fly has no file: it gets a new pick).
@@ -339,24 +346,17 @@ func _launch() -> void:
 		_open_run()
 
 
-## The notice screen (see scenes/egg_notice.gd), before anything of the run is loaded.
-func _show_notice() -> void:
-	if DisplayServer.get_name() == "headless":
-		get_tree().change_scene_to_file.call_deferred(NOTICE)
-		return
-	await _fade_cover(1.0, COVER_IN)
-	get_tree().change_scene_to_file(NOTICE)
-	for i in 3:
-		await get_tree().process_frame
-	await _fade_cover(0.0, COVER_OUT)
-
-
-## The notice is answered: `real` swaps the easter egg for the real scenario (Indian Ocean, so the path
-## becomes Indian Ocean + Kahramanmaras); either way the run goes on.
+## The egg card (scenes/egg_notice.gd, shown by the globe) is answered. `real` swaps the easter egg for the
+## real scenario: the path becomes Indian Ocean + Kahramanmaras and the run starts over on its globe, which
+## spins by itself. Otherwise nothing changes here: the globe lets the 3026 run go on.
 func answer_notice(real: bool) -> void:
-	if real:
-		launch_path = PATHS[0]
-		_pick = launch_path[role]
+	egg_pending = false
+	if not real:
+		return
+	launch_path = PATHS[0]
+	_pick = launch_path[role]
+	_step = -1
+	autolaunch_globe = true
 	_launch()
 
 
@@ -407,11 +407,11 @@ func partner_pending(d: Disaster) -> bool:
 	return partner != "" and not played_ids.has(_id_of(partner))
 
 
-## Starts the path partner of the current disaster (the other role), straight into its run.
+## Starts the path partner of the current disaster (the other role), straight into its run (its globe spins by itself).
 func play_partner() -> void:
 	var partner := partner_of(disaster)
 	if partner != "":
-		start(&"citizen" if disaster.role == &"state" else &"state", partner)
+		start(&"citizen" if disaster.role == &"state" else &"state", partner, true)
 
 
 ## Counts the run on this machine.
@@ -639,6 +639,7 @@ func _open_run() -> void:
 	await _warm_up(gen)
 	if gen != _warm_gen:
 		return
+	var before := get_tree().current_scene  # the real scenario picked on the egg card leaves a globe for a globe
 	next()
 	# the globe's first frames can still be slow: stay covered until it has drawn STABLE of them in a row
 	var globe_path := scene_path(&"globe")
@@ -649,7 +650,8 @@ func _open_run() -> void:
 		var now := Time.get_ticks_usec()
 		var ms := (now - last) / 1000.0
 		last = now
-		var up := get_tree().current_scene != null and get_tree().current_scene.scene_file_path == globe_path
+		var up := get_tree().current_scene != null and get_tree().current_scene != before \
+				and get_tree().current_scene.scene_file_path == globe_path
 		stable = stable + 1 if up and ms < STABLE_MS else 0
 		if stable >= STABLE:
 			break

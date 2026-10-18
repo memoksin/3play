@@ -1,6 +1,6 @@
 extends SceneTree
-## Launch notice: boot reaches it once per launch (splash -> notice -> title), the confirm checkbox
-## (mouse and keyboard) leads to the title, coming back to the title does not show it again, Start
+## Launch notice: boot reaches it once per launch (splash -> notice -> title), the confirm button
+## (mouse, keyboard, a click anywhere) leads to the title, coming back to the title does not show it again, Start
 ## always plays the prologue, and the text is readable (fits the 1280x720 screen, both languages).
 ## godot --headless --path . -s res://tests/test_notice.gd
 
@@ -53,7 +53,15 @@ func _run() -> void:
 	_check("boot: splash -> notice", current_scene.scene_file_path == NOTICE)
 	var n := current_scene
 	_check("not marked shown before the tick", not story.notice_shown)
-	_check("checkbox is unticked and focused", not n.confirm_box.button_pressed and n.confirm_box.has_focus())
+	_check("confirm is a real themed Button (not a CheckBox), focused", n.confirm_box.get_class() == "Button"
+			and not (n.confirm_box is CheckBox) and n.confirm_box.has_focus())
+	_check("confirm has no blanked-icon overrides", not n.confirm_box.has_theme_icon_override("unchecked")
+			and not n.confirm_box.has_theme_stylebox_override("normal") and not n.confirm_box.has_theme_stylebox_override("hover"))
+	var theme_box: Theme = n.theme
+	_check("confirm takes the space theme's Button look: hover differs from normal",
+			theme_box.get_stylebox("hover", "Button") != theme_box.get_stylebox("normal", "Button")
+			and n.confirm_box.get_theme_stylebox("hover") == theme_box.get_stylebox("hover", "Button"))
+	_check("audio: the confirm button is hooked for the UI hover / click sounds", n.confirm_box.has_meta(&"audio_button"))
 
 	# readable and centred at 1280x720: the panel fits and sits in the middle
 	var panel: Control = n.get_node("%Panel")
@@ -64,14 +72,21 @@ func _run() -> void:
 			absf(r.get_center().x - 640.0) < 4.0 and absf(r.get_center().y - 360.0) < 4.0)
 	var body: RichTextLabel = n.get_node("%Body")
 	_check("body font >= 36", body.get_theme_font_size("normal_font_size") >= 36)
-	_check("checkbox big enough", n.confirm_box.size.y >= 56)
+	_check("button big enough", n.confirm_box.size.y >= 56)
+	# centred: the box sits on the panel's centre line and so does its label
+	var cb: Rect2 = n.confirm_box.get_global_rect()
+	_check("button centred in the panel (%.1f vs %.1f)" % [cb.get_center().x, r.get_center().x],
+			absf(cb.get_center().x - r.get_center().x) < 1.5)
+	_check("label centred in the button", n.confirm_box.alignment == HORIZONTAL_ALIGNMENT_CENTER
+			and n.confirm_box.icon == null and n.confirm_box.get_theme_stylebox("normal").get_margin(SIDE_LEFT)
+			== n.confirm_box.get_theme_stylebox("normal").get_margin(SIDE_RIGHT))
 	var tr_text := body.get_parsed_text()
 	_check("TR text", tr_text == "Oyunumuzu en iyi şekilde anlamak için hem Devlet hem de Vatandaş perspektifinden oynamanız önerilir.")
-	_check("TR confirm", n.confirm_box.text.strip_edges() == "Anladım")
+	_check("TR confirm", n.confirm_box.text.strip_edges() == "ANLADIM")
 	TranslationServer.set_locale("en")
 	await process_frame
 	_check("EN text", body.get_parsed_text() == "To get the most out of our game, we recommend playing from both the State and the Citizen perspective.")
-	_check("EN confirm", n.confirm_box.text.strip_edges() == "Got it")
+	_check("EN confirm", n.confirm_box.text.strip_edges() == "GOT IT")
 	TranslationServer.set_locale("tr")
 	await process_frame
 
@@ -111,17 +126,28 @@ func _run() -> void:
 	await _wait_scene(story.TITLE)
 	_check("same launch: splash -> title", current_scene.scene_file_path == story.TITLE)
 
-	# 5) mouse click on the checkbox
+	# 5) mouse: hover feedback and sounds on the button, then a click on it
 	story.notice_shown = false
 	change_scene_to_file(NOTICE)
 	await _wait_scene(NOTICE)
 	n = current_scene
-	var c: CheckBox = n.confirm_box
+	var c: Button = n.confirm_box
+	var audio := root.get_node("Audio")
+	var far := InputEventMouseMotion.new()
+	far.position = Vector2(8, 8)
+	far.global_position = far.position
+	Input.parse_input_event(far)
+	await process_frame
+	_check("not hovered at first", not c.is_hovered())
+	audio.reset_history()
 	var move := InputEventMouseMotion.new()
 	move.position = c.get_global_rect().get_center()
 	move.global_position = move.position
 	Input.parse_input_event(move)
 	await process_frame
+	_check("hover: the button is hovered and draws its hover state", c.is_hovered() and c.get_draw_mode() in [BaseButton.DRAW_HOVER, BaseButton.DRAW_HOVER_PRESSED])
+	_check("hover: UI hover sound M2", "play:M2" in audio.history.map(func(e: Dictionary) -> String: return "%s:%s" % [e.op, e.id]))
+	audio.reset_history()
 	var click := InputEventMouseButton.new()
 	click.button_index = MOUSE_BUTTON_LEFT
 	click.position = c.get_global_rect().get_center()
@@ -132,6 +158,34 @@ func _run() -> void:
 	click = click.duplicate()
 	click.pressed = false
 	Input.parse_input_event(click)
+	await process_frame
+	_check("click: UI click sound M3, once", audio.history.filter(func(e: Dictionary) -> bool: return e.op == &"play" and e.id == &"M3").size() == 1)
 	await _wait_scene(story.TITLE)
-	_check("mouse click on the box -> title", current_scene.scene_file_path == story.TITLE)
+	_check("mouse click on the button -> title", current_scene.scene_file_path == story.TITLE)
+
+	# 6) a click anywhere (on the body text, off the panel) or Space also closes it, with the click sound
+	for how in ["body", "empty", "space"]:
+		story.notice_shown = false
+		change_scene_to_file(NOTICE)
+		await _wait_scene(NOTICE)
+		n = current_scene
+		audio.reset_history()
+		if how == "space":
+			var key := InputEventKey.new()
+			key.keycode = KEY_SPACE
+			key.pressed = true
+			Input.parse_input_event(key)
+		else:
+			var where: Vector2 = n.get_node("%Body").get_global_rect().get_center() if how == "body" else Vector2(20, 700)
+			var press := InputEventMouseButton.new()
+			press.button_index = MOUSE_BUTTON_LEFT
+			press.position = where
+			press.global_position = where
+			press.pressed = true
+			Input.parse_input_event(press)
+		await process_frame
+		await process_frame
+		_check("%s: closes the notice" % how, n.leaving)
+		_check("%s: UI click sound M3" % how, audio.history.any(func(e: Dictionary) -> bool: return e.op == &"play" and e.id == &"M3"))
+		await _wait_scene(story.TITLE)
 	quit(0 if ok else 1)

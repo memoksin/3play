@@ -1,9 +1,10 @@
 extends Control
 ## Launch notice, once per game launch, between the Stack splash and the title screen: the advice to
 ## play both the State and the Citizen side. One click anywhere (or Enter / Space) closes it; the
-## "Got it" button is a CheckBox without a box, pressed by that click. Story.notice_shown keeps it to one time per launch,
+## "Got it" button is a plain themed Button (the title screen's look, hover / focus / press feedback, the
+## global UI sounds), pressed by that click. Story.notice_shown keeps it to one time per launch,
 ## so coming back to the title from the menu does not show it again.
-## Public API (tests): confirm_box (the CheckBox), leaving.
+## Public API (tests): confirm_box (the Button), leaving.
 
 const FADE_OUT := 0.35
 const TICK_HOLD := 0.1
@@ -11,14 +12,18 @@ const STATE_HEX := "ff5a3c"
 const CITIZEN_HEX := "9fd8ff"
 
 var leaving := false
-var confirm_box: CheckBox
+var confirm_box: Button
 
 
 func _ready() -> void:
 	confirm_box = %Confirm
-	_style_box()
+	# equal padding left and right (the theme's plate has more on the left for its accent bar), so the title,
+	# the text and the button all sit on the centre line of the card
+	var plate: StyleBox = (%Panel as Control).get_theme_stylebox("panel").duplicate()
+	plate.content_margin_right = plate.content_margin_left
+	(%Panel as Control).add_theme_stylebox_override("panel", plate)
 	_apply_texts()
-	confirm_box.toggled.connect(_on_toggled)
+	confirm_box.pressed.connect(_on_pressed)
 	TextFx.fade_in(%Panel, 0.0, 0.5)
 	confirm_box.grab_focus.call_deferred()
 
@@ -31,58 +36,25 @@ func _notification(what: int) -> void:
 func _apply_texts() -> void:
 	%Title.text = TextFx.upper(tr("NOTICE_TITLE"))
 	%Body.text = tr("NOTICE_BODY") % [STATE_HEX, CITIZEN_HEX]
-	confirm_box.text = tr("NOTICE_CONFIRM")
+	confirm_box.text = TextFx.upper(tr("NOTICE_CONFIRM"))
 	%Hint.text = tr("NOTICE_HINT")
 
 
-## A click anywhere or Enter / Space presses the button, even when the focus was lost.
+## A click anywhere or Enter / Space presses the button, even when the focus was lost (a press on the button
+## or Enter / Space with the focus on it is the button's own; `pressed` also plays the UI click sound).
 func _unhandled_input(event: InputEvent) -> void:
 	var click: bool = event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
 	if (click or event.is_action_pressed(&"ui_accept")) and not leaving:
 		get_viewport().set_input_as_handled()
-		confirm_box.button_pressed = true
+		confirm_box.pressed.emit()
 
 
-func _on_toggled(on: bool) -> void:
-	if not on or leaving:
+func _on_pressed() -> void:
+	if leaving:
 		return
 	leaving = true
 	Story.notice_shown = true
-	confirm_box.disabled = true
 	var tw := create_tween()
 	tw.tween_interval(TICK_HOLD)
 	tw.tween_property(self, "modulate:a", 0.0, FADE_OUT)
 	tw.tween_callback(func() -> void: get_tree().change_scene_to_file(Story.TITLE))
-
-
-## A clear outlined button; the CheckBox icons are blanked so it reads as a plain button.
-func _style_box() -> void:
-	var blank := ImageTexture.create_from_image(Image.create(1, 1, false, Image.FORMAT_RGBA8))
-	for icon in ["unchecked", "checked", "unchecked_disabled", "checked_disabled"]:
-		confirm_box.add_theme_icon_override(icon, blank)
-	confirm_box.add_theme_constant_override("h_separation", 0)
-	confirm_box.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	confirm_box.icon_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color",
-			"font_hover_pressed_color", "font_disabled_color"]:
-		confirm_box.add_theme_color_override(c, Color(1, 1, 1, 1))
-	var focus := StyleBoxFlat.new()
-	focus.bg_color = Color(0.62, 0.85, 1.0, 0.10)
-	focus.set_border_width_all(2)
-	focus.border_color = Color(0.62, 0.85, 1.0, 0.9)
-	focus.set_corner_radius_all(4)
-	focus.set_content_margin_all(10)
-	focus.content_margin_left = 24
-	focus.content_margin_right = 24
-	var plain := StyleBoxFlat.new()
-	plain.bg_color = Color(0.62, 0.85, 1.0, 0.04)
-	plain.set_border_width_all(2)
-	plain.border_color = Color(0.62, 0.85, 1.0, 0.35)
-	plain.set_corner_radius_all(4)
-	plain.content_margin_left = focus.content_margin_left
-	plain.content_margin_right = focus.content_margin_right
-	plain.content_margin_top = 10
-	plain.content_margin_bottom = 10
-	for s in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
-		confirm_box.add_theme_stylebox_override(s, plain)
-	confirm_box.add_theme_stylebox_override("focus", focus)

@@ -1,6 +1,6 @@
 extends SceneTree
-## Screenshots of the first-run notice and the result cards with the "play the other perspective" block,
-## saved to res://export/shots/partner_<name>_<locale>_<h>p.png (result cards, info overlay, notice). Run windowed (needs a renderer):
+## Screenshots of the result cards with the "play the other perspective" block,
+## saved to res://export/shots/partner_<name>_<locale>_<h>p.png (result cards, info overlay; the easter-egg card is in tools/egg_shots.gd). Run windowed (needs a renderer):
 ##   godot --path . -s res://tools/partner_shots.gd [-- --locale=tr --size=1280x720]
 
 const OUT := "res://export/shots"
@@ -46,7 +46,6 @@ func _run() -> void:
 	await process_frame
 	for locale: String in locales:
 		TranslationServer.set_locale(locale)
-		await _shot("res://scenes/egg_notice.tscn", "notice", locale, size)
 		for id in ["indian_ocean", "kahramanmaras", "solar_flare", "black_saturday"]:
 			game.reset_launch()
 			var d: Disaster = load("res://data/disasters/%s.tres" % id)
