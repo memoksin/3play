@@ -1,46 +1,41 @@
-# Run instructions (rule A.3) - DRAFT
+# Kurulum, Çalıştırma ve Kontrol Talimatları
 
-Owner: burcubaran22 (issue #19). Items marked `CHECK` need a person with the game to confirm before upload (Sun 12:00).
+Yazan: burcubaran22 (issue #19). Kontroller tablosu ve teknik bilgiler oyunun koduna ve belgelerine göre derlendi.
 
-## Platform
+3play bir Windows oyunudur (Windows 10 veya Windows 11, 64 bit). Oyun için kurulum gerekli değildir. İnternet bağlantısı gerekli değildir.
 
-- Windows 10 or 11, 64-bit. Download the ZIP, extract it, double-click `3play.exe`. No installer, no internet needed.
-- A graphics card with Vulkan or OpenGL 3.3 support (any laptop from the last 8 years). `CHECK` minimum spec on a real Windows PC.
-- The game opens in fullscreen on the first start (1280x720 base size, scaled with the aspect kept). Fullscreen can be turned off in Settings. The language is Turkish by default and can be changed on the first screen or in Settings.
-- Mouse and keyboard. Sound on is recommended.
+## Çalıştırma adımları
 
-## How to start and what happens
+1. ZIP dosyasını indirin ve bir klasöre çıkarın.
+2. Klasördeki `3play.exe` dosyasına çift tıklayarak oyunu başlatabilirsiniz.
+3. Oyun tam ekran açılır. Oyun ilk açılışta Türkçe'dir; sağ üst köşedeki Ayarlar düğmesinden İngilizce'ye çevirebilirsiniz.
 
-1. Pick a language on the first launch (Turkish or English).
-2. Pick a role: **State** or **Citizen**.
-3. The globe spins and locks on a real disaster. Click or Space skips the spin.
-4. A short intro scene shows the place and year, then the minigame starts.
-5. A result card shows the score and the real facts. Play again or return to the menu.
+Oyunu oynamak için fare ve klavye gereklidir. Sesin açık tutulması önerilir.
 
-A run takes about 3 minutes. Which disaster you get depends on your role and on what you played before (it alternates).
+## Oyuna başlamak
 
-## Controls
+Giriş ekranında Başlat'a basın. Önce bir rol seçin: Devlet ya da Vatandaş. Dünya küresi döner ve sizi daha önce geçmişte yaşanmış gerçek bir afetin içine bırakır (küreyi atlamak için tıklayın veya Space'e basın). Kısa bir ön tanıtımdan sonra mini oyun başlar. Mini oyunun sonunda ilgili afet hakkında bilgilendirme metni ve skoru içeren sonuç kartı gelir. Bir tur birkaç dakika sürer. "Tekrar oyna" aynı afeti yeniden oynatır, yeni bir afet için ana menüye geri dönebilirsiniz.
 
-| Where | Controls |
+## Kontroller
+
+| Nerede | Tuşlar |
 |---|---|
-| Menus and cards | Mouse. Enter presses the main button. |
-| Globe | Drag to turn the globe. Click or Space skips to the lock. |
-| Pause (any time in a run) | Esc opens the pause menu (4 buttons). |
-| Indian Ocean (Connect) | Click a pipe tile to rotate it 90 degrees. Mouse only. |
-| Solar flare 3026 (Beam) | Click a satellite = turn +45 degrees. Right-click or Shift+click = back. Mouse wheel turns either way. Countdown phase keyboard: Tab / Shift+Tab or arrows pick, E / Space / Enter turn, Q turns back, F fires. |
-| Black Saturday (Fire, first person) | W A S D or arrows move, mouse looks (arrow keys Left/Right also turn), Shift run, Space jump, E / F / Enter interact (pick up, cut, attach, turn). |
-| Kahramanmaras (Fener) | W A S D or arrows walk, the mouse aims the torch, hold the left mouse button to walk to the pointer, Space or F turns the torch on and off. |
-| Settings (main menu) | Language, master / music / effects volume, mouse sensitivity, invert Y, fullscreen, replay the prologue, Back, Quit. |
+| Menüler | Fare. Enter ana düğmeye basar. |
+| Duraklatma | Esc: Devam, Ayarlar, Ana menü, Çık |
+| Hint Okyanusu | Borulara tıklayın, boru 90° döner. Soldaki ve sağdaki aynı sıradaki uçları birleştirin. |
+| Güneş patlaması (Işın Ağı) | Uyduya sol tık: +45°. Sağ tık: geri. Fare tekerleği: iki yöne. Klavye: Tab veya oklar seçer, E / Space / Enter çevirir, Q geri, F ateşler. |
+| Kara Cumartesi (yangın) | W / A / S / D veya oklar yürür, fare bakar, Shift koşar, Space zıplar, E / F / Enter etkileşim. |
+| Kahramanmaraş (Fener) | W / A / S / D veya oklar yürür, fare feneri yöne tutar, sol tuş basılı tutulursa fareye doğru yürür, Space veya F feneri açıp kapatır. |
+| Ayarlar | Dil, genel ses, müzik, efektler, fare hassasiyeti, Y eksenini ters çevirme, tam ekran. |
 
-## Known issues
+## Teknik koşullar
 
-`CHECK` with memoksin and sudeimete before upload. Current list:
+Windows 10/11 (64 bit), Vulkan veya OpenGL 3.3 destekleyen bir ekran kartı. `CHECK` Memo ve İrem'in Windows testi sonucuna göre doğrulanacak.
 
-- The first start may take a few seconds to load the globe and scenes.
-- The Kahramanmaras (Fener) minigame was still being tuned at the time of writing. `CHECK` its final state.
-- Not tested on every graphics card. `CHECK` the result of the Windows test (issues #51, #9).
+## Bilinen sorunlar
 
-## Source and licences
+`CHECK` Memo ve İrem'in listesine göre yazılacak.
 
-- Source code: the public repository (link in the submission form). The build matches the repo source.
-- Assets and AI usage: `assets/CREDITS.md` (ready-made assets and the AI declaration).
+## Kaynak ve lisanslar
+
+Kaynak kod herkese açık depodadır. Hazır varlıklar ve yapay zekâ kullanımı: `assets/CREDITS.md`.
