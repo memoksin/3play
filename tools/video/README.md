@@ -100,7 +100,7 @@ sound of exactly those frames (48 kHz stereo, the Music bus muted: the film has 
 | `io_mini` | 19.4 s | Connect from 13 s before the wave: the pipes turned (they lock at 1.1 and 2.4 s), one line left open; the sea draws back, the swell rises into a wall and breaks over the whole town at ~13.15 s, the flood fills the pipes |
 | `menu_roles` | 7.0 s | the role menu: prompt, hover on Devlet (~2.8 s), then Vatandaş (~4.8 s) |
 | `globe_spin2` | 5.0 s | a second spin from another angle |
-| `fire_mini` | 9.8 s | Black Saturday as the citizen, first person, the hands as they are now: the wire cutters cut the fence ties (cut at 1.08 s), step back, the kangaroos run out through the gap (~3.6-5.2 s); jump cut at 5.5 s to the hose on the open valve: the player sprays the flame in the way out (from 6.0 s) until it goes out (7.6 s), steam and the banner |
+| `fire_mini` | 11.1 s | Black Saturday as the citizen, first person, no how-to modal: the bolt cutters strain and snap through the fence (1.9 s hold, the cut at 2.0 s), step back, the kangaroos run out through the gap (~4.3-6.1 s; the wind alert); jump cut at 6.42 s to the hose on the open valve, the nozzle comes up, the player sprays the flame in the way out (from 7.3 s) until it goes out (8.9 s), the alerts and the banner. The bottom task plate is hidden (it covers the hands and the film's caption), and the crosshair layer is off while the kangaroos run (its arrow would sit on the caption) |
 
 `globe_spin`, `globe_lock_io` and `title` can still be captured (older cut); the film no longer uses them.
 
@@ -169,11 +169,11 @@ than before (Fener 1x, globe 1.1x, Connect 2.9x / 1.25x, fire 1.15x / 1.1x).
 | 13 | `black` | 34.65 | 54 | 0.625 | black, one faint heartbeat, the music stops for the beat |
 | 14 | `menu`, `s_fark`, `c_tercih` | 35.275 | 55 | 4.375 | `menu_roles` from 1.7 s opens like the eye; "Farkındalık tek taraflı değildir" at 35.9 (bar; typed by 36.9, held to 38.45); TERCİH ET at 38.4 (bar; "Devlet" hovered at 36.4, "Vatandaş" at 38.5) |
 | 15-16 | `globe2`, `s_dunya`, `s_count` | 39.65 | 62 | 3.125 | `globe_spin2` at 1.1x (glitch cut in); "Dünyanın dört bir yanından" (40.275) + "3 afet senaryosu" (40.9, bar; digit slot-roll) |
-| 16 | `fire_a`, `fire_b`, `fire_c` | 42.775 | 67 | 5.0 | `fire_mini` (glitch cut in): the cutters cut the fence (from 0.36 s at 1.15x, the cut on bar 43.4), hard cut to the kangaroos running out (44.025, from 3.55 s at 1.15x), hard cut to the hose on the flame (45.275, from 5.54 s at 1.1x, the flame goes out at 47.15); caption VICTORIA, AVUSTRALYA · 2009 |
+| 16 | `fire_a`, `fire_b`, `fire_c` | 42.775 | 67 | 5.0 | `fire_mini` (glitch cut in): the cutters cut the fence (from 1.28 s at 1.15x, the cut on bar 43.4), hard cut to the kangaroos running out (44.025, from 4.4 s at 1.15x), hard cut to the hose on the flame (45.275, from 6.84 s at 1.1x, the flame goes out at 47.15); caption VICTORIA, AVUSTRALYA · 2009 |
 | 17-18 | `bunny`, `s_easter` | 47.775 | 75 | 3.125 | pixelate into the pixel-art egg; it cracks (its cracks on the normal-speed sound), "Belki bir de easter egg, kim bilir…" at 48.4 (bar), the bunny pops out at 49.025 (beat 77) |
 | 19 | `c_aaa`, `s_yok` | 50.9 | 80 | 2.5 | "AAA" with a small "GAME" under it, calm (bar 20); it settles, then "yok yok" types on (52.15) into the music's half-beat break |
 | 19 | `logo` | 53.4 | 84 | 2.5 | "3play" lands on the music's strongest hit (bar 21), the same "GAME" under it, held |
-| 19 | `c_fark`, `end` | 55.9 | 88 | 4.05 | FARK ET (bar 22), held; CRT power-off at 59.025 (beat 93), black from 59.675 |
+| 19 | `c_fark`, `end` | 55.9 | 88 | 4.05 | FARK ET (bar 22), held; CRT power-off at 59.025 (beat 93), black from 59.675; the music credit from 56.6 to the end |
 
 Final film: 6.0 s intro + 53.95 s film (`FILM_LEN`) = 59.95 s.
 Fener went from 6.8 s to 5.0 s, the Black Saturday fire from 2.2 s to 5.0 s (now with the hose on the flame).
@@ -247,9 +247,17 @@ whistle is heard in the dark before the lamp clicks on (on beat 22). `io_mini` p
 
 The fire shot is one capture, `fire_mini`, so it can be swapped alone (for example once the first-person hands are
 improved): `bash tools/video/capture.sh fire_mini`, find the fence cut, the kangaroos and the flame going out in the
-new frames, set `CUT_CLIP` and `OUT_CLIP` (the rows' in-points follow; `fire_b` keeps `in: 3.55` while the kangaroos
-run from ~3.6 s), keep `fire_c.in` after the jump cut (5.5 s), delete frames 02200-02506 of `export/video/frames/film/`
+new frames, set `CUT_CLIP`, `ROO_IN` and `OUT_CLIP` (the rows' in-points follow; the kangaroos' hops vary a little from
+take to take, so look at them again), keep `fire_c.in` after the jump cut (6.42 s), delete frames 02200-02506 of `export/video/frames/film/`
 (film 36.7-41.78 s: the glitch cut in to the pixelate out), render with `--resume`, then `assemble.sh` and
 `mix.py --mux --web`.
+
+### Music credit
+
+Mountain Emperor is CC BY 4.0, so the film carries its credit on screen: `CREDIT` in `film.html` (three lines, VT323
+32 px, light grey on a translucent black band, centred at the bottom) fades in over 0.4 s at final 56.6 s and stays to
+the end. It is drawn on its own canvas and laid over the finished frame after the post pass, so the bloom, grain and
+the CRT power-off leave it alone and it is still there over the black tail. Changing it: edit `CREDIT`, delete frames
+03036-03236 of `export/video/frames/film/`, render with `--resume`, then `assemble.sh` and `mix.py --mux --web`.
 
 The 3026 solar flare stays out of the film: it is the easter egg the bunny step teases.
