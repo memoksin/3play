@@ -47,6 +47,11 @@ const GLITCH_AT := 1.15
 const GLITCH_LEN := 1.35
 const GLITCH_SWAP := 0.62
 const GLITCH_RATE := 30.0
+## Easter-egg card (Game.egg_pending, scenes/egg_notice.tscn): the glitch run stops here for it, when the Earth
+## has landed on the target and the counter reads the glitch year, a hair before the lock HUD (crosshair, then
+## the typed coordinates at SPIN + TYPE_START) starts. The hold is the card's own (egg_card), not `paused`,
+## so the Voice's hold at the 3026 lock (voice.gd, after the coordinates) and this one never release each other.
+const EGG_AT := SPIN - 0.05
 ## Years the counter rewinds toward before it tears.
 const GLITCH_PAST := 1000
 ## Orbital ring, fixed in world space (the Earth turns inside it): main band radius, tilt toward the
@@ -110,6 +115,10 @@ var _flare: ColorRect
 var _tear: ColorRect
 var _fov := 32.0
 var _year_pos := Vector2.ZERO
+## True when this run's spin was started by Game.autolaunch_globe (no drag hint).
+var _auto_spin := false
+## The easter-egg card while it is up (the timeline holds), null otherwise.
+var egg_card: Control
 ## Glitch run state (read by tests): true while the timeline tears; 0 = present Earth, 1 = year 3026.
 var glitching := false
 var future := 0.0
@@ -192,7 +201,11 @@ func seek(time: float) -> void:
 	if not launched:
 		_launch(0.0)
 	t = clampf(time, 0.0, TOTAL)
+	if _egg_due():
+		t = minf(t, EGG_AT)
 	_pose()
+	if _egg_due() and t >= EGG_AT:
+		_open_egg_card()
 
 
 ## Arm the timeline glitch for this run: the rewind tears and lands on `year` (Disaster.glitch runs arm it
@@ -243,6 +256,9 @@ func _start() -> void:
 	_cam.position.z = CAM_FAR
 	if _disaster.glitch:
 		glitch_to(_disaster.year)
+	_auto_spin = Game.autolaunch_globe and get_viewport() == get_tree().root
+	if _auto_spin:  # partner run, real scenario: the spin starts by itself, no drag needed
+		_launch(0.0)
 	_pose()
 
 
@@ -297,15 +313,44 @@ func _process(delta: float) -> void:
 			_spin_vel = IDLE_DRIFT + (_spin_vel - IDLE_DRIFT) * exp(-FRICTION * minf(delta, 0.05))
 			_earth.rotation.y += _spin_vel * minf(delta, 0.05)
 			_pose()
-	elif not paused and t < TOTAL:
+	elif not paused and egg_card == null and t < TOTAL:
 		t = minf(TOTAL, t + minf(delta, 0.05))
+		if _egg_due():
+			t = minf(t, EGG_AT)
 		_pose()
+		if _egg_due() and t >= EGG_AT:
+			_open_egg_card()
 	_fade.color.a = _clamp01((t - (TOTAL - FADE)) / FADE)
-	_hint.modulate.a = 1.0 - _clamp01(t / 0.3) if launched else 0.55 + 0.45 * sin(Time.get_ticks_msec() / 300.0)
+	if launched:
+		_hint.modulate.a = 0.0 if _auto_spin else 1.0 - _clamp01(t / 0.3)  # no "drag the globe" flash on an auto spin
+	else:
+		_hint.modulate.a = 0.55 + 0.45 * sin(Time.get_ticks_msec() / 300.0)
 	_overlay.queue_redraw()
 	if t >= TOTAL and not paused and not _done:
 		_done = true
 		_hand_over()
+
+
+## True while this globe still owes the player the easter-egg card: a first Devlet pick on the solar flare, on
+## the glitch run, in the real tree (the copy Game warms up off-screen shows nothing).
+func _egg_due() -> bool:
+	return Game.egg_pending and egg_card == null and _glitch_year >= 0 and is_inside_tree() \
+			and get_viewport() == get_tree().root
+
+
+## Holds the timeline at EGG_AT under the card. "Devam et" lets the run go on; "Gerçek Senaryo" has
+## Game start the real scenario's run over (this globe is replaced).
+func _open_egg_card() -> void:
+	Game.egg_pending = false
+	egg_card = (load(Game.NOTICE) as PackedScene).instantiate()
+	var layer := CanvasLayer.new()
+	layer.layer = 50
+	add_child(layer)
+	layer.add_child(egg_card)
+	egg_card.answered.connect(func(real: bool) -> void:
+		if not real:
+			layer.queue_free()
+			egg_card = null)
 
 
 ## The veil is solid now. Hide what is under it and let the GPU drain a frame or two before the scene
@@ -328,6 +373,8 @@ func _hand_over() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if egg_card != null:
+		return  # the card answers; a click or Space must not skip the globe past it
 	var click: bool = event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT
 	var space: bool = event is InputEventKey and event.pressed and not event.echo \

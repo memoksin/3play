@@ -134,6 +134,7 @@ const CUES := {
 	&"FR9": {"path": "fire/fire_crackling_loop.ogg", "bus": &"SFX", "volume_db": -10.0, "loop": true, "fade_in": 0.3, "notes": "small flame, 15.5 s seamless loop, no wind; fade it out when the flame goes out"},
 	&"FR11a": {"path": "fire/horse_gallop.ogg", "bus": &"SFX", "volume_db": -6.0, "notes": "kangaroos run: gallop layer; play with FR11b, 2 to 3 times overlapping"},
 	&"FR11b": {"path": "fire/footsteps_dirt_trim.ogg", "bus": &"SFX", "volume_db": -2.0, "notes": "kangaroos run: dirt footsteps layer, quiet source"},
+	&"FR11c": {"path": "fire/kangaroo_steps.ogg", "bus": &"SFX", "volume_db": 0.0, "notes": "kangaroos run: footsteps layer (Pixabay, kuzu420), once per run-out; file -27 LUFS, peak -1 dB, sits with the gallop"},
 	# Beam (#124)
 	&"BM1": {"path": F_SOLAR, "bus": &"SFX", "volume_db": -12.0, "loop": true, "fade_in": 0.5, "notes": "space ambience, same file as D3"},
 	&"BM2": {"path": "beam/servo_panera.ogg", "bus": &"SFX", "volume_db": -5.0, "cut": true, "notes": "rotate a satellite; one servo move from Servo_1_Panera"},
@@ -832,13 +833,14 @@ func _hook_fire(f) -> void:
 						for k in FIRE_GALLOPS:
 							after(k * FIRE_GALLOP_GAP, func() -> void: play(&"FR11a", {"pitch": 1.0 + (k - 1) * 0.04}), f)
 						play(&"FR11b")
+						play(&"FR11c")
 				&"exit":
 					fire_ending(true)
 				&"lose":
 					fire_ending(false)
 				# jump, cut, hose, heartbeat, gust: no sound.
 		)
-		_bind_exit(f, [&"FR1", &"FR2", &"FR5", &"FR8", &"FR9", &"FR11a", &"FR11b"], 0.5))
+		_bind_exit(f, [&"FR1", &"FR2", &"FR5", &"FR8", &"FR9", &"FR11a", &"FR11b", &"FR11c"], 0.5))
 
 
 ## Fener (docs/minigames/fener-kahramanmaras.md). tap, call, cry, heartbeat, treat, report, spark,

@@ -150,6 +150,8 @@ func _run() -> void:
 ## then the run goes on to the diorama.
 func _real_run() -> void:
 	done_count = 0
+	game.reset_launch()
+	game.launch_path = game.PATHS[1]  # a chosen path: no first-pick notice
 	game.start(&"state")
 	game.disaster = load("res://data/disasters/solar_flare.tres")
 	game.role = &"state"

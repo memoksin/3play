@@ -3,6 +3,7 @@ class_name Story
 ## Game.settings_path = "" (tests, shots): nothing is read or written, the prologue counts as unseen.
 
 const SPLASH := "res://scenes/splash.tscn"
+const NOTICE := "res://scenes/notice.tscn"
 const TITLE := "res://scenes/title.tscn"
 const PROLOGUE := "res://scenes/prologue.tscn"
 const CREDITS := "res://scenes/credits.tscn"
@@ -31,14 +32,19 @@ static func mark_prologue_seen() -> void:
 		push_warning("Story: cannot save %s (error %d)" % [path, err])
 
 
-## Where the splash goes: the title screen.
+## True once the launch notice (play both sides) was closed in this launch. Not saved: it shows on
+## every launch, and only once per launch.
+static var notice_shown := false
+
+
+## Where the splash goes: the launch notice the first time in a launch, the title screen after.
 static func after_splash() -> String:
-	return TITLE
+	return TITLE if notice_shown else NOTICE
 
 
-## Where Start on the title screen goes: the prologue on the first run, the main menu after.
+## Where Start on the title screen goes: always the prologue (the story plays after every Start).
 static func after_title() -> String:
-	return Game.scene_path(&"main") if prologue_seen() else PROLOGUE
+	return PROLOGUE
 
 
 ## Scene the badges screen goes back to; "" = the main menu. The title screen sets it, the screen

@@ -57,7 +57,7 @@ Burcu's rule: every button in every scene uses the same two sounds, no exception
 
 | # | Sound | Plays when | File name | Author | Link | License | Status | Notes |
 |---|---|---|---|---|---|---|---|---|
-| UI1 | Button hover | The mouse is over any button: menus, minigame choice and card buttons, the pause menu (4 buttons), settings, result card | UI_Hover | unfa | https://freesound.org/people/unfa/sounds/565131/ | CC0 | in repo (M2) | Same as M2. Also on the pause menu opened inside a minigame. |
+| UI1 | Button hover | The mouse is over any button: menus, the launch notice's "Anladım", the easter-egg card, minigame choice and card buttons, the pause menu (4 buttons), settings, result card | UI_Hover | unfa | https://freesound.org/people/unfa/sounds/565131/ | CC0 | in repo (M2) | Same as M2. Also on the pause menu opened inside a minigame. |
 | UI2 | Button click | Any button is pressed, including the pause menu buttons | Soft UI Button Click | Jummit | https://freesound.org/people/Jummit/sounds/528561/ | CC0 | in repo (M3) | Same as M3. |
 | UI3 | Settings panel and pause menu | Settings (language, invert Y, fullscreen, replay prologue, back) and the pause menu (Resume, Settings, Main menu, Quit) | UI1 hover and UI2 click | | | | chosen | All of these are buttons or toggles, so the global hook covers them. The language flags keep LS1 and LS2. |
 | UI4 | Sliders | Master, Music, Effects volume and mouse sensitivity sliders | | | | | no sound | Burcu: no sound on sliders. |
@@ -133,7 +133,7 @@ Timeline from `scenes/minigames/connect.gd`: a calm bay until about 6 s before t
 | C7 | Broken line spills | The water spills out of a broken line | Big Water Splash | qubodup | https://freesound.org/people/qubodup/sounds/442773/ | CC0 | in repo (to test) | Repeat the same splash several times, each starting before the previous ends, to build an overflow. Try it, replace the sound if it feels fake. Issue #95. |
 | C8 | Village floods | The spilled water floods the village | | | | | no sound (test) | Leave empty and test the game. Add a sound only if it feels empty. |
 | C9 | Water drains | The water drains back (1.5 s) | wavesound.wav | transitking | https://freesound.org/people/transitking/sounds/11505/ | CC0 | in repo | Use only the first 4 s of the file (waves wash over the rock and drain back through a crack). |
-| C10 | Pipeline locks | A pipeline is correct and locks (no more rotation) | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | in repo | The shared success sound (FN7, FR6, BM4, C10). Memoksin added a `locked` sound_event kind in audio.gd (#162); Sude adds the cue. |
+| C10 | Pipeline locks | A pipeline becomes correct (inlet i reaches its own basin; nothing locks, not repeated for the same line within 1 s) | Short Success Sound Glockenspiel Treasure Video Game | FunWithSound | https://freesound.org/people/FunWithSound/sounds/456965/ | CC0 | in repo | The shared success sound (FN7, FR6, BM4, C10). Memoksin added a `locked` sound_event kind in audio.gd (#162); Sude adds the cue. |
 
 ## Result card
 
@@ -210,6 +210,7 @@ Spec: `docs/minigames/fire-farm.md`.
 | FR9 | Small flame | The small flame burns | fire crackling, fireplace, BBQ | AlexanderChe | https://freesound.org/people/AlexanderChe/sounds/410404/ | CC0 (checked by Sude) | in repo | Alone, no wind mix. Small wood fire, about 16 s, loop. Fades out when the flame is put out (FR10). |
 | FR10 | Flame goes out | The flame is put out | | | | | decided | No separate sound: the flame sound (FR9) fades out. |
 | FR11 | Kangaroos run out | 2 to 3 kangaroos run through the gap | Horse Gallop Loop.wav + Footsteps Dirt 01 | DeadxCreed + aglinder | https://freesound.org/people/DeadxCreed/sounds/322448/ and https://freesound.org/people/aglinder/sounds/264469/ | CC0 (verify both) | in repo (to test) | No kangaroo hop CC0 exists. Layer both and play the pair 2 to 3 times, each starting before the previous ends. Replace if it sounds fake. |
+| FR11c | Kangaroo footsteps | 2 to 3 kangaroos run through the gap (third layer) | animal-walking-right-to-left-192403.mp3 | kuzu420 (Pixabay) | https://pixabay.com/sound-effects/film-special-effects-animal-walking-right-to-left-192403/ | Pixabay Content License | in repo | Burcu found it. Seconds 2 to 9 of the file, +8 dB, mono, file `fire/kangaroo_steps.ogg`. To wire next to FR11a (gallop) and FR11b (dirt steps). |
 | FR12 | Smoke (cough, breath) | The smoke thickens | | | | | no sound | Not needed. |
 | FR13 | Ending shot | The camera rises out of first person over the burning farm (event `exit`), or the dark version when time runs out (event `lose`) | FR1 mix (digital wildfire + wind), raised | vekoN + Podcapocalipsis | see FR1 | CC0 | in repo (FR1 reuse) | No new file. On `exit`: raise the FR1 volume and open it up, then a held quiet before the result card. On `lose`: the same sound lowered (low-pass) and heavier. Burcu agreed. |
 
