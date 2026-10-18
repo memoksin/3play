@@ -5,6 +5,7 @@ extends SceneTree
 ## The scene renders in a SubViewport (the shot size does not depend on the window). Game time is driven
 ## with advance()/seek(); particles and shaders run on real time while each shot waits. The HUD is laid out at the
 ## project's 1280x720 and scaled to the shot size, as the game's canvas_items stretch does in a bigger window.
+## Alerts: context (the line that opens play), alert_<id> at the moment each comes, clock (the red last seconds).
 ## The opening shot: intro_0 .. intro_7 (shares INTRO of it). intro=gif renders only the opening shot (and a second
 ## of play after it) at 25 fps into export/shots/<prefix>intro_frames/ and quits; tools/fire_intro_gif.sh makes the GIF.
 
@@ -104,7 +105,9 @@ func _run() -> void:
 		await _shot("intro_%d" % k)
 	s.skip_overview()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE  # a free mouse does not steer the view (a real mouse may be moving)
-	s.advance(1.5)
+	s.advance(0.6)
+	await _shot("context")
+	s.advance(2.9)
 	await _shot("start")
 	s.look(PI * 0.5, 0.0)
 	await _shot("start_left")
@@ -190,6 +193,31 @@ func _run() -> void:
 	s.queue_free()
 	await process_frame
 
+	# the alerts, each at the moment the game brings it (alert_<id>), and the red clock of the last seconds
+	s = (load(SCENE) as PackedScene).instantiate()
+	s.submit = false
+	s.time_scale = 0.0
+	vp.add_child(s)
+	await process_frame
+	s.skip_overview()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	s.look(-0.5, 0.12)
+	s.logic.pick_cutters()
+	s.logic.cut_fence()
+	s.call("_on_fence_cut")
+	for id in ["roos", "front", "embers", "wind", "hurry", "now"]:
+		await _shot_alert(id)
+	s.logic.pick_hose()
+	s.logic.attach_hose()
+	s.logic.open_valve()
+	s.logic.douse(1.0)
+	s.call("_on_flame_out")
+	await _shot_alert("run")
+	s.seek(78.6)
+	await _shot("clock")
+	s.queue_free()
+	await process_frame
+
 	# out of time: the dark ending
 	s = (load(SCENE) as PackedScene).instantiate()
 	s.submit = false
@@ -226,6 +254,20 @@ func _intro_frames() -> void:
 			return
 	print("frames %d in %s" % [n, ProjectSettings.globalize_path(dir)])
 	quit(0)
+
+
+## Game time runs (0.05 s steps) until alert `id` is up, a little more so it is fully in, then the shot alert_<id>.
+func _shot_alert(id: String) -> void:
+	var n := 0
+	while String(s.alert_now()) != id and n < 2400 and s.phase == s.Phase.PLAY:
+		s.advance(0.05)
+		n += 1
+	if String(s.alert_now()) != id:
+		push_error("fire_shots: alert %s never came" % id)
+		quit(1)
+		return
+	s.advance(0.3)
+	await _shot("alert_" + id)
 
 
 ## The yard side of a prop (its local +Z in the world, flat).

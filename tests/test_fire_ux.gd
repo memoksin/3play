@@ -7,6 +7,11 @@ extends SceneTree
 ## - markers: the 3D exclamation marks are off, the HUD pins show the open tasks at a constant size, fade close by and
 ##   over the crosshair, keep above the task plate; the edge arrow stays on screen and above the plate; the focus moves
 ##   from task to task; gold on the dark disc / plate keeps a high contrast over the fire.
+## - alerts: the context line opens play before the task plate; each alert comes once, at its moment (60 / 30 / 15 s
+##   left, the first spot fire, the wind bringing a new stretch of the front, the kangaroos gone, the way out open);
+##   urgent ones pulse the screen edges red; the band never covers the task plate, the prompt, the clock or the done
+##   banner and fits at 720p / 1080p in both languages; the clock goes red and blinks in the last 15 s; the opening
+##   shot shows a "skip" chip; the grass flame never stands behind the farmer's hat on the way down.
 ## - text: the task plate sits at the bottom centre at 1280x720 and 1920x1080, in English and Turkish: every step line
 ##   and the task line fit (two lines at most), clear of the crosshair, the prompt and the controls line; a new step
 ##   flashes the plate; the task line goes with the controls line.
@@ -61,6 +66,7 @@ func _run() -> void:
 	await _intro()
 	await _intro_skip()
 	await _markers()
+	await _alerts()
 	await _text()
 	TranslationServer.set_locale("en")
 	print("test_fire_ux ok" if ok else "test_fire_ux FAIL")
@@ -127,6 +133,22 @@ func _intro() -> void:
 	var eye: Vector3 = s.get_node("Player").global_position + Vector3(0, s.HEAD_Y, 0)
 	var fwd: Vector3 = -s.get_node("Player").global_basis.z
 	fwd = Vector3(fwd.x, 0.0, fwd.z).normalized()
+	var face_h: Vector3 = fwd * cos(s.FACE_PHI) + fwd.cross(Vector3.UP) * sin(s.FACE_PHI)
+	# the grass flame by the gate: its fire tongues (or the prop) at three heights
+	var flame: Node3D = s.get_node("Props/Flame")
+	var tongues: Array[Vector3] = []
+	var roots := flame.find_children("F*", "Node3D", true, false)
+	if roots.is_empty():
+		roots = [flame]
+	for n: Node3D in roots:
+		for h in [0.4, 1.2, 2.0]:
+			tongues.append(Vector3(n.global_position.x, h, n.global_position.z))
+	var hat := eye + Vector3(0, 0.12, 0)
+	var flame_ok := true
+	var flame_min := INF
+	var skip: Control = s.get_node("Hud/Skip")
+	_check("intro: a skip chip shows (%s)" % (skip.get_node("Label") as Label).text, skip.visible
+			and (skip.get_node("Label") as Label).text == tr("FIRE_SKIP"))
 	var prev := ov.global_transform
 	var prev_fov := ov.fov
 	var max_turn := 0.0
@@ -154,9 +176,22 @@ func _intro() -> void:
 		if u > s.INTRO_FACE + 0.01 and u < s.INTRO_TURN - 0.01:
 			face_n += 1
 			var looks := rad_to_deg((-xf.basis.z).angle_to(to_eye)) < 3.0
-			var front := (-to_eye).normalized().dot(fwd) > 0.95
+			var front := (-to_eye).normalized().dot(face_h) > 0.95
 			var near: bool = to_eye.length() > s.FACE_DIST.y - 0.05 and to_eye.length() < s.FACE_DIST.x + 0.05
 			face_ok = face_ok and looks and front and near and farmer.visible and absf(ov.fov - s.FACE_FOV) < 0.1
+		# on the way down (close in) and on his face: no fire tongue right behind his hat
+		if u < s.INTRO_TURN and xf.origin.distance_to(eye) < 15.0:
+			var to_hat := hat - xf.origin
+			var clear := atan2(0.4, to_hat.length())
+			for tp in tongues:
+				var to_t := tp - xf.origin
+				if to_t.length() > to_hat.length():
+					var ang := to_t.angle_to(to_hat)
+					flame_min = minf(flame_min, rad_to_deg(ang - clear))
+					if ang < clear + deg_to_rad(2.0):
+						if flame_ok:
+							print("  flame near the hat at u %.3f, %.1f m from his eyes, tongue %s" % [u, xf.origin.distance_to(eye), tp])
+						flame_ok = false
 		# the body only goes behind his eyes, close; the arms are there exactly when he is not
 		var behind := (-to_eye).dot(fwd) < 1e-3
 		if not farmer.visible:
@@ -174,6 +209,7 @@ func _intro() -> void:
 	_check("intro: no jumps (turn < 4 deg, move < 10 %% of the distance, fov < 1.6 deg per frame)",
 			max_turn < 4.0 and max_move < 0.1 and max_fov < 1.6)
 	_check("intro: holds on his face, looking at it (%d frames)" % face_n, face_ok and face_n >= int(0.08 * T / DT))
+	_check("intro: no flame behind his hat on the way down (closest %.1f deg clear)" % flame_min, flame_ok)
 	_check("intro: the body goes only behind his eyes, the arms come with it", body_ok and swap_ok and behind_seen)
 	var fpx: Transform3D = s.call("_fp_transform")
 	_check("intro: ends in his eyes on the first-person view (%.3f m, %.2f deg, fov %.1f)" % [
@@ -185,6 +221,7 @@ func _intro() -> void:
 			and fp_cam.global_position.distance_to(last.origin) < 0.05 and _angle(fp_cam.global_basis, last.basis) < 2.0)
 	_check("intro: in play the body is hidden, the arms node shows", not farmer.visible and hand.visible)
 	_check("intro: play clock untouched", s.elapsed == 0.0)
+	_check("intro: the skip chip goes with the shot", not skip.visible)
 	await _free(s)
 
 
@@ -239,7 +276,7 @@ func _markers() -> void:
 	_check("markers: the 3D exclamation marks are off (drawn on the HUD)", models_off)
 	_check("markers: no pins in the opening shot", s.marker_pins().is_empty())
 	s.skip_overview()
-	s.advance(0.1)
+	s.advance(s.CONTEXT_DUR + 0.5)  # the task plate is in
 	var vp := Vector2(SIZES[0])
 	var top: float = s.plate_rect().position.y
 	var mpos := a.global_position + Vector3(0, s.MARKER_H, 0)
@@ -317,6 +354,110 @@ func _contrast(a: Color, b: Color) -> float:
 	return (maxf(la, lb) + 0.05) / (minf(la, lb) + 0.05)
 
 
+# --- alerts ---------------------------------------------------------------------------
+
+func _alerts() -> void:
+	var s := await _new_scene(SIZES[0])
+	s.set_physics_process(false)
+	var plate: Control = s.get_node("Hud/TaskPlate")
+	var sm := (s.get_node("Hud/Smoke") as ColorRect).material as ShaderMaterial
+	var clock: Label = s.get_node("Hud/Timer/Box/Row/Time")
+	var heard: Array[int] = []
+	s.sound_event.connect(func(kind: StringName, i: int) -> void:
+		if kind == &"alert":
+			heard.append(i))
+	s.advance(1.0)
+	_check("alerts: none in the opening shot", s.alert_now() == &"" and heard.is_empty())
+	s.skip_overview()
+	s.advance(DT)
+	_check("alerts: the context line opens play", s.alert_now() == &"context")
+	# the fence at once: the kangaroos run out
+	s.logic.pick_cutters()
+	s.logic.cut_fence()
+	s.call("_on_fence_cut")
+	var seen: Array = [[&"context", 0.0, s.skin.timer_seconds, 0.0]]
+	var prev: StringName = &"context"
+	var prev_urgent := false
+	var plate_early := false
+	var overlap := false
+	var calm_ok := true
+	var peak := {}
+	var roos_gone_at := -1.0
+	var tasks_at := -1.0
+	var reds := 0
+	var dims := 0
+	var lits := 0
+	while s.elapsed < 89.0 and s.phase == s.Phase.PLAY:
+		s.advance(0.05)
+		if tasks_at < 0.0 and s.elapsed >= 70.0:
+			s.logic.pick_hose()
+			s.logic.attach_hose()
+			s.logic.open_valve()
+			s.logic.douse(1.0)
+			s.call("_on_flame_out")
+			tasks_at = s.elapsed
+		if roos_gone_at < 0.0 and s.get_node("Props/Kangaroos").get_children().slice(0, s.skin.kangaroos).all(
+				func(k: Node3D) -> bool: return not k.visible):
+			roos_gone_at = s.elapsed
+		var now: StringName = s.alert_now()
+		if now != prev and now != &"":
+			seen.append([now, s.elapsed, s.skin.timer_seconds - s.elapsed, FireLogic.smoke(s.elapsed, s.skin)])
+		var urgent: bool = now != &"" and s.ALERTS[now][1]
+		var al := float(sm.get_shader_parameter(&"alarm"))
+		if urgent:
+			peak[now] = maxf(float(peak.get(now, 0.0)), al)
+		elif not prev_urgent and al > 0.0:
+			calm_ok = false
+		prev = now
+		prev_urgent = urgent
+		if now == &"context" and plate.visible and plate.modulate.a > 0.01 and (s.get_node("Hud/Alert") as Control).modulate.a > 0.6:
+			plate_early = true
+		if now != &"" and plate.visible and plate.modulate.a > 0.01 and s.alert_rect().intersects(s.plate_rect()):
+			overlap = true
+		if s.skin.timer_seconds - s.elapsed < s.CLOCK_RED:
+			reds += int(clock.get_theme_color(&"font_color") == Palette.DANGER)
+			dims += int(clock.modulate.a < 0.5)
+			lits += int(clock.modulate.a > 0.9)
+	var ids := seen.map(func(e: Array) -> StringName: return e[0])
+	print("  alerts: ", ", ".join(seen.map(func(e: Array) -> String: return "%s@%.1fs" % [e[0], e[1]])))
+	var once := true
+	for id: StringName in s.ALERTS:
+		once = once and ids.count(id) == 1
+	_check("alerts: each one came, once (%d shown)" % seen.size(), once and seen.size() == s.ALERTS.size())
+	_check("alerts: a sound hook for each, urgent ones marked", heard.size() == seen.size()
+			and heard.count(1) == s.ALERTS.values().filter(func(v: Array) -> bool: return v[1]).size())
+	var at := {}
+	for e: Array in seen:
+		at[e[0]] = e
+	var timed := true
+	for id: StringName in s.ALERT_LEFT:
+		var left: float = at[id][2]
+		timed = timed and left <= s.ALERT_LEFT[id] + 0.01 and left >= s.ALERT_LEFT[id] - s.ALERT_STALE
+	_check("alerts: at 60 / 30 / 15 s left (%.1f / %.1f / %.1f)" % [at[&"front"][2], at[&"hurry"][2], at[&"now"][2]], timed)
+	_check("alerts: embers with the first spot fire (%.1f s)" % at[&"embers"][1], at[&"embers"][1] >= s.SPOTS[0].z)
+	_check("alerts: wind as the front's new stretch catches (smoke %.2f)" % at[&"wind"][3], at[&"wind"][3] >= s.ALERT_WIND_SMOKE)
+	_check("alerts: kangaroos once they are gone (%.1f s, gone %.1f s)" % [at[&"roos"][1], roos_gone_at],
+			roos_gone_at > 0.0 and at[&"roos"][1] >= roos_gone_at)
+	_check("alerts: run once the way out is open (%.1f s)" % at[&"run"][1], tasks_at > 0.0 and at[&"run"][1] >= tasks_at)
+	_check("alerts: the plate waits for the context line", not plate_early)
+	_check("alerts: the band never covers the task plate", not overlap)
+	var pulsed := true
+	for id: StringName in s.ALERTS:
+		if s.ALERTS[id][1]:
+			pulsed = pulsed and float(peak.get(id, 0.0)) > 0.3 and float(peak.get(id, 0.0)) <= s.ALARM_MAX + 1e-3
+	_check("alerts: urgent ones pulse the screen edges red (light), the others do not %s" % str(peak), pulsed and calm_ok)
+	_check("alerts: the clock is red and blinks in the last 15 s (%d red, %d dim, %d lit)" % [reds, dims, lits],
+			reds > 0 and dims > 0 and lits > 0 and reds == dims + lits)
+	# a burst of the same moments later: nothing again
+	var n := heard.size()
+	for i in 20:
+		s.call("_check_alerts")
+		s.alert(&"now")
+		s.advance(0.2)
+	_check("alerts: no repeats", heard.size() == n)
+	await _free(s)
+
+
 # --- task text ------------------------------------------------------------------------
 
 func _text() -> void:
@@ -339,6 +480,8 @@ func _text_in(s: Node3D, vp: Vector2, tag: String) -> void:
 	_check("text %s: no plate early in the opening shot" % tag, not plate.visible or plate.modulate.a < 0.01)
 	s.skip_overview()
 	s.advance(0.1)
+	_check("text %s: the context line first, no plate yet" % tag, s.alert_now() == &"context" and plate.modulate.a < 0.01)
+	s.advance(s.CONTEXT_DUR + 0.4)
 	_check("text %s: plate shows in play" % tag, plate.visible and plate.modulate.a > 0.99
 			and hint.get_theme_font_size(&"font_size") >= 32)
 	var fits := true
@@ -383,6 +526,34 @@ func _text_in(s: Node3D, vp: Vector2, tag: String) -> void:
 	s.set("_target", {})
 	_check("text %s: prompt clear of the plate" % tag, gap_ok)
 	_check("text %s: controls line under the plate" % tag, controls.get_global_rect().position.y >= r.end.y - 0.5)
+	# every alert band: top centre, on the screen, two lines at most, clear of the clock, the done banner (longest text),
+	# the plate (with the task line), every prompt and the crosshair
+	var banner: Control = s.get_node("Hud/Banner")
+	s.call("_show_banner", s.skin.fence_done_key)
+	s.advance(0.3)
+	var br := banner.get_global_rect()
+	var tr_r: Rect2 = (s.get_node("Hud/Timer") as Control).get_global_rect()
+	var label: Label = s.get_node("Hud/Alert/Label")
+	var a_ok := true
+	var a_bad := ""
+	for id: StringName in s.ALERTS:
+		s.call("_show_alert", id)
+		var ar: Rect2 = s.alert_rect()
+		var ok_one: bool = ar.position.x >= 40.0 and ar.end.x <= vp.x - 40.0 and ar.end.y < vp.y / 2.0 - 30.0 \
+				and not ar.intersects(br) and not ar.intersects(tr_r) and not ar.intersects(r) \
+				and absf(ar.get_center().x - vp.x / 2.0) <= 1.0 and label.get_line_count() <= 2 \
+				and label.get_visible_line_count() >= label.get_line_count()
+		for key: String in PROMPTS:
+			s.set("_target", {"id": &"x", "kind": &"hold", "key": key})
+			s.call("_update_prompt")
+			ok_one = ok_one and not ar.intersects(prompt.get_global_rect())
+		s.set("_target", {})
+		if not ok_one:
+			a_bad += " %s %s lines %d" % [id, ar, label.get_line_count()]
+		a_ok = a_ok and ok_one
+	s.set("_alert_id", &"")
+	s.advance(0.05)
+	_check("text %s: every alert fits, clear of the plate, prompt, clock, banner, crosshair%s" % [tag, a_bad], a_ok)
 	# a new step flashes the plate, then it settles
 	s.logic.pick_cutters()
 	s.advance(0.05)

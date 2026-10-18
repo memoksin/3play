@@ -546,6 +546,17 @@ func _run() -> void:
 		audio.reset_history()
 		fire.sound_event.emit(kind, 0)
 		_check("fire: %s -> %s" % [kind, map[kind]], _log() == [map[kind]])
+	# Alert flash (FR14): FR1 swells for a moment and settles back.
+	var amb_a: AudioStreamPlayer = audio.loop(&"FR1")
+	await create_timer(0.6).timeout  # the fade-in of FR1 is over
+	var base_db: float = audio.CUES[&"FR1"].volume_db
+	audio.reset_history()
+	fire.sound_event.emit(&"alert", 1)
+	await create_timer(0.3).timeout
+	_check("fire: an urgent alert swells FR1 (%.1f dB)" % (amb_a.volume_db - base_db), _log() == ["loop:FR1"]
+			and absf(amb_a.volume_db - (base_db + audio.FIRE_ALERT_DB)) < 1.0)
+	await create_timer(audio.FIRE_ALERT_HOLD + audio.FIRE_ALERT_FALL).timeout
+	_check("fire: and settles back", absf(amb_a.volume_db - base_db) < 0.5)
 	# Ending (FR13): exit opens FR1 up and fades it out, lose makes it heavier.
 	audio.fire_end_open = 0.2
 	audio.fire_end_fade_at = 0.5

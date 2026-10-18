@@ -19,7 +19,8 @@ signal finished(saved: int, total: int)
 ## Audio hooks (docs/audio.md, scripts/audio.gd). sound_event kinds: footstep, jump, land, cutters (picked up),
 ## snip (a tie cut, index = tie), cut, panel_land (index 0 = the slam, 1 = the little hop after it), kangaroo
 ## (index = kangaroo), success (index 0 = fence, 1 = flame), hose, attach, valve, water_on, water_off, flame_out,
-## heartbeat, gust, exit (the ending shot starts), lose (the dark ending starts).
+## heartbeat, gust, exit (the ending shot starts), lose (the dark ending starts), alert (an alert flash shows: index 1
+## urgent, 0 not).
 signal sound_event(kind: StringName, index: int)
 
 enum Phase { OVERVIEW, PLAY, END }
@@ -94,6 +95,9 @@ const INTRO_TOP_AT := 0.36
 const FACE_DIST := Vector2(1.25, 1.1)
 const FACE_ELEV := -0.05
 const FACE_FOV := 30.0
+## The face shot looks at him a little from his left (radians round him; the turn goes on that way): straight from his
+## front the grass flame by the gate stands right behind his hat while the camera comes down.
+const FACE_PHI := -0.5
 ## During the turn the camera rises a little over his head (radians at the half turn), so his head sits low in the
 ## frame when it is behind him; the figure dissolves where it is nearer the camera than BODY_FADE.y (gone inside
 ## BODY_FADE.x, m), and is hidden once the camera is BODY_HIDE m behind his eyes.
@@ -114,6 +118,35 @@ const PLATE_FLASH := 1.4
 const MARKER_H := 2.7
 const MARKER_R := 15.0
 const MARKER_NEAR := Vector2(1.6, 3.0)
+## Alerts (_check_alerts, alert()): short, big flashes at the top centre (apart from the task plate), each once a game,
+## on the game's own events: id -> [text key, urgent (white on a red band, the screen edges pulse red, else white on a
+## dark band)]. The context line opens play and is read before the task plate comes in.
+const ALERTS := {
+	&"context": ["FIRE_ALERT_CONTEXT", false],
+	&"front": ["FIRE_ALERT_FRONT", true],
+	&"embers": ["FIRE_ALERT_EMBERS", false],
+	&"wind": ["FIRE_ALERT_WIND", true],
+	&"hurry": ["FIRE_ALERT_HURRY", false],
+	&"now": ["FIRE_ALERT_NOW", true],
+	&"roos": ["FIRE_ALERT_ROOS", false],
+	&"run": ["FIRE_ALERT_RUN", true],
+}
+## Seconds left at which the front, hurry and now alerts come; the smoke at which the wind brings a new stretch of the
+## front in (farm.gd CREEP Front3) for the wind alert (the embers alert comes with the first spot fire, SPOTS[0]).
+const ALERT_LEFT := {&"front": 60.0, &"hurry": 30.0, &"now": 15.0}
+const ALERT_WIND_SMOKE := 0.3
+## Seconds an alert stays (the context line longer), the pause between two, how long one may wait in the queue.
+const ALERT_DUR := 1.4
+const CONTEXT_DUR := 3.2
+const ALERT_GAP := 0.25
+const ALERT_STALE := 4.0
+## Top of the alert band: this share of the screen height, but under the clock and the done banner.
+const ALERT_Y := 0.17
+const ALERT_TOP_MIN := 124.0
+## Last seconds: the clock blinks red (twice a second).
+const CLOCK_RED := 15.0
+## Strongest red of the edge band an urgent alert pulses.
+const ALARM_MAX := 0.6
 ## Last seconds: the heart beats (faster and faster), the edges flush red, the view breathes.
 const HEART_FROM := 25.0
 const HEART_SLOW := 0.95
@@ -244,6 +277,18 @@ var _plate: Panel
 var _plate_style: StyleBoxFlat
 var _hint_flash := -1.0
 var _plate_for := ""
+## Alerts: ids already queued (each comes once), the queue ([id, _world_t when queued]), the one up and its time, the
+## pause before the next; the band, its label and the two band styles; the "skip" chip of the opening shot.
+var _alerts_done := {}
+var _alert_queue: Array = []
+var _alert_id := &""
+var _alert_t := 0.0
+var _alert_wait := 0.0
+var _alert_box: PanelContainer
+var _alert_label: Label
+var _alert_red: StyleBoxFlat
+var _alert_white: StyleBoxFlat
+var _skip: PanelContainer
 
 @onready var _env: Environment = ($Env as WorldEnvironment).environment
 @onready var _sun: DirectionalLight3D = $Sun
@@ -344,6 +389,7 @@ func _ready() -> void:
 	_controls.text = tr(skin.controls_key)
 	_reticle.draw.connect(_draw_reticle)
 	_build_plate()
+	_build_alerts()
 	_update_hint()
 	_apply_smoke(0.0)
 	_pose_overview(0.0)
@@ -717,6 +763,7 @@ func advance(dt: float) -> void:
 				elapsed = skin.timer_seconds  # summed steps land a hair short of the end
 			_update_interact(dt)
 			_check_exit()
+			_check_alerts()
 			if phase == Phase.PLAY and elapsed >= skin.timer_seconds:
 				_end(false)
 		Phase.END:
@@ -754,6 +801,7 @@ func _begin_play() -> void:
 	_hand.visible = true
 	_camera.current = true
 	_capture()
+	alert(&"context")
 
 
 func _capture() -> void:
@@ -778,6 +826,9 @@ func _headless() -> bool:
 func _end(escaped: bool) -> void:
 	phase = Phase.END
 	_end_t = 0.0
+	_alert_queue.clear()
+	_alert_id = &""
+	_alert_box.visible = false
 	_set_spray(false)
 	_prompt.visible = false
 	_hand_cutters.visible = false
@@ -1019,7 +1070,9 @@ func _pose_overview(t: float) -> void:
 	var eye := _player.global_position + Vector3(0, HEAD_Y, 0)
 	var fwd := -_player.global_basis.z
 	fwd = Vector3(fwd.x, 0.0, fwd.z).normalized()
-	var face := fwd * cos(FACE_ELEV) + Vector3.UP * sin(FACE_ELEV)
+	var side := fwd.cross(Vector3.UP)
+	var face_h := fwd * cos(FACE_PHI) + side * sin(FACE_PHI)
+	var face := face_h * cos(FACE_ELEV) + Vector3.UP * sin(FACE_ELEV)
 	var body := true
 	var xf := hero
 	var fov := _overview_fov
@@ -1030,7 +1083,7 @@ func _pose_overview(t: float) -> void:
 		var d0 := hero.origin.y / maxf(-f0.y, 0.2)  # the hero view's look point on the ground
 		var look := (hero.origin + f0 * d0).lerp(eye, _ease5(clampf(k / 0.8, 0.0, 1.0)))
 		var b0 := -f0
-		var yaw := atan2(b0.x, b0.z) + wrapf(atan2(fwd.x, fwd.z) - atan2(b0.x, b0.z), -PI, PI) \
+		var yaw := atan2(b0.x, b0.z) + wrapf(atan2(face_h.x, face_h.z) - atan2(b0.x, b0.z), -PI, PI) \
 				* _ease5(clampf(k / 0.62, 0.0, 1.0))
 		var elev := lerpf(asin(b0.y), INTRO_TOP, _ease5(clampf(k / INTRO_TOP_AT, 0.0, 1.0)))
 		elev = lerpf(elev, FACE_ELEV, _ease5(clampf((k - INTRO_TOP_AT) / (0.92 - INTRO_TOP_AT), 0.0, 1.0)))
@@ -1046,10 +1099,9 @@ func _pose_overview(t: float) -> void:
 	elif u > INTRO_TURN:
 		var k := (u - INTRO_TURN) / (1.0 - INTRO_TURN)
 		var e := _ease5(k)
-		var phi := PI * e
+		var phi := lerpf(FACE_PHI, PI * signf(FACE_PHI + 1e-6), e)
 		var r := FACE_DIST.y * (1.0 - smoothstep(0.3, 1.0, k))
 		var elev := FACE_ELEV * (1.0 - e) + TURN_LIFT * sin(PI * e) * (1.0 - smoothstep(0.75, 1.0, k))
-		var side := fwd.cross(Vector3.UP)
 		var off := (fwd * cos(phi) + side * sin(phi)) * cos(elev) + Vector3.UP * sin(elev)
 		var b := Basis.looking_at(-off, Vector3.UP)
 		var fp := _fp_transform()
@@ -1057,7 +1109,7 @@ func _pose_overview(t: float) -> void:
 		xf = Transform3D(Basis(q), eye + off * r)
 		fov = lerpf(FACE_FOV, skin.fov, smoothstep(0.1, 1.0, k))
 		# behind his head (the figure dissolves near the camera, _own_farmer_materials) and then gone
-		if phi > PI * 0.5 and r < BODY_HIDE:
+		if absf(phi) > PI * 0.5 and r < BODY_HIDE:
 			body = false
 	_overview.global_transform = xf
 	_overview.fov = fov
@@ -1684,6 +1736,8 @@ func _apply_smoke(_dt: float) -> void:
 	var danger := smoothstep(HEART_FROM, 4.0, left) if phase == Phase.PLAY else 0.0
 	sm.set_shader_parameter(&"danger", danger)
 	sm.set_shader_parameter(&"pulse", _pulse())
+	# an urgent alert pulses a red band along the screen edges (light, a few beats while it is up)
+	sm.set_shader_parameter(&"alarm", alarm_level() * (0.65 + 0.35 * sin(_alert_t * TAU * 2.5)))
 	var fade := 0.0
 	if phase == Phase.END:
 		fade = _ending_look(smoke_col, sm)
@@ -1750,6 +1804,16 @@ func _update_hud(dt: float) -> void:
 	if phase == Phase.OVERVIEW:
 		plate_a = clampf((_intro_t / skin.overview_seconds - 0.85) / 0.15, 0.0, 1.0)
 	_timer.modulate.a = plate_a
+	# the task plate waits for the context line (it opens play) to be read
+	if phase == Phase.PLAY:
+		plate_a = clampf((elapsed - (CONTEXT_DUR - 0.15)) / 0.4, 0.0, 1.0)
+	elif phase == Phase.OVERVIEW:
+		plate_a = 0.0
+	_red_clock(left)
+	_skip.visible = phase == Phase.OVERVIEW
+	_skip.modulate.a = clampf((0.9 - _intro_t / skin.overview_seconds) / 0.1, 0.0, 1.0)
+	_place_skip()
+	_update_alert(dt)
 	(_hint.get_parent() as Control).modulate.a = plate_a
 	_plate.modulate.a = plate_a
 	_plate.visible = plate_a > 0.0
@@ -1860,6 +1924,197 @@ func _style_plate() -> void:
 	_plate_style.border_color = PLATE_EDGE.lerp(Color.WHITE, f)
 	_plate_style.set_border_width_all(2 if f < 0.3 else 3)
 	_hint.add_theme_color_override(&"font_color", PLATE_EDGE.lerp(Color.WHITE, f * 0.8))
+
+
+# --- alerts ---------------------------------------------------------------------------
+
+## Builds the alert band (top centre) and the opening shot's "skip" chip (top right, where the clock comes later).
+func _build_alerts() -> void:
+	_alert_red = StyleBoxFlat.new()
+	_alert_red.bg_color = Color(0.66, 0.07, 0.03, 0.94)  # deeper than Fener's warn toast: it has to beat the orange
+	_alert_red.border_color = Color.WHITE
+	_alert_red.set_border_width_all(3)
+	_alert_red.shadow_color = Color(0, 0, 0, 0.45)
+	_alert_red.shadow_size = 8
+	_alert_red.content_margin_left = 30
+	_alert_red.content_margin_right = 30
+	_alert_red.content_margin_top = 6
+	_alert_red.content_margin_bottom = 8
+	_alert_white = _alert_red.duplicate() as StyleBoxFlat
+	_alert_white.bg_color = Color(0.03, 0.03, 0.06, 0.88)
+	_alert_white.border_color = Color(1, 1, 1, 0.85)
+	_alert_white.set_border_width_all(2)
+	_alert_box = PanelContainer.new()
+	_alert_box.name = "Alert"
+	_alert_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_alert_box.visible = false
+	_alert_label = Label.new()
+	_alert_label.name = "Label"
+	_alert_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_alert_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_alert_label.max_lines_visible = 2
+	_alert_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_alert_label.add_theme_color_override(&"font_color", Color.WHITE)
+	_alert_label.add_theme_color_override(&"font_outline_color", Color(0.12, 0.02, 0.0, 0.85))
+	_alert_label.add_theme_constant_override(&"outline_size", 6)
+	_alert_box.add_child(_alert_label)
+	_banner.add_sibling(_alert_box)
+	_skip = PanelContainer.new()
+	_skip.name = "Skip"
+	_skip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var ss := StyleBoxFlat.new()
+	ss.bg_color = Color(0.03, 0.03, 0.06, 0.7)
+	ss.border_color = Color(1, 1, 1, 0.35)
+	ss.set_border_width_all(1)
+	ss.content_margin_left = 14
+	ss.content_margin_right = 14
+	ss.content_margin_top = 4
+	ss.content_margin_bottom = 4
+	_skip.add_theme_stylebox_override(&"panel", ss)
+	var sl := Label.new()
+	sl.name = "Label"
+	sl.text = tr("FIRE_SKIP")
+	sl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sl.add_theme_font_size_override(&"font_size", 24)
+	sl.add_theme_color_override(&"font_color", Palette.HUD_WHITE)
+	_skip.add_child(sl)
+	_alert_box.add_sibling(_skip)
+	_place_skip()
+
+
+func _place_skip() -> void:
+	if not _skip.visible:
+		return
+	_skip.reset_size()
+	var vp := get_viewport().get_visible_rect().size
+	_skip.position = Vector2(vp.x - _skip.size.x - 20.0, 20.0)
+
+
+## Queues alert `id` (ALERTS) unless it came already: each alert shows once a game. Urgent ones go before the ordinary
+## ones still waiting.
+func alert(id: StringName) -> void:
+	if _alerts_done.has(id) or not ALERTS.has(id) or phase == Phase.END:
+		return
+	_alerts_done[id] = elapsed
+	var entry := [id, _world_t]
+	if ALERTS[id][1]:
+		var at := 0
+		while at < _alert_queue.size() and ALERTS[_alert_queue[at][0]][1]:
+			at += 1
+		_alert_queue.insert(at, entry)
+	else:
+		_alert_queue.append(entry)
+
+
+## The game's own moments that bring an alert: the time left (60 / 30 / 15 s), the first spot fire catching in the yard,
+## the wind bringing in a new stretch of the front (the smoke), the kangaroos gone, the last step (the way out open).
+func _check_alerts() -> void:
+	var left := skin.timer_seconds - elapsed
+	for id: StringName in ALERT_LEFT:
+		if left <= ALERT_LEFT[id] and left > ALERT_LEFT[id] - ALERT_STALE:
+			alert(id)
+	if elapsed >= SPOTS[0].z and elapsed < SPOTS[0].z + ALERT_STALE:
+		alert(&"embers")
+	var s := FireLogic.smoke(elapsed, skin)
+	if s >= ALERT_WIND_SMOKE and s < ALERT_WIND_SMOKE + 0.05:
+		alert(&"wind")
+	if _released_at >= 0.0 and _world_t > _released_at:
+		var gone := true
+		for i in mini(_roos.size(), skin.kangaroos):
+			gone = gone and not (_roos[i] as Node3D).visible
+		if gone:
+			alert(&"roos")
+	if logic.all_tasks():
+		alert(&"run")
+
+
+## Shows the next alert when the band is free, runs the one that is up (a quick punch in, a fade out).
+func _update_alert(dt: float) -> void:
+	if _alert_id == &"":
+		_alert_wait -= dt
+		while _alert_wait <= 0.0 and not _alert_queue.is_empty():
+			var e: Array = _alert_queue.pop_front()
+			if _world_t - float(e[1]) <= ALERT_STALE or e[0] == &"context":
+				_show_alert(e[0])
+				break
+	if _alert_id == &"":
+		_alert_box.visible = false
+		return
+	_alert_t += dt
+	var dur := alert_seconds(_alert_id)
+	if _alert_t >= dur:
+		_alert_id = &""
+		_alert_box.visible = false
+		_alert_wait = ALERT_GAP
+		return
+	_alert_box.modulate.a = clampf(minf(_alert_t / 0.08, (dur - _alert_t) / 0.3), 0.0, 1.0)
+	var punch := 1.0 + 0.16 * exp(-_alert_t * 16.0)
+	_alert_box.pivot_offset = _alert_box.size / 2.0
+	_alert_box.scale = Vector2(punch, punch)
+	if ALERTS[_alert_id][1]:  # the urgent band's edge flickers white / red
+		_alert_red.border_color = Palette.HUD_RED.lerp(Color.WHITE, 0.5 + 0.5 * cos(_alert_t * TAU * 2.5))
+
+
+func _show_alert(id: StringName) -> void:
+	_alert_id = id
+	_alert_t = 0.0
+	var urgent: bool = ALERTS[id][1]
+	var txt := tr(ALERTS[id][0])
+	_alert_label.text = txt if id == &"context" else TextFx.upper(txt)
+	_alert_label.add_theme_font_size_override(&"font_size", 38 if id == &"context" else 58)
+	_alert_box.add_theme_stylebox_override(&"panel", _alert_red if urgent else _alert_white)
+	_alert_box.visible = true
+	_place_alert()
+	sound_event.emit(&"alert", 1 if urgent else 0)
+
+
+## Top centre: under the clock (top left) and the done banner, at most PLATE_MAX_W wide (two lines at most).
+func _place_alert() -> void:
+	var vp := get_viewport().get_visible_rect().size
+	var font := _alert_label.get_theme_font(&"font")
+	var fs := _alert_label.get_theme_font_size(&"font_size")
+	var w := font.get_string_size(_alert_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 8.0
+	var max_w := minf(vp.x - 200.0, PLATE_MAX_W)
+	# too long for one line: two even lines (not a long line and a lone word)
+	_alert_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if w > max_w else TextServer.AUTOWRAP_OFF
+	_alert_label.custom_minimum_size = Vector2(w if w <= max_w else minf(max_w, w * 0.56 + 24.0), 0.0)
+	_alert_box.size = Vector2.ZERO
+	_alert_box.reset_size()
+	_alert_box.position = Vector2(roundf((vp.x - _alert_box.size.x) / 2.0), roundf(maxf(vp.y * ALERT_Y, ALERT_TOP_MIN)))
+
+
+## Seconds alert `id` stays up.
+static func alert_seconds(id: StringName) -> float:
+	return CONTEXT_DUR if id == &"context" else ALERT_DUR
+
+
+## The alert up now (&"" none) and its band on screen (tests).
+func alert_now() -> StringName:
+	return _alert_id
+
+
+func alert_rect() -> Rect2:
+	return Rect2(_alert_box.position, _alert_box.size)
+
+
+## 0..1: how hard an urgent alert flushes the screen edges red now (light: it rides on the smoke's vignette).
+func alarm_level() -> float:
+	if _alert_id == &"" or not ALERTS[_alert_id][1]:
+		return 0.0
+	return ALARM_MAX * clampf(minf(_alert_t / 0.1, (ALERT_DUR - _alert_t) / 0.4), 0.0, 1.0)
+
+
+## The last CLOCK_RED seconds: the clock's number and bar go red and the number blinks twice a second.
+func _red_clock(left: float) -> void:
+	if phase != Phase.PLAY or left >= CLOCK_RED or left <= 0.0:
+		return
+	var tl := _timer.get_node_or_null(^"Box/Row/Time") as Label
+	if tl:
+		tl.add_theme_color_override(&"font_color", Palette.DANGER)
+		tl.modulate.a = 1.0 if fmod(left, 0.5) >= 0.25 else 0.3
+	var fill: Variant = _timer.get(&"_fill")
+	if fill is StyleBoxFlat:
+		(fill as StyleBoxFlat).bg_color = Palette.DANGER
 
 
 ## The task plate on screen (tests; the HUD markers keep above it).
@@ -2018,6 +2273,10 @@ func marker_pins() -> Array[Dictionary]:
 			continue
 		if absf(sp.x - c.x) < _plate.size.x / 2.0 + MARKER_R * 2.0:
 			sp.y = minf(sp.y, floor_y - (MARKER_R + 34.0) * s)
+		# and out from under an alert band
+		var band := alert_rect().grow(MARKER_R * s + 6.0)
+		if _alert_box.visible and band.has_point(sp):
+			sp.y = band.end.y
 		out.append({"marker": mk, "pos": sp, "scale": s, "alpha": a, "dist": dist})
 	return out
 
