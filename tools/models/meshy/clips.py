@@ -323,6 +323,41 @@ def build_wave(R, frames, name):
     return out
 
 
+def build_jog(R, frames, name):
+    # an easy jog (the farmer slowing down out of the gate): short stride, small arm pump, a little slower
+    f = amplitude(frames, {**{b: 0.55 for b in LEGS}, **{b: 0.6 for b in ARMS}, "Hips": 0.65, "loc": 0.6})
+    return retime(f, 1.2)
+
+
+def build_crouch(R, frames, name):
+    """Crouched low in the smoke: right forearm across the mouth and nose, head ducked, two coughs a loop."""
+    n = len(frames) - 1
+    T = n / FPS
+    co, part = R.co, R.part
+    hz = R.rest["Head"].translation.z
+    k = hz / 1.5
+    face = co[(part == 0) & (np.abs(co[:, 0]) < 0.04) & (co[:, 2] > hz) & (co[:, 2] < hz + 0.08 * k)]
+    mouth = Vector((0.0, float(face[:, 1].min()) - 0.045 * k, hz + 0.045 * k))     # rest space, in front of the face
+    out = []
+    for i, base in enumerate(frames):
+        t = i / FPS
+        fr = copy(base)
+        cough = sum(math.exp(-((t - c * T) / 0.09) ** 2) * (1 if t > c * T else 0.35) for c in (0.28, 0.7))
+        turn(R, fr, "Spine01", X, 3 + 5 * cough)
+        turn(R, fr, "Spine", X, 3 + 6 * cough)
+        turn(R, fr, "neck", X, 8 + 4 * cough)
+        turn(R, fr, "Head", X, 4 + 3 * cough)
+        world = R.fk(fr)
+        head = world["Head"] @ R.rest["Head"].inverted()
+        target = head @ (mouth + Vector((0.075 * k, 0.0, -0.01 * k)))          # wrist past the left cheek
+        pole = head.to_3x3() @ Vector((-0.8, -0.2, -1.0))
+        palm = head.to_3x3() @ Vector((0.0, 1.0, 0.0))                           # palm to the face
+        arm_ik(R, fr, "Right", target, pole, palm)
+        out.append(fr)
+    out[-1] = copy(out[0])
+    return out
+
+
 SPECS = {
     "idle": {"source": "Idle_Loop"},
     "walk": {"source": "Walk_Loop", "ground": "constant"},
@@ -333,6 +368,8 @@ SPECS = {
     "trapped": {"source": "Death01", "build": build_trapped, "clear": False, "ground": "constant"},
     "dig": {"source": "Fixing_Kneeling", "build": build_dig, "ground": "constant", "clear": False},
     "wave": {"source": "Idle_Loop", "build": build_wave, "clear_sides": ("Left",)},
+    "jog": {"source": "Jog_Fwd_Loop", "build": build_jog, "ground": "constant"},
+    "crouch": {"source": "Crouch_Idle_Loop", "build": build_crouch, "clear": False, "ground": "constant"},
 }
 
 COMMON = ["idle", "walk", "run", "walk_follow"]
@@ -342,4 +379,5 @@ CLIPS_OF = {
     "child": COMMON + ["shiver", "trapped"],
     "grandpa": COMMON + ["walk_tired", "trapped"],
     "rescuer": ["idle", "walk", "run", "dig", "wave"],
+    "farmer": ["idle", "walk", "jog", "run", "crouch"],
 }

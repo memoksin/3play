@@ -504,8 +504,8 @@ func _lose() -> void:
 	_check("lose run: no acting after the end", not s.logic.pick_hose())
 	s.advance(skin.lose_seconds * 0.5)
 	var fig: Node = s.get_node("Props/Farmer/Model")
-	_check("lose run: dark ending, the figure crouched in the smoke", got.is_empty() and fig.get_node("Crouch").visible \
-			and not fig.get_node("Run0").visible and float(env.ambient_light_energy) < skin.ambient_energy_smoke)
+	_check("lose run: dark ending, the figure crouched in the smoke", got.is_empty() and fig.call("gait") == {&"crouch": 1.0} \
+			and float(env.ambient_light_energy) < skin.ambient_energy_smoke)
 	s.skip_ending()
 	_check("lose run: a key cuts the ending to its fade", s.get("_end_t") >= s.get("_end_dur") - s.END_FADE - 1e-4)
 	s.advance(skin.lose_seconds)
