@@ -50,19 +50,18 @@ func _add_card(d: Disaster) -> void:
 		place.add_theme_color_override("font_color", Palette.HUD_DIM)
 	box.add_child(place)
 	var status := _label(_status(p), &"HudMuted")
-	if earned:
-		status.add_theme_color_override("font_color", Palette.GOLD)
+	status.visible = not earned  # an earned badge always means a full score: nothing to add
 	box.add_child(status)
 	%Grid.add_child(card)
 	cards[d.id] = {card = card, badge = badge, place = place, status = status, earned = earned}
 
 
-## Best score when played; how to earn it when not earned yet; "not played" otherwise.
+## Best score + how to earn it when played but not earned; "not played" otherwise (an earned card shows no line).
 func _status(p: Dictionary) -> String:
 	if not p.done:
 		return tr("BADGES_LOCKED")
 	var best: String = tr("BADGES_BEST") % [p.saved, p.total]
-	return best if p.badge else best + "\n" + tr("BADGES_HINT")
+	return best + "\n" + tr("BADGES_HINT")
 
 
 func _label(text: String, variation: StringName) -> Label:
