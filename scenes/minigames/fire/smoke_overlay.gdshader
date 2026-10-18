@@ -1,10 +1,12 @@
 shader_type canvas_item;
 // Fire minigame (#125): the smoke on the player's eyes. The view closes in from the edges as `smoke`
 // rises (0 clear .. 1 very dense) and a soft veil drifts across. In the last seconds `danger` lets each
-// heartbeat (`pulse` 0..1) flush the edges red. `fade` covers the screen with `fade_color` (the end).
+// heartbeat (`pulse` 0..1) flush the edges red. `alarm` (0..1, an urgent alert) reddens a band along the screen edges
+// whatever the smoke. `fade` covers the screen with `fade_color` (the end).
 uniform float smoke = 0.0;
 uniform float pulse = 0.0;
 uniform float danger = 0.0;
+uniform float alarm = 0.0;
 uniform float fade = 0.0;
 uniform float aspect = 1.7778;
 uniform vec3 smoke_color : source_color = vec3(0.46, 0.38, 0.33);
@@ -36,5 +38,8 @@ void fragment() {
 	float red = danger * pulse * vig;
 	col = mix(col, vec3(0.5, 0.05, 0.03), clamp(red * 1.4, 0.0, 1.0));
 	a = max(a, red * 0.75);
+	float edge = smoothstep(0.5, 1.0, r + (n - 0.5) * 0.12) * alarm;
+	col = mix(col, vec3(0.62, 0.04, 0.02), clamp(edge * 1.6, 0.0, 1.0));
+	a = max(a, edge * 0.7);
 	COLOR = vec4(mix(col, fade_color, fade), mix(a, 1.0, fade));
 }

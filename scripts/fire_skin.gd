@@ -17,8 +17,9 @@ extends Resource
 
 ## Total time (s): the player must be out of the gate before it runs out.
 @export var timer_seconds := 90.0
-## Seconds after the start before the "Overview" camera hands over to first person.
-@export var overview_seconds := 3.8
+## Seconds of the opening shot (fire.gd _pose_overview: the hero view, down to the farmer's face, round his head
+## into first person) before play starts.
+@export var overview_seconds := 5.4
 
 @export_group("Smoke")
 ## Smoke follows the clock: clear for clear_seconds, thickens to ramp_level until dense_seconds before
@@ -62,7 +63,8 @@ extends Resource
 ## Hand reach (m) for picking up, cutting, attaching and turning.
 @export var reach := 2.6
 @export var cut_seconds := 1.0
-@export var valve_seconds := 1.0
+## Holding the valve this long turns it open: the arms' valve clip (fp_nozzle.glb, 2.6 s) plays over the hold.
+@export var valve_seconds := 2.6
 ## The hose sprays this far (m); the flame is out after douse_seconds of water, and grows back at
 ## regrow_rate per second while it is not hit.
 @export var spray_range := 8.5
@@ -104,6 +106,9 @@ extends Resource
 ## In-hand models (first person): the wire cutters held in both hands, the hose nozzle at the bottom right.
 @export var hand_cutters_model: PackedScene
 @export var hand_nozzle_model: PackedScene
+## The bare hands while no tool is in hand (low, the fingers just over the bottom of the view); they go down as a
+## tool comes up and come back up after it is put away.
+@export var hand_empty_model: PackedScene
 ## The player as a small figure for the ending shots (runs out along the track, or crouches in the smoke).
 @export var farmer_model: PackedScene
 

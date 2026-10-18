@@ -1,15 +1,10 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scenes/minigames/fire/art/hand_cutters.gd" id="1_hc"]
-[ext_resource type="PackedScene" path="res://assets/3d/fire/cutters_view_r.glb" id="2_hc"]
-[ext_resource type="PackedScene" path="res://assets/3d/fire/cutters_view_l.glb" id="3_hc"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/fp_cutters.glb" id="2_hc"]
 
 [node name="HandCutters" type="Node3D"]
 script = ExtResource("1_hc")
 
-[node name="View" type="Node3D" parent="."]
-transform = Transform3D(-1, 0, 0, 0, 0.98481, -0.17365, 0, -0.17365, -0.98481, -0.3, -0.02, -0.42)
-
-[node name="R" parent="View" instance=ExtResource("2_hc")]
-
-[node name="L" parent="View" instance=ExtResource("3_hc")]
+[node name="View" parent="." instance=ExtResource("2_hc")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 0.27, 0.5)

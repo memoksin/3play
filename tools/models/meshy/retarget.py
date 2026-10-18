@@ -3,7 +3,7 @@
 blender -b --factory-startup --python-exit-code 1 -P tools/models/meshy/retarget.py [-- name ...]
 In:  work/<name>_rig.blend, UAL1_Standard.glb (Universal Animation Library [Standard], Quaternius, CC0;
      $UAL or ~/Downloads/Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard.glb).
-Out: assets/3d/kahramanmaras/meshy_<name>.glb (512 px JPEG texture, clips named <clip>_loop: Godot strips
+Out: assets/3d/kahramanmaras/meshy_<name>.glb (fire/ for the farmer, DEST_OF; 512 px JPEG texture, TEX_OF, clips named <clip>_loop: Godot strips
      the suffix and loops them), work/<name>_anim.blend, work/<name>_report.json.
 
 Retarget maths as in pf_3d tools/anim/bloom/retarget_ual.py: per frame the UAL bone's world rotation times
@@ -28,9 +28,11 @@ import motion_quality as MQ
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 UAL = os.environ.get("UAL", str(Path.home() / "Downloads/Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard.glb"))
 DEST = HERE.parents[2] / "assets/3d/kahramanmaras"
+DEST_OF = {"farmer": HERE.parents[2] / "assets/3d/fire"}       # the fire game's farmer (FireSkin.farmer_model)
 WORK = HERE / "work"
 FPS = 30
 TEX = 512
+TEX_OF = {"farmer": 1024}                                       # seen up close as the ending shot leaves his head
 MAX_STEP_DEG = 3.0
 
 MAP = [
@@ -394,9 +396,10 @@ def main():
         for pb in rig.pose.bones:
             pb.matrix_basis = Matrix.Identity(4)
         sc.frame_set(0)
+        tex = TEX_OF.get(name, TEX)
         for img in bpy.data.images:
-            if img.size[0] > TEX:
-                img.scale(TEX, TEX)
+            if img.size[0] > tex:
+                img.scale(tex, tex)
         attr = body.data.attributes.get("qa_part")
         bpy.ops.wm.save_as_mainfile(filepath=str(WORK / f"{name}_anim.blend"))
         if attr:
@@ -404,7 +407,7 @@ def main():
         bpy.ops.object.select_all(action="DESELECT")
         rig.select_set(True)
         body.select_set(True)
-        bpy.ops.export_scene.gltf(filepath=str(DEST / f"meshy_{name}.glb"), export_format="GLB", use_selection=True,
+        bpy.ops.export_scene.gltf(filepath=str(DEST_OF.get(name, DEST) / f"meshy_{name}.glb"), export_format="GLB", use_selection=True,
                                   export_image_format="JPEG", export_jpeg_quality=85,
                                   export_animation_mode="ACTIONS", export_animations=True,
                                   export_force_sampling=True, export_optimize_animation_size=False,

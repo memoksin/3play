@@ -7,7 +7,8 @@ extends SceneTree
 ## (work/<name>_report.json), so sliding feet show as feet moving against the grid.
 
 var OUT := "res://export/shots/meshy_gif/frames/"
-const NAMES := ["player", "mom", "child", "grandpa", "rescuer"]
+const NAMES := ["player", "mom", "child", "grandpa", "rescuer", "farmer"]
+const DIR_OF := {"farmer": "res://assets/3d/fire/"}
 const FPS := 30.0
 const FRAME_CAP := 200000
 
@@ -98,7 +99,7 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	for n in NAMES:
-		var packed: PackedScene = load("res://assets/3d/kahramanmaras/meshy_%s.glb" % n)
+		var packed: PackedScene = load(DIR_OF.get(n, "res://assets/3d/kahramanmaras/") + "meshy_%s.glb" % n)
 		if packed == null:
 			push_error("gif.gd: cannot load meshy_%s.glb" % n)
 			quit(1)

@@ -2,8 +2,11 @@
 
 [ext_resource type="Script" path="res://scenes/minigames/fire/art/hose.gd" id="1_h"]
 [ext_resource type="PackedScene" path="res://assets/3d/fire/hose_coil.glb" id="2_h"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/hose_coil_nozzle.glb" id="3_h"]
 
 [node name="Hose" type="Node3D"]
 script = ExtResource("1_h")
 
 [node name="Coil" parent="." instance=ExtResource("2_h")]
+
+[node name="Nozzle" parent="." instance=ExtResource("3_h")]

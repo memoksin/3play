@@ -1,7 +1,8 @@
 """Meshy character -> clean rig: unit scale, joints centred in the body, new skin weights.
 
 blender -b --factory-startup --python-exit-code 1 -P tools/models/meshy/rig.py [-- name ...]
-In:  out/<name>/rigged.glb (Meshy auto-rig: 24 bones, one mesh, one 2K texture; not modified).
+In:  out/<name>/rigged.glb (Meshy auto-rig: 24 bones, one mesh, one 2K texture; not modified), or for a model
+     that was not auto-rigged src/<name>_meshy.glb through fit_skeleton.py (the same 24 bones fitted to the mesh).
 Out: work/<name>_rig.blend, work/<name>_rig.json (joints moved, part sizes).
 
 Meshy's weights pull coats and skirts with the thighs, put hoods on the head and its joints sit at the body
@@ -39,10 +40,14 @@ CFG = {
     "child": dict(follow=0.55, calf=0.0, centre=0.04),
     "grandpa": dict(follow=0.8, calf=0.15, centre=0.12),
     "rescuer": dict(follow=0.55, calf=0.0, centre=0.05),
+    "farmer": dict(follow=0.55, calf=0.0, centre=0.05),
 }
 
 
 def load(name):
+    if not (HERE / "out" / name / "rigged.glb").exists():
+        from fit_skeleton import fit
+        return fit(name)
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.context.preferences.filepaths.save_version = 0
     bpy.ops.import_scene.gltf(filepath=str(HERE / "out" / name / "rigged.glb"))

@@ -14,6 +14,7 @@
 [ext_resource type="PackedScene" path="res://scenes/minigames/fire/art/hand_nozzle.tscn" id="12"]
 [ext_resource type="PackedScene" path="res://scenes/minigames/fire/art/spot.tscn" id="13"]
 [ext_resource type="PackedScene" path="res://scenes/minigames/fire/art/farmer.tscn" id="14"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/fire/art/hand_empty.tscn" id="15"]
 
 [resource]
 script = ExtResource("1")
@@ -32,5 +33,6 @@ flame_model = ExtResource("9")
 kangaroo_model = ExtResource("10")
 hand_cutters_model = ExtResource("11")
 hand_nozzle_model = ExtResource("12")
+hand_empty_model = ExtResource("15")
 spot_model = ExtResource("13")
 farmer_model = ExtResource("14")
