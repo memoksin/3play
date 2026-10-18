@@ -1,10 +1,46 @@
 {
   "extraKnownMarketplaces": {
     "godot-gamedev": {
-      "source": { "source": "github", "repo": "Zate/cc-godot" }
+      "source": {
+        "source": "github",
+        "repo": "Zate/cc-godot"
+      }
+    },
+    "cw-crew": {
+      "source": {
+        "source": "github",
+        "repo": "memoksin/cw-crew"
+      }
     }
   },
   "enabledPlugins": {
-    "gd@godot-gamedev": true
+    "gd@godot-gamedev": true,
+    "cw-crew@cw-crew": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-start.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/inbox-check.sh"
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/context-check.sh"
+          }
+        ]
+      }
+    ]
   }
 }

@@ -1,0 +1,1198 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>film</title>
+<!--
+  Pitch film body (storyboard steps 5-19), plays right after the approved intro (export/video/approved/intro_stack_v2_cut.mp4).
+  Frame-exact: everything is a pure function of t (seconds). window.renderAt(t) draws one frame and returns a Promise
+  (Godot clip frames are PNG sequences loaded on demand); frame N = renderAt(N / 60). Seeded randomness only.
+  Godot footage: export/video/clips/<name>/%05d.png + clip.json {frames}. A missing clip draws a labelled PLACEHOLDER.
+  Render: node tools/video/render.mjs film [--clips /abs/clips/dir]      Preview: film.html?t=12.5
+  All timing lives in the TIMELINE table below.
+-->
+<style>
+  @font-face { font-family: "VT323"; src: url("../../assets/fonts/VT323-Regular.ttf"); }
+  html, body { margin: 0; background: #000; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="out" width="1920" height="1080"></canvas>
+<script>
+"use strict";
+// ================================================================ TIMELINE (the only place to retime the film)
+// Film-local seconds: film.mp4 starts at 0. In the final pitch film everything is INTRO_LEN later.
+// clip  = folder in export/video/clips/ (Godot PNG sequence). in = clip in-point (seconds into the clip at `start`).
+// speed = clip playback rate (optional). text = on-screen line (*stars* = amber highlight in statements).
+// c_* rows are title cards (STACK PRESENTS style), s_* rows are statements (smaller, fg colour).
+const INTRO_FILE_LEN = 8.0;           // approved intro file (export/video/approved/intro_stack_v2_cut.mp4)
+const INTRO_CUT = 2.0;                // its first seconds are cut off in the final film (assemble.sh INTRO_CUT)
+const INTRO_LEN = INTRO_FILE_LEN - INTRO_CUT;   // intro length in the final film
+const SCENARIO_COUNT = 3;             // step 16: number of disaster scenarios
+// The cuts sit on the music's grid: the bed (MUSIC, t33_music_bed.ogg) is 96 BPM, a beat every 0.625 s, its first
+// downbeat at final 0.9 s, a bar every 4 beats (final 0.9, 3.4, ... 25.9 the drums come in, ... 53.4 the logo).
+// B(k) = film seconds of beat k (k % 4 == 0: a bar). Rebuild the bed when the logo moves (tools/video/README.md).
+const GRID = { first: 0.9, beat: 0.625 };   // final-film seconds
+const B = (k) => +(GRID.first + k * GRID.beat - INTRO_LEN).toFixed(4);
+const span = (a, b) => ({ start: B(a), len: +(B(b) - B(a)).toFixed(4) });   // a row from beat a to beat b
+const FILM_LEN = 53.95;               // film.mp4 length: 6.0 s intro + 53.95 s = 59.95 s (the limit is 60)
+// moments inside the Godot clips (clip seconds) that the grid places
+const LAMP_CLIP = 1.25;               // fener_mini: the lamp clicks on
+const LOCK_CLIP = 4.92;               // globe_full: the game's crosshair closes on the Indian Ocean
+const HIT_CLIP = 13.15;               // io_mini: the wave breaks over the town
+const CUT_CLIP = 2.0;                 // fire_mini: the strained cut snaps through, the fence panel drops (frame 120)
+const ROO_IN = 4.4;                   // fire_mini: the kangaroos run out through the gap (~4.3-6.1 s)
+const OUT_CLIP = 8.9;                 // fire_mini: the flame goes out (frame 534; the jump cut to the hose is at 6.42 s)
+const GLOBE_IN = +(LOCK_CLIP - (B(36) - B(29)) * 1.1).toFixed(4);           // the crosshair closes on bar 9 (beat 36)
+const IO_B = { in: 9.45, speed: 1.25 };
+const IO_B_START = +(B(52) - (HIT_CLIP - IO_B.in) / IO_B.speed).toFixed(4);  // the wave breaks on bar 13 (beat 52)
+const TL = [
+  // step id             start / len (beats)   clip / text
+  { step: 5,  id: "dark",       start: 0.0, len: B(15) },
+  { step: 5,  id: "s_hayat",    start: 1.8,  len: 2.35, text: "Hayatın *göremediğimiz* boyutları vardır" },   // beat 11 is 1.775
+  { step: 6,  id: "diorama",    ...span(15, 21), clip: "kahr_diorama", in: 0.9 },          // past the game's fly-in, orbiting
+  { step: 7,  id: "c_tahmin",   ...span(18, 21), text: "TAHMİN ET" },
+  { step: 8,  id: "fener",      ...span(21, 29), clip: "fener_mini", in: +(LAMP_CLIP - B(22) + B(21)).toFixed(4) },   // a whistle in the dark, the lamp clicks on on beat 22, "ANNE" found, the family follows
+  // the game's whole globe animation at 1.1x in one take: the spin (globe), then the lock and the zoom (lock), same clip
+  { step: 9,  id: "globe",      start: B(29), len: 3.8, clip: "globe_full", in: GLOBE_IN, speed: 1.1 },
+  { step: 9,  id: "c_kesfet",   start: B(30), len: 2.2, text: "KEŞFET" },
+  // lock: the HUD locks `lock` s after start (the game's crosshair closes), extra push + flash from `zoom` s.
+  // target = screen point (clip px) of the Indian Ocean when locked. hud: "brackets" (the game draws its own crosshair
+  // and readout) or "full" (our own crosshair, rings and readout, for a clip without the game's lock UI).
+  { step: 10, id: "lock",       start: B(29) + 3.8, len: +(B(40) - B(29) - 3.8).toFixed(4), clip: "globe_full", in: +(GLOBE_IN + 3.8 * 1.1).toFixed(4), speed: 1.1,
+    lock: +(B(36) - B(29) - 3.8).toFixed(4), zoom: +(B(40) - B(29) - 3.8 - 0.4).toFixed(4), target: [960, 540], hud: "brackets" },
+  { step: 11, id: "c_mudahale", ...span(40, 43), text: "MÜDAHALE ET" },                    // bar 10: the drums come in
+  // the tsunami in one take: the drawback and the rising wall sped up (io_a), then the break and the flood (io_b)
+  { step: 12, id: "io_a",       start: B(43), len: +(IO_B_START - B(43)).toFixed(4), clip: "io_mini", in: +(IO_B.in - (IO_B_START - B(43)) * 2.9).toFixed(4), speed: 2.9 },   // the pipes lock, the sea pulls back
+  { step: 12, id: "io_b",       start: IO_B_START, len: +(B(54) - IO_B_START).toFixed(4), clip: "io_mini", in: IO_B.in, speed: IO_B.speed, hit: +(B(52) - IO_B_START).toFixed(4) },  // the wall; breaks at +hit (clip 13.15 s), the town floods
+  { step: 13, id: "black",      ...span(54, 55) },
+  { step: 14, id: "menu",       ...span(55, 62), clip: "menu_roles", in: 1.7 },           // opens like the eye; "Devlet" hovers ~+1.1, "Vatandaş" ~+3.2 (under TERCİH ET)
+  { step: 14, id: "s_fark",     start: B(56), len: +(B(60) - B(56) + 0.05).toFixed(4), text: "Farkındalık *tek taraflı* değildir" },   // typed in 1.0 s, held ~1 s to read
+  { step: 14, id: "c_tercih",   ...span(60, 62), text: "TERCİH ET" },
+  { step: 15, id: "globe2",     ...span(62, 67), clip: "globe_spin2", in: 0.3, speed: 1.1 },
+  { step: 15, id: "s_dunya",    ...span(63, 67), text: "Dünyanın *dört bir yanından*" },
+  { step: 16, id: "s_count",    ...span(64, 67), text: `*${SCENARIO_COUNT}* afet senaryosu` },
+  // Black Saturday, first person: the wire cutters cut the fence (fire_a, the cut on bar 17), cut to the kangaroos
+  // running out (fire_b), cut to the hose on the flame in the way out (fire_c, the flame goes out on beat 74)
+  { step: 16, id: "fire_a",     ...span(67, 69), clip: "fire_mini", in: +(CUT_CLIP - (B(68) - B(67)) * 1.15).toFixed(4), speed: 1.15 },
+  { step: 16, id: "fire_b",     ...span(69, 71), clip: "fire_mini", in: ROO_IN, speed: 1.15 },
+  { step: 16, id: "fire_c",     ...span(71, 75), clip: "fire_mini", in: +(OUT_CLIP - (B(74) - B(71)) * 1.1).toFixed(4), speed: 1.1 },
+  { step: 17, id: "bunny",      ...span(75, 80), burst: +(B(77) - B(75)).toFixed(4) },     // the egg bursts on beat 77 (1.4 s at normal speed), the bunny at normal speed
+  { step: 18, id: "s_easter",   start: B(76), len: +(B(80) - B(76) + 0.05).toFixed(4), text: "Belki bir de *easter egg*, kim bilir…" },
+  { step: 19, id: "c_aaa",      ...span(80, 84), text: "AAA" },                           // bar 20; calm, like an "AAA game" label, GAME under it; it settles before "yok yok"
+  { step: 19, id: "s_yok",      ...span(82, 84), text: "yok yok" },
+  { step: 19, id: "logo",       ...span(84, 88), },                                        // bar 21: "3play" lands on the music's strongest beat, the same GAME under it, held
+  { step: 19, id: "c_fark",     start: B(88), len: 0, text: "FARK ET" },                                  // bar 22; held; the CRT power-off (beat 93) closes it, len set below
+  { step: 19, id: "end",        start: 0, len: 0 },                                        // pure black tail to FILM_LEN
+];
+const R = Object.fromEntries(TL.map((r) => [r.id, r]));
+const end = (r) => r.start + r.len;
+const CRT = 0.65;                     // the CRT power-off: the last seconds of FARK ET
+R.c_fark.len = +(B(93) + CRT - B(88)).toFixed(4);
+R.end.start = end(R.c_fark); R.end.len = +(FILM_LEN - R.end.start).toFixed(4);
+// the music credit (Mountain Emperor is CC BY 4.0): final 56.6 s to the end, over FARK ET, the CRT and the black; drawn
+// after the post pass (no bloom, grain or CRT on it), centred at the bottom, VT323 on a translucent black band
+const CREDIT = {
+  start: +(56.6 - INTRO_LEN).toFixed(4), fade: 0.4, px: 32, lh: 36, base: 958, band: [920, 1047], padX: 19,
+  col: "rgb(216,221,230)", bandA: 150 / 255, thin: 0.2,
+  lines: ['Music: "Mountain Emperor" by Kevin MacLeod (incompetech.com), licensed under CC BY 4.0',
+    '(creativecommons.org/licenses/by/4.0). Edited: cut, time-stretched, layered.',
+    '"Opening Theme V2" by nene (opengameart.org), CC0.'],
+};
+const EGG_BURST = 1.4;                    // scene seconds of the burst (cracks at 0.55 and 1.0); the picture is sped up to it
+const EGG_SND = { file: "assets/audio/trailer/t27_egg_crack.ogg", c1: 0.34, c2: 0.58, burst: 1.08 };   // the cracks in the sound (s)
+const eggBurstAt = () => R.bunny.burst;   // row seconds of the burst
+// silent beats for the team's audio (film-local seconds); the visuals pulse on the heartbeats
+// (lub, dub) pairs 0.45 s apart: the gap of t9_heartbeat.ogg, so the glow pulses on the sound
+const HEART = [[0.22, 1], [0.67, 0.7], [1.32, 1], [1.77, 0.7], [R.black.start + 0.06, 0.8], [R.black.start + 0.51, 0.55]];
+const VOICE = { t: 0.8, len: 1.2, text: "Sesimi duyan var mı?" };   // echoing voice over the dark
+const CUTS = [R.fener.start, R.io_a.start, R.globe2.start, R.fire_a.start];   // glitch cuts
+
+// ================================================================ SOUND (the mix: tools/video/mix.py reads it from export/video/film_audio.json)
+// Every cue is tied to a row above, so retiming a row moves its sounds. Times are film seconds (`at`), or `final`
+// seconds for the intro (it plays before the film). file = repo path; ss / dur = trim in the file (s); lu = loudness
+// of the placed sound in LUFS before the master (tools/video/mix.py sets the gain from a measurement); peak = sample
+// peak in dBFS instead, for sounds too short to measure; fade = [in, out] s; loop = repeat the trim to fill dur;
+// tempo = speed-up (keeps pitch); ceil = peak cap of the layer (dBFS). Stems: the game's own sound captured with the clip (clip.wav), placed under its row.
+const A = "assets/audio/";
+const TYPE_STEP = 0.032;                                  // drawLine's default seconds per letter
+const typeLen = (r, step = TYPE_STEP) => [...r.text.replace(/\*/g, "")].length * step;
+const T11 = A + "trailer/t11_low_impact.ogg", G7 = A + "globe/glitch_corruption.ogg", G3 = A + "globe/keyboard_typing_loop.ogg";
+const HEART_FILE = { file: A + "trailer/t9_heartbeat.ogg", lub: 0.15 };   // the lub peaks 0.15 s into the file
+function cardHit(T, r, note) {                             // title card: low boom + the start of the glitch
+  return [{ T, at: r.start, file: T11, lu: -22, ceil: -7, fade: [0, 1.2], dur: 3.2, note }, { T, at: r.start, file: G7, dur: 0.45, lu: -27, fade: [0, 0.12], note: note + " (glitch layer)" }];
+}
+function typing(T, r, dur, lu = -28, note = "typing") { return { T, at: r.start, file: G3, dur, lu, fade: [0.01, 0.06], note }; }
+// One bed: t33_music_bed.ogg, built for this film from Opening Theme V2 (nene, CC0) and the drums of Mountain Emperor
+// (Kevin MacLeod, CC BY 4.0) on the GRID above (tools/video/README.md, "Music bed"). It starts with the intro (final
+// 0 s): the theme's quiet opening until bar 10 (final 25.9, MÜDAHALE ET), then the drums, a half-beat break and its
+// strongest hit on the logo (bar 21, final 53.4). Its first 0.9 s (before the first downbeat) stay muted.
+const MUSIC = {
+  file: A + "trailer/t33_music_bed.ogg", final: 0, from: 0, lu: -19.5,
+  keys: [[-INTRO_LEN, -80], [GRID.first - INTRO_LEN, -80], [GRID.first - INTRO_LEN + 0.6, -2], [0, 4], [B(15), 2], [B(39), 2], [B(40), 0],
+    [B(54) - 0.02, 0], [B(54), -80], [B(55) - 0.01, -80], [B(55), -12], [B(56), 0],
+    [B(93), 0], [B(93) + 0.6, -80]],
+  // [film s, dB]: under the intro's storm, the quiet opening raised until the drums, out on the hard cut to black and
+  // back as the menu opens, out with the CRT
+  // ducks [film s, hold s, dB]: the bed steps back 2-3 dB while a key game sound plays, then comes back (0.06 s in,
+  // 0.35 s out); in between, music and effects sit about level (tools/video/mix.py prints both buses)
+  duck: [[R.fener.start + LAMP_CLIP - R.fener.in, 0.8, -2.5], [R.lock.start + R.lock.lock, 0.5, -2.5],
+    [R.io_b.start + R.io_b.hit, 1.0, -3], [R.fire_a.start, end(R.fire_c) - R.fire_a.start - 0.4, -2.5],
+    [R.c_aaa.start - 0.2, 0.9, -2], [R.s_yok.start, 0.6, -2.5]],
+};
+const STEMS = [                                           // row id, loudness, fades [in, out]
+  { T: "T14b", row: "fener", lu: -21, ceil: -12, fade: [0.03, 0.3], note: "Fener in-game sound: wind, footsteps, the mother's whistle, lamp click (FN3), found (FN6)" },
+  { T: "T15b", row: "globe", lu: -28, fade: [0.2, 0.0], note: "globe in-game sound at 1.1x: swell (G1), drone (G9)" },
+  { T: "T17b", row: "lock", lu: -26, fade: [0.0, 0.1], note: "the same take, lock and zoom: drone, coordinates typing (G3), zoom whoosh (G5)" },
+  { T: "T20", row: "io_a", lu: -22, fade: [0.03, 0.0], note: "Connect in-game sound at 2.9x: the pipes lock (C10), wave rising (C3)" },
+  { T: "T20a", row: "io_b", lu: -20, fade: [0.0, 0.015], note: "Connect in-game sound at 1.25x: wave rising (C3), the wave hits (C4), water; hard cut" },
+  { T: "T22", row: "menu", lu: -27, ceil: -14, fade: [0.3, 0.2], note: "role menu in-game sound: hover (M2) on Devlet, then on Vatandaş" },
+  { T: "T25b", row: "globe2", lu: -28, fade: [0.03, 0.2], note: "second globe in-game sound at 1.1x (G9)" },
+  { T: "T25f", row: "fire_a", lu: -22, ceil: -10, fade: [0.03, 0.03], note: "fire in-game sound: wind and fire (FR1), the cutters (FR5, FR5.2), the fence cut (FR6)" },
+  { T: "T25g", row: "fire_b", lu: -22, ceil: -10, fade: [0.03, 0.03], note: "fire in-game sound: wind and fire (FR1), the kangaroos run (FR11)" },
+  { T: "T25h", row: "fire_c", lu: -22, ceil: -10, fade: [0.03, 0.3], note: "fire in-game sound at 1.1x: the flame (FR9), the hose sprays (FR8), the flame goes out (FR6)" },
+];
+const IC = INTRO_CUT;                                     // intro cue times are in the intro file's seconds
+const SFX = [
+  // intro (approved picture, its first INTRO_CUT seconds cut off): times in the intro file minus the cut
+  { T: "T1", final: 0, file: A + "trailer/t1_rain_loop.ogg", ss: IC, dur: 7.75 - IC, loop: true, lu: -26, fade: [0.3, 0.5], note: "rain under the intro" },
+  { T: "T2", final: 2.4 - IC, file: A + "trailer/t2_far_thunder.ogg", lu: -28, fade: [0, 0.5], note: "distant sheet lightning" },
+  { T: "T3", final: 2.8 - IC, file: A + "trailer/t3a_thunderclap.ogg", dur: 3.0, lu: -24, ceil: -7, fade: [0, 1.0], note: "close strike 1" },
+  { T: "T3", final: 3.4 - IC, file: A + "trailer/t3b_close_strike.ogg", dur: 3.0, lu: -22, ceil: -6, fade: [0, 1.2], note: "close strike 2" },
+  { T: "T4", final: 3.9 - IC, file: A + "trailer/t4_final_strike.ogg", dur: 3.8, lu: -22, ceil: -6, fade: [0, 1.5], note: "final strike (plain file, raised)" },
+  { T: "T5", final: 4.45 - IC, file: G3, dur: 0.85, lu: -27, fade: [0.01, 0.06], note: "STACK PRESENTS typing" },
+  { T: "T6", final: 5.5 - IC, file: A + "trailer/t2_far_thunder.ogg", lu: -29, fade: [0, 0.6], note: "last far strike" },
+  { T: "T7", final: 6.05 - IC, file: A + "trailer/t7_noise_riser.ogg", lu: -27, ceil: -8, fade: [0.08, 0.05], note: "push into the eye (T8: silence from the black)" },
+  // film
+  ...HEART.filter((h, i) => i % 2 === 0).map(([t], i) => ({ T: i < 2 ? "T9" : "T21", at: t - HEART_FILE.lub, file: HEART_FILE.file, lu: i < 2 ? -20 : -22, note: "heartbeat (lub-dub)" })),
+  { T: "T11", at: R.s_hayat.start, file: T11, lu: -23, ceil: -7, fade: [0, 1.5], dur: 3.5, note: "statement: Hayatın göremediğimiz boyutları vardır" },
+  typing("T11b", R.s_hayat, typeLen(R.s_hayat)),
+  { T: "T12", at: R.diorama.start, file: A + "diorama/winter_wind.ogg", ss: 4, dur: R.diorama.len + 0.1, lu: -25, fade: [0.6, 0.3], note: "the eye opens on the snowy diorama (D1)" },
+  ...cardHit("T13", R.c_tahmin, "TAHMİN ET"),
+  { T: "T14", at: R.fener.start, file: G7, dur: 0.45, lu: -23, fade: [0, 0.1], note: "glitch cut: Fener" },
+  { T: "T15", at: R.globe.start - 2.1, file: A + "globe/whoosh.ogg", lu: -24, fade: [0.2, 0.4], note: "zoom-blur whip to the globe (peak on the cut)" },
+  ...cardHit("T16", R.c_kesfet, "KEŞFET"),
+  { T: "T17", at: R.lock.start + R.lock.lock, file: A + "globe/target_lock_trim.ogg", lu: -26, fade: [0, 0.1], note: "target lock (G4)" },
+  ...cardHit("T19", R.c_mudahale, "MÜDAHALE ET"),
+  { T: "T14", at: R.io_a.start, file: G7, dur: 0.45, lu: -24, fade: [0, 0.1], note: "glitch cut: Indian Ocean" },
+  { T: "T20b", at: R.io_b.start + R.io_b.hit, file: T11, dur: 2.38, lu: -20, ceil: -6, fade: [0, 0.4], note: "the wave breaks over the town: low boom under the game's C4" },
+  { T: "T23", at: R.s_fark.start, file: T11, dur: 1.6, lu: -26, ceil: -10, fade: [0, 0.8], note: "statement sting: Farkındalık tek taraflı değildir" },
+  typing("T23b", R.s_fark, typeLen(R.s_fark)),
+  ...cardHit("T24", R.c_tercih, "TERCİH ET"),
+  { T: "T14", at: R.globe2.start, file: G7, dur: 0.45, lu: -24, fade: [0, 0.1], note: "glitch cut: second globe" },
+  { T: "T25", at: R.globe2.start, file: A + "globe/spaceship_ambience.ogg", dur: R.globe2.len, lu: -28, fade: [0.3, 0.4], note: "globe spin ambience (G2)" },
+  typing("T25c", R.s_dunya, typeLen(R.s_dunya)),
+  typing("T25d", R.s_count, typeLen(R.s_count)),
+  { T: "T25e", at: R.s_count.start + 0.45, file: A + "menu/ui_hover.ogg", peak: -17, note: "the digit 3 settles" },
+  { T: "T14", at: R.fire_a.start, file: G7, dur: 0.45, lu: -24, fade: [0, 0.1], note: "glitch cut: Black Saturday fire" },
+  { T: "T26", at: end(R.fire_c) - 0.4, file: G7, ss: 0.6, dur: 0.75, lu: -23, fade: [0.05, 0.2], note: "pixelate into the bunny scene" },
+  { T: "T27", at: R.bunny.start + eggBurstAt() - EGG_SND.burst, file: EGG_SND.file, lu: -21, ceil: -8, fade: [0, 0.4], note: "egg cracks at normal speed: its two small cracks on the picture's, the big crack on the burst" },
+  { T: "T28", at: R.s_easter.start, file: T11, dur: 1.6, lu: -27, ceil: -10, fade: [0, 0.8], note: "statement sting: Belki bir de easter egg" },
+  typing("T28b", R.s_easter, typeLen(R.s_easter)),
+  { T: "T29", at: R.c_aaa.start - 0.2, file: A + "globe/guitar_swell_trim.ogg", lu: -22, fade: [0, 0.3], note: "AAA GAME appears: calm swell (R1), no hit" },
+  typing("T29b", R.s_yok, typeLen(R.s_yok, 0.07), -27, "yok yok types on"),
+  { T: "T29c", at: R.logo.start, file: T11, dur: 4.0, lu: -22, ceil: -6, fade: [0, 1.6], note: "3play lands, under the bed's own hit" },
+  ...cardHit("T30", R.c_fark, "FARK ET"),
+  { T: "T31", at: end(R.c_fark) - CRT - 0.05, file: A + "trailer/t31_tv_off.ogg", peak: -9, note: "CRT power-off on FARK ET, at the very end" },
+];
+
+// ================================================================ config
+const W = 1920, H = 1080, FPS = 60;
+const DURATION = Math.max(...TL.map(end));
+const PAL = { bg: [15, 12, 21], amber: [242, 193, 78], hot: [255, 90, 54], cool: [111, 211, 196], fg: [236, 228, 210] };
+const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+
+// ---------------------------------------------------------------- helpers
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, u) => a + (b - a) * u;
+const smooth = (a, b, x) => { const u = clamp((x - a) / (b - a)); return u * u * (3 - 2 * u); };
+const easeOut = (u) => 1 - Math.pow(1 - clamp(u), 3);
+const easeIn = (u) => Math.pow(clamp(u), 3);
+const easeOutBack = (u) => { u = clamp(u); const c = 1.9; return 1 + (c + 1) * Math.pow(u - 1, 3) + c * Math.pow(u - 1, 2); };
+const hash1 = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+function vnoise(x) { const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f); return lerp(hash1(i), hash1(i + 1), u) * 2 - 1; }
+const frameOf = (dt) => Math.floor(dt * FPS + 1e-6);
+const inRow = (r, t, pre = 0, post = 0) => t >= r.start - pre && t < end(r) + post;
+
+// ---------------------------------------------------------------- clips (Godot PNG sequences)
+const Q = new URLSearchParams(location.search);
+const CLIP_ROOT = Q.get("clips") || "../../export/video/clips/";
+const CLIPS = {};                         // name -> { frames, base } or null (placeholder)
+async function probeClip(name) {
+  try {
+    const r = await fetch(`${CLIP_ROOT}${name}/clip.json`, { cache: "no-store" });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const b0 = await fetch(`${CLIP_ROOT}${name}/00000.png`, { method: "HEAD", cache: "no-store" });
+    return { frames: j.frames, base: b0.ok ? 0 : 1 };
+  } catch { return null; }
+}
+const cache = new Map();                  // "name:idx" -> Promise<ImageBitmap|null>, small LRU
+function loadFrame(name, idx) {
+  const k = name + ":" + idx;
+  if (cache.has(k)) { const p = cache.get(k); cache.delete(k); cache.set(k, p); return p; }
+  const p = fetch(`${CLIP_ROOT}${name}/${String(idx).padStart(5, "0")}.png`, { cache: "no-store" })
+    .then((r) => { if (!r.ok) throw new Error(r.status); return r.blob(); }).then((b) => createImageBitmap(b))
+    .catch(() => null);
+  cache.set(k, p);
+  while (cache.size > 12) { const [k0, p0] = cache.entries().next().value; cache.delete(k0); p0.then((b) => b && b.close()); }
+  return p;
+}
+function clipFrame(r, t) {                // raw frame number in the clip (clamped to the clip when it exists)
+  const f = Math.round((r.in + Math.max(0, t - r.start) * (r.speed || 1)) * FPS);
+  const m = CLIPS[r.clip];
+  return m ? Math.min(m.frames - 1, f) : f;
+}
+const FR = {};                            // row id -> ImageBitmap for the current frame
+async function prefetch(t) {
+  const rows = TL.filter((r) => r.clip && inRow(r, t, 0.7, 0.7));
+  await Promise.all(rows.map(async (r) => {
+    const m = CLIPS[r.clip];
+    FR[r.id] = m ? await loadFrame(r.clip, clipFrame(r, t) + m.base) : null;
+  }));
+}
+
+// ---------------------------------------------------------------- canvases
+const out = document.getElementById("out");
+const fg = document.createElement("canvas"); fg.width = W; fg.height = H;
+const fx = fg.getContext("2d");
+fx.imageSmoothingEnabled = true; fx.imageSmoothingQuality = "high";
+const ov = document.createElement("canvas"); ov.width = W; ov.height = H;   // the music credit, laid over the post
+const ox = ov.getContext("2d");
+
+// draw a clip row (or its placeholder) at the current transform
+function drawClip(r, t, o = {}) {
+  const sc = o.scale ?? 1, cx = o.cx ?? W / 2, cy = o.cy ?? H / 2;
+  fx.save();
+  fx.globalAlpha = o.alpha ?? 1;
+  fx.translate(cx, cy + (o.dy || 0)); fx.scale(sc, sc); fx.translate(-cx, -cy);
+  const img = FR[r.id];
+  if (img) fx.drawImage(img, 0, 0, W, H);
+  else drawPlaceholder(r, clipFrame(r, t), t);
+  fx.restore();
+}
+
+// ---------------------------------------------------------------- placeholders (only while the Godot clips are missing)
+function phLabel(name, f) {
+  fx.save();
+  fx.font = "34px VT323"; fx.textBaseline = "top";
+  const s = `PLACEHOLDER  clip: ${name}  frame ${String(f).padStart(4, "0")}`;
+  fx.fillStyle = "rgba(255,90,54,0.85)"; fx.fillRect(60, 60, fx.measureText(s).width + 28, 44);
+  fx.fillStyle = "#0f0c15"; fx.fillText(s, 74, 66);
+  fx.restore();
+}
+function phGlobe(f, mode) {
+  // wireframe orthographic globe; "lock" decelerates and stops with the Indian Ocean (lat 5.55, lon 95.32) in the centre
+  const s = f / FPS, Rg = 400, cx = W / 2, cy = H / 2;
+  let lon0, tilt = mode === "spin2" ? 0.42 : 0.18;
+  if (mode === "lock") { const L = R.lock.lock + R.lock.in, u = clamp(s / L); lon0 = 95.32 - 160 * Math.pow(1 - u, 2.2); tilt = lerp(0.3, 5.55 * Math.PI / 180, easeOut(u)); }
+  else lon0 = (mode === "spin2" ? -40 + s * 34 : 10 + s * 22);
+  const g = fx.createRadialGradient(cx - 120, cy - 140, 40, cx, cy, Rg);
+  g.addColorStop(0, "#1d3a4a"); g.addColorStop(1, "#0a1520");
+  fx.fillStyle = "#07060b"; fx.fillRect(0, 0, W, H);
+  fx.fillStyle = g; fx.beginPath(); fx.arc(cx, cy, Rg, 0, Math.PI * 2); fx.fill();
+  const proj = (la, lo) => {
+    const a = la * Math.PI / 180, b = (lo - lon0) * Math.PI / 180;
+    const x = Math.cos(a) * Math.sin(b), y = Math.cos(tilt) * Math.sin(a) - Math.sin(tilt) * Math.cos(a) * Math.cos(b);
+    const z = Math.sin(tilt) * Math.sin(a) + Math.cos(tilt) * Math.cos(a) * Math.cos(b);
+    return [cx + Rg * x, cy - Rg * y, z];
+  };
+  fx.lineWidth = 1.5;
+  const line = (pts) => { fx.beginPath(); let on = false; for (const [x, y, z] of pts) { if (z > 0) { on ? fx.lineTo(x, y) : fx.moveTo(x, y); on = true; } else on = false; } fx.stroke(); };
+  fx.strokeStyle = "rgba(111,211,196,0.35)";
+  for (let lo = -180; lo < 180; lo += 20) line([...Array(61).keys()].map((i) => proj(-90 + i * 3, lo)));
+  for (let la = -60; la <= 60; la += 20) line([...Array(121).keys()].map((i) => proj(la, -180 + i * 3)));
+  for (const [la, lo, c] of [[37.58, 36.93, "#f2c14e"], [5.55, 95.32, "#6fd3c4"], [0, -150, "#ff5a36"]]) {
+    const [x, y, z] = proj(la, lo); if (z <= 0) continue;
+    fx.fillStyle = c; fx.beginPath(); fx.arc(x, y, 9, 0, Math.PI * 2); fx.fill();
+  }
+  fx.strokeStyle = "rgba(111,211,196,0.6)"; fx.lineWidth = 3; fx.beginPath(); fx.arc(cx, cy, Rg, 0, Math.PI * 2); fx.stroke();
+}
+function drawPlaceholder(r, f, t) {
+  const s = f / FPS;
+  fx.save();
+  if (r.clip.startsWith("globe")) phGlobe(f, r.id === "lock" || r.clip === "globe_lock_io" ? "lock" : r.clip === "globe_spin2" ? "spin2" : "spin");
+  else if (r.clip === "kahr_diorama") {
+    const sky = fx.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, "#1a2233"); sky.addColorStop(1, "#3a4252");
+    fx.fillStyle = sky; fx.fillRect(0, 0, W, H);
+    const dx = -s * 18;
+    fx.fillStyle = "#c9ccd6"; fx.fillRect(0, 760, W, 320);
+    const rng = mulberry32(77);
+    for (let i = 0; i < 9; i++) {
+      const bw = 150 + rng() * 140, bh = 180 + rng() * 260, bx = 80 + i * 205 + dx, by = 780 - bh;
+      fx.fillStyle = "#23283a"; fx.fillRect(bx, by, bw, bh);
+      fx.fillStyle = "#e6e9f0"; fx.fillRect(bx - 8, by - 14, bw + 16, 18);
+      for (let k = 0; k < 6; k++) { fx.fillStyle = rng() < 0.5 ? "#f2c14e" : "#2e3448"; fx.fillRect(bx + 20 + (k % 3) * (bw - 50) / 2.2, by + 30 + Math.floor(k / 3) * 70, 26, 34); }
+    }
+  } else if (r.clip === "fener_mini" || r.clip === "io_mini") {
+    const io = r.clip === "io_mini";
+    fx.fillStyle = io ? "#0b1a22" : "#1b1622"; fx.fillRect(0, 0, W, H);
+    const n = Math.floor(s * 2.2), cols = 8, rows = 5, cs = 130, ox = W / 2 - cols * cs / 2, oy = H / 2 - rows * cs / 2 + 40;
+    for (let i = 0; i < cols * rows; i++) {
+      const x = ox + (i % cols) * cs, y = oy + Math.floor(i / cols) * cs;
+      fx.strokeStyle = "rgba(236,228,210,0.18)"; fx.lineWidth = 2; fx.strokeRect(x + 4, y + 4, cs - 8, cs - 8);
+      if (io) {
+        const rot = Math.round(hash1(i * 3.1) * 4 + (i % 5 === n % 5 ? s * 4 : 0)) * Math.PI / 2;
+        fx.save(); fx.translate(x + cs / 2, y + cs / 2); fx.rotate(rot);
+        fx.strokeStyle = i < n * 3 ? "#6fd3c4" : "rgba(111,211,196,0.35)"; fx.lineWidth = 18;
+        fx.beginPath(); fx.moveTo(-cs / 2 + 6, 0); fx.lineTo(0, 0); fx.lineTo(0, cs / 2 - 6); fx.stroke(); fx.restore();
+      } else if (hash1(i * 7.7) < 0.12 * n) {
+        fx.fillStyle = ["#f2c14e", "#ff5a36", "#6fd3c4"][i % 3]; fx.fillRect(x + 20, y + 20, cs - 40, cs - 40);
+      }
+    }
+    if (!io) { const k = (s * 0.9) % 1; fx.fillStyle = "#ece4d2"; fx.fillRect(lerp(200, 1300, k), lerp(900, 420, k), 90, 90); }
+  } else if (r.clip === "menu_roles" || r.clip === "title") {
+    fx.fillStyle = "#0f0c15"; fx.fillRect(0, 0, W, H);
+    fx.font = "120px VT323"; fx.textAlign = "center"; fx.fillStyle = "#ece4d2"; fx.fillText("3PLAY", W / 2, 300);
+    const hov = s > 1.4 ? 1 : 0;
+    for (let i = 0; i < 2; i++) {
+      const x = W / 2 + (i ? 60 : -460), on = i === hov;
+      fx.fillStyle = on ? "rgba(242,193,78,0.25)" : "rgba(236,228,210,0.06)"; fx.fillRect(x, 470, 400, 260);
+      fx.strokeStyle = on ? "#f2c14e" : "rgba(236,228,210,0.3)"; fx.lineWidth = 4; fx.strokeRect(x, 470, 400, 260);
+      fx.font = "64px VT323"; fx.fillStyle = on ? "#f2c14e" : "#ece4d2"; fx.fillText(`ROL ${i + 1}`, x + 200, 620);
+    }
+  } else if (r.clip === "result_card") {
+    fx.fillStyle = "#0f0c15"; fx.fillRect(0, 0, W, H);
+    fx.fillStyle = "#1c1726"; fx.fillRect(460, 160, 1000, 760); fx.strokeStyle = "#f2c14e"; fx.lineWidth = 4; fx.strokeRect(460, 160, 1000, 760);
+    fx.font = "80px VT323"; fx.fillStyle = "#f2c14e"; fx.fillText("SONUÇ", 520, 270);
+    for (let i = 0; i < 5; i++) { fx.fillStyle = "rgba(236,228,210,0.25)"; fx.fillRect(520, 340 + i * 70, 880 - i * 90, 26); }
+    const line = "kapanış cümlesi yazılıyor...", n = clamp(Math.floor(s * 14), 0, line.length);
+    fx.font = "56px VT323"; fx.fillStyle = "#ece4d2"; fx.fillText(line.slice(0, n), 520, 840);
+  }
+  phLabel(r.clip, f);
+  fx.restore();
+}
+
+// ---------------------------------------------------------------- text: title cards (STACK PRESENTS style) and statements
+// title card: letter-by-letter glitch type-on, white-hot arrival, chroma split, block cursor, side rules.
+// The verb is amber, the closing "ET" is teal (Tahmin ET, Keşf-ET, Müdahale ET, Tercih ET, Fark ET).
+const AMB = { col: [255, 210, 120], glow: "255,150,50" }, COOL = { col: [150, 232, 220], glow: "60,200,190" };
+function drawCard(r, t, o = {}) {
+  const T0 = r.start, T1 = end(r);
+  if (t < T0 || t >= T1) return;
+  const px = o.px || 172, baseY = o.y || 990, step = o.step || 0.058;
+  const chars = [...r.text], et = r.text.lastIndexOf("ET"), split = et < 0 ? chars.length : et;   // no "ET": all amber
+  const out = o.noOut ? 0 : smooth(T1 - (o.outDur || 0.4), T1, t);
+  fx.save();
+  if (o.scrim) {
+    const a = smooth(T0 - 0.2, T0 + 0.3, t) * (1 - out) * o.scrim;
+    const g = fx.createLinearGradient(0, H - 460, 0, H); g.addColorStop(0, "rgba(4,3,8,0)"); g.addColorStop(1, `rgba(4,3,8,${a})`);
+    fx.fillStyle = g; fx.fillRect(0, H - 460, W, 460);
+  }
+  fx.font = `${px}px VT323`; fx.textBaseline = "alphabetic";
+  const track = px * 0.12, ws = chars.map((ch) => fx.measureText(ch).width + track);
+  let x0 = W / 2 - (ws.reduce((a, b) => a + b, 0) - track) / 2;
+  const xs = ws.map((w) => { const x = x0; x0 += w; return x; });
+  const spread = 1 + 0.5 * out * out;
+  let li = 0, gaps = 0, lastEnd = 0, shown = 0, lastT = T0;
+  const nLetters = chars.filter((c) => c !== " ").length;
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i]; if (ch === " ") { gaps++; continue; }
+    const ti = T0 + li * step + gaps * 0.12; li++; lastT = ti;
+    const a = t - ti; if (a < 0) continue;
+    const sty = i >= split ? COOL : AMB;
+    const x = W / 2 + (xs[i] - W / 2) * spread;
+    // calm (o.calm): no jitter, no chroma split, a slow soft arrival instead of the white-hot glitch
+    const g = o.calm ? 0 : clamp(1 - a / 0.16), f = frameOf(a);
+    const gx = g * 22 * (hash1(i * 13 + f * 7 + T0) - 0.5), gy = g * 10 * (hash1(i * 31 + f * 3 + T0) - 0.5);
+    const hot = o.calm ? 0.35 * clamp(1 - a / 0.5) : clamp(1 - a / 0.12), alpha = (1 - out) * (o.calm ? easeOut(a / 0.35) : f === 1 ? 0.35 : 1);
+    const c = sty.col.map((v) => Math.round(lerp(v, 255, hot)));
+    fx.globalCompositeOperation = o.calm ? "source-over" : "lighter";   // calm: a big label, no additive blow-out
+    fx.shadowColor = `rgba(${sty.glow},${(o.calm ? 0.55 : 0.9) * alpha})`; fx.shadowBlur = 28 + 40 * hot;
+    fx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${alpha})`; fx.fillText(ch, x + gx, baseY + gy);
+    fx.shadowBlur = 0;
+    if (g > 0) {
+      fx.fillStyle = `rgba(255,40,60,${0.7 * g * alpha})`; fx.fillText(ch, x + gx + 9 * g, baseY + gy);
+      fx.fillStyle = `rgba(40,200,255,${0.7 * g * alpha})`; fx.fillText(ch, x + gx - 9 * g, baseY + gy);
+    }
+    lastEnd = x + fx.measureText(ch).width; shown++;
+  }
+  const done = shown === nLetters;
+  const blinkOn = !done || Math.floor((t - lastT) * 3.2) % 2 === 0;
+  if (shown > 0 && blinkOn && out < 0.5 && !o.noCursor && !(o.cursorOff && t > o.cursorOff)) {
+    const cw = px * 0.36, chh = px * 0.62;
+    fx.globalCompositeOperation = "lighter";
+    fx.shadowColor = "rgba(111,211,196,0.9)"; fx.shadowBlur = 30;
+    fx.fillStyle = `rgba(236,240,235,${done ? 0.85 : 0.95})`;
+    fx.fillRect(lastEnd + px * 0.1, baseY - chh, cw, chh);
+    fx.shadowBlur = 0;
+  }
+  const ru = smooth(lastT + 0.15, lastT + 0.6, t) * (1 - out);
+  if (ru > 0) {
+    // symmetric: the same gap on both sides (with room for the block cursor on both when the card has one)
+    const L = (o.rule || 260) * ru, y = baseY - px * 0.3, gap = 40 + (o.noCursor ? 0 : px * 0.46);
+    const left = W / 2 + (xs[0] - W / 2) * spread, right = W / 2 + (xs[chars.length - 1] + fx.measureText(chars[chars.length - 1]).width - W / 2) * spread;
+    fx.globalCompositeOperation = "lighter";
+    fx.fillStyle = `rgba(236,228,210,${0.5 * ru})`;
+    fx.fillRect(left - gap - L, y, L, 2); fx.fillRect(right + gap, y, L, 2);
+  }
+  fx.restore();
+}
+// statement: smaller, fg colour, *highlight* in amber, fast type-on with a small cursor, fades out at the row end.
+function parseHL(text) { const a = []; let hl = false; for (const ch of text) { if (ch === "*") { hl = !hl; continue; } a.push({ ch, hl }); } return a; }
+function drawLine(r, t, o = {}) {
+  const T0 = r.start, T1 = end(r);
+  if (t < T0 || t >= T1) return;
+  const px = o.px || 80, y = o.y || 990, step = o.step || 0.032, hs = o.hlScale || 1;
+  const chars = parseHL(r.text);
+  const out = smooth(T1 - 0.45, T1, t);
+  fx.save();
+  if (o.scrim) {
+    const a = smooth(T0 - 0.2, T0 + 0.3, t) * (1 - out) * o.scrim;
+    const g = fx.createLinearGradient(0, H - 420, 0, H); g.addColorStop(0, "rgba(4,3,8,0)"); g.addColorStop(1, `rgba(4,3,8,${a})`);
+    fx.fillStyle = g; fx.fillRect(0, H - 420, W, 420);
+  }
+  fx.textBaseline = "alphabetic";
+  const track = px * 0.04;
+  const ws = chars.map((c) => { fx.font = `${c.hl ? px * hs : px}px VT323`; return fx.measureText(c.ch).width + track; });
+  let x0 = W / 2 - (ws.reduce((a, b) => a + b, 0) - track) / 2;
+  const xs = ws.map((w) => { const x = x0; x0 += w; return x; });
+  const yy = y - 10 * out;
+  let lastEnd = xs[0], shown = 0, lastT = T0;
+  for (let i = 0; i < chars.length; i++) {
+    const { ch, hl } = chars[i];
+    const ti = T0 + i * step; lastT = ti;
+    const a = t - ti; if (a < 0 || ch === " ") { if (a >= 0) { lastEnd = xs[i] + ws[i] - track; shown++; } continue; }
+    const g = clamp(1 - a / 0.1), f = frameOf(a), hot = clamp(1 - a / 0.1);
+    const alpha = (1 - out) * (f === 0 ? 0.4 : 1);
+    let glyph = ch;
+    if (hl && /[0-9]/.test(ch) && a < 0.45) glyph = String(Math.floor(hash1(f * 3.7 + i) * 10));   // slot-roll digits
+    fx.font = `${hl ? px * hs : px}px VT323`;
+    const base = hl ? PAL.amber : PAL.fg;
+    const c = base.map((v) => Math.round(lerp(v, 255, hot)));
+    const gx = g * 12 * (hash1(i * 17 + f * 5 + T0) - 0.5);
+    fx.globalCompositeOperation = "lighter";
+    fx.shadowColor = hl ? `rgba(255,150,50,${0.75 * alpha})` : `rgba(236,200,150,${0.35 * alpha})`; fx.shadowBlur = hl ? 26 : 16;
+    fx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${alpha})`; fx.fillText(glyph, xs[i] + gx, yy);
+    fx.shadowBlur = 0;
+    if (g > 0) { fx.fillStyle = `rgba(255,40,60,${0.5 * g * alpha})`; fx.fillText(glyph, xs[i] + gx + 5 * g, yy); }
+    lastEnd = xs[i] + ws[i] - track; shown++;
+  }
+  const done = shown === chars.length;
+  if (shown > 0 && out < 0.3 && (!done || Math.floor((t - lastT) * 3.2) % 2 === 0) && !(done && t - lastT > (o.cursorHold ?? 1.0))) {
+    fx.globalCompositeOperation = "lighter";
+    fx.fillStyle = "rgba(236,228,210,0.8)"; fx.shadowColor = "rgba(236,200,150,0.6)"; fx.shadowBlur = 14;
+    fx.fillRect(lastEnd + px * 0.08, yy - px * 0.58, px * 0.32, px * 0.58);
+  }
+  fx.restore();
+}
+
+// ---------------------------------------------------------------- step 5 / 13: darkness with a heartbeat glow and a faint voice echo
+function heartEnv(t) { let e = 0; for (const [b, a] of HEART) if (t >= b) e += a * smooth(0, 0.04, t - b) * Math.exp(-(t - b) * 5.5); return e; }
+function drawDark(t) {
+  const e = heartEnv(t);
+  if (e > 0.003) {
+    const g = fx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, 1050);
+    g.addColorStop(0, `rgba(255,90,54,${0.13 * e})`); g.addColorStop(0.45, `rgba(120,30,40,${0.07 * e})`); g.addColorStop(1, "rgba(0,0,0,0)");
+    fx.fillStyle = g; fx.fillRect(0, 0, W, H);
+  }
+  // the echoing voice: three faint rings, each one later and weaker
+  for (let k = 0; k < 3; k++) {
+    const t0 = VOICE.t + k * 0.38, p = (t - t0) / 1.6;
+    if (p <= 0 || p >= 1) continue;
+    fx.strokeStyle = `rgba(236,228,210,${0.06 * (1 - p) * (1 - k * 0.3)})`; fx.lineWidth = 2;
+    fx.beginPath(); fx.arc(W / 2, H / 2, 30 + 1000 * Math.pow(p, 0.7), 0, Math.PI * 2); fx.stroke();
+  }
+}
+
+// ---------------------------------------------------------------- the darkness opens: an eye-shaped tear of light (rhymes with the intro's push into the eye)
+function lensPath(hw, hh) {
+  fx.beginPath();
+  fx.moveTo(W / 2 - hw, H / 2); fx.quadraticCurveTo(W / 2, H / 2 - 2 * hh, W / 2 + hw, H / 2);
+  fx.quadraticCurveTo(W / 2, H / 2 + 2 * hh, W / 2 - hw, H / 2); fx.closePath();
+}
+function eyeOpen(t, t0, dur, draw) {
+  const u = (t - t0) / dur;
+  if (u >= 1.05) { draw(1); return; }
+  const slit = easeOut(clamp(u / 0.28));                  // point of light stretches to a line
+  const op = Math.pow(smooth(0.18, 1, u), 1.6);           // the lids part
+  const hw = lerp(10, 1500, slit) + 1300 * op, hh = lerp(1.5, 940, op);
+  if (op > 0) { fx.save(); lensPath(hw, hh); fx.clip(); draw(op); fx.restore(); }
+  // glowing lid edges (bloom picks them up), fading as the eye opens fully
+  const ga = clamp(slit * 1.4) * (1 - smooth(0.55, 1, u));
+  if (ga > 0) {
+    fx.save(); fx.globalCompositeOperation = "lighter";
+    for (const [w, a] of [[26, 0.10], [10, 0.28], [3, 0.95]]) {
+      fx.lineWidth = w; fx.strokeStyle = `rgba(255,214,150,${a * ga})`; lensPath(hw, hh); fx.stroke();
+    }
+    const g = fx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, 520);
+    g.addColorStop(0, `rgba(255,236,200,${0.55 * ga * (1 - op)})`); g.addColorStop(1, "rgba(255,200,140,0)");
+    fx.fillStyle = g; fx.fillRect(0, 0, W, H);
+    fx.restore();
+  }
+}
+
+// ---------------------------------------------------------------- snow over the diorama (three depths, seeded)
+const SNOW = (() => { const r = mulberry32(911), a = []; for (let i = 0; i < 300; i++) a.push({ x: r() * (W + 300), y: r() * (H + 100), z: r(), ph: r() * 6.28, f: 0.6 + r() }); return a; })();
+function drawSnow(t, alpha) {
+  fx.save();
+  for (const s of SNOW) {
+    const z = s.z, sz = 1.4 + z * z * 7, sp = 50 + z * 190;
+    const y = ((s.y + sp * t) % (H + 100)) - 50;
+    const x = ((s.x - 40 * z * t + 26 * z * Math.sin(t * s.f + s.ph)) % (W + 300) + W + 300) % (W + 300) - 150;
+    if (z > 0.9) {                                       // near flakes: soft and big
+      const g = fx.createRadialGradient(x, y, 0, x, y, sz * 2.2);
+      g.addColorStop(0, `rgba(236,236,245,${0.30 * alpha})`); g.addColorStop(1, "rgba(236,236,245,0)");
+      fx.fillStyle = g; fx.fillRect(x - sz * 2.2, y - sz * 2.2, sz * 4.4, sz * 4.4);
+    } else {
+      fx.fillStyle = `rgba(236,236,245,${(0.25 + 0.6 * z) * alpha})`;
+      fx.beginPath(); fx.arc(x, y, sz * 0.5, 0, Math.PI * 2); fx.fill();
+    }
+  }
+  fx.restore();
+}
+// small place caption (top left), typed
+function drawCaption(t, t0, t1, lines, y0 = 92) {   // y0: top of the amber bar (top left by default)
+  if (t < t0 || t >= t1) return;
+  const a = 1 - smooth(t1 - 0.4, t1, t);
+  fx.save(); fx.textBaseline = "alphabetic";
+  const rl = easeOut((t - t0) / 0.4);
+  fx.fillStyle = `rgba(242,193,78,${0.8 * a})`; fx.fillRect(96, y0, 4, 112 * rl);
+  lines.forEach(([s, px, col], k) => {
+    const n = clamp(Math.floor((t - t0 - 0.15 - k * 0.35) / 0.03), 0, s.length);
+    fx.font = `${px}px VT323`; fx.fillStyle = rgba(col, 0.92 * a);
+    fx.shadowColor = "rgba(0,0,0,0.8)"; fx.shadowBlur = 12;
+    fx.fillText([...s].slice(0, n).join(""), 124, y0 + 48 + k * 54);
+  });
+  fx.restore();
+}
+
+// ---------------------------------------------------------------- step 10: targeting reticle over the globe lock + zoom
+function lockState(t) {
+  const r = R.lock, u = t - r.start;
+  const z = clamp((u - r.zoom) / (r.len - r.zoom));
+  return { u, z, zoom: Math.exp(Math.log(10) * easeIn(z)), locked: u >= r.lock };
+}
+function drawReticle(t) {
+  const r = R.lock, S = lockState(t), u = S.u;
+  if (u < 0.05 || u >= r.len) return;
+  const [cx, cy] = r.target;
+  const conv = easeOut((u - 0.05) / (r.lock - 0.05));
+  const snap = S.locked ? easeOutBack((u - r.lock) / 0.28) : 0;
+  const zo = easeIn(S.z);
+  const appear = smooth(0.05, 0.35, u), fade = 1 - smooth(0.35, 0.9, S.z);
+  const A = appear * fade; if (A <= 0) return;
+  const flash = S.locked ? Math.exp(-(u - r.lock) * 9) : 0;
+  const col = S.locked ? [lerp(255, 255, 0), lerp(90, 255, flash), lerp(54, 255, flash)] : PAL.cool;
+  const C = (a) => rgba(col.map(Math.round), a * A);
+  let hw = lerp(860, 170, conv), hh = lerp(470, 170, conv);
+  hw -= 40 * snap; hh -= 40 * snap;
+  hw *= 1 + 9 * zo; hh *= 1 + 9 * zo;
+  fx.save();
+  fx.globalCompositeOperation = "lighter";
+  fx.shadowColor = C(0.9); fx.shadowBlur = 18;
+  // corner brackets
+  const L = 54; fx.lineWidth = 4; fx.strokeStyle = C(0.95);
+  for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+    const x = cx + sx * hw, y = cy + sy * hh;
+    fx.beginPath(); fx.moveTo(x, y - sy * L); fx.lineTo(x, y); fx.lineTo(x - sx * L, y); fx.stroke();
+  }
+  const rr = lerp(330, 118, conv) * (1 - 0.12 * snap) * (1 + 6 * zo);
+  const full = (r.hud || "full") === "full";
+  if (!full) {                                         // the game draws its own crosshair + readout: brackets and lock pulse only
+    if (S.locked) {
+      const p = clamp((u - r.lock) / 0.6);
+      fx.lineWidth = 3; fx.strokeStyle = rgba(PAL.hot, (1 - p) * 0.9 * A);
+      fx.beginPath(); fx.arc(cx, cy, 90 + 260 * easeOut(p), 0, Math.PI * 2); fx.stroke();
+    }
+    fx.restore(); return;
+  }
+  // rotating dashed ring + inner ring
+  fx.lineWidth = 2; fx.strokeStyle = C(0.7);
+  fx.setLineDash([18, 14]); fx.lineDashOffset = -u * (S.locked ? 40 : 160);
+  fx.beginPath(); fx.arc(cx, cy, rr, 0, Math.PI * 2); fx.stroke();
+  fx.setLineDash([]);
+  fx.lineWidth = 2; fx.strokeStyle = C(0.5);
+  fx.beginPath(); fx.arc(cx, cy, rr * 0.55, u * 2.2, u * 2.2 + Math.PI * 1.3); fx.stroke();
+  // crosshair with a gap; long hairlines to the screen edges with ticks
+  fx.shadowBlur = 0; fx.lineWidth = 1.5; fx.strokeStyle = C(0.32);
+  fx.beginPath(); fx.moveTo(0, cy); fx.lineTo(cx - rr - 12, cy); fx.moveTo(cx + rr + 12, cy); fx.lineTo(W, cy);
+  fx.moveTo(cx, 0); fx.lineTo(cx, cy - rr - 12); fx.moveTo(cx, cy + rr + 12); fx.lineTo(cx, H); fx.stroke();
+  fx.fillStyle = C(0.4);
+  for (let k = -24; k <= 24; k++) { const x = cx + k * 40; if (Math.abs(x - cx) > rr + 20) fx.fillRect(x - 1, cy - (k % 5 ? 5 : 11), 2, k % 5 ? 10 : 22); }
+  for (let k = -14; k <= 14; k++) { const y = cy + k * 40; if (Math.abs(y - cy) > rr + 20) fx.fillRect(cx - (k % 5 ? 5 : 11), y - 1, k % 5 ? 10 : 22, 2); }
+  fx.lineWidth = 3; fx.strokeStyle = C(0.95); fx.shadowBlur = 14; fx.shadowColor = C(0.9);
+  fx.beginPath(); fx.moveTo(cx - 26, cy); fx.lineTo(cx - 9, cy); fx.moveTo(cx + 9, cy); fx.lineTo(cx + 26, cy);
+  fx.moveTo(cx, cy - 26); fx.lineTo(cx, cy - 9); fx.moveTo(cx, cy + 9); fx.lineTo(cx, cy + 26); fx.stroke();
+  // lock pulse ring
+  if (S.locked) {
+    const p = clamp((u - r.lock) / 0.6);
+    fx.lineWidth = 3; fx.strokeStyle = rgba(PAL.hot, (1 - p) * 0.9 * A);
+    fx.beginPath(); fx.arc(cx, cy, rr + 160 * easeOut(p), 0, Math.PI * 2); fx.stroke();
+  }
+  // readout panel (right of the box)
+  fx.shadowBlur = 10; fx.textBaseline = "alphabetic";
+  const px0 = cx + Math.max(hw, rr) + 70, py0 = cy - 120, ra = A * (1 - smooth(0, 0.25, S.z));
+  const typed = (s, t0) => [...s].slice(0, clamp(Math.floor((u - t0) / 0.028), 0, 99)).join("");
+  const scan = (v, d) => (S.locked ? v : v + (hash1(frameOf(u) * 1.7 + d) - 0.5) * 60 * (1 - conv)).toFixed(2);
+  // dark backing panel so the readout stays legible over bright footage
+  fx.save(); fx.globalCompositeOperation = "source-over"; fx.shadowBlur = 0;
+  fx.fillStyle = `rgba(4,6,10,${0.62 * ra})`; fx.fillRect(px0 - 22, py0 - 48, 560, S.locked ? 268 : 268 * conv + 1);
+  fx.fillStyle = rgba(S.locked ? PAL.hot : PAL.cool, 0.9 * ra); fx.fillRect(px0 - 22, py0 - 48, 3, 268);
+  fx.restore();
+  fx.font = "40px VT323";
+  fx.fillStyle = rgba(S.locked ? PAL.hot : PAL.cool, ra);
+  fx.fillText(S.locked ? typed("HEDEF KİLİTLENDİ", r.lock) : typed("HEDEF ARANIYOR", 0.25) + (Math.floor(u * 4) % 2 ? "_" : ""), px0, py0);
+  fx.font = "56px VT323"; fx.fillStyle = rgba(PAL.fg, ra);
+  fx.fillText(`${scan(5.55, 1)}°K  ${scan(95.32, 2)}°D`, px0, py0 + 62);
+  if (S.locked) {
+    fx.font = "44px VT323"; fx.fillStyle = rgba(PAL.amber, ra);
+    fx.fillText(typed("HİNT OKYANUSU, ENDONEZYA", r.lock + 0.12), px0, py0 + 118);
+    fx.fillStyle = rgba(PAL.fg, 0.7 * ra); fx.fillText(typed("2004", r.lock + 0.5), px0, py0 + 166);
+  }
+  // signal bar
+  const sb = S.locked ? 1 : conv * (0.85 + 0.15 * hash1(frameOf(u)));
+  fx.fillStyle = rgba(PAL.fg, 0.25 * ra); fx.fillRect(px0, py0 + 196, 300, 8);
+  fx.fillStyle = rgba(S.locked ? PAL.hot : PAL.cool, ra); fx.fillRect(px0, py0 + 196, 300 * sb, 8);
+  fx.restore();
+}
+
+// ---------------------------------------------------------------- step 11: dark water behind "MÜDAHALE ET"
+function drawDeep(t) {
+  const r = R.c_mudahale, u = t - r.start;
+  const g = fx.createRadialGradient(W / 2, H / 2 + 60, 0, W / 2, H / 2 + 60, 1100);
+  g.addColorStop(0, "rgba(14,52,58,0.85)"); g.addColorStop(1, "rgba(3,6,9,1)");
+  fx.fillStyle = g; fx.fillRect(0, 0, W, H);
+  fx.save(); fx.globalCompositeOperation = "lighter"; fx.lineWidth = 2;
+  for (let k = 0; k < 9; k++) {
+    const y0 = 700 + k * 44, a = 0.07 * (1 - k / 10);
+    fx.strokeStyle = rgba(PAL.cool, a);
+    fx.beginPath();
+    for (let x = 0; x <= W; x += 24) { const y = y0 + 9 * Math.sin(x * 0.006 + u * 1.6 + k * 0.9) + 5 * Math.sin(x * 0.017 - u * 2.3 + k); x ? fx.lineTo(x, y) : fx.moveTo(x, y); }
+    fx.stroke();
+  }
+  fx.restore();
+}
+
+// ---------------------------------------------------------------- step 17: Easter bunny breaks out of an egg (software pixel art, 160x90 at 12x)
+const PW = 160, PH = 90;
+const pcv = document.createElement("canvas"); pcv.width = PW; pcv.height = PH;
+const pcx = pcv.getContext("2d");
+const pimg = pcx.createImageData(PW, PH), pb = new Uint32Array(pimg.data.buffer);
+const pk = (c) => ((255 << 24) | (c[2] << 16) | (c[1] << 8) | c[0]) >>> 0;
+const PC = {
+  out: pk([6, 4, 10]), eggL: pk([255, 250, 238]), egg: pk(PAL.fg), eggS: pk([196, 184, 166]), eggD: pk([150, 138, 128]),
+  amber: pk(PAL.amber), amberS: pk([196, 146, 52]), hot: pk(PAL.hot), cool: pk(PAL.cool), coolS: pk([70, 160, 150]),
+  fur: pk(PAL.fg), furS: pk([190, 180, 166]), pink: pk([244, 150, 128]), eye: pk(PAL.bg), shadow: pk([8, 6, 12]),
+};
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+const PBG = (() => {   // dithered spotlight on a dark stage, built once
+  const a = new Uint32Array(PW * PH), lv = [[9, 7, 13], [15, 12, 21], [26, 20, 36], [40, 31, 52], [58, 45, 70]].map(pk);
+  for (let y = 0; y < PH; y++) for (let x = 0; x < PW; x++) {
+    const floor = y >= 60;
+    let I = floor ? 1.25 * Math.exp(-(((x - 80) / 40) ** 2 + ((y - 61) / 7) ** 2)) : 0.95 * Math.exp(-(((x - 80) / (14 + (y) * 0.42)) ** 2)) * (0.35 + 0.65 * y / 60);
+    const v = I * 4 + BAYER[(y % 4) * 4 + (x % 4)] / 16 - 0.5 + 0.25;
+    a[y * PW + x] = lv[clamp(Math.round(v), 0, 4)];
+  }
+  return a;
+})();
+const EG = { cx: 80, cy: 45, rx: 11, ry: 14 };
+const ZIG = [0, -1, -2, -1, 0, 1, 2, 1];
+const crackY = (x) => -2 + ZIG[(x + 16) % 8];          // x relative to the egg centre
+function inEgg(x, y) { const dy = y / EG.ry; if (Math.abs(dy) > 1) return false; const rx = EG.rx * (dy < 0 ? 1 + 0.2 * dy : 1 - 0.04 * dy * dy); return (x / rx) ** 2 + dy * dy <= 1.0; }
+function eggColor(x, y) {
+  const dy = y / EG.ry;
+  if (y === 3 + (ZIG[(x + 16) % 8] > 0 ? 1 : 0) - (ZIG[(x + 16) % 8] < 0 ? 1 : 0)) return PC.hot;        // zigzag band
+  if (y >= 6 && y <= 7) return x / EG.rx > 0.45 ? PC.amberS : PC.amber;
+  if ((y === -7 || y === -6) && [-5, -4, 0, 1, 5, 6].includes(x) && x !== 6) return PC.cool;          // dots
+  if ((y === 10 || y === 11) && [-5, -4, 3, 4].includes(x)) return PC.cool;
+  if (x >= -6 && x <= -5 && y >= -10 && y <= -8) return PC.eggL;                                       // highlight
+  const sh = (x / EG.rx) * 0.55 + dy * 0.35;
+  return sh > 0.62 ? PC.eggD : sh > 0.3 ? PC.eggS : PC.egg;
+}
+const LAYER = new Uint32Array(PW * PH);
+function stamp() {                       // composite LAYER with a 1px dark outline, then clear it
+  for (let y = 0; y < PH; y++) for (let x = 0; x < PW; x++) {
+    const i = y * PW + x;
+    if (LAYER[i]) { pb[i] = LAYER[i]; continue; }
+    if ((x > 0 && LAYER[i - 1]) || (x < PW - 1 && LAYER[i + 1]) || (y > 0 && LAYER[i - PW]) || (y < PH - 1 && LAYER[i + PW])) pb[i] = PC.out;
+  }
+  LAYER.fill(0);
+}
+const lput = (x, y, c) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && x < PW && y >= 0 && y < PH) LAYER[y * PW + x] = c; };
+const SPARK = (() => { const r = mulberry32(5150), a = []; for (let i = 0; i < 16; i++) { const an = -Math.PI * (0.1 + 0.8 * r()); a.push({ vx: Math.cos(an) * (20 + 34 * r()), vy: Math.sin(an) * (34 + 30 * r()), c: [PC.amber, PC.cool, PC.eggL, PC.hot][i % 4], big: r() < 0.35 }); } return a; })();
+const STARS = [[46, 20], [118, 16], [36, 44], [126, 40], [58, 10], [104, 30]];
+function plus(x, y, c, big) { const P = big ? [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]] : [[0, 0]]; for (const [a, b] of P) { const xx = Math.round(x) + a, yy = Math.round(y) + b; if (xx >= 0 && xx < PW && yy >= 0 && yy < PH) pb[yy * PW + xx] = c; } }
+function bunnyTime(t) {                    // row time -> scene time: the cracking sped up so each crack meets the sound's
+  const ur = t - R.bunny.start, b = eggBurstAt();   // (which plays at normal speed), the bunny at normal speed
+  const K = [[0, 0], [b - (EGG_SND.burst - EGG_SND.c1), 0.55], [b - (EGG_SND.burst - EGG_SND.c2), 1.0], [b, EGG_BURST]];
+  if (ur >= b) return EGG_BURST + (ur - b);
+  for (let i = 1; i < K.length; i++) if (ur < K[i][0]) return K[i - 1][1] + (K[i][1] - K[i - 1][1]) * (ur - K[i - 1][0]) / (K[i][0] - K[i - 1][0]);
+  return EGG_BURST;
+}
+function drawBunnyScene(t) {
+  const u = bunnyTime(t);
+  const f = frameOf(t - R.bunny.start);
+  pb.set(PBG);
+  const { cx, cy, ry } = EG;
+  const T_C1 = 0.55, T_C2 = 1.0, T_BURST = EGG_BURST;
+  // wobble: rows shear around the base (pixel steps)
+  let wob = 0;
+  if (u > 0.3 && u < 0.8) wob = Math.sin((u - 0.3) * Math.PI * 2 * 2.6) * 1.6 * Math.sin((u - 0.3) / 0.5 * Math.PI);
+  if (u > 0.85 && u < T_BURST) wob = Math.sin((u - 0.85) * Math.PI * 2 * 3.4) * 2.6 * Math.sin((u - 0.85) / (T_BURST - 0.85) * Math.PI);
+  const shear = (y) => Math.round(wob * (ry - y) / (2 * ry));
+  // ground shadow
+  for (let x = -15; x <= 15; x++) for (let y = -2; y <= 2; y++) {
+    const d = (x / 15) ** 2 + (y / 2.2) ** 2;
+    if (d <= 1 && (d < 0.45 || (x + y) % 2 === 0)) pb[(cy + ry + 1 + y) * PW + cx + x] = PC.shadow;
+  }
+  const burst = u >= T_BURST, bu = u - T_BURST;
+  // bunny (behind the lower shell)
+  if (burst) {
+    const rise = easeOutBack((bu - 0.1) / 0.32);
+    const bob = u > 2.0 ? Math.round(Math.sin((u - 2.0) * Math.PI * 2 * 0.9) * 0.6) : 0;
+    const hy = Math.round(lerp(6, -7, rise)) + bob;        // head centre (relative to egg centre)
+    const earL = Math.round(11 * easeOutBack((bu - 0.22) / 0.35));
+    const twitch = u > 2.6 && u < 2.85 ? 1 : 0;
+    for (const side of [-1, 1]) {
+      const ex = side < 0 ? -4 : 2;
+      for (let k = 0; k < earL; k++) {
+        const lean = Math.round(k * 0.22) * side + (side > 0 && k > earL - 5 ? twitch : 0);
+        for (let w = 0; w < 3; w++) lput(cx + ex + w + lean, cy + hy - 5 - k, w === 1 && k > 1 && k < earL - 2 ? PC.pink : (w === 2 ? PC.furS : PC.fur));
+      }
+    }
+    for (let y = -6; y <= 6; y++) for (let x = -8; x <= 8; x++) {
+      if ((x / 7.6) ** 2 + (y / 6.2) ** 2 > 1) continue;
+      lput(cx + x, cy + hy + y, x > 3 || y > 4 ? PC.furS : PC.fur);
+    }
+    const blink = (u > 2.3 && u < 2.38) || (u > 3.05 && u < 3.12);
+    for (const ex of [-4, 2]) {
+      if (blink) { lput(cx + ex, cy + hy, PC.eye); lput(cx + ex + 1, cy + hy, PC.eye); }
+      else { lput(cx + ex, cy + hy - 1, PC.eggL); lput(cx + ex + 1, cy + hy - 1, PC.eye); lput(cx + ex, cy + hy, PC.eye); lput(cx + ex + 1, cy + hy, PC.eye); }
+    }
+    lput(cx - 1, cy + hy + 2, PC.hot); lput(cx, cy + hy + 2, PC.hot);
+    lput(cx - 6, cy + hy + 2, PC.pink); lput(cx + 5, cy + hy + 2, PC.pink);
+    stamp();
+  }
+  // egg (whole before the burst, lower shell after); cracks drawn into it
+  const crackW = u >= T_C2 ? 12 : u >= T_C1 ? 3 + Math.round(4 * easeOut((u - T_C1) / 0.2)) : -1;
+  for (let y = -ry; y <= ry; y++) for (let x = -EG.rx; x <= EG.rx; x++) {
+    if (!inEgg(x, y)) continue;
+    if (burst && y < crackY(x) + 1) continue;
+    let c = eggColor(x, y);
+    if (!burst && Math.abs(x) <= crackW && (y === crackY(x) || (y === crackY(x) + 1 && (x & 1)))) c = PC.out;
+    lput(cx + x + shear(y), cy + y, c);
+  }
+  stamp();
+  if (burst) {
+    // paws on the rim
+    if (bu > 0.3) { for (const px of [-7, 5]) for (let w = 0; w < 3; w++) { lput(cx + px + w, cy + crackY(px + w) - 1, PC.fur); lput(cx + px + w, cy + crackY(px + w), PC.fur); } stamp(); }
+    // flying top shell: ballistic arc, lands upside-down on the ground to the right
+    const FL = 0.6, p = clamp(bu / FL), bounce = bu > FL ? Math.round(2 * Math.abs(Math.sin((bu - FL) * 9)) * Math.exp(-(bu - FL) * 5)) : 0;
+    const ox = 30 * Math.pow(p, 0.7), oy = lerp(-8, 8, p) - 46 * p * (1 - p) - bounce, th = Math.PI * easeOut(p);
+    const c0 = Math.cos(th), s0 = Math.sin(th);
+    for (let y = -16; y <= 16; y++) for (let x = -16; x <= 16; x++) {
+      const sx = Math.round(c0 * x + s0 * y), sy = Math.round(-s0 * x + c0 * y) - 8;   // inverse rotate into shell space
+      if (!inEgg(sx, sy) || sy >= crackY(sx) + 1) continue;
+      lput(cx + ox + x, cy + oy + y, eggColor(sx, sy));
+    }
+    stamp();
+    // pop: a ring of light pixels for a few frames
+    if (bu < 0.2) {
+      const rr = 6 + 70 * bu, n = 28;
+      for (let k = 0; k < n; k++) if ((k + f) % 3) plus(cx + Math.cos(k / n * 6.283) * rr * 1.2, cy - 3 + Math.sin(k / n * 6.283) * rr * 0.8, k % 2 ? PC.amber : PC.eggL, false);
+    }
+    // sparkles from the burst, then idle twinkles
+    for (const [i, s] of SPARK.entries()) {
+      const L = 0.9; if (bu > L) break;
+      if (hash1(i * 9.1 + f * 0.37) < 0.22) continue;
+      plus(cx + s.vx * bu, cy - 3 + s.vy * bu + 55 * bu * bu, s.c, s.big && bu < 0.5);
+    }
+    STARS.forEach(([x, y], i) => {
+      const ph = Math.floor((u * 6 + i * 1.7)) % 6;
+      if (bu > 0.5 + i * 0.12 && ph < 3) plus(x, y, i % 2 ? PC.amber : PC.cool, ph === 1);
+    });
+  }
+  pcx.putImageData(pimg, 0, 0);
+  fx.save(); fx.imageSmoothingEnabled = false; fx.drawImage(pcv, 0, 0, W, H); fx.restore();
+}
+
+// ---------------------------------------------------------------- step 19: the "AAA" gag on a calm dark stage, then the game's logo lands
+function drawStage(t) {
+  const g = fx.createRadialGradient(W / 2, H / 2 - 40, 0, W / 2, H / 2 - 40, 1150);
+  g.addColorStop(0, "rgba(28,22,40,1)"); g.addColorStop(0.55, "rgba(14,11,20,1)"); g.addColorStop(1, "rgba(4,3,7,1)");
+  fx.fillStyle = g; fx.fillRect(0, 0, W, H);
+  // a few slow motes of dust in the light, seeded
+  fx.save(); fx.globalCompositeOperation = "lighter";
+  const rng = mulberry32(4242);
+  for (let i = 0; i < 46; i++) {
+    const x = rng() * W, y0 = rng() * H, sp = 6 + rng() * 14, z = rng();
+    const y = ((y0 - sp * t) % H + H) % H;
+    fx.fillStyle = `rgba(236,228,210,${0.05 + 0.08 * z})`;
+    fx.fillRect(x + 10 * Math.sin(t * 0.4 + i), y, 2 + 2 * z, 2 + 2 * z);
+  }
+  fx.restore();
+}
+// "3play" as the game draws it (ui/logo.tscn): VT323, light main face, red copy shifted left, blue copy right
+const LOGO = { text: "3play", px: 300, y: 600, main: [230, 232, 240], red: [255, 90, 60], blue: [159, 216, 255] };
+const AAA = { px: 300, y: 600 };           // "AAA" sits where "3play" lands: same size, same baseline
+// the small "GAME" under "AAA" and, unchanged, under "3play" (teal, like the cards' "ET")
+const GAME = { text: "GAME", px: 64, y: 748, track: 0.55 };
+function drawGame(t) {
+  const t0 = R.c_aaa.start + 0.3, t1 = end(R.logo);
+  if (t < t0 || t >= t1) return;
+  const a = smooth(t0, t0 + 0.35, t) * (1 - smooth(t1 - 0.3, t1, t));
+  fx.save();
+  fx.font = `${GAME.px}px VT323`; fx.textBaseline = "alphabetic";
+  const ch = [...GAME.text], tr = GAME.px * GAME.track, ws = ch.map((c) => fx.measureText(c).width);
+  let x = W / 2 - (ws.reduce((p, q) => p + q, 0) + tr * (ch.length - 1)) / 2;
+  fx.shadowColor = `rgba(60,200,190,${0.6 * a})`; fx.shadowBlur = 18;
+  fx.fillStyle = rgba(COOL.col, 0.95 * a);
+  ch.forEach((c, i) => { fx.fillText(c, x, GAME.y); x += ws[i] + tr; });
+  fx.restore();
+}
+function drawLogo(t) {
+  const r = R.logo, u = t - r.start;
+  if (u < 0 || t >= end(r)) return;
+  const land = easeOut(u / 0.24), out = smooth(end(r) - 0.3, end(r), t);
+  const sc = lerp(1.32, 1, land) * (1 + 0.025 * Math.exp(-Math.max(0, u - 0.24) * 9) * Math.sin(Math.max(0, u - 0.24) * 30)) * (1 + 0.04 * out);
+  const a = clamp(u / 0.08) * (1 - out);
+  const split = lerp(34, 9, easeOut(u / 0.4));
+  fx.save();
+  fx.translate(W / 2, LOGO.y - LOGO.px * 0.3); fx.scale(sc, sc); fx.translate(-W / 2, -(LOGO.y - LOGO.px * 0.3));
+  fx.font = `${LOGO.px}px VT323`; fx.textAlign = "center"; fx.textBaseline = "alphabetic";
+  fx.fillStyle = `rgba(0,0,0,${0.55 * a})`; fx.fillText(LOGO.text, W / 2 + 10, LOGO.y + 12);     // drop shadow
+  fx.globalCompositeOperation = "lighter";
+  fx.fillStyle = rgba(LOGO.red, 0.85 * a); fx.fillText(LOGO.text, W / 2 - split, LOGO.y);
+  fx.fillStyle = rgba(LOGO.blue, 0.85 * a); fx.fillText(LOGO.text, W / 2 + split, LOGO.y);
+  fx.globalCompositeOperation = "source-over";
+  fx.shadowColor = `rgba(200,220,255,${0.6 * a})`; fx.shadowBlur = 40 + 60 * Math.exp(-u * 5);
+  const hot = Math.exp(-u * 6);
+  fx.fillStyle = rgba(LOGO.main.map((v) => Math.round(lerp(v, 255, hot))), a); fx.fillText(LOGO.text, W / 2, LOGO.y);
+  fx.restore();
+  // side rules settle in after the landing, like the title cards
+  const ru = smooth(0.3, 0.8, u) * (1 - out);
+  if (ru > 0) {
+    fx.save(); fx.globalCompositeOperation = "lighter";
+    fx.font = `${LOGO.px}px VT323`; const hw = fx.measureText(LOGO.text).width / 2 + 60, L = 300 * ru, y = LOGO.y - LOGO.px * 0.3;
+    fx.fillStyle = `rgba(236,228,210,${0.5 * ru})`; fx.fillRect(W / 2 - hw - L, y, L, 2); fx.fillRect(W / 2 + hw, y, L, 2);
+    fx.restore();
+  }
+}
+
+// ---------------------------------------------------------------- the music credit (CREDIT): drawn on `ov`, returns its opacity
+function drawCredit(t) {
+  const a = t >= CREDIT.start ? clamp((t - CREDIT.start) / CREDIT.fade) : 0;   // a linear fade-in
+  ox.setTransform(1, 0, 0, 1, 0, 0); ox.clearRect(0, 0, W, H);
+  if (a <= 0) return 0;
+  ox.font = `${CREDIT.px}px VT323`; ox.textAlign = "center"; ox.textBaseline = "alphabetic";
+  const w = Math.max(...CREDIT.lines.map((l) => ox.measureText(l).width));
+  const [y0, y1] = CREDIT.band, x0 = Math.round(W / 2 - w / 2 - CREDIT.padX), x1 = Math.round(W / 2 + w / 2 + CREDIT.padX);
+  ox.globalAlpha = a;
+  ox.fillStyle = `rgba(0,0,0,${CREDIT.bandA})`; ox.fillRect(x0, y0, x1 - x0, y1 - y0);
+  // the lines are drawn SS times larger and scaled down: plain coverage edges, without the glyph dilation that the
+  // browser applies to small text (they would read heavier than the reference credit)
+  const SS = 4, top = y0, tw = x1 - x0, th = y1 - y0;
+  if (!drawCredit.c) { drawCredit.c = document.createElement("canvas"); drawCredit.c.width = W * SS; drawCredit.c.height = th * SS; }
+  const cc = drawCredit.c, cx = cc.getContext("2d");
+  cx.setTransform(1, 0, 0, 1, 0, 0); cx.clearRect(0, 0, cc.width, cc.height);
+  cx.font = `${CREDIT.px * SS}px VT323`; cx.textAlign = "center"; cx.textBaseline = "alphabetic"; cx.fillStyle = CREDIT.col;
+  CREDIT.lines.forEach((l, i) => cx.fillText(l, W / 2 * SS, (CREDIT.base + i * CREDIT.lh - top) * SS));
+  cx.globalCompositeOperation = "destination-out"; cx.lineWidth = CREDIT.thin * 2 * SS; cx.strokeStyle = "#000";   // thinner strokes
+  CREDIT.lines.forEach((l, i) => cx.strokeText(l, W / 2 * SS, (CREDIT.base + i * CREDIT.lh - top) * SS));
+  cx.globalCompositeOperation = "source-over";
+  ox.imageSmoothingEnabled = true; ox.imageSmoothingQuality = "high";
+  ox.drawImage(cc, x0 * SS, 0, tw * SS, th * SS, x0, top, tw, th);
+  ox.globalAlpha = 1;
+  return a;
+}
+
+// ---------------------------------------------------------------- WebGL post (bloom, CA, zoom blur, glitch, pixelate, CRT off, grain, vignette)
+const gl = out.getContext("webgl", { preserveDrawingBuffer: true, antialias: false, premultipliedAlpha: false });
+const VS = "attribute vec2 p; varying vec2 v; void main(){ v = p * 0.5 + 0.5; gl_Position = vec4(p, 0.0, 1.0); }";
+const COMMON = `precision highp float; varying vec2 v;
+float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+`;
+const FS_BRIGHT = COMMON + `
+uniform sampler2D uSrc; uniform vec2 uTexel; uniform float uThr;
+void main(){
+  vec3 c = vec3(0.0);
+  for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) c += texture2D(uSrc, v + vec2(float(x), float(y)) * uTexel).rgb;
+  c /= 9.0;
+  float l = dot(c, vec3(0.3, 0.59, 0.11));
+  gl_FragColor = vec4(c * smoothstep(uThr, uThr + 0.25, l), 1.0);
+}`;
+const FS_BLUR = COMMON + `
+uniform sampler2D uSrc; uniform vec2 uDir;
+void main(){
+  vec3 c = texture2D(uSrc, v).rgb * 0.2270270;
+  c += (texture2D(uSrc, v + uDir * 1.3846153).rgb + texture2D(uSrc, v - uDir * 1.3846153).rgb) * 0.3162162;
+  c += (texture2D(uSrc, v + uDir * 3.2307692).rgb + texture2D(uSrc, v - uDir * 3.2307692).rgb) * 0.0702702;
+  gl_FragColor = vec4(c, 1.0);
+}`;
+const FS_FINAL = COMMON + `
+uniform sampler2D uScene, uB1, uB2, uOver; uniform vec2 uShake, uZC; uniform vec3 uFlashCol;
+uniform float uCA, uZoomBlur, uFade, uFrame, uGlitch, uPix, uCRT, uFlash, uBloom, uVig, uOverOn;
+void main(){
+  vec2 uv = v;
+  // CRT power-off: squeeze to a horizontal line, then to a dot
+  float sy = mix(1.0, 0.0035, smoothstep(0.0, 0.5, uCRT)), sx = mix(1.0, 0.002, smoothstep(0.45, 0.85, uCRT));
+  vec2 dd = max(abs(uv - 0.5) - 0.5 * vec2(sx, sy), 0.0);
+  float inside = step(length(dd), 0.0);
+  float crtGlow = uCRT > 0.0 ? exp(-length(dd * vec2(1.7778, 1.0)) * 70.0) * smoothstep(0.15, 0.5, uCRT) * (1.0 - smoothstep(0.85, 1.0, uCRT)) : 0.0;
+  if (uCRT > 0.0) uv = (uv - 0.5) / vec2(sx, sy) + 0.5;
+  if (uPix > 1.0) { vec2 res = vec2(1920.0, 1080.0) / uPix; uv = (floor(uv * res) + 0.5) / res; }
+  if (uGlitch > 0.0) {
+    float row = floor(uv.y * 23.0 + hash(vec2(uFrame, 3.0)) * 7.0);
+    if (hash(vec2(row, uFrame)) > 0.5) uv.x += (hash(vec2(row * 1.3, uFrame + 7.0)) - 0.5) * 0.14 * uGlitch;
+  }
+  uv += uShake;
+  vec2 d = uv - uZC;
+  vec2 o = (uv - 0.5) * uCA + vec2(0.011 * uGlitch, 0.0);
+  vec3 col;
+  if (uZoomBlur > 0.0005) {
+    col = vec3(0.0);
+    for (int i = 0; i < 16; i++) {
+      float f = float(i) / 15.0; vec2 q = uZC + d * (1.0 - uZoomBlur * f);
+      col += vec3(texture2D(uScene, q + o).r, texture2D(uScene, q).g, texture2D(uScene, q - o).b);
+    }
+    col /= 16.0;
+  } else {
+    col = vec3(texture2D(uScene, uv + o).r, texture2D(uScene, uv).g, texture2D(uScene, uv - o).b);
+  }
+  col += (texture2D(uB1, uv).rgb * 0.55 + texture2D(uB2, uv).rgb * 0.85) * uBloom;
+  col += uFlash * uFlashCol;
+  col = col / (1.0 + max(col - 0.85, 0.0) * 0.9);
+  if (uCRT > 0.0) col = inside * col * (1.0 + 1.6 * smoothstep(0.1, 0.5, uCRT)) + crtGlow * vec3(0.92, 0.96, 1.0);
+  vec2 dv = v - 0.5;
+  float vig = smoothstep(1.05, 0.28, length(dv * vec2(1.0, 0.82)));
+  col *= mix(uVig, 1.0, vig);
+  float l = dot(col, vec3(0.3, 0.59, 0.11));
+  float g = hash(floor(v * vec2(1920.0, 1080.0)) + vec2(fract(uFrame * 0.6180339) * 311.0, fract(uFrame * 0.4142135) * 173.0)) - 0.5;
+  col += g * 0.055 * (0.6 + 0.4 * (1.0 - l));
+  col = clamp(col, 0.0, 1.0) * uFade;
+  if (uOverOn > 0.0) { vec4 o = texture2D(uOver, v); col = mix(col, o.rgb, o.a); }   // the credit, untouched by the post
+  gl_FragColor = vec4(col, 1.0);
+}`;
+function prog(fs) {
+  const mk = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+  const p = gl.createProgram(); gl.attachShader(p, mk(gl.VERTEX_SHADER, VS)); gl.attachShader(p, mk(gl.FRAGMENT_SHADER, fs));
+  gl.bindAttribLocation(p, 0, "p"); gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  const u = {}; const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < n; i++) { const a = gl.getActiveUniform(p, i); u[a.name] = gl.getUniformLocation(p, a.name); }
+  return { p, u };
+}
+function tex(w, h) {
+  const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  if (w) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  return t;
+}
+function target(w, h) { const t = tex(w, h), f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0); return { t, f, w, h }; }
+const P = { bright: prog(FS_BRIGHT), blur: prog(FS_BLUR), final: prog(FS_FINAL) };
+const fgTex = tex(), ovTex = tex(W, H);
+const RT = { a1: target(480, 270), b1: target(480, 270), a2: target(240, 135), b2: target(240, 135) };
+gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+function pass(pr, rt, texs, uni) {
+  gl.useProgram(pr.p);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, rt ? rt.f : null);
+  gl.viewport(0, 0, rt ? rt.w : W, rt ? rt.h : H);
+  let unit = 0;
+  for (const [name, t] of Object.entries(texs)) { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t); gl.uniform1i(pr.u[name], unit); unit++; }
+  for (const [name, val] of Object.entries(uni)) {
+    if (!pr.u[name]) continue;
+    if (Array.isArray(val)) (val.length === 3 ? gl.uniform3f : gl.uniform2f).call(gl, pr.u[name], ...val); else gl.uniform1f(pr.u[name], val);
+  }
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+}
+function blur(src, mid, dst, spread) {
+  pass(P.blur, mid, { uSrc: src.t }, { uDir: [spread / src.w, 0] });
+  pass(P.blur, dst, { uSrc: mid.t }, { uDir: [0, spread / src.h] });
+}
+
+// ---------------------------------------------------------------- scene (2D) and post state, pure functions of t
+function drawScene(t) {
+  fx.setTransform(1, 0, 0, 1, 0, 0); fx.globalCompositeOperation = "source-over"; fx.globalAlpha = 1;
+  fx.fillStyle = "#000"; fx.fillRect(0, 0, W, H);
+  // 5 + 13: darkness, heartbeat
+  if (t < R.diorama.start + 1.2 || inRow(R.black, t)) drawDark(t);
+  // 6: the darkness opens on the snowy diorama
+  if (inRow(R.diorama, t)) {
+    const r = R.diorama, u = (t - r.start) / r.len;
+    eyeOpen(t, r.start, 1.05, (op) => {
+      drawClip(r, t, { scale: 1.16 - 0.16 * easeOut(u), alpha: 0.35 + 0.65 * op });
+      drawSnow(t, op);
+    });
+    drawCaption(t, r.start + 0.8, end(r) - 0.1, [["KAHRAMANMARAŞ, TÜRKİYE", 52, PAL.fg], ["37.58°K  36.93°D  ·  2023", 40, PAL.amber]]);
+  }
+  // 8: Fener at night (glitch cut in); whips out at the end
+  if (inRow(R.fener, t, 0, 0.05)) {
+    const r = R.fener, wo = smooth(end(r) - 0.32, end(r), t);
+    drawClip(r, t, { scale: (1.06 - 0.04 * easeOut((t - r.start) / r.len)) * (1 - 0.45 * wo * wo), alpha: 1 - wo });
+  }
+  // 9: globe spins in (zoom-blur whip), crossfades into the lock clip
+  if (inRow(R.globe, t, 0.15, 0.3)) {
+    const r = R.globe, wi = easeOut((t - r.start + 0.15) / 0.65);
+    drawClip(r, t, { scale: 1 + 0.45 * (1 - wi), alpha: clamp((t - r.start + 0.15) / 0.2) });
+  }
+  // 10: lock on the Indian Ocean, reticle, zoom into the target
+  if (inRow(R.lock, t)) {
+    const r = R.lock, S = lockState(t);
+    drawClip(r, t, { alpha: smooth(r.start - 0.05, r.start + 0.3, t), scale: S.zoom, cx: r.target[0], cy: r.target[1] });
+    drawReticle(t);
+  }
+  // 11: dark water + MÜDAHALE ET
+  if (inRow(R.c_mudahale, t)) drawDeep(t);
+  // 12: Indian Ocean in one take (io_a fast, io_b at the break): slow push in toward the beach, hard cut to black after
+  for (const r of [R.io_a, R.io_b]) if (inRow(r, t)) {
+    const t0 = R.io_a.start, hitAt = R.io_b.start + R.io_b.hit;
+    drawClip(r, t, { scale: 1.04 + 0.05 * smooth(t0, hitAt, t), cx: 700, cy: 330 });
+  }
+  // 14: the role menu opens like the eye; it carries the statement and TERCİH ET
+  if (inRow(R.menu, t)) {
+    const r = R.menu, wo = smooth(end(r) - 0.25, end(r), t);
+    eyeOpen(t, r.start, 0.8, (op) => drawClip(r, t, { scale: (1.05 - 0.05 * easeOut((t - r.start) / r.len)) * (1 - 0.3 * wo * wo), alpha: (0.35 + 0.65 * op) * (1 - wo), dy: -70 }));
+  }
+  // 15/16: second spin, 1.1x
+  if (inRow(R.globe2, t)) { const r = R.globe2; drawClip(r, t, { scale: 0.98 - 0.1 * easeOut((t - r.start) / 0.6) + 0.04 * smooth(r.start + 1.5, end(r), t), dy: -95 }); }   // lifted: the lines sit under the globe
+  // 16: Black Saturday, first person (glitch cut in); a hard cut inside it; ends in the pixelate into the bunny
+  if (inRow(R.fire_a, t)) drawClip(R.fire_a, t, { scale: 1.05 - 0.03 * easeOut((t - R.fire_a.start) / R.fire_a.len) });
+  if (inRow(R.fire_b, t)) drawClip(R.fire_b, t, { scale: 1.02 + 0.03 * smooth(R.fire_b.start, end(R.fire_b), t) });
+  if (inRow(R.fire_c, t)) drawClip(R.fire_c, t, { scale: 1.04 - 0.03 * easeOut((t - R.fire_c.start) / R.fire_c.len) });
+  if (t >= R.fire_a.start && t < end(R.fire_c))
+    drawCaption(t, R.fire_a.start + 0.15, end(R.fire_c) - 0.05, [["VICTORIA, AVUSTRALYA", 52, PAL.fg], ["37.53°G  145.35°D  ·  2009", 40, PAL.amber]], H - 236);
+  // 17: bunny
+  if (inRow(R.bunny, t)) drawBunnyScene(t);
+  // 19: "AAA GAME", "yok yok", the logo lands with the same GAME; FARK ET on the same stage
+  if (t >= R.c_aaa.start && t < end(R.c_fark)) drawStage(t);
+  drawLogo(t);
+  drawGame(t);
+  // text
+  drawLine(R.s_hayat, t, { y: 568, px: 84 });
+  drawCard(R.c_tahmin, t, { scrim: 0.92 });
+  drawCard(R.c_kesfet, t, { scrim: 0.6 });
+  drawCard(R.c_mudahale, t, { y: 600 });
+  drawLine(R.s_fark, t, { y: 985, px: 84, scrim: 0.85, cursorHold: 0.4 });
+  drawCard(R.c_tercih, t, { scrim: 0.85 });
+  drawLine(R.s_dunya, t, { y: 890, px: 76, scrim: 0.85, cursorHold: 0.3 });
+  drawLine(R.s_count, t, { y: 1005, px: 84, hlScale: 1.5 });
+  drawLine(R.s_easter, t, { y: 985, px: 76, cursorHold: 0.8 });
+  drawCard(R.c_aaa, t, { y: AAA.y, px: AAA.px, step: 0.12, calm: true, rule: 320, noCursor: true, outDur: 0.18 });
+  drawLine(R.s_yok, t, { y: 860, px: 84, step: 0.07, cursorHold: 0.5 });
+  drawCard(R.c_fark, t, { y: 610, px: 210, rule: 300, noOut: true });   // no fade: the CRT power-off closes it
+}
+function postState(t) {
+  const P = { shake: [0, 0], ca: 0.0012, zb: 0, zc: [0.5, 0.5], glitch: 0, pix: 1, crt: 0, flash: 0, flashCol: [0.6, 0.95, 0.9], bloom: 1, vig: 0.28, fade: 1, thr: 0.8 };
+  // heartbeat: the vignette tightens on each beat
+  P.vig = 0.28 - 0.12 * heartEnv(t);
+  // glitch cuts
+  for (const c of CUTS) { const f = frameOf(t - c + 2 / FPS); if (t >= c - 2 / FPS && f < 7) P.glitch = [0.6, 1, 0.8, 1, 0.5, 0.25, 0.1][f]; }
+  // eye-open bloom + slight CA as the lids part
+  for (const [t0, d] of [[R.diorama.start, 1.05], [R.menu.start, 0.8]]) { const u = (t - t0) / d; if (u > 0 && u < 1.2) P.ca += 0.006 * Math.sin(Math.PI * clamp(u)); }
+  // whip from the minigame to the globe
+  const wk = smooth(end(R.fener) - 0.3, end(R.fener), t) * (1 - smooth(R.globe.start, R.globe.start + 0.5, t));
+  P.zb = Math.max(P.zb, 0.22 * wk);
+  const wm = smooth(end(R.menu) - 0.25, end(R.menu), t) * (t < end(R.menu) ? 1 : 0);
+  P.zb = Math.max(P.zb, 0.18 * wm);
+  // lock zoom: zoom blur toward the target, teal flash into MÜDAHALE ET
+  if (inRow(R.lock, t)) {
+    const S = lockState(t);
+    P.zb = Math.max(P.zb, 0.3 * smooth(0.1, 1, S.z));
+    P.zc = [R.lock.target[0] / W, 1 - R.lock.target[1] / H];
+    P.ca += 0.006 * S.z;
+    if (S.locked) { const k = Math.exp(-(S.u - R.lock.lock) * 10); P.shake = [3 * k * vnoise(t * 40) / W, 3 * k * vnoise(t * 37 + 9) / H]; P.flash = 0.06 * k; P.flashCol = [1.0, 0.45, 0.3]; }
+  }
+  const fe = t < end(R.lock) ? smooth(end(R.lock) - 0.35, end(R.lock), t) : Math.exp(-(t - end(R.lock)) * 4.5);
+  if (t > end(R.lock) - 0.35 && t < R.c_mudahale.start + 1.2) { P.flash = Math.max(P.flash, 0.42 * fe); P.flashCol = [0.62, 0.95, 0.9]; }
+  // pixelate: the fire -> the bunny (pixel world)
+  const g2 = end(R.fire_c);
+  if (t >= g2 - 0.4 && t < g2) P.pix = Math.round(lerp(1, 40, easeIn((t - g2 + 0.4) / 0.4))) || 1;
+  if (t >= g2 && t < g2 + 0.35) P.pix = Math.max(1, Math.round(lerp(40, 1, easeOut((t - g2) / 0.35))));
+  if (P.pix > 1 && P.pix < 2) P.pix = 1;
+  // the logo lands: a soft cool flash and a short zoom-blur settle (no shake)
+  const lu = t - R.logo.start;
+  if (lu >= 0 && lu < 1.0) { P.flash = Math.max(P.flash, 0.2 * Math.exp(-lu * 7)); P.flashCol = [0.75, 0.85, 1.0]; P.zb = Math.max(P.zb, 0.14 * Math.exp(-lu * 9)); P.ca += 0.004 * Math.exp(-lu * 6); }
+  // the CRT power-off ends FARK ET, then black
+  const c0 = end(R.c_fark) - CRT;
+  if (t >= c0 && t < end(R.c_fark)) P.crt = clamp((t - c0) / (CRT - 0.03));
+  if (t >= end(R.c_fark)) P.fade = 0;
+  return P;
+}
+
+// ---------------------------------------------------------------- frame
+async function renderAt(t) {
+  await prefetch(t);
+  drawScene(t);
+  const S = postState(t);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+  gl.bindTexture(gl.TEXTURE_2D, fgTex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, fg);
+  const credit = drawCredit(t);
+  if (credit > 0) { gl.bindTexture(gl.TEXTURE_2D, ovTex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, ov); }
+  const scene = { t: fgTex, w: W, h: H };
+  pass(P.bright, RT.a1, { uSrc: scene.t }, { uTexel: [1 / W * 2, 1 / H * 2], uThr: S.thr });
+  blur(RT.a1, RT.b1, RT.a1, 1.6);
+  blur(RT.a1, RT.b1, RT.a1, 3.0);
+  pass(P.blur, RT.a2, { uSrc: RT.a1.t }, { uDir: [0, 0] });
+  blur(RT.a2, RT.b2, RT.a2, 2.0);
+  blur(RT.a2, RT.b2, RT.a2, 4.0);
+  pass(P.final, null, { uScene: fgTex, uB1: RT.a1.t, uB2: RT.a2.t, uOver: ovTex }, {
+    uShake: S.shake, uZC: S.zc, uCA: S.ca, uZoomBlur: S.zb, uFade: S.fade, uFrame: Math.round(t * FPS), uGlitch: S.glitch,
+    uPix: S.pix, uCRT: S.crt, uFlash: S.flash, uFlashCol: S.flashCol, uBloom: S.bloom, uVig: S.vig, uOverOn: credit > 0 ? 1 : 0,
+  });
+  gl.finish();
+  return Math.round(t * FPS);
+}
+
+// ---------------------------------------------------------------- cue sheet for the audio team (final-film seconds = INTRO_LEN + film seconds)
+function cues() {
+  const c = HEART.map(([t], i) => ({ film: t, what: `heartbeat (${i % 2 ? "dub" : "lub"})` }));
+  c.push({ film: R.diorama.start, what: "darkness tears open: snowy Kahramanmaraş diorama" }, { film: R.fener.start + LAMP_CLIP - R.fener.in, what: "Fener: the lamp clicks on, the mother is found" },
+    { film: R.globe.start - 0.3, what: "zoom-blur whip to the globe" }, { film: R.lock.start + R.lock.lock, what: "target lock (Indian Ocean)" },
+    { film: R.io_b.start + R.io_b.hit, what: "the wave breaks over the town" }, { film: R.black.start, what: "hard cut to black" },
+    { film: R.menu.start, what: "role menu opens (eye again)" }, { film: R.fire_a.start, what: "Black Saturday fire: cut the fence" },
+    { film: R.fire_b.start, what: "the kangaroos run out" }, { film: R.fire_c.start, what: "the hose on the flame" },
+    { film: R.fire_c.start + (OUT_CLIP - R.fire_c.in) / R.fire_c.speed, what: "the flame goes out" }, { film: end(R.fire_c) - 0.4, what: "pixelate into the bunny scene" },
+    { film: R.logo.start, what: "3play lands" });
+  c.push({ film: VOICE.t, len: VOICE.len, what: `voice, echoing: "${VOICE.text}" (dropped: no voice, the rings stay)` });
+  for (const r of TL) if (r.text) c.push({ film: r.start, len: r.len, what: `${r.id.startsWith("c_") ? "title card" : "statement"}: ${r.text.replace(/\*/g, "")}` });
+  for (const t of CUTS) c.push({ film: t, what: "glitch cut" });
+  c.push({ film: end(R.lock) - 0.35, what: "zoom flash into the ocean" });
+  c.push({ film: R.bunny.start + eggBurstAt(), what: "egg bursts, bunny pops out" });
+  c.push({ film: end(R.c_fark) - CRT, what: "CRT power-off on FARK ET" }, { film: R.end.start, what: "black (end)" });
+  c.push({ film: CREDIT.start, len: FILM_LEN - CREDIT.start, what: "music credit (CC BY 4.0), fades in over 0.4 s, to the end" });
+  return c.map((x) => ({ ...x, film: +x.film.toFixed(2), final: +(x.film + INTRO_LEN).toFixed(2) })).sort((a, b) => a.film - b.film);
+}
+
+// ---------------------------------------------------------------- boot
+// the bed's volume curve with the ducks added: both are piecewise linear, so their sum is exact at the union of the
+// breakpoints (a duck: 0.06 s down, `hold` s at `db`, 0.35 s back)
+function duckKeys(keys, ducks) {
+  const at = (pts, t) => {
+    if (t <= pts[0][0]) return pts[0][1];
+    for (let i = 1; i < pts.length; i++) if (t <= pts[i][0]) return pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * (t - pts[i - 1][0]) / Math.max(pts[i][0] - pts[i - 1][0], 1e-6);
+    return pts[pts.length - 1][1];
+  };
+  const shapes = ducks.map(([t, hold, db]) => [[t - 0.06, 0], [t, db], [t + hold, db], [t + hold + 0.35, 0]]);
+  const ts = [...new Set([...keys.map((k) => k[0]), ...shapes.flat().map((k) => k[0])])].sort((a, b) => a - b);
+  return ts.map((t) => { const base = at(keys, t); return [t, base <= -79 ? base : base + shapes.reduce((s, d) => s + at(d, t), 0)]; });
+}
+function audioPlan() {                                   // final-film seconds for tools/video/mix.py
+  const fin = (c) => +((c.final ?? c.at + INTRO_LEN)).toFixed(3);
+  return {
+    intro: INTRO_LEN, length: +(INTRO_LEN + DURATION).toFixed(3),
+    music: { file: MUSIC.file, from: MUSIC.from, lu: MUSIC.lu, start: MUSIC.final, grid: GRID,
+      keys: duckKeys(MUSIC.keys, MUSIC.duck).map(([t, db]) => [+(t + INTRO_LEN - MUSIC.final).toFixed(3), +db.toFixed(2)]) },
+    stems: STEMS.map((s) => { const r = R[s.row]; return { ...s, clip: r.clip, in: r.in, speed: r.speed || 1, at: +(r.start + INTRO_LEN).toFixed(3), len: r.len }; }),
+    sfx: SFX.map((c) => ({ ...c, at: fin(c), final: undefined })).sort((a, b) => a.at - b.at),
+  };
+}
+window.SEGMENT = { name: "film", fps: FPS, duration: DURATION, frames: Math.round(DURATION * FPS), cues: cues(), audio: audioPlan() };
+(async () => {
+  for (const name of new Set(TL.filter((r) => r.clip).map((r) => r.clip))) CLIPS[name] = await probeClip(name);
+  window.SEGMENT.clips = Object.fromEntries(Object.entries(CLIPS).map(([k, v]) => [k, v ? v.frames : "PLACEHOLDER"]));
+  await document.fonts.load("172px VT323");
+  window.renderAt = renderAt;
+  await renderAt(Q.has("t") ? parseFloat(Q.get("t")) : 0);
+  document.documentElement.dataset.ready = "1";
+})().catch((e) => { document.documentElement.dataset.error = String(e); console.error(e); });
+</script>
+</body>
+</html>

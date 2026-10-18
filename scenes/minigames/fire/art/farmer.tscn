@@ -1,0 +1,17 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/minigames/fire/art/farmer.gd" id="1_fm"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/meshy_farmer.glb" id="2_fm"]
+
+[node name="Farmer" type="Node3D"]
+script = ExtResource("1_fm")
+
+[node name="Body" parent="." instance=ExtResource("2_fm")]
+
+[node name="Rim" type="OmniLight3D" parent="."]
+position = Vector3(0, 2.4, 0.9)
+light_color = Color(0.78, 0.86, 1, 1)
+light_energy = 3.0
+omni_range = 4.0
+omni_attenuation = 1.4
+shadow_enabled = false

@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/minigames/fire/art/fp_arms.gd" id="1_he"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/fp_empty.glb" id="2_he"]
+
+[node name="HandEmpty" type="Node3D"]
+script = ExtResource("1_he")
+
+[node name="View" parent="." instance=ExtResource("2_he")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 0.27, 0.5)

@@ -1,0 +1,101 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/minigames/connect/connect_world.gd" id="1_script"]
+[ext_resource type="Shader" path="res://scenes/style/post_25d.gdshader" id="3_post"]
+[ext_resource type="PackedScene" path="res://assets/3d/indian_ocean/coast_slab.glb" id="4_slab"]
+[ext_resource type="Shader" path="res://scenes/minigames/connect/lens.gdshader" id="6_lens"]
+
+[sub_resource type="Sky" id="sky"]
+radiance_size = 0
+
+[sub_resource type="Environment" id="env"]
+background_mode = 2
+sky = SubResource("sky")
+reflected_light_source = 1
+glow_enabled = true
+glow_intensity = 0.9
+glow_strength = 1.0
+glow_bloom = 0.04
+glow_blend_mode = 1
+glow_hdr_threshold = 0.9
+
+[sub_resource type="ShaderMaterial" id="post_mat"]
+shader = ExtResource("3_post")
+shader_parameter/focus_y = 0.6
+shader_parameter/focus_band = 0.42
+shader_parameter/blur_px = 3.0
+shader_parameter/vignette = 0.2
+shader_parameter/shadow_tint = Color(1, 1, 1, 1)
+shader_parameter/light_tint = Color(1, 1, 1, 1)
+
+[sub_resource type="ShaderMaterial" id="lens_mat"]
+shader = ExtResource("6_lens")
+
+[node name="ConnectWorld" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="Env" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+shadow_enabled = true
+shadow_blur = 1.2
+directional_shadow_mode = 0
+directional_shadow_max_distance = 140.0
+
+[node name="Camera" type="Camera3D" parent="."]
+fov = 26.0
+near = 1.0
+far = 300.0
+
+[node name="CameraPlay" type="Camera3D" parent="."]
+fov = 26.0
+near = 1.0
+far = 300.0
+current = true
+
+[node name="Coast" type="Node3D" parent="."]
+rotation_degrees = Vector3(0, -22, 0)
+
+[node name="Slab" parent="Coast" instance=ExtResource("4_slab")]
+
+[node name="Grid" type="Node3D" parent="Coast"]
+
+[node name="Water" type="Node3D" parent="Coast"]
+
+[node name="Fx" type="Node3D" parent="Coast"]
+
+[node name="Props" type="Node3D" parent="Coast"]
+
+[node name="HoverLight" type="OmniLight3D" parent="Coast"]
+visible = false
+light_color = Color(0.35, 1, 0.9, 1)
+light_energy = 2.5
+omni_range = 4.5
+omni_attenuation = 1.4
+
+[node name="Post" type="CanvasLayer" parent="."]
+layer = -1
+
+[node name="Grade" type="ColorRect" parent="Post"]
+material = SubResource("post_mat")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="LensCopy" type="BackBufferCopy" parent="Post"]
+visible = false
+copy_mode = 2
+
+[node name="Lens" type="ColorRect" parent="Post"]
+visible = false
+material = SubResource("lens_mat")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2

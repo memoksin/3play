@@ -5,3 +5,4 @@
 export/
 *.translation
 .DS_Store
+__pycache__/

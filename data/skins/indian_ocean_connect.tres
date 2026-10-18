@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ConnectSkin" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/connect_skin.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+cols = 7
+rows = 6
+tiles = PackedInt32Array(3, 2, 2, 1, 1, 1, 4, 0, 2, 2, 0, 2, 2, 0, 3, 1, 1, 1, 2, 2, 4, 3, 2, 2, 1, 1, 1, 4, 0, 2, 2, 0, 2, 2, 0, 3, 1, 1, 1, 2, 2, 4)
+solution = PackedInt32Array(0, 1, 0, 0, 0, 0, 0, 0, 3, 2, 0, 0, 1, 0, 0, 0, 0, 0, 2, 3, 0, 0, 1, 0, 0, 0, 0, 0, 0, 3, 2, 0, 0, 1, 0, 0, 0, 0, 0, 2, 3, 0)
+start_seed = 2004
+min_start_clicks = 10
+timer_seconds = 60.0
+red_seconds = 15.0
+prompt_key = "IO_TASK"
+community_keys = PackedStringArray("IO_COMMUNITY_1", "IO_COMMUNITY_2", "IO_COMMUNITY_3", "IO_COMMUNITY_4")
+score_key = "IO_CARD_SCORE"
+wave_key = "IO_CONNECT_WAVE"
