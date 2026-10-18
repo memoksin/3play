@@ -330,6 +330,7 @@ func _io_mini() -> void:
 	_disaster(IO)
 	var s := await _open("res://scenes/minigames/connect.tscn")
 	s.submit = false  # do not leave the scene
+	s.start_play()
 	var skin: ConnectSkin = s.skin
 	var solved := ConnectLogic.solved_rotations(skin)
 	var traces := ConnectLogic.traces(skin, solved)
