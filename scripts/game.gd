@@ -110,6 +110,8 @@ var _loaded := {}
 var _kept_assets := {}
 var _warm_gen := 0
 var _cover: ColorRect
+## The loading mark on the cover (shown only while a run loads).
+var _loader: CoverLoader
 ## The diorama built and drawn ahead (in its off-screen viewport), taken over by `_go`.
 var _prepared: Node
 var _prepared_vp: SubViewport
@@ -693,9 +695,12 @@ func _open_run() -> void:
 	_warm_gen += 1
 	var gen := _warm_gen
 	await _fade_cover(1.0, COVER_IN)
+	_loader.arm()  # fades in only when the wait lasts
 	await get_tree().process_frame
 	_begin_run()
+	_loader.progress(0.08)
 	await _warm_up(gen)
+	_loader.progress(1.0)
 	if gen != _warm_gen:
 		return
 	var before := get_tree().current_scene  # the real scenario picked on the egg card leaves a globe for a globe
@@ -742,6 +747,7 @@ func _warm_up(gen: int) -> void:
 	if globe:
 		_loaded[scene_path(&"globe")] = globe
 		await _warm_globe(globe, gen)
+		_loader.progress(0.4)
 		if gen != _warm_gen:
 			return
 	var mini_path := scene_path(&"minigame")
@@ -763,6 +769,7 @@ func _warm_up(gen: int) -> void:
 		await _draw_once(_prepared_vp, gen, false)
 		_prepared.warm_view(false)
 		_prepared_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		_loader.progress(0.7)
 	if not await _wait_loads(Array(assets), gen):  # loading meanwhile, behind the globe and the diorama
 		return
 	for path in assets:  # taken and kept: the minigame's own load() then finds them cached
@@ -807,6 +814,12 @@ func _warm_minigame(path: String, gen: int) -> void:
 	_prepared_mini.process_mode = Node.PROCESS_MODE_DISABLED
 	_prepared_mini_vp.add_child(_prepared_mini)
 	add_child(_prepared_mini_vp)
+	if _prepared_mini.has_method(&"warm_view"):  # its play look is drawn first too (the fire's intro skip)
+		_prepared_mini.warm_view(true)
+		await _draw_once(_prepared_mini_vp, gen, false)
+		if not is_instance_valid(_prepared_mini):
+			return
+		_prepared_mini.warm_view(false)
 	await _draw_once(_prepared_mini_vp, gen, false)
 	_prepared_mini_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 
@@ -898,6 +911,8 @@ func _fade_cover(alpha: float, time: float) -> void:
 	_make_cover()
 	_cover.visible = true
 	_cover.mouse_filter = Control.MOUSE_FILTER_STOP
+	if alpha == 0.0:
+		_loader.disarm(time)
 	var tween := create_tween()
 	tween.tween_property(_cover, "modulate:a", alpha, time)
 	await tween.finished
@@ -912,11 +927,13 @@ func _draw_cover_once() -> void:
 		return
 	_cover.modulate.a = 0.004
 	_cover.visible = true
+	_loader.warm()  # its shaders compile now, not when the first run loads
 	for i in 3:
 		await get_tree().process_frame
 	if _warm_gen == 0:  # nobody has used it meanwhile
 		_cover.visible = false
 		_cover.modulate.a = 0.0
+		_loader.cool()
 
 
 func _make_cover() -> void:
@@ -930,5 +947,8 @@ func _make_cover() -> void:
 	_cover.modulate.a = 0.0
 	_cover.visible = false
 	_cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_loader = CoverLoader.new()
+	_loader.setup(shader_for(CoverLoader.MARK_SHADER))
+	_cover.add_child(_loader)
 	layer.add_child(_cover)
 	add_child(layer)

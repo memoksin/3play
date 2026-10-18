@@ -500,14 +500,17 @@ func _walkthrough() -> void:
 	var farmer: Node3D = props.get_node("Farmer")
 	var ov: Camera3D = s.get_node("Overview")
 	var f0 := farmer.global_position
-	s.advance(1.5)
+	s.advance(0.35)
 	_check("ending: not over yet, the figure runs out", got.is_empty() and ov.current and farmer.visible)
-	s.advance(skin.escape_seconds * 0.6 - 1.5)
+	s.advance(skin.escape_seconds * 0.6 - 0.35)
 	var run_to: Vector3 = s.RUN_TO
 	var went := farmer.global_position - f0
 	var aim := run_to - f0
 	_check("ending: the figure ran straight down the track, no turn (%.2f m)" % went.length(),
-			went.length() > 5.0 and Vector2(went.x, went.z).angle_to(Vector2(aim.x, aim.z)) < 0.2)
+			went.length() > 1.5 and Vector2(went.x, went.z).angle_to(Vector2(aim.x, aim.z)) < 0.2)
+	var bank: Vector3 = s.get_node("EdgeSmoke").global_position
+	_check("ending: gone inside the edge smoke, short of the slab's edge (z %.2f, bank %.2f)" % [farmer.global_position.z, bank.z],
+			not farmer.visible and farmer.global_position.z < 19.0 and absf(farmer.global_position.z - bank.z) < 1.0)
 	var fg: Dictionary = farmer.get_node("Model").call("gait")
 	var dom: StringName = &"idle"
 	for gk: StringName in fg:

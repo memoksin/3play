@@ -422,11 +422,11 @@ func _alerts() -> void:
 	var ids := seen.map(func(e: Array) -> StringName: return e[0])
 	print("  alerts: ", ", ".join(seen.map(func(e: Array) -> String: return "%s@%.1fs" % [e[0], e[1]])))
 	# the sign thought comes from where the player looks, not from the clock (test_fire.gd covers it)
-	var timed: Array = s.ALERTS.keys().filter(func(id: StringName) -> bool: return id != &"sign")
+	var timed_ids: Array = s.ALERTS.keys().filter(func(id: StringName) -> bool: return id != &"sign")
 	var once := true
-	for id: StringName in timed:
+	for id: StringName in timed_ids:
 		once = once and ids.count(id) == 1
-	_check("alerts: each one came, once (%d shown)" % seen.size(), once and seen.size() == timed.size())
+	_check("alerts: each one came, once (%d shown)" % seen.size(), once and seen.size() == timed_ids.size())
 	_check("alerts: a sound hook for each, urgent ones marked", heard.size() == seen.size()
 			and heard.count(1) == s.ALERTS.values().filter(func(v: Array) -> bool: return v[1]).size())
 	var at := {}
