@@ -43,6 +43,9 @@ const SET_SCENE := "res://scenes/diorama/set_%s.tscn"
 ## misses them): minigame -> script with a static `scene_paths()`. Fener loads ~70 .glb models in its setup:
 ## ~5 s of one (covered) warm-up frame on the main thread unless they are preloaded here.
 const MINI_ASSETS := {&"fener": "res://scenes/minigames/fener/fener_world.gd"}
+## They are asked this long (seconds) after start-up, behind the title and the menu, and kept for the launch:
+## on the run's cover they still took ~2 s of loader time (kahr cover ~4.4 s, io ~2 s).
+const MINI_ASSETS_AFTER := 1.0
 ## Off-screen warm-up viewport size.
 const WARM_SIZE := Vector2i(128, 72)
 ## Fade of the loading cover in / out (seconds).
@@ -103,6 +106,8 @@ var _step := -1
 var _pending := {}
 ## Scenes taken from the loader (path -> PackedScene), kept for the run.
 var _loaded := {}
+## The minigames' own models (MINI_ASSETS), loaded at start-up and kept for the whole launch (path -> PackedScene).
+var _kept_assets := {}
 var _warm_gen := 0
 var _cover: ColorRect
 ## The diorama built and drawn ahead (in its off-screen viewport), taken over by `_go`.
@@ -133,6 +138,8 @@ func _ready() -> void:
 	add_child(preload("res://scenes/ui/pause_menu.tscn").instantiate())  # Esc during a run
 	apply_fullscreen()
 	apply_audio_settings.call_deferred()  # the Audio autoload makes its buses in its own _ready
+	if DisplayServer.get_name() != "headless":
+		_preload_mini_assets()
 
 
 ## Requested scenes nobody took (e.g. the game quits on the globe) are collected, so none leaks.
@@ -141,6 +148,7 @@ func _exit_tree() -> void:
 		ResourceLoader.load_threaded_get(path)
 	_pending.clear()
 	_loaded.clear()
+	_kept_assets.clear()
 	_textures.clear()
 	_disasters.clear()
 	_shaders.clear()
@@ -541,6 +549,38 @@ func mini_assets(d: Disaster) -> PackedStringArray:
 	return load(MINI_ASSETS[d.minigame]).scene_paths()
 
 
+## Every minigame's own models (MINI_ASSETS) on the loader threads, while the title and the menu are up;
+## taken into _kept_assets as they finish, so a run's warm-up finds them loaded.
+func _preload_mini_assets() -> void:
+	# the list first, in this start-up frame (compiling fener_world.gd costs ~0.2 s: hidden by the boot)
+	var all := PackedStringArray()
+	for d: StringName in MINI_ASSETS:
+		all.append_array(load(MINI_ASSETS[d]).scene_paths())
+	await get_tree().create_timer(MINI_ASSETS_AFTER).timeout
+	var paths: Array[String] = []
+	for path in all:
+		if _pending.has(path) or _kept_assets.has(path):
+			continue
+		# a model has no scripts: not preload_scene, whose dependency scan costs ~5 ms a file here
+		if ResourceLoader.load_threaded_request(path) == OK:
+			_pending[path] = true
+			paths.append(path)
+	while is_inside_tree() and not paths.is_empty():
+		for path in paths.duplicate():
+			if not _pending.has(path):  # taken by a run's warm-up meanwhile
+				paths.erase(path)
+			elif ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+				paths.erase(path)
+				_keep_asset(path)
+		await get_tree().process_frame
+
+
+func _keep_asset(path: String) -> void:
+	var scene := packed_scene(path)
+	if scene:
+		_kept_assets[path] = scene
+
+
 func preload_scene(path: String) -> void:
 	if _pending.has(path) or not ResourceLoader.exists(path):
 		return
@@ -697,7 +737,8 @@ func _warm_up(gen: int) -> void:
 	# would hold up the globe's load)
 	var assets := mini_assets(disaster)
 	for path in assets:
-		preload_scene(path)
+		if not _kept_assets.has(path):  # most are loaded at start-up already (_preload_mini_assets)
+			preload_scene(path)
 	if globe:
 		_loaded[scene_path(&"globe")] = globe
 		await _warm_globe(globe, gen)
@@ -724,8 +765,9 @@ func _warm_up(gen: int) -> void:
 		_prepared_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	if not await _wait_loads(Array(assets), gen):  # loading meanwhile, behind the globe and the diorama
 		return
-	for path in assets:  # taken (and kept in _loaded): the minigame's own load() then finds them cached
-		packed_scene(path)
+	for path in assets:  # taken and kept: the minigame's own load() then finds them cached
+		if not _kept_assets.has(path):
+			_keep_asset(path)
 	await _warm_minigame(mini_path, gen)
 
 
