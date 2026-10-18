@@ -7,6 +7,11 @@ Every clip is a full pose of every bone, baked at 30 fps from parameters:
   tool   the tool's pose under View; the hands follow the grips (two-bone IK, fingers solved on the handles)
   open   cutters: half opening angle of the arms (deg); squeeze: fingers pressing in (0..1)
   trigger nozzle: trigger lever pulled (0..1); the index finger follows it
+The nozzle's interaction clips (pickup, attach, valve: fire.gd holds the camera where the clip wants it) give every
+part in camera space instead: tool_m / right_m / left_m / coupling_m (matrices), poles, hand_ang (finger angles),
+roots (the arms' roots moved, bent down to a prop), hose_free (the left hand off the hose: it hangs), turn (the
+valve wheel, 0..1, on the Turn bone) and scale (a part that is not there: bone scale HIDE, e.g. the nozzle before
+the grab). Ref<Act>O/X/Y bones hold the prop's frame in camera space for fire.gd's camera lock.
 """
 import bpy, bmesh, json, math, os, re
 from collections import Counter
@@ -34,6 +39,28 @@ N_GRIP_C = Vector((0.0, 0.034, -0.012))
 N_INLET = Vector((0.0, 0.034 + math.sin(math.radians(14.0)) * 0.112, -0.012 - math.cos(math.radians(14.0)) * 0.112))
 N_MUZZLE = Vector((0.0, -0.248, 0.06))
 HOSE_R, HOSE_LEN, HOSE_BONES = 0.022, 1.1, 11
+
+# --- the props the nozzle's arms work on (fire.gd locks the camera to them while a clip plays). Godot, prop-local:
+# valve.tscn (tools/models/fire/valve.py: the models shifted -0.2 m in x) and hose.tscn (hose.py).
+G2B = Matrix(((1, 0, 0, 0), (0, 0, -1, 0), (0, 1, 0, 0), (0, 0, 0, 1)))   # Godot (x, y, z) -> Blender (x, -z, y)
+B2G = G2B.transposed()
+WHEEL_C = Vector((0.0, 0.92, 0.26))      # the handwheel's hub (valve.tscn Wheel), turning about the valve's +z
+WHEEL_R, RIM_R = 0.095, 0.014            # valve.py wheel(): rim radius, rim tube radius
+OUTLET_TOP = Vector((0.16, 0.70, 0.12))  # the coupling's top seated on the ribbed connector (valve.tscn Coupling)
+CPL_R, CPL_NUT_R, CPL_LEN = 0.031, 0.036, 0.075   # hose.py coupling_v: sleeve, nut (across flats), top -> hose
+COIL_NOZZLE_LOC = Vector((0.42, -0.98, 0.033))     # hose.py NOZZLE_LOC / NOZZLE_ROT: the nozzle lying by the coil
+COIL_NOZZLE_ROT = (0.0, 90.0, -70.0)               # (Blender, coil-local; x, y, z deg applied z(y(x)))
+REF_LEN = 0.25
+CPL_REST = Matrix.Translation(Vector((0.0, 0.3, -0.7)))
+TURN_REST = Matrix.Translation(Vector((0.0, -1.0, -1.0)))
+TURN_M = 0.1
+HIDE = 1e-3                              # bone scale of a part that is not there (the nozzle before the grab)
+# clip lengths (s) and moments; fire.gd reads the moments from the clips (the scale keys), the lengths too
+PICKUP_T, PICK_GRAB = 1.8, 0.9
+ATTACH_T, ATTACH_SWAP = 2.1, 1.45
+VALVE_T = 2.6
+LOCK_IN = 0.4                            # fire.gd LOCK_IN: the camera reaches its lock; no contact before this
+VALVE_TURNS = 1.0                        # valve.gd TURNS
 
 
 def handle_x(s, y):
@@ -79,7 +106,7 @@ def import_part(name):
 
 
 def add_bones(rig, bones):
-    """bones: [(name, parent, rest 4x4 camera space, length)]."""
+    """bones: [(name, parent or None (a root), rest 4x4 camera space, length)]."""
     bpy.context.view_layer.objects.active = rig
     bpy.ops.object.mode_set(mode="EDIT")
     eb = rig.data.edit_bones
@@ -88,7 +115,8 @@ def add_bones(rig, bones):
         b.head = m.translation
         b.tail = m.translation + m.to_3x3() @ Vector((0, ln, 0))
         b.align_roll(m.to_3x3() @ Vector((0, 0, 1)))
-        b.parent = eb[parent]
+        if parent:
+            b.parent = eb[parent]
     bpy.ops.object.mode_set(mode="OBJECT")
     for name, *_ in bones:
         rig.pose.bones[name].rotation_mode = "QUATERNION"
@@ -117,6 +145,7 @@ class ViewModel:
     REACH_WARN = 0.97
     SHOULDER = Vector((0.0, 0.0, 0.0))       # the arms' roots moved by this (camera space) for this tool
     SPLIT_FINGERS = False                    # cut the glove where two fingers touch in the rest mesh (split_fingers)
+    SCALE = {}                               # bone -> scale in every clip unless a frame's p["scale"] says otherwise
 
     def __init__(self):
         bpy.ops.wm.open_mainfile(filepath=str(WORK / "fp_rig.blend"))
@@ -192,7 +221,7 @@ class ViewModel:
         R = self.R
         world = {}
         V = p.get("view", Matrix.Identity(4))
-        world["View"] = R.rest["View"] @ V @ Matrix.Translation(self.SHOULDER)
+        world["View"] = R.rest["View"] @ V @ Matrix.Translation(self.SHOULDER + p.get("roots", Vector()))
         self.tool_world(world, p)
         rep = self.report.setdefault("ik", {})
         for s, (hand, pole) in self.hand_targets(world, p).items():
@@ -322,6 +351,7 @@ class ViewModel:
         for i, p in enumerate(params):
             world = self.pose(p)
             basis = R.basis(world)
+            scale = dict(self.SCALE, **p.get("scale", {}))
             for n in R.order:
                 pb = rig.pose.bones[n]
                 q = basis[n].to_quaternion()
@@ -330,8 +360,10 @@ class ViewModel:
                 prev[n] = q
                 pb.rotation_quaternion = q
                 pb.location = basis[n].translation
+                pb.scale = (scale.get(n, 1.0),) * 3
                 pb.keyframe_insert("rotation_quaternion", frame=i)
                 pb.keyframe_insert("location", frame=i)
+                pb.keyframe_insert("scale", frame=i)
         rig.animation_data.action = None
         self.report["clips"][clip] = {"frames": len(params), "loop": loop,
                                       "reach_max": round(self.report["ik"].get("reach", 0.0), 3),
@@ -342,10 +374,12 @@ class ViewModel:
     def set_pose(self, p):
         """Pose the rig (no keys) for a render."""
         basis = self.R.basis(self.pose(p))
+        scale = dict(self.SCALE, **p.get("scale", {}))
         for n in self.R.order:
             pb = self.rig.pose.bones[n]
             pb.rotation_quaternion = basis[n].to_quaternion()
             pb.location = basis[n].translation
+            pb.scale = (scale.get(n, 1.0),) * 3
         bpy.context.view_layer.update()
 
     def export(self, path, actions):
@@ -551,6 +585,7 @@ def raise_params(hold, c, n, left_c=None, whole=False):
 # ---------------------------------------------------------------- the hose nozzle
 class Nozzle(ViewModel):
     name = "nozzle"
+    SCALE = {"Coupling": HIDE}
     GRIP = Vector((0.16, 0.42, -0.15))       # middle of the pistol grip, camera space
     PITCH = 4.0
     YAW = 3.0                                # toward the middle of the view
@@ -573,6 +608,14 @@ class Nozzle(ViewModel):
         for k in range(HOSE_BONES):
             bones.append((f"Hose{k}", "View", hose_rest @ Matrix.Translation(Vector((0, k * self.seg, 0))), self.seg * 0.9))
         bones.append(("Inlet", f"Hose{HOSE_BONES - 1}", hose_rest @ Matrix.Translation(Vector((0, HOSE_LEN, 0))), 0.05))
+        # the hose's coupling end (attach: in the left hand, hidden by scale otherwise), the valve wheel's turn as
+        # data (Turn's offset from its rest / TURN_M = 0..1 of the wheel's turns) and the props' poses the camera
+        # locks to (Ref<Act>O/X/Y: the prop frame's origin and its x / y axis points, REF_LEN away; fire.gd)
+        self.cam = self.act_cams()
+        bones += [("Coupling", None, CPL_REST, 0.05), ("Turn", None, TURN_REST, 0.05)]
+        for act, M in self.cam.items():
+            for k, q in (("O", Vector()), ("X", Vector((REF_LEN, 0, 0))), ("Y", Vector((0, REF_LEN, 0)))):
+                bones.append((f"Ref{act.capitalize()}{k}", None, Matrix.Translation(M @ q), 0.02))
         add_bones(self.rig, bones)
         ob = import_part("fp_nozzle")
         ob.data.transform(T0)
@@ -590,6 +633,9 @@ class Nozzle(ViewModel):
         for k in range(HOSE_BONES):
             w[f"Hose{k}"] = np.where(k0 == k, 1 - t, 0.0) + np.where(k0 + 1 == k, t, 0.0)
         skin(ob, self.rig, w)
+        ob = import_part("fp_coupling")
+        ob.data.transform(CPL_REST)
+        skin(ob, self.rig, {"Coupling": 1.0})
 
     def grip_axis(self):
         rk = math.radians(N_GRIP_RAKE)
@@ -652,18 +698,25 @@ class Nozzle(ViewModel):
         self.report["grip"] = {s: {k: [round(float(x), 1) for x in v] for k, v in self.ang[s][0].items()} for s in self.ang}
 
     def tool_world(self, world, p):
-        world["Tool"] = world["View"] @ p.get("tool", Matrix.Identity(4)) @ self.t0()
+        world["Tool"] = p["tool_m"] if "tool_m" in p else world["View"] @ p.get("tool", Matrix.Identity(4)) @ self.t0()
         world["Trigger"] = world["Tool"] @ self.R.rel["Trigger"] @ rot(x=self.TRIGGER * p.get("trigger", 0.0))
         world["Muzzle"] = world["Tool"] @ self.R.rel["Muzzle"]
 
     def hand_targets(self, world, p):
+        """The hands: right on the nozzle's grip, left under the hose; an interaction clip gives them as camera-space
+        matrices (right_m / left_m) with their elbow poles (poles)."""
         left = world["View"] @ p.get("left", Matrix.Identity(4)) @ self.left_hand
         V = world["View"].to_3x3()
-        return {"Right": (world["Tool"] @ self.G["Right"], V @ self.pole["Right"]), "Left": (left, V @ self.pole["Left"])}
+        poles = p.get("poles", {})
+        return {"Right": (p.get("right_m", world["Tool"] @ self.G["Right"]), poles.get("Right", V @ self.pole["Right"])),
+                "Left": (p.get("left_m", left), poles.get("Left", V @ self.pole["Left"]))}
 
     def fingers(self, p):
         out = {}
         for s in ("Left", "Right"):
+            if s in p.get("hand_ang", {}):
+                out[s] = p["hand_ang"][s]
+                continue
             a, b = self.ang[s]
             k = p.get("trigger", 0.0) if s == "Right" else p.get("squeeze", 0.0)
             extra = p.get("curl", {}).get(s, 0.0)
@@ -688,6 +741,16 @@ class Nozzle(ViewModel):
         V = world["View"]
         P2 = V @ self.HOSE_END
         t2 = (V.to_3x3() @ Vector((-0.2, -0.3, -1.0))).normalized()
+        free = p.get("hose_free", 0.0)
+        if free > 0.0:
+            # the left hand off the hose: it hangs from the nozzle (down: the world's down in camera space)
+            down = p.get("down", Vector((0, 0, -1)))
+            P1 = P1.lerp(P0 + down * 0.3 + t0 * 0.08, free)
+            t1 = t1.lerp(down, free).normalized()
+            P2 = P2.lerp(P0 + down * 0.9 + (V.to_3x3() @ Vector((-0.25, -0.2, 0.0))), free)
+            t2 = t2.lerp(down, free).normalized()
+        world["Coupling"] = p.get("coupling_m", CPL_REST)
+        world["Turn"] = TURN_REST @ Matrix.Translation(Vector((0.0, TURN_M * p.get("turn", 0.0), 0.0)))
         k1 = 0.45 * (P1 - P0).length
         stiff = p.get("stiff", 0.0)
         pts = bezier(P0, P0 + t0 * k1 * (1 + 0.4 * stiff), P1 - t1 * k1, P1, 24)[:-1] + \
@@ -724,6 +787,10 @@ class Nozzle(ViewModel):
         out.append(("spray_start", [self.start_p(i / FPS) for i in range(10)], False))
         out.append(("raise", raise_params(self.idle_p(0.0), self.GRIP, 12, self.LEFT_PT), False))
         out.append(("lower", raise_params(self.idle_p(0.0), self.GRIP, 9, self.LEFT_PT)[::-1], False))
+        self.solve_acts()
+        for name, fn, length in (("pickup", self.pickup_p, PICKUP_T), ("attach", self.attach_p, ATTACH_T),
+                                 ("valve", self.valve_p, VALVE_T)):
+            out.append((name, [fn(i / FPS) for i in range(int(round(length * FPS)) + 1)], False))
         return out
 
     def idle_p(self, t):
@@ -741,16 +808,18 @@ class Nozzle(ViewModel):
         return p
 
     def spray_p(self, t):
-        """Water on: trigger held, the nozzle pushed back and up by the jet, shivering with the pressure."""
+        """Water on: trigger held, the nozzle pushed back and up by the jet and held there against it. Only a slow
+        sway (one per loop): the old 4-9 Hz pressure shiver, keyed at 30 fps, buzzed the muzzle and the hose
+        (the jet, the hose line) by several mm from frame to frame."""
         w = 2 * math.pi * t
         p = self.idle_p(0.0)
-        kick = Vector((0.0015 * math.sin(7 * w), -0.011 + 0.0015 * math.sin(5 * w + 1.0), 0.003 + 0.0012 * math.sin(9 * w)))
-        p["tool"] = about(self.GRIP, rot(x=1.6 + 0.35 * math.sin(6 * w + 0.5), z=0.3 * math.sin(4 * w)), kick)
-        p["left"] = Matrix.Translation(Vector((0.0, -0.006, 0.004 + 0.001 * math.sin(7 * w + 2.0))))
+        kick = Vector((0.0004 * math.sin(w + 0.4), -0.011, 0.003 + 0.0004 * math.sin(w)))
+        p["tool"] = about(self.GRIP, rot(x=1.6 + 0.12 * math.sin(w + 0.5), z=0.1 * math.sin(w)), kick)
+        p["left"] = Matrix.Translation(Vector((0.0, -0.006, 0.004 + 0.0004 * math.sin(w + 2.0))))
         p["trigger"] = 1.0
         p["squeeze"] = 1.0
         p["stiff"] = 1.0
-        p["view"] = breath(0.0) @ rot(x=0.3 * math.sin(3 * w))
+        p["view"] = breath(0.0)
         return p
 
     def start_p(self, t):
@@ -771,6 +840,391 @@ class Nozzle(ViewModel):
         return p
 
 
+    # ---- interactions (fire.gd locks the camera to the prop, LOCK_IN s from the start; camera space throughout)
+    VALVE_EYE = Vector((0.0, 1.2, 0.68))     # the camera at the valve (Godot, valve-local), pitched VALVE_PITCH deg
+    VALVE_PITCH = -12.0
+    VALVE_ROOTS = Vector((0.0, 0.11, 0.04))  # the arms' roots while the hands are on the wheel (crouched, leaning in)
+    ATTACH_EYE = Vector((0.2, 0.95, 0.55))
+    ATTACH_PITCH = -26.0
+    ATTACH_ROOTS = Vector((0.0, 0.08, 0.03))
+    PICK_EYE = Vector((-0.1, 0.7, 0.2))       # from the coil nozzle's grip (x right, y up, z back of the camera's yaw)
+    PICK_YAW = 8.0
+    PICK_PITCH = -45.0
+    PICK_ROOTS = Vector((0.0, 0.17, -0.05))   # bent down to the ground: the shoulders come forward with the head
+    STROKES = ((0.48, 0.8), (0.95, 1.27), (1.42, 1.74), (1.89, 2.21))   # the valve: four 90 deg heaves of the wheel
+    STROKE = 90.0
+
+    def act_cams(self):
+        """Prop-local (Godot) -> camera (Blender) per interaction: the camera where fire.gd locks it."""
+        N = B2G @ coil_nozzle()
+        grip = N @ N_GRIP_C
+        fwd = N.to_3x3() @ Vector((0, -1, 0))
+        yaw = math.degrees(math.atan2(-fwd.x, -fwd.z)) + self.PICK_YAW
+        eye = grip + Matrix.Rotation(math.radians(yaw), 3, "Y") @ self.PICK_EYE
+        return {"pickup": godot_cam(eye, yaw, self.PICK_PITCH),
+                "attach": godot_cam(self.ATTACH_EYE, 0.0, self.ATTACH_PITCH),
+                "valve": godot_cam(self.VALVE_EYE, 0.0, self.VALVE_PITCH)}
+
+    def _solve_at(self, roots, fn):
+        keep = self.SHOULDER
+        self.SHOULDER = keep + roots
+        try:
+            return fn()
+        finally:
+            self.SHOULDER = keep
+
+    def _pole_for(self, s, hm, roots, cands):
+        """The elbow pole (of cands) with the least forearm twist for hand matrix hm."""
+        best = None
+        for c in cands:
+            rep = {}
+            self.arms.solve({"View": self.view_rest() @ Matrix.Translation(roots)}, s, hm, c, rep)
+            tw = abs(rep["twist_deg"][s])
+            if best is None or tw < best[0]:
+                best = (tw, c)
+        return best[1]
+
+    def solve_acts(self):
+        """Grips on the props: both hands on the valve's rim, the left hand on the hose's coupling, the right hand
+        on the nozzle lying by the coil; the hold pose (idle frame 0) the clips start from and end in."""
+        hold = self.pose(self.idle_p(0.0))
+        self.hold = {n: hold[n].copy() for n in ("Tool", "RightHand", "LeftHand")}
+        self.hold_ang = self.fingers(self.idle_p(0.0))
+        self.open_ang = {s: {f: [0.25 * x for x in v] for f, v in self.hold_ang[s].items()} for s in self.hold_ang}
+        V = self.view_rest().to_3x3()
+        self.hold_pole = {s: V @ self.pole[s] for s in ("Left", "Right")}
+        rep = self.report.setdefault("acts", {})
+        # the valve: the rim at 4 / 10 o'clock (mid-heave: 2 / 8), the palm on its front, fingers round behind it
+        M = self.cam["valve"]
+        M3 = M.to_3x3()
+        c, a, e1, e2 = M @ WHEEL_C, (M3 @ Z).normalized(), M3 @ X, M3 @ Y
+        self.wheel = (c, a, e1, e2)
+        self.rim = {}
+        for s, mid, poles in (("Right", 30.0, ((0.8, -0.3, -1.0), (1.0, 0.0, -0.5), (0.3, -0.5, -1.0), (0.0, -0.2, -1.0))),
+                              ("Left", 210.0, ((-0.8, -0.3, -1.0), (-1.0, 0.0, -0.5), (-0.3, -0.5, -1.0), (0.0, -0.2, -1.0)))):
+            th = math.radians(mid)
+            radial = e1 * math.cos(th) + e2 * math.sin(th)
+            pt = c + radial * WHEEL_R
+            d = -e1 * math.sin(th) + e2 * math.cos(th)
+            hm, _, pole = self._solve_at(self.VALVE_ROOTS, lambda: self.rim_grip(s, pt, d, a, radial, poles))
+            Hi = hm.inverted()
+            axes = []
+            for k in range(-2, 2):
+                q0 = c + (e1 * math.cos(th + math.radians(15 * k)) + e2 * math.sin(th + math.radians(15 * k))) * WHEEL_R
+                q1 = c + (e1 * math.cos(th + math.radians(15 * k + 15)) + e2 * math.sin(th + math.radians(15 * k + 15))) * WHEEL_R
+                axes.append((Hi @ ((q0 + q1) / 2), (Hi.to_3x3() @ (q1 - q0)).normalized(), RIM_R + 0.001, (q1 - q0).length / 2))
+            hand = self.hands[s]
+            fing = FP.close_fingers(hand, axes)
+            fing["Thumb"] = list(FP.thumb_wrap(hand, axes, Hi @ (pt - radial * (RIM_R + 0.004) + a * 0.012)))
+            self.rim[s] = (hm, pole, fing, mid)
+            rep["valve_" + s] = dict(self.report["grip_choice"][s])
+        # the coupling, seated on the connector (P(0, 0)); the hand holds its sleeve, solved mid-twist
+        M = self.cam["attach"]
+        self.cpl_seat = M @ Matrix.Translation(OUTLET_TOP) @ B2G @ Matrix.Rotation(math.pi, 4, "Z")
+        Pm = self.cpl(-30.0, 0.0)
+        up = (Pm.to_3x3() @ Z).normalized()
+        a = (M.to_3x3() @ Z).normalized()
+        e1 = M.to_3x3() @ X
+        pt = Pm @ Vector((0, 0, -0.055))
+        poles = [Vector(v) for v in ((-0.8, -0.3, -1.0), (-1.0, 0.0, -0.5), (-0.3, -0.5, -1.0), (0.0, -0.2, -1.0))]
+        hm, _, pole = self._solve_at(self.ATTACH_ROOTS, lambda: self.best_grip(
+            "Left", pt, up, CPL_R, poles, along=0.7, diags=(10.0, 20.0), want=(e1 * 0.6 - a * 0.8), want_w=2.0))
+        Hi = hm.inverted()
+        hand = self.hands["Left"]
+        caps = [(Pm @ Vector((0, 0, -0.049)), CPL_R + 0.001, 0.026), (Pm @ Vector((0, 0, -0.013)), CPL_NUT_R + 0.002, 0.013),
+                (Pm @ Vector((0, 0, -0.12)), HOSE_R + 0.001, 0.045)]
+        axes = [(Hi @ q, (Hi.to_3x3() @ up).normalized(), r, h) for q, r, h in caps]
+        fing = FP.close_fingers(hand, axes)
+        fing["Thumb"] = list(FP.thumb_wrap(hand, axes, Hi @ (pt + a * (CPL_R + 0.006))))
+        self.cpl_hand = Pm.inverted() @ hm
+        self.cpl_grip = (pole, fing)
+        rep["attach_Left"] = dict(self.report["grip_choice"]["Left"])
+        # the nozzle on the ground: the right hand takes it by the grip as it holds it (the palm comes down on it)
+        self.tool_ground = self.cam["pickup"] @ B2G @ coil_nozzle()
+        hm = self.tool_ground @ self.G["Right"]
+        self.pick_pole = self._pole_for("Right", hm, self.PICK_ROOTS, [Vector(v) for v in (
+            (0.8, -0.3, -1.0), (1.0, 0.0, -0.5), (0.3, -0.5, -1.0), (0.0, -0.2, -1.0), (1.0, 0.5, -0.5), (0.5, 0.5, -1.0))])
+        # the aside pose of the nozzle while the left hand works the coupling: down and out to the right
+        hT = self.hold["Tool"]
+        self.tool_aside = Matrix.Translation(Vector((0.07, -0.06, -0.13))) @ about(hT.translation, rot(x=-35.0, y=20.0, z=-15.0)) @ hT
+
+    def rim_grip(self, s, pt, d, a, radial, poles):
+        """A hand on the rim (handle through pt along d) for a heave: the forearm near neutral twist at mid-heave
+        (it turns STROKE / 2 either way), the wrist not bent past ~35 deg, the palm on the rim's front (toward
+        -a) and a little outside it, in reach."""
+        H = self.hands[s]
+        best = None
+        d = d.normalized()
+        e1 = d.orthogonal().normalized()
+        e2 = d.cross(e1)
+        want = (-a * 0.85 - radial * 0.5).normalized()
+        for pole in poles:
+            pole = Vector(pole)
+            for diag in (10.0, 20.0, 30.0):
+                for sign in (1.0, -1.0):
+                    for k in range(36):
+                        ang = 2 * math.pi * k / 36
+                        hm, line = H.place_axis(pt, d, e1 * math.cos(ang) + e2 * math.sin(ang), RIM_R, sign=sign,
+                                                along=0.7, diag=diag)
+                        n = hm.to_3x3() @ Vector((0, 0, 1))
+                        tws, wr, reach = [], 0.0, 0.0
+                        for rel in (-self.STROKE / 2, 0.0, self.STROKE / 2):
+                            m = spin(pt - radial * WHEEL_R, a, rel) @ hm
+                            rep = {}
+                            E = self.arms.solve({"View": self.view_rest()}, s, m, pole, rep)
+                            tws.append(rep["twist_deg"][s])
+                            fo = (m.translation - E).normalized()
+                            wr = max(wr, math.degrees(fo.angle(m.to_3x3() @ Vector((0, 1, 0)))))
+                            reach = max(reach, rep["reach"])
+                        tw = max(abs(x) for x in tws)
+                        cost = (tw / 60.0 + max(0.0, tw - 75.0) / 10.0 + max(0.0, wr - 35.0) / 10.0
+                                + 2.0 * (1 - n.dot(want)) + max(0.0, reach - 0.95) * 50.0)
+                        if best is None or cost < best[0]:
+                            best = (cost, hm, line, pole, [round(x, 1) for x in tws], round(wr, 1), round(reach, 3))
+        self.report.setdefault("grip_choice", {})[s] = {"twists": best[4], "wrist": best[5], "reach": best[6],
+                                                        "pole": list(best[3])}
+        return best[1], best[2], best[3]
+
+    def cpl(self, twist, drop):
+        """The coupling's pose (camera space) turned `twist` deg about its axis, `drop` m below its seat."""
+        return self.cpl_seat @ Matrix.Translation(Vector((0, 0, -drop))) @ Matrix.Rotation(math.radians(twist), 4, "Z")
+
+    def _act_base(self, act, roots_k, roots):
+        M = self.cam[act]
+        return {"view": Matrix.Identity(4), "roots": roots * roots_k, "down": (M.to_3x3() @ -Y).normalized(),
+                "hand_ang": {}, "poles": {}, "stiff": 0.0}
+
+    def pickup_p(self, t):
+        """Bend down to the nozzle lying by the coil, take it by the grip (PICK_GRAB: the coil's nozzle goes, this
+        one shows), lift it into the hold; the left hand comes up under the hose."""
+        k_roots = ease((t - 0.2) / 0.45) * (1.0 - ease((t - 1.0) / 0.6))
+        p = self._act_base("pickup", k_roots, self.PICK_ROOTS)
+        G = self.G["Right"]
+        TG = self.tool_ground
+        grab = TG @ G
+        down = p["down"]
+        if t < PICK_GRAB:
+            pre = Matrix.Translation(-down * 0.09) @ grab
+            m = lerp_m(low(self.hold["RightHand"], 1.0), pre, ease((t - 0.3) / 0.45))
+            m = lerp_m(m, grab, ease((t - 0.7) / (PICK_GRAB - 0.08 - 0.7)))
+            p["tool_m"] = TG
+            p["right_m"] = m
+            p["hand_ang"]["Right"] = mix(self.open_ang["Right"], self.hold_ang["Right"], ease((t - 0.74) / 0.12))
+            p["scale"] = dict({"Tool": HIDE}, **{f"Hose{k}": HIDE for k in range(HOSE_BONES)})
+        else:
+            u = ease((t - 0.95) / 0.6)
+            tool = lerp_m(TG, self.hold["Tool"], u)
+            tool = Matrix.Translation(-down * 0.07 * math.sin(math.pi * u)) @ tool
+            p["tool_m"] = tool
+            p["hand_ang"]["Right"] = self.hold_ang["Right"]
+        p["poles"]["Right"] = self.hold_pole["Right"].lerp(self.pick_pole, ease(t / 0.5) * (1.0 - ease((t - 1.0) / 0.5)))
+        kl = ease((t - 1.0) / 0.6)
+        p["left_m"] = lerp_m(low(self.hold["LeftHand"], 1.0), self.hold["LeftHand"], kl)
+        p["hand_ang"]["Left"] = mix(self.open_ang["Left"], self.hold_ang["Left"], ease((t - 1.35) / 0.25))
+        p["hose_free"] = 1.0 - ease((t - 1.15) / 0.45)
+        return p
+
+    def attach_p(self, t):
+        """The nozzle aside in the right hand; the left hand brings the hose's coupling up under the tap's connector,
+        pushes it on, gives it a turn and lets go (ATTACH_SWAP: the tap's own coupling shows), back under the hose."""
+        k_roots = ease((t - 0.2) / 0.4) * (1.0 - ease((t - 1.5) / 0.5))
+        p = self._act_base("attach", k_roots, self.ATTACH_ROOTS)
+        k_aside = ease(t / 0.4) * (1.0 - ease((t - 1.5) / 0.5))
+        p["tool_m"] = lerp_m(self.hold["Tool"], self.tool_aside, k_aside)
+        p["hand_ang"]["Right"] = self.hold_ang["Right"]
+        pole, fing = self.cpl_grip
+        hL = self.hold["LeftHand"]
+        H = self.cpl_hand
+        pre = self.cpl(-60.0, 0.09) @ H
+        if t < 0.35:
+            p["left_m"] = lerp_m(hL, low(hL, 1.0), ease(t / 0.35))
+            p["hand_ang"]["Left"] = mix(self.hold_ang["Left"], self.open_ang["Left"], ease(t / 0.2))
+            p["coupling_m"] = low(pre, 1.0) @ H.inverted()
+            p["poles"]["Left"] = self.hold_pole["Left"].lerp(pole, ease(t / 0.35))
+        elif t < ATTACH_SWAP:
+            if t < 0.85:
+                hand = lerp_m(low(pre, 1.0), pre, ease((t - 0.35) / 0.5))
+                P = hand @ H.inverted()
+            elif t < 1.1:
+                P = self.cpl(-60.0, 0.09 * (1.0 - ease((t - 0.85) / 0.25)))
+                hand = P @ H
+            else:
+                P = self.cpl(-60.0 + 60.0 * ease((t - 1.1) / 0.25), 0.0)
+                hand = P @ H
+            k_off = ease((t - 1.36) / (ATTACH_SWAP - 1.36))      # fingers open, the hand eases off toward the camera
+            p["left_m"] = Matrix.Translation((self.wheel_axis("attach") * 0.025 + p["down"] * 0.015) * k_off) @ hand
+            p["coupling_m"] = P
+            p["hand_ang"]["Left"] = mix(mix(self.open_ang["Left"], fing, ease((t - 0.3) / 0.2)), self.open_ang["Left"], k_off)
+            p["poles"]["Left"] = pole
+        else:
+            rel = Matrix.Translation(self.wheel_axis("attach") * 0.025 + p["down"] * 0.015) @ self.cpl(0.0, 0.0) @ H
+            k = ease((t - ATTACH_SWAP) / (ATTACH_T - 0.05 - ATTACH_SWAP))
+            m = lerp_m(rel, hL, k)
+            p["left_m"] = Matrix.Translation(p["down"] * 0.05 * math.sin(math.pi * k)) @ m
+            p["hand_ang"]["Left"] = mix(self.open_ang["Left"], self.hold_ang["Left"], ease((t - 1.75) / 0.25))
+            p["poles"]["Left"] = pole.lerp(self.hold_pole["Left"], k)
+            p["scale"] = {"Coupling": HIDE}
+        if t < ATTACH_SWAP:
+            p["scale"] = {"Coupling": 1.0}
+        p["hose_free"] = ease(t / 0.3) * (1.0 - ease((t - 1.6) / 0.45))
+        return p
+
+    def wheel_axis(self, act):
+        """The prop's +z (toward the camera) in camera space."""
+        return (self.cam[act].to_3x3() @ Z).normalized()
+
+    def wheel_angle(self, t):
+        """Degrees the wheel has turned at valve clip time t (counterclockwise, seen from the front)."""
+        return sum(self.STROKE * ease((t - a) / (b - a)) for a, b in self.STROKES)
+
+    def valve_p(self, t):
+        """Let the nozzle drop, both hands on the rim, four heaves of 90 deg with a regrip between (one turn:
+        valve.gd TURNS), let go and reach down out of view (fire.gd then raises the nozzle again: raise)."""
+        end = self.STROKES[-1][1]
+        k_roots = ease(t / 0.35) * (1.0 - ease((t - end - 0.1) / 0.3))
+        p = self._act_base("valve", k_roots, self.VALVE_ROOTS)
+        c, a, e1, e2 = self.wheel
+        down = p["down"]
+        # the nozzle: let go at 0.05 s, it falls away out of view (on its hose)
+        hT = self.hold["Tool"]
+        tau = max(0.0, t - 0.05)
+        fall = min(0.5 * 9.8 * tau * tau, 1.2)
+        p["tool_m"] = Matrix.Translation(down * fall + a * 0.1 * min(tau / 0.4, 1.0)) @ \
+            about(hT.translation, rot(x=-100.0 * ease(tau / 0.4), z=25.0 * ease(tau / 0.4))) @ hT
+        p["hose_free"] = ease(t / 0.15)
+        p["turn"] = self.wheel_angle(t) / (360.0 * VALVE_TURNS)
+        for s in ("Right", "Left"):
+            hm, pole, fing, mid = self.rim[s]
+
+            def at(rel, lift):
+                return Matrix.Translation(a * lift) @ spin(c, a, rel) @ hm
+
+            start = -self.STROKE / 2
+            hold_m = self.hold[s + "Hand"]
+            open_a = self.open_ang[s]
+            first = self.STROKES[0][0]
+            if t < first:
+                # off the nozzle / hose, up to the rim (just short of it till the camera is there: LOCK_IN), onto it
+                out = at(start, 0.0).translation - c
+                out -= a * out.dot(a)
+                pre = Matrix.Translation(a * 0.08 + out * 0.25) @ at(start, 0.0)    # back toward the camera, outside the rim
+                m = lerp_m(hold_m, pre, ease((t - 0.06) / (LOCK_IN - 0.06)))
+                m = lerp_m(m, at(start, 0.0), ease((t - LOCK_IN) / (first - 0.02 - LOCK_IN)))
+                ang = mix(mix(self.hold_ang[s], open_a, ease(t / 0.1)), fing, ease((t - LOCK_IN) / (first - LOCK_IN)))
+                p["poles"][s] = self.hold_pole[s].lerp(pole, ease(t / 0.35))
+            elif t >= end:
+                # let go, back off the wheel, down out of view
+                u = ease((t - end) / 0.12)
+                m = at(-start, 0.05 * u)
+                m = lerp_m(m, low(m, 1.0), ease((t - end - 0.1) / (VALVE_T - end - 0.12)))
+                ang = mix(fing, open_a, u)
+                p["poles"][s] = pole
+            else:
+                rel, lift, k = start, 0.0, 1.0
+                for i, (sa, sb) in enumerate(self.STROKES):
+                    if sa <= t < sb:
+                        rel = start + self.STROKE * ease((t - sa) / (sb - sa))
+                        break
+                    nxt = self.STROKES[i + 1][0] if i + 1 < len(self.STROKES) else None
+                    if nxt is not None and sb <= t < nxt:
+                        # regrip: open, swing back clear of the rim, close again
+                        u = (t - sb) / (nxt - sb)
+                        k = 1.0 - pulse(u, 0.0, 1.0) ** 0.5
+                        rel = -start - self.STROKE * ease((u - 0.2) / 0.6)
+                        lift = 0.03 * math.sin(math.pi * min(max((u - 0.1) / 0.8, 0.0), 1.0))
+                        break
+                m = at(rel, lift)
+                ang = mix(open_a, fing, k)
+                p["poles"][s] = pole
+            p[s.lower() + "_m"] = m
+            p["hand_ang"][s] = ang
+        return p
+
+
+# ---------------------------------------------------------------- empty hands
+class Empty(ViewModel):
+    """No tool: both hands relaxed and half open, low in front of the body, only the fingers and the backs of the
+    hands peeking up over the bottom of the frame (the arms the player sees before he has picked anything up)."""
+    name = "empty"
+    SPLIT_FINGERS = True
+    # wrist (camera space), fingers' direction, the palm's facing (right hand; the left is its mirror)
+    WRIST = Vector((0.19, 0.3, -0.335))
+    FINGERS = Vector((-0.15, 0.8, 0.5))
+    PALM = Vector((-0.8, 0.1, -0.6))
+    # half open: knuckle, middle, end joint flexion (deg), more toward the little finger; the thumb loose
+    RELAXED = {"Thumb": [8.0, 12.0, 15.0, 15.0], "Index": [16.0, 24.0, 12.0], "Middle": [20.0, 28.0, 14.0],
+               "Ring": [24.0, 32.0, 16.0], "Pinky": [28.0, 34.0, 18.0]}
+
+    def setup_tool(self):
+        pass
+
+    def solve_grips(self):
+        self.H = {}
+        self.pole = {}
+        for s, sx in (("Right", 1.0), ("Left", -1.0)):
+            m = FP.frame(Vector((sx * self.FINGERS.x, self.FINGERS.y, self.FINGERS.z)),
+                         Vector((sx * self.PALM.x, self.PALM.y, self.PALM.z))).to_4x4()
+            m.translation = Vector((sx * self.WRIST.x, self.WRIST.y, self.WRIST.z))
+            self.H[s] = m
+            self.pole[s] = self._pole_for(s, m)
+        self.report["hold"] = {s: [round(x, 3) for x in self.H[s].translation] for s in self.H}
+
+    def _pole_for(self, s, hm):
+        sx = 1.0 if s == "Right" else -1.0
+        best = None
+        for c in ((0.6, -0.2, -1.0), (1.0, 0.0, -0.6), (0.3, -0.4, -1.0), (0.0, -0.2, -1.0)):
+            c = Vector((sx * c[0], c[1], c[2]))
+            rep = {}
+            self.arms.solve({"View": self.view_rest()}, s, hm, c, rep)
+            tw = abs(rep["twist_deg"][s])
+            if best is None or tw < best[0]:
+                best = (tw, c)
+        return best[1]
+
+    def tool_world(self, world, p):
+        pass
+
+    def hand_targets(self, world, p):
+        V = world["View"]
+        return {s: (V @ p.get(s.lower(), Matrix.Identity(4)) @ self.H[s], V.to_3x3() @ self.pole[s])
+                for s in ("Right", "Left")}
+
+    def fingers(self, p):
+        out = {}
+        for s in ("Left", "Right"):
+            c = p.get("curl", {}).get(s, 0.0)
+            out[s] = {f: [x + (c if f != "Thumb" else 0.3 * c) for x in v] for f, v in self.RELAXED.items()}
+        return out
+
+    def extra(self, world, p):
+        pass
+
+    def clips(self):
+        mid = (self.H["Right"].translation + self.H["Left"].translation) / 2
+        return [("idle", [self.idle_p(i / FPS) for i in range(4 * FPS + 1)], True),
+                ("walk", [self.walk_p(i / FPS) for i in range(FPS + 1)], True),
+                ("raise", raise_params(self.idle_p(0.0), mid, 12, whole=True), False),
+                ("lower", raise_params(self.idle_p(0.0), mid, 9, whole=True)[::-1], False)]
+
+    def idle_p(self, t):
+        """Breathing; the fingers flex a little now and then, one hand after the other."""
+        w = 2 * math.pi * t / 4
+        p = {"view": breath(t)}
+        p["right"] = Matrix.Translation(Vector((0.0, 0.0, 0.003 * math.sin(w + 0.6))))
+        p["left"] = Matrix.Translation(Vector((0.0, 0.0, 0.003 * math.sin(w - 0.4))))
+        p["curl"] = {"Right": 6.0 * pulse(t, 0.8, 1.8), "Left": 6.0 * pulse(t, 2.4, 3.4)}
+        return p
+
+    def walk_p(self, ph):
+        """One loop = two steps: the hands swing a little against each other with the steps."""
+        w = 2 * math.pi * ph
+        p = {"view": step_bob(ph)}
+        sw = 0.012 * math.sin(w)
+        p["right"] = Matrix.Translation(Vector((0.0, sw, 0.004 * math.sin(2 * w - 0.8)))) @ about(self.H["Right"].translation, rot(x=4.0 * math.sin(w)))
+        p["left"] = Matrix.Translation(Vector((0.0, -sw, 0.004 * math.sin(2 * w - 0.8)))) @ about(self.H["Left"].translation, rot(x=-4.0 * math.sin(w)))
+        return p
+
+
 def lerp_m(a, b, t):
     la, ra, _ = a.decompose()
     lb, rb, _ = b.decompose()
@@ -788,4 +1242,34 @@ def bezier(a, b, c, d, n):
     return out
 
 
-TOOLS = {"cutters": Cutters, "nozzle": Nozzle}
+def mix(a, b, k):
+    """Finger angles {finger: [deg]} from a to b."""
+    return {f: [x + (y - x) * k for x, y in zip(a[f], b[f])] for f in a}
+
+
+def low(m, k):
+    """A hand / tool matrix taken down out of view (k = 1) like raise_params' low pose."""
+    c = m.translation
+    return Matrix.Translation(Vector((0.0, -0.12 * k, -0.26 * k))) @ about(c, rot(x=-35.0 * k)) @ m
+
+
+def spin(c, axis, deg):
+    """Rotation by deg about the line through c along axis."""
+    return Matrix.Translation(c) @ Matrix.Rotation(math.radians(deg), 4, axis) @ Matrix.Translation(-c)
+
+
+def godot_cam(eye, yaw, pitch):
+    """Prop-local (Godot) -> camera space (Blender) for a camera at eye (prop-local), turned yaw deg about +y and
+    pitched (deg, + up) like fire.gd's player and head."""
+    cam = Matrix.Translation(eye) @ Matrix.Rotation(math.radians(yaw), 4, "Y") @ Matrix.Rotation(math.radians(pitch), 4, "X")
+    return G2B @ cam.inverted()
+
+
+def coil_nozzle():
+    """The nozzle lying by the coil: part space -> coil-local (Blender)."""
+    rx, ry, rz = (math.radians(v) for v in COIL_NOZZLE_ROT)
+    return (Matrix.Translation(COIL_NOZZLE_LOC) @ Matrix.Rotation(rz, 4, "Z") @ Matrix.Rotation(ry, 4, "Y")
+            @ Matrix.Rotation(rx, 4, "X"))
+
+
+TOOLS = {"cutters": Cutters, "nozzle": Nozzle, "empty": Empty}

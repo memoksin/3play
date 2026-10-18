@@ -14,6 +14,9 @@ fp_nozzle.glb):
   fp_nozzle_trigger    the yellow trigger lever on its own (pivot TRIGGER_PIVOT, under the barrel).
   fp_hose              a straight 1.1 m piece of the green hose along +Y from the origin, rings every 2 cm
                        (bent by bones in fp_arms.py).
+  fp_coupling          the hose's other end in the left hand: hose.py's brass coupling (coupling_v, origin = its top,
+                       axis -Z) and the hose hanging out of its foot; it ends up on the tap's connector (attach clip),
+                       where valve.tscn shows hose_coupling.glb, the same part.
 """
 import math
 import os
@@ -119,13 +122,21 @@ def hose():
     L.tube("hose", [(0, HOSE_LEN * i / n, 0) for i in range(n + 1)], HOSE_R, mat="hose_green", verts=12)
 
 
+def coupling():
+    import hose as H
+    H.coupling_v()
+    L.tube("stub", [(0, 0, -H.COUPLING_LEN + 0.004), (0, 0.0, -0.2), (0, 0.03, -0.33), (0, 0.1, -0.45)], HOSE_R,
+           mat="hose_green", verts=12)
+
+
 VARIANTS = (("fp_cut_r", lambda: cut_half(-1)), ("fp_cut_l", lambda: cut_half(1)), ("fp_nozzle", nozzle_body),
-            ("fp_nozzle_trigger", nozzle_trigger), ("fp_hose", hose))
+            ("fp_nozzle_trigger", nozzle_trigger), ("fp_hose", hose), ("fp_coupling", coupling))
 
 if __name__ == "__main__":
     out = L.out_dir_arg("tools/models/meshy/work/fp_tools")
     only = L.variants_arg()
     rounder()
+    L._fp_round = True                    # hose.py's parts (fp_coupling) are rounded already
     for name, fn in VARIANTS:
         if only and name not in only:
             continue

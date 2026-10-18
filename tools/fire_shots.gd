@@ -151,11 +151,28 @@ func _run() -> void:
 	_stand(hose.global_position + vn * 1.6 + _side(valve) * 0.6, valve.to_global(Vector3(0, 0.8, 0)))
 	s.look(0.0, -0.12)
 	await _shot("valve")
+	# the arms' clips with the camera held on the prop: bending down for the nozzle, the coupling going on, the
+	# wheel turning (the valve held)
+	_stand(hose.global_position + vn * 1.4, hose.global_position)
 	s.call("_act", &"hose")
-	_stand(valve.global_position + vn * 1.5, valve.to_global(Vector3(0, 0.95, 0.25)))
+	_play_act(0.8)
+	await _shot("pickup")
+	_play_act(9.0)
+	_stand(valve.global_position + vn * 1.5, valve.to_global(Vector3(0, 0.8, 0.2)))
 	s.call("_act", &"valve")
-	s.logic.open_valve()
-	s.set("_valve_turn", 1.0)
+	_play_act(1.15)
+	await _shot("attach")
+	_play_act(9.0)
+	_stand(valve.global_position + vn * 1.5, valve.to_global(Vector3(0, 0.95, 0.25)))
+	s.interact_press()
+	for i in 22:
+		s.advance(0.05)
+	await _shot("turn")
+	while not s.logic.valve_open:
+		s.advance(0.05)
+	s.interact_release()
+	_play_act(9.0)
+	_stand(valve.global_position + vn * 1.5, valve.to_global(Vector3(0, 0.95, 0.25)))
 	s.advance(0.1)
 	await _shot("attached")
 	s.seek(40.0)
@@ -281,6 +298,12 @@ func _side(n: Node3D) -> Vector3:
 	var x := n.global_basis.x
 	x.y = 0.0
 	return x.normalized()
+
+
+## Runs the interaction clip that is playing (or the stand-up after one) to `secs` in, or to its end.
+func _play_act(secs: float) -> void:
+	while (s.get("_act_id") != &"" or s.get("_stand_t") >= 0.0) and float(s.get("_act_t")) < secs - 1e-4:
+		s.advance(0.05 if s.get("_act_id") == &"" else minf(0.05, secs - float(s.get("_act_t"))))
 
 
 func _stand(feet: Vector3, point: Vector3) -> void:

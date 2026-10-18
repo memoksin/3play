@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" path="res://assets/3d/fire/valve_stand.glb" id="2_v"]
 [ext_resource type="PackedScene" path="res://assets/3d/fire/valve.glb" id="3_v"]
 [ext_resource type="PackedScene" path="res://assets/3d/fire/valve_wheel.glb" id="4_v"]
+[ext_resource type="PackedScene" path="res://assets/3d/fire/hose_coupling.glb" id="5_v"]
 
 [node name="Valve" type="Node3D"]
 script = ExtResource("1_v")
@@ -18,3 +19,7 @@ position = Vector3(-0.2, 0, 0)
 position = Vector3(0, 0.92, 0.26)
 
 [node name="Rim" parent="Wheel" instance=ExtResource("4_v")]
+
+[node name="Coupling" parent="." instance=ExtResource("5_v")]
+visible = false
+position = Vector3(0.16, 0.7, 0.12)

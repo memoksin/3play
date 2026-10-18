@@ -55,6 +55,12 @@ const LAND_DIP := 0.12
 const AIM_SLACK := 0.12
 ## A tap (pick up, attach) still counts this long after the press, so an early press is not lost.
 const TAP_BUFFER := 0.2
+## Interaction clips (the nozzle's arms: pickup, attach, valve; hand_nozzle.gd): the camera is brought to where the
+## clip wants it in LOCK_IN s (fp_tool.py LOCK_IN: no hand touches the prop before), and once the prop has
+## changed hands the player stands up in STAND_UP s, the view no lower than STAND_PITCH.
+const LOCK_IN := 0.4
+const STAND_UP := 0.5
+const STAND_PITCH := -0.25
 const BANNER_DUR := 2.4
 ## Controls line: shown in the overview and the first seconds of play.
 const CONTROLS_DUR := 12.0
@@ -226,6 +232,14 @@ var _target: Dictionary = {}
 var _hold := 0.0
 var _spraying := false
 var _valve_turn := 0.0
+var _act_id := &""
+var _act_t := 0.0
+var _act_done := false
+var _lock_from: Array = []
+var _lock_to: Array = []
+var _lock_w := 0.0
+var _crouch := 0.0
+var _stand_t := -1.0
 var _banner_t := -1.0
 var _released_at := -1.0
 var _roo_hops: Array = []
@@ -297,6 +311,7 @@ var _skip: PanelContainer
 @onready var _camera: Camera3D = $Player/Head/Camera
 @onready var _hand_cutters: Node3D = $Player/Head/Camera/Hand/Cutters
 @onready var _hand_nozzle: Node3D = $Player/Head/Camera/Hand/Nozzle
+@onready var _hand_empty: Node3D = $Player/Head/Camera/Hand/Empty
 @onready var _water: CPUParticles3D = $Player/Head/Camera/Hand/Nozzle/Water
 @onready var _embers: CPUParticles3D = $Player/Embers
 @onready var _puffs: CPUParticles3D = $Player/Puffs
@@ -449,6 +464,7 @@ func _swap_models() -> void:
 		"Props/Gate": skin.gate_model, "Props/Debris": skin.debris_model, "Props/Valve": skin.valve_model,
 		"Props/Hose": skin.hose_model, "Props/Flame": skin.flame_model, "Props/Farmer": skin.farmer_model,
 		"Player/Head/Camera/Hand/Cutters": skin.hand_cutters_model, "Player/Head/Camera/Hand/Nozzle": skin.hand_nozzle_model,
+		"Player/Head/Camera/Hand/Empty": skin.hand_empty_model,
 	}
 	for m in $Markers.get_children():
 		map["Markers/" + m.name] = skin.marker_model
@@ -501,6 +517,8 @@ func _take_out(prop: Node3D) -> void:
 	prop.visible = true
 	if m and m.has_method(&"raise"):
 		m.call(&"raise")
+	if prop != _hand_empty:
+		_empty_hands()
 
 
 ## Puts a hand tool away: the prop is hidden at once (the game's state); a model that can (put_away) lowers out
@@ -511,6 +529,7 @@ func _put_away(prop: Node3D) -> void:
 	prop.visible = false
 	var m := prop.get_node_or_null("Model") as Node3D
 	if m == null or not m.has_method(&"put_away"):
+		_empty_hands()
 		return
 	var away := _hand.get_node_or_null("Away") as Node3D
 	if away == null:
@@ -522,7 +541,18 @@ func _put_away(prop: Node3D) -> void:
 	away.add_child(m)
 	m.transform = xf
 	m.set_meta(&"home", prop)
-	m.call(&"put_away", _away_model.bind(prop))
+	m.call(&"put_away", func() -> void:
+		_away_model(prop)
+		_empty_hands())
+
+
+## The bare hands (FireSkin.hand_empty_model): down as soon as a tool is in hand, up again once the last tool
+## has gone down out of view.
+func _empty_hands() -> void:
+	if _hand_cutters.visible or _hand_nozzle.visible:
+		_put_away(_hand_empty)
+	elif not _hand_empty.visible and phase != Phase.END:
+		_take_out(_hand_empty)
 
 
 ## Brings a tool's model back from Hand/Away into its prop (when it is gone, or the tool is taken out again).
@@ -833,6 +863,7 @@ func _end(escaped: bool) -> void:
 	_prompt.visible = false
 	_hand_cutters.visible = false
 	_hand_nozzle.visible = false
+	_hand_empty.visible = false
 	_hose_line.visible = false
 	_end_cam_from = _camera.global_transform
 	_end_fov_from = _camera.fov
@@ -922,6 +953,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## Turns the view: yaw and pitch deltas in radians (pitch is clamped).
 func look(d_yaw: float, d_pitch: float) -> void:
+	if _locked():
+		return
 	_yaw = wrapf(_yaw + d_yaw, -PI, PI)
 	_pitch = clampf(_pitch + d_pitch, -PITCH_LIMIT, PITCH_LIMIT)
 	_player.rotation.y = _yaw
@@ -977,7 +1010,7 @@ func _look_keys(delta: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if phase != Phase.PLAY or _finished:
+	if phase != Phase.PLAY or _finished or _locked():
 		return
 	var input := Input.get_vector(&"fire_left", &"fire_right", &"fire_forward", &"fire_back")
 	if Input.is_action_just_pressed(&"fire_jump") and Engine.get_physics_frames() >= _no_jump_until:
@@ -1162,24 +1195,25 @@ func _pose_camera(delta: float) -> void:
 	_dip_vel += (-_dip * 120.0 - _dip_vel * 16.0) * delta
 	_dip += _dip_vel * delta
 	var bob := Vector3(sin(_bob_t) * BOB.x * k, -absf(cos(_bob_t)) * BOB.y * k, 0.0)
-	_head.position = Vector3(0, HEAD_Y + _dip, 0) + bob
+	var free := 1.0 - _lock_w  # an interaction clip holds the camera (and the hands) still where it wants them
+	_head.position = Vector3(0, HEAD_Y + _dip * free + _crouch, 0) + bob * free
 	var gust := _gust()
 	var left := skin.timer_seconds - elapsed
 	var breath := smoothstep(15.0, 0.0, left) * sin(elapsed * 2.4) * 1.6 if phase == Phase.PLAY else 0.0
 	var running := hs > skin.walk_speed + 0.4
 	var want := (skin.run_fov if running else skin.fov) + breath
 	_camera.fov = lerpf(_camera.fov, want, 1.0 - exp(-6.0 * delta))
-	_camera.rotation.z = deg_to_rad(sin(elapsed * 1.9) * 0.6 * gust + sin(_bob_t * 0.5) * 0.25 * k)
-	_camera.position.x = sin(elapsed * 23.0) * 0.006 * gust
+	_camera.rotation.z = deg_to_rad(sin(elapsed * 1.9) * 0.6 * gust + sin(_bob_t * 0.5) * 0.25 * k) * free
+	_camera.position.x = sin(elapsed * 23.0) * 0.006 * gust * free
 	# the hands swing with the steps and trail a little behind a turn
 	var turn := Vector2(wrapf(_yaw - _hand_yaw, -PI, PI), _pitch - _hand_pitch) / maxf(delta, 1e-4)
 	_hand_yaw = _yaw
 	_hand_pitch = _pitch
 	_hand_lag = _hand_lag.lerp((turn * 0.006).limit_length(0.035), 1.0 - exp(-10.0 * delta))
 	_hand.position = _hand_rest + Vector3(sin(_bob_t) * 0.012 * k + _hand_lag.x,
-			-absf(cos(_bob_t)) * 0.014 * k - _dip * 0.3 - _hand_lag.y, 0.0)
+			-absf(cos(_bob_t)) * 0.014 * k - _dip * 0.3 - _hand_lag.y, 0.0) * free
 	# the arms' own walk (fp_arms.gd): the same step phase as the bob
-	for prop: Node3D in [_hand_cutters, _hand_nozzle]:
+	for prop: Node3D in [_hand_cutters, _hand_nozzle, _hand_empty]:
 		var m := prop.get_node_or_null("Model")
 		if prop.visible and m and m.has_method(&"set_move"):
 			m.call(&"set_move", k, _bob_t)
@@ -1272,7 +1306,16 @@ func _update_interact(dt: float) -> void:
 		_tap_buffer = 0.0
 	var pressed := _tap_buffer > 0.0
 	_tap_buffer = maxf(_tap_buffer - dt, 0.0)
-	var t := pick_target()
+	if (_act_id != &"" and _act_id != &"valve") or _stand_t >= 0.0:
+		_tap_buffer = 0.0
+		_target = {}
+		_hold = 0.0
+		_set_spray(false)
+		logic.regrow(skin.regrow_rate * dt)
+		_tick_act(dt)
+		return
+	# turning the valve the camera is held on it: the target stays
+	var t := _target if _act_id == &"valve" else pick_target()
 	if t.get("id", &"") != _target.get("id", &"") or t.get("kind", &"") != _target.get("kind", &""):
 		_hold = 0.0
 	_target = t
@@ -1298,14 +1341,14 @@ func _update_interact(dt: float) -> void:
 			if down:
 				_hold += dt
 				if t.id == &"valve":
-					_valve_turn = clampf(_hold / skin.valve_seconds, 0.0, 1.0)
+					_valve_turn = _valve_hold()
 				if _hold >= float(t.secs):
 					_hold = 0.0
 					_act(t.id)
 			else:
 				_hold = maxf(_hold - dt * 2.0, 0.0)
 				if t.id == &"valve" and not logic.valve_open:
-					_valve_turn = clampf(_hold / skin.valve_seconds, 0.0, 1.0)
+					_valve_turn = _valve_hold()
 	if t.kind == &"spray" and spraying:
 		if logic.douse(dt / skin.douse_seconds):
 			_on_flame_out()
@@ -1325,7 +1368,13 @@ func _act(id: StringName) -> void:
 			if logic.cut_fence():
 				_on_fence_cut()
 		&"hose":
-			if logic.pick_hose():
+			if _has_act(&"pickup") and not logic.hose_held and not logic.hose_attached:
+				_put_away(_hand_cutters)
+				_away_model(_hand_nozzle)
+				_hand_nozzle.visible = true
+				_empty_hands()
+				_start_act(&"pickup", _hose)
+			elif logic.pick_hose():
 				if not _model_state(_hose, &"held"):
 					_hose.visible = false
 				_put_away(_hand_cutters)
@@ -1333,19 +1382,154 @@ func _act(id: StringName) -> void:
 				sound_event.emit(&"hose", 0)
 		&"valve":
 			if logic.hose_held and not logic.hose_attached:
-				if logic.attach_hose():
-					_hose.global_position = (_valve.get_node("Coil") as Node3D).global_position
-					_hose.visible = true
-					if not _model_state(_hose, &"attached"):
-						var nozzle := _hose.get_node_or_null("Model/Nozzle") as Node3D
-						if nozzle:
-							nozzle.visible = false
-					_hose_line.visible = true
+				if _has_act(&"attach"):
+					_start_act(&"attach", _valve)
+				elif logic.attach_hose():
+					_show_attached()
 					sound_event.emit(&"attach", 0)
 			elif logic.open_valve():
 				_valve_turn = 1.0
 				_model_state(_valve, &"open")
 				sound_event.emit(&"valve", 0)
+				if _act_id == &"valve":
+					_end_act()
+					_take_out(_hand_nozzle)  # the hands come back up with the nozzle (raise)
+					_stand_t = 0.0
+
+
+## The hose on the tap: its coupling on the outlet, the line from the tap to the hand.
+func _show_attached() -> void:
+	_hose.global_position = (_valve.get_node("Coil") as Node3D).global_position
+	_hose.visible = true
+	if not _model_state(_hose, &"attached"):
+		var nozzle := _hose.get_node_or_null("Model/Nozzle") as Node3D
+		if nozzle:
+			nozzle.visible = false
+	_model_state(_valve, &"attached")
+	_hose_line.visible = true
+
+
+# --- interaction clips ------------------------------------------------------------
+
+func _nozzle_model() -> Node3D:
+	return _hand_nozzle.get_node_or_null("Model") as Node3D
+
+
+## The nozzle's arms have interaction clip `id` (the placeholder models do not: their tasks happen at once).
+func _has_act(id: StringName) -> bool:
+	var m := _nozzle_model()
+	return m != null and m.has_method(&"has_act") and bool(m.call(&"has_act", id))
+
+
+func _locked() -> bool:
+	return _act_id != &"" or _stand_t >= 0.0
+
+
+## Starts interaction clip `id` on `prop`: where the player is now, where the clip wants the camera (the prop as
+## the clip sees it, hand_nozzle.gd act_ref: camera = prop * rel^-1), standing on the same ground, crouched.
+func _start_act(id: StringName, prop: Node3D) -> void:
+	var m := _nozzle_model()
+	_act_id = id
+	_act_t = 0.0
+	_act_done = false
+	_stand_t = -1.0
+	var rel := Transform3D(Basis(), _hand_rest) * _hand.global_transform.affine_inverse() * (m.call(&"act_ref", id) as Transform3D)
+	var cam := prop.global_transform * rel.affine_inverse()
+	var fwd := -cam.basis.z
+	var feet := Vector3(cam.origin.x, _player.global_position.y, cam.origin.z)
+	_lock_from = [_player.global_position, _yaw, _pitch]
+	_lock_to = [feet, atan2(-fwd.x, -fwd.z), asin(clampf(fwd.y, -1.0, 1.0)), cam.origin.y - feet.y - HEAD_Y]
+	m.call(&"set_act", id, 0.0)
+
+
+## Back to the player's own control (the clip off the arms, the lock let go where it is).
+func _end_act() -> void:
+	var m := _nozzle_model()
+	if m and m.has_method(&"set_act"):
+		m.call(&"set_act", &"", 0.0)
+	_act_id = &""
+	_act_t = 0.0
+
+
+## A tap clip's step (pickup, attach) or the stand-up after one: the camera brought in, the moment the prop changes
+## hands (act_event), standing up after it, the game's state at the clip's end.
+func _tick_act(dt: float) -> void:
+	if _stand_t >= 0.0:
+		_stand_t += dt
+		_apply_lock(1.0, smoothstep(0.0, 1.0, _stand_t / STAND_UP))
+		if _stand_t >= STAND_UP:
+			_stand_t = -1.0
+			_lock_w = 0.0
+			_crouch = 0.0
+		return
+	var m := _nozzle_model()
+	_act_t += dt
+	var ev: float = m.call(&"act_event", _act_id)
+	if not _act_done and _act_t >= ev:
+		_act_done = true
+		match _act_id:
+			&"pickup":
+				_model_state(_hose, &"grabbed")
+				sound_event.emit(&"hose", 0)
+			&"attach":
+				_show_attached()
+				sound_event.emit(&"attach", 0)
+	var stand := smoothstep(0.0, 1.0, (_act_t - ev) / STAND_UP) if _act_done else 0.0
+	_apply_lock(smoothstep(0.0, 1.0, _act_t / LOCK_IN), stand)
+	m.call(&"set_act", _act_id, _act_t)
+	if _act_t < float(m.call(&"act_length", _act_id)):
+		return
+	match _act_id:
+		&"pickup":
+			if logic.pick_hose():
+				_model_state(_hose, &"held")
+		&"attach":
+			logic.attach_hose()
+	_end_act()
+	_lock_w = 0.0
+	_crouch = 0.0
+
+
+## The valve hold (hold progress = the valve clip's time): the camera brought to the wheel with it, back as the
+## hold runs down; how far the wheel has turned (the arms' own count: act_turn).
+func _valve_hold() -> float:
+	var k := clampf(_hold / skin.valve_seconds, 0.0, 1.0)
+	if not _has_act(&"valve"):
+		return k
+	if _act_id != &"valve":
+		if k <= 0.0:
+			return 0.0
+		_start_act(&"valve", _valve)
+	var m := _nozzle_model()
+	_act_t = k * float(m.call(&"act_length", &"valve"))
+	_apply_lock(smoothstep(0.0, 1.0, _act_t / LOCK_IN), 0.0)
+	m.call(&"set_act", &"valve", _act_t)
+	var turn: float = m.call(&"act_turn", _act_t)
+	if k <= 0.0:
+		_end_act()
+		_lock_w = 0.0
+		_crouch = 0.0
+	return turn
+
+
+## Puts the player w of the way from where he was to the clip's camera, then `stand` of the way back up (the
+## crouch out, the view no lower than STAND_PITCH).
+func _apply_lock(w: float, stand: float) -> void:
+	var to_feet: Vector3 = _lock_to[0]
+	var feet := (_lock_from[0] as Vector3).lerp(to_feet, w)
+	var pitch := lerpf(_lock_from[2], _lock_to[2], w)
+	var crouch: float = float(_lock_to[3]) * w
+	if stand > 0.0:
+		pitch = lerpf(pitch, maxf(pitch, STAND_PITCH), stand)
+		crouch *= 1.0 - stand
+	_player.global_position = feet
+	_player.velocity = Vector3.ZERO
+	_yaw = wrapf(lerp_angle(_lock_from[1], _lock_to[1], w), -PI, PI)
+	_pitch = clampf(pitch, -PITCH_LIMIT, PITCH_LIMIT)
+	_player.rotation.y = _yaw
+	_head.rotation.x = _pitch
+	_crouch = crouch
+	_lock_w = w * (1.0 - stand)
 
 
 func _on_fence_cut() -> void:

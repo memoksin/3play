@@ -52,16 +52,17 @@ rig itself (height 1.88 m; wrists at the narrowest cut of the glove cuff, elbows
 found from the texture's glove / skin colours), and `rig.py` falls back to it when `out/farmer/rigged.glb` is
 missing. `retarget.py` writes `assets/3d/fire/meshy_farmer.glb` (`DEST_OF`, 4.6k tris, 1024 px: `TEX_OF`).
 
-First-person arms (`assets/3d/fire/fp_cutters.glb`, `fp_nozzle.glb`; `scenes/minigames/fire/art/hand_*.tscn`):
+First-person arms (`assets/3d/fire/fp_cutters.glb`, `fp_nozzle.glb`, `fp_empty.glb`; `scenes/minigames/fire/art/hand_*.tscn`):
 
 ```sh
 blender -b --factory-startup --python-exit-code 1 -P tools/models/fire/fp_tools.py    # tool parts -> work/fp_tools/
 blender -b --factory-startup --python-exit-code 1 -P tools/models/meshy/fp_arms.py    # stages mesh, rig, anim
-blender -b --factory-startup --python-exit-code 1 -P tools/models/meshy/fp_arms.py -- anim nozzle
+blender -b --factory-startup --python-exit-code 1 -P tools/models/meshy/fp_arms.py -- anim nozzle   # or cutters / empty
 godot --headless --path . --import
 godot --headless --path . -s res://tests/test_fire_arms.gd
 bash tools/models/meshy/fp_gif.sh       # export/shots/fp_gif/<tool>_<clip>.gif + contact.png (needs a window)
-godot --path . -s res://tools/fire_shots.gd -- only=cutters,snip,attached,spray prefix=fp_ size=1280x720
+godot --path . -s res://tools/fire_shots.gd -- only=cutters,snip,pickup,attach,turn,attached,spray prefix=fp_ size=1280x720
+bash tools/fire_gif.sh                  # export/shots/fire_gif/{pickup,attach,valve,spray}.gif: the clips in the game
 ```
 
 - `fp_arms.py` stage `mesh`: both arms cut from the full-detail mesh at mid upper arm (glove shell + sleeve piece,
@@ -75,8 +76,29 @@ godot --path . -s res://tools/fire_shots.gd -- only=cutters,snip,attached,spray 
   Hose0..10, Inlet), both hands placed by two-bone IK with an anatomical elbow hinge; `best_grip` picks the hand
   roll / palm angle / elbow pole that keep forearm twist and wrist bend natural; fingers close on the handles by a
   contact solver against the glove's own vertices, the thumb by a small search. Clips (camera space, 30 fps):
-  cutters `idle` `walk` `snip` `raise` `lower`; nozzle `idle` `walk` `spray` `spray_start` `raise` `lower`.
-  Reach and twist per clip in `work/fp_report.json`.
+  cutters `idle` `walk` `snip` `raise` `lower`; nozzle `idle` `walk` `spray` `spray_start` `raise` `lower`
+  `pickup` `attach` `valve`; empty (bare hands) `idle` `walk` `raise` `lower`. Reach and twist per clip in
+  `work/fp_report.json`.
+- Bare hands (`Empty`, `hand_empty.tscn` with plain `fp_arms.gd`, `FireSkin.hand_empty_model`): no tool, both
+  hands relaxed and half open (fingers 16-34 deg per joint, more toward the little finger), wrists 0.34 m below
+  and 0.3 m ahead of the eye, so only the fingers and the backs of the hands show over the bottom of the view
+  (~33 deg below centre at FOV 75). fire.gd shows them while no tool is in hand: they go down (`put_away`) as a
+  tool comes up, and come back up (`raise`) once the last tool has gone down.
+- Nozzle interaction clips (`Nozzle.pickup_p` / `attach_p` / `valve_p`): fire.gd brings the camera, in `LOCK_IN`
+  0.4 s, to where the clip wants it on the prop (the prop's frame in camera space is baked on three root bones,
+  `Ref<Act>O/X/Y`; `hand_nozzle.gd act_ref`; camera = prop x ref^-1, crouched, movement and look frozen) and plays
+  the clip by game time (`set_act`). `pickup` 1.8 s: bent down (eye 0.7 m over the nozzle, the arms' roots forward),
+  the right hand takes the nozzle lying by the coil with its hold grip (0.9 s: the coil's own nozzle, the same part,
+  hides and the hand's one shows: the Tool bone's scale), lifts it, the left hand comes up under the hose.
+  `attach` 2.1 s: the nozzle aside, the left hand brings the hose's coupling (`fp_coupling`, Coupling bone) under the
+  tap's connector, pushes it on, turns it 60 deg and lets go (1.47 s: valve.tscn's Coupling shows, the hose line
+  too). `valve` 2.6 s, seeked by the hold (`valve_seconds`): the nozzle dropped, both hands on the rim (palm on its
+  front, fingers closed round it on four short capsules along the arc, forearm twist within -75..+25 deg over a
+  heave), four 90 deg heaves with a regrip between (one turn, counterclockwise: opening), let go, reach down; the
+  wheel's turn is baked on the Turn bone (`act_turn`), so the prop wheel follows the hands. Then `raise`.
+- Spray: the loop is held still against the jet (only a sway once per loop). The old 4-9 Hz "pressure shiver",
+  keyed at 30 fps, moved the muzzle ~1 mm between frames at 60 fps (the jet, the FP hose and the world hose line
+  with it); now 0.007 mm.
 - Cutters grip (`Cutters` in `fp_tool.py`): each hand holds its handle from the outside, as with real long-handled
   bolt cutters: the palm on the handle's outer, upper side, the fingers closing round under it to the inner side,
   the thumb over the top, so squeezing brings the handles together. `anat_grip` searches hand roll, palm diagonal
@@ -91,8 +113,9 @@ godot --path . -s res://tools/fire_shots.gd -- only=cutters,snip,attached,spray 
   thumb tip and the index / middle tips are fused in the Meshy mesh (they pulled out into needles once the
   fingers part); cutters only, the nozzle export is unchanged.
 - In game: `fp_arms.gd` (AnimationTree: idle / walk by `set_move`, the tool action, raise / lower one-shots),
-  `hand_cutters.gd` (`set_snip` 0..1 seeks `snip`), `hand_nozzle.gd` (`set_spray`), `viewmodel.gdshader` (drawn in
-  front of the world by squeezing the depth, so walls never cut the arms; glove grain / sleeve weave detail).
+  `hand_cutters.gd` (`set_snip` 0..1 seeks `snip`), `hand_nozzle.gd` (`set_spray`; `set_act` / `act_ref` /
+  `act_event` / `act_turn`, the interaction clips over everything), `viewmodel.gdshader` (drawn in front of the world
+  by squeezing the depth, so walls never cut the arms; glove grain / sleeve weave detail).
 
 ## What the scripts do
 
