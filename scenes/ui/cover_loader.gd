@@ -2,8 +2,8 @@ class_name CoverLoader
 extends Control
 ## The loading mark on Game's full-screen cover: a small still globe with its orbit ring, "Yükleniyor..."
 ## and a thin bar that fills a step at a time as the run loads (Game calls `progress`). Nothing in it spins:
-## the warm-up has frames of 0.5-1 s (first draws, shader compiles) in which nothing on screen can move, and
-## a stopped spinner reads as a freeze, a bar that waits and then jumps reads as loading. It is a child of
+## a slow machine's first globe frames can last 0.1-0.5 s (uploads, first draws), in which nothing on screen
+## can move, and a stopped spinner reads as a freeze, a bar that waits and then jumps reads as loading. It is a child of
 ## the cover, so it fades with it; `arm()` shows it only when the wait lasts, `disarm()` hides it again.
 
 const DELAY := 0.3       # seconds the cover must stay up before the mark shows
