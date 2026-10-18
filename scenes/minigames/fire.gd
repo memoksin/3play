@@ -3,7 +3,8 @@ extends Node3D
 ## Saturday bushfire comes. Rules live in FireLogic, data in Game.disaster.skin (FireSkin); the scene is
 ## built by tools/fire_gen.gd with placeholder art (every prop's `Model` child is swappable, see FireSkin).
 ##
-## Flow: a few seconds of overview from above, then first person. Cut the fence (wire cutters), put out the flame
+## Flow: an opening shot (the hero view of the slab, down to the farmer's face, round his head into his eyes), then
+## first person (Space or a click skips the shot). Cut the fence (wire cutters), put out the flame
 ## on the way out (hose, valve), jump the debris in the broken gate. 90 s; the smoke follows the clock.
 ## Out of the gate (or out of time) an ending shot plays (skin.escape_seconds / lose_seconds): the camera leaves the
 ## head, rises and pulls back to the 2.5D style's hero view of the floating farm slab while the fire takes the farm;
@@ -18,7 +19,8 @@ signal finished(saved: int, total: int)
 ## Audio hooks (docs/audio.md, scripts/audio.gd). sound_event kinds: footstep, jump, land, cutters (picked up),
 ## snip (a tie cut, index = tie), cut, panel_land (index 0 = the slam, 1 = the little hop after it), kangaroo
 ## (index = kangaroo), success (index 0 = fence, 1 = flame), hose, attach, valve, water_on, water_off, flame_out,
-## heartbeat, gust, exit (the ending shot starts), lose (the dark ending starts).
+## heartbeat, gust, exit (the ending shot starts), lose (the dark ending starts), alert (an alert flash shows: index 1
+## urgent, 0 not).
 signal sound_event(kind: StringName, index: int)
 
 enum Phase { OVERVIEW, PLAY, END }
@@ -53,6 +55,12 @@ const LAND_DIP := 0.12
 const AIM_SLACK := 0.12
 ## A tap (pick up, attach) still counts this long after the press, so an early press is not lost.
 const TAP_BUFFER := 0.2
+## Interaction clips (the nozzle's arms: pickup, attach, valve; hand_nozzle.gd): the camera is brought to where the
+## clip wants it in LOCK_IN s (fp_tool.py LOCK_IN: no hand touches the prop before), and once the prop has
+## changed hands the player stands up in STAND_UP s, the view no lower than STAND_PITCH.
+const LOCK_IN := 0.4
+const STAND_UP := 0.5
+const STAND_PITCH := -0.25
 const BANNER_DUR := 2.4
 ## Controls line: shown in the overview and the first seconds of play.
 const CONTROLS_DUR := 12.0
@@ -77,8 +85,74 @@ const STRIDE := 0.55
 ## Air in the ending shot: fog density and screen smoke at the hero view (escape, lose).
 const END_FOG := Vector2(0.0042, 0.0105)
 const END_SMOKE := Vector2(0.1, 0.42)
-## The overview hands over to first person in the last share of its time.
-const SWOOP := 0.42
+## The opening shot (skin.overview_seconds, shares of it): the hero view holds until INTRO_DIVE, the camera tilts down
+## and closes in on the farmer's face by INTRO_FACE, holds there (a slow push-in) until INTRO_TURN, then turns half
+## way round his head and into his eyes: first person, the arms come in as the body goes.
+const INTRO_DIVE := 0.13
+const INTRO_FACE := 0.54
+const INTRO_TURN := 0.65
+## On the way down the camera cranes up to INTRO_TOP (radians over the horizon, seen from his eyes) by this share of
+## the dive, so the line of sight clears the gums and the farmhouse while it swings round to his front, and comes down
+## to his eye level only in the last part, close to him (nothing stands between there).
+const INTRO_TOP := 1.05
+const INTRO_TOP_AT := 0.36
+## The face shot: camera distance from the eyes (arriving, after the push-in), its height angle (radians, below eye
+## level is negative), FOV (a telephoto portrait, like the style camera's 26).
+const FACE_DIST := Vector2(1.25, 1.1)
+const FACE_ELEV := -0.05
+const FACE_FOV := 30.0
+## The face shot looks at him a little from his left (radians round him; the turn goes on that way): straight from his
+## front the grass flame by the gate stands right behind his hat while the camera comes down.
+const FACE_PHI := -0.5
+## During the turn the camera rises a little over his head (radians at the half turn), so his head sits low in the
+## frame when it is behind him; the figure dissolves where it is nearer the camera than BODY_FADE.y (gone inside
+## BODY_FADE.x, m), and is hidden once the camera is BODY_HIDE m behind his eyes.
+const TURN_LIFT := 0.38
+const BODY_FADE := Vector2(0.3, 0.75)
+const BODY_HIDE := 0.22
+## Task plate (Fener's errand banner): the current step big at the bottom centre, the whole task under it (while the
+## controls line shows), on a dark plate that reads against the fire. Gap to the bottom edge (the controls line is under it), widest plate, padding.
+const PLATE_BOTTOM := 64.0
+const PLATE_MAX_W := 980.0
+const PLATE_PAD := Vector2(26.0, 10.0)
+const PLATE_BG := Color(0.03, 0.03, 0.06, 0.8)
+const PLATE_EDGE := Color("f2c14e")
+## A new step flashes the plate for this long (s).
+const PLATE_FLASH := 1.4
+## Task markers on the HUD (_draw_markers): height over the marker (m), disc radius (px), how near (m) they fade out
+## (the prompt takes over there).
+const MARKER_H := 2.7
+const MARKER_R := 15.0
+const MARKER_NEAR := Vector2(1.6, 3.0)
+## Alerts (_check_alerts, alert()): short, big flashes at the top centre (apart from the task plate), each once a game,
+## on the game's own events: id -> [text key, urgent (white on a red band, the screen edges pulse red, else white on a
+## dark band)]. The context line opens play and is read before the task plate comes in.
+const ALERTS := {
+	&"context": ["FIRE_ALERT_CONTEXT", false],
+	&"front": ["FIRE_ALERT_FRONT", true],
+	&"embers": ["FIRE_ALERT_EMBERS", false],
+	&"wind": ["FIRE_ALERT_WIND", true],
+	&"hurry": ["FIRE_ALERT_HURRY", false],
+	&"now": ["FIRE_ALERT_NOW", true],
+	&"roos": ["FIRE_ALERT_ROOS", false],
+	&"run": ["FIRE_ALERT_RUN", true],
+}
+## Seconds left at which the front, hurry and now alerts come; the smoke at which the wind brings a new stretch of the
+## front in (farm.gd CREEP Front3) for the wind alert (the embers alert comes with the first spot fire, SPOTS[0]).
+const ALERT_LEFT := {&"front": 60.0, &"hurry": 30.0, &"now": 15.0}
+const ALERT_WIND_SMOKE := 0.3
+## Seconds an alert stays (the context line longer), the pause between two, how long one may wait in the queue.
+const ALERT_DUR := 1.4
+const CONTEXT_DUR := 3.2
+const ALERT_GAP := 0.25
+const ALERT_STALE := 4.0
+## Top of the alert band: this share of the screen height, but under the clock and the done banner.
+const ALERT_Y := 0.17
+const ALERT_TOP_MIN := 124.0
+## Last seconds: the clock blinks red (twice a second).
+const CLOCK_RED := 15.0
+## Strongest red of the edge band an urgent alert pulses.
+const ALARM_MAX := 0.6
 ## Last seconds: the heart beats (faster and faster), the edges flush red, the view breathes.
 const HEART_FROM := 25.0
 const HEART_SLOW := 0.95
@@ -158,6 +232,14 @@ var _target: Dictionary = {}
 var _hold := 0.0
 var _spraying := false
 var _valve_turn := 0.0
+var _act_id := &""
+var _act_t := 0.0
+var _act_done := false
+var _lock_from: Array = []
+var _lock_to: Array = []
+var _lock_w := 0.0
+var _crouch := 0.0
+var _stand_t := -1.0
 var _banner_t := -1.0
 var _released_at := -1.0
 var _roo_hops: Array = []
@@ -204,6 +286,23 @@ var _end_smoke_from := 0.0
 ## The ending shot now: camera rise 0..1 (first person .. hero view) and how far the fire has taken the farm.
 var _end_e := 0.0
 var _end_engulf := 0.0
+## The task plate behind Hud/Info, its style, seconds since the step changed (-1: no flash) and the layout it has.
+var _plate: Panel
+var _plate_style: StyleBoxFlat
+var _hint_flash := -1.0
+var _plate_for := ""
+## Alerts: ids already queued (each comes once), the queue ([id, _world_t when queued]), the one up and its time, the
+## pause before the next; the band, its label and the two band styles; the "skip" chip of the opening shot.
+var _alerts_done := {}
+var _alert_queue: Array = []
+var _alert_id := &""
+var _alert_t := 0.0
+var _alert_wait := 0.0
+var _alert_box: PanelContainer
+var _alert_label: Label
+var _alert_red: StyleBoxFlat
+var _alert_white: StyleBoxFlat
+var _skip: PanelContainer
 
 @onready var _env: Environment = ($Env as WorldEnvironment).environment
 @onready var _sun: DirectionalLight3D = $Sun
@@ -212,6 +311,7 @@ var _end_engulf := 0.0
 @onready var _camera: Camera3D = $Player/Head/Camera
 @onready var _hand_cutters: Node3D = $Player/Head/Camera/Hand/Cutters
 @onready var _hand_nozzle: Node3D = $Player/Head/Camera/Hand/Nozzle
+@onready var _hand_empty: Node3D = $Player/Head/Camera/Hand/Empty
 @onready var _water: CPUParticles3D = $Player/Head/Camera/Hand/Nozzle/Water
 @onready var _embers: CPUParticles3D = $Player/Embers
 @onready var _puffs: CPUParticles3D = $Player/Puffs
@@ -261,6 +361,7 @@ func _ready() -> void:
 	_hand_rest = _hand.position
 	_yaw = _player.rotation.y
 	_pitch = -0.08
+	look(0.0, 0.0)  # the head takes the start pitch (the opening shot ends on it)
 	_hand_yaw = _yaw
 	_hand_pitch = _pitch
 	for k in _roos:
@@ -279,8 +380,14 @@ func _ready() -> void:
 			_fx.append(n)
 	for m in [_marker_a, _marker_b, _marker_exit]:
 		_collect_marker_mats(m)
+		# the exclamation mark itself is drawn on the HUD (_draw_markers); the faint beam stays in the world
+		var mm := (m as Node3D).get_node_or_null("Model") as Node3D
+		if mm:
+			mm.visible = false
 	_marker_exit.visible = false
+	_own_farmer_materials()
 	_farmer.visible = false
+	_hand.visible = false  # the arms come in at the end of the opening shot
 	var fm := _fence.get_node_or_null("Model")
 	if fm and fm.has_signal(&"snipped"):
 		fm.connect(&"snipped", func(i: int) -> void: sound_event.emit(&"snip", i))
@@ -296,6 +403,8 @@ func _ready() -> void:
 	_task.text = tr(skin.task_key)
 	_controls.text = tr(skin.controls_key)
 	_reticle.draw.connect(_draw_reticle)
+	_build_plate()
+	_build_alerts()
 	_update_hint()
 	_apply_smoke(0.0)
 	_pose_overview(0.0)
@@ -355,6 +464,7 @@ func _swap_models() -> void:
 		"Props/Gate": skin.gate_model, "Props/Debris": skin.debris_model, "Props/Valve": skin.valve_model,
 		"Props/Hose": skin.hose_model, "Props/Flame": skin.flame_model, "Props/Farmer": skin.farmer_model,
 		"Player/Head/Camera/Hand/Cutters": skin.hand_cutters_model, "Player/Head/Camera/Hand/Nozzle": skin.hand_nozzle_model,
+		"Player/Head/Camera/Hand/Empty": skin.hand_empty_model,
 	}
 	for m in $Markers.get_children():
 		map["Markers/" + m.name] = skin.marker_model
@@ -399,6 +509,75 @@ func _model_call(prop: Node, method: StringName, value: float) -> bool:
 		m.call(method, value)
 		return true
 	return false
+
+
+## Shows a hand tool (picked up): its model raises it into view when it can (raise()).
+func _take_out(prop: Node3D) -> void:
+	var m := _away_model(prop)
+	prop.visible = true
+	if m and m.has_method(&"raise"):
+		m.call(&"raise")
+	if prop != _hand_empty:
+		_empty_hands()
+
+
+## Puts a hand tool away: the prop is hidden at once (the game's state); a model that can (put_away) lowers out
+## of view first, from a holder beside the props (Hand/Away), and goes back into its prop when it is gone.
+func _put_away(prop: Node3D) -> void:
+	if not prop.visible:
+		return
+	prop.visible = false
+	var m := prop.get_node_or_null("Model") as Node3D
+	if m == null or not m.has_method(&"put_away"):
+		_empty_hands()
+		return
+	var away := _hand.get_node_or_null("Away") as Node3D
+	if away == null:
+		away = Node3D.new()
+		away.name = "Away"
+		_hand.add_child(away)
+	var xf := prop.transform * m.transform
+	prop.remove_child(m)
+	away.add_child(m)
+	m.transform = xf
+	m.set_meta(&"home", prop)
+	m.call(&"put_away", func() -> void:
+		_away_model(prop)
+		_empty_hands())
+
+
+## The bare hands (FireSkin.hand_empty_model): down as soon as a tool is in hand, up again once the last tool
+## has gone down out of view.
+func _empty_hands() -> void:
+	if _hand_cutters.visible or _hand_nozzle.visible:
+		_put_away(_hand_empty)
+	elif not _hand_empty.visible and phase != Phase.END:
+		_take_out(_hand_empty)
+
+
+## Brings a tool's model back from Hand/Away into its prop (when it is gone, or the tool is taken out again).
+func _away_model(prop: Node3D) -> Node3D:
+	var away := _hand.get_node_or_null("Away")
+	if away:
+		for m: Node3D in away.get_children():
+			if m.get_meta(&"home", null) == prop:
+				var xf := prop.transform.affine_inverse() * m.transform
+				away.remove_child(m)
+				m.name = "Model"
+				prop.add_child(m)
+				m.transform = xf
+				m.remove_meta(&"home")
+	return prop.get_node_or_null("Model") as Node3D
+
+
+## A point that moves with a hand tool's model (its point(name), e.g. the nozzle's Muzzle), else the prop's marker.
+func _tool_point(prop: Node3D, name: StringName, marker: String) -> Node3D:
+	var m := prop.get_node_or_null("Model")
+	if m and m.has_method(&"point"):
+		var p := m.call(&"point", name) as Node3D
+		if p:
+			return p
+	return prop.get_node_or_null(marker) as Node3D
 
 
 func _own_flame_materials() -> void:
@@ -560,7 +739,8 @@ func _pose_jet(delta: float) -> void:
 	_jet.visible = _spraying and _hand_nozzle.visible
 	if not _jet.visible:
 		return
-	var p0 := (_hand_nozzle.get_node("Tip") as Node3D).global_position
+	var p0 := _tool_point(_hand_nozzle, &"Muzzle", "Tip").global_position
+	_water.global_transform = Transform3D(_camera.global_basis, p0)
 	var v := -_camera.global_basis.z * JET_SPEED + Vector3(0, 1.2, 0)
 	var g := Vector3(0, -9.8, 0)
 	# time to reach the ground (or 0.75 s, ~9 m)
@@ -613,6 +793,7 @@ func advance(dt: float) -> void:
 				elapsed = skin.timer_seconds  # summed steps land a hair short of the end
 			_update_interact(dt)
 			_check_exit()
+			_check_alerts()
 			if phase == Phase.PLAY and elapsed >= skin.timer_seconds:
 				_end(false)
 		Phase.END:
@@ -646,8 +827,11 @@ func skip_overview() -> void:
 func _begin_play() -> void:
 	phase = Phase.PLAY
 	_intro_t = skin.overview_seconds
+	_farmer.visible = false
+	_hand.visible = true
 	_camera.current = true
 	_capture()
+	alert(&"context")
 
 
 func _capture() -> void:
@@ -672,10 +856,14 @@ func _headless() -> bool:
 func _end(escaped: bool) -> void:
 	phase = Phase.END
 	_end_t = 0.0
+	_alert_queue.clear()
+	_alert_id = &""
+	_alert_box.visible = false
 	_set_spray(false)
 	_prompt.visible = false
 	_hand_cutters.visible = false
 	_hand_nozzle.visible = false
+	_hand_empty.visible = false
 	_hose_line.visible = false
 	_end_cam_from = _camera.global_transform
 	_end_fov_from = _camera.fov
@@ -765,6 +953,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## Turns the view: yaw and pitch deltas in radians (pitch is clamped).
 func look(d_yaw: float, d_pitch: float) -> void:
+	if _locked():
+		return
 	_yaw = wrapf(_yaw + d_yaw, -PI, PI)
 	_pitch = clampf(_pitch + d_pitch, -PITCH_LIMIT, PITCH_LIMIT)
 	_player.rotation.y = _yaw
@@ -820,7 +1010,7 @@ func _look_keys(delta: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if phase != Phase.PLAY or _finished:
+	if phase != Phase.PLAY or _finished or _locked():
 		return
 	var input := Input.get_vector(&"fire_left", &"fire_right", &"fire_forward", &"fire_back")
 	if Input.is_action_just_pressed(&"fire_jump") and Engine.get_physics_frames() >= _no_jump_until:
@@ -899,18 +1089,95 @@ func _leash() -> void:
 
 # --- camera ---------------------------------------------------------------------
 
+## The opening shot at `t` s (INTRO_* shares of skin.overview_seconds): the style camera's hero view drifting a
+## little; then it tilts down and closes in on the farmer (standing where the player starts, facing the way the player
+## looks) along a curve: the look point slides from the slab to his eyes, the view direction turns from the hero angle
+## to his front, the distance shrinks evenly in log steps, the FOV goes from 26 to a portrait's; a held moment on his
+## face with a slow push-in; then the camera turns half way round his head (rising a little over it, the FOV opening
+## to first person's) and ends in his eyes on the first-person camera's exact transform. The body fades out as the
+## camera closes in behind his eyes, and the first-person arms come in as it is gone.
 func _pose_overview(t: float) -> void:
-	var k := clampf((t / skin.overview_seconds - (1.0 - SWOOP)) / SWOOP, 0.0, 1.0)
-	var drift := Transform3D(Basis(Vector3.UP, 0.05 * t), Vector3.ZERO)
-	var from := drift * _overview_home()
-	if k <= 0.0:
-		_overview.global_transform = from
-		_overview.fov = _overview_fov
-		return
-	var e := k * k * (3.0 - 2.0 * k)
-	var to := _player.global_transform * Transform3D(Basis(Vector3.RIGHT, _pitch), Vector3(0, HEAD_Y, 0))
-	_overview.global_transform = from.interpolate_with(to, e)
-	_overview.fov = lerpf(_overview_fov, skin.fov, e)
+	var u := clampf(t / skin.overview_seconds, 0.0, 1.0)
+	var hero := Transform3D(Basis(Vector3.UP, 0.05 * minf(t, INTRO_DIVE * skin.overview_seconds)), Vector3.ZERO) \
+			* _overview_home()
+	var eye := _player.global_position + Vector3(0, HEAD_Y, 0)
+	var fwd := -_player.global_basis.z
+	fwd = Vector3(fwd.x, 0.0, fwd.z).normalized()
+	var side := fwd.cross(Vector3.UP)
+	var face_h := fwd * cos(FACE_PHI) + side * sin(FACE_PHI)
+	var face := face_h * cos(FACE_ELEV) + Vector3.UP * sin(FACE_ELEV)
+	var body := true
+	var xf := hero
+	var fov := _overview_fov
+	if u > INTRO_DIVE and u <= INTRO_FACE:
+		var k := (u - INTRO_DIVE) / (INTRO_FACE - INTRO_DIVE)
+		var e := _ease5(k)
+		var f0 := -hero.basis.z
+		var d0 := hero.origin.y / maxf(-f0.y, 0.2)  # the hero view's look point on the ground
+		var look := (hero.origin + f0 * d0).lerp(eye, _ease5(clampf(k / 0.8, 0.0, 1.0)))
+		var b0 := -f0
+		var yaw := atan2(b0.x, b0.z) + wrapf(atan2(face_h.x, face_h.z) - atan2(b0.x, b0.z), -PI, PI) \
+				* _ease5(clampf(k / 0.62, 0.0, 1.0))
+		var elev := lerpf(asin(b0.y), INTRO_TOP, _ease5(clampf(k / INTRO_TOP_AT, 0.0, 1.0)))
+		elev = lerpf(elev, FACE_ELEV, _ease5(clampf((k - INTRO_TOP_AT) / (0.92 - INTRO_TOP_AT), 0.0, 1.0)))
+		var back := Vector3(sin(yaw) * cos(elev), sin(elev), cos(yaw) * cos(elev))
+		var d := exp(lerpf(log(d0), log(FACE_DIST.x), e))
+		xf = Transform3D(Basis.looking_at(-back, Vector3.UP), look + back * d)
+		fov = lerpf(_overview_fov, FACE_FOV, e)
+	elif u > INTRO_FACE and u <= INTRO_TURN:
+		var k := (u - INTRO_FACE) / (INTRO_TURN - INTRO_FACE)
+		var d := lerpf(FACE_DIST.x, FACE_DIST.y, k * k * (3.0 - 2.0 * k))
+		xf = Transform3D(Basis.looking_at(-face, Vector3.UP), eye + face * d)
+		fov = FACE_FOV
+	elif u > INTRO_TURN:
+		var k := (u - INTRO_TURN) / (1.0 - INTRO_TURN)
+		var e := _ease5(k)
+		var phi := lerpf(FACE_PHI, PI * signf(FACE_PHI + 1e-6), e)
+		var r := FACE_DIST.y * (1.0 - smoothstep(0.3, 1.0, k))
+		var elev := FACE_ELEV * (1.0 - e) + TURN_LIFT * sin(PI * e) * (1.0 - smoothstep(0.75, 1.0, k))
+		var off := (fwd * cos(phi) + side * sin(phi)) * cos(elev) + Vector3.UP * sin(elev)
+		var b := Basis.looking_at(-off, Vector3.UP)
+		var fp := _fp_transform()
+		var q := b.get_rotation_quaternion().slerp(fp.basis.get_rotation_quaternion(), smoothstep(0.55, 1.0, k))
+		xf = Transform3D(Basis(q), eye + off * r)
+		fov = lerpf(FACE_FOV, skin.fov, smoothstep(0.1, 1.0, k))
+		# behind his head (the figure dissolves near the camera, _own_farmer_materials) and then gone
+		if absf(phi) > PI * 0.5 and r < BODY_HIDE:
+			body = false
+	_overview.global_transform = xf
+	_overview.fov = fov
+	_overview.near = clampf(xf.origin.distance_to(eye) * 0.25, _camera.near, 1.0)
+	_farmer.global_position = _player.global_position
+	_farmer.rotation = Vector3(0.0, _yaw + PI, 0.0)
+	_farmer.visible = body
+	_hand.visible = not body
+
+
+## The farmer figure's materials dissolve (pixel dither) where they come closer to the camera than BODY_FADE.y and
+## are gone inside BODY_FADE.x: the opening shot goes into his head through the dissolving hat and shoulders.
+func _own_farmer_materials() -> void:
+	for mi: MeshInstance3D in _farmer.find_children("*", "MeshInstance3D", true, false):
+		if mi.mesh == null:
+			continue
+		for i in mi.mesh.get_surface_count():
+			var m := mi.get_active_material(i) as BaseMaterial3D
+			if m == null:
+				continue
+			var own := m.duplicate() as BaseMaterial3D
+			own.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_DITHER
+			own.distance_fade_min_distance = BODY_FADE.x
+			own.distance_fade_max_distance = BODY_FADE.y
+			mi.set_surface_override_material(i, own)
+
+
+## The first-person camera's transform at rest (no bob): where the opening shot ends.
+func _fp_transform() -> Transform3D:
+	return _player.global_transform * Transform3D(Basis(Vector3.RIGHT, _pitch), Vector3(0, HEAD_Y, 0))
+
+
+## Quintic ease in/out (0..1).
+static func _ease5(k: float) -> float:
+	return k * k * k * (k * (k * 6.0 - 15.0) + 10.0)
 
 
 func _overview_home() -> Transform3D:
@@ -928,22 +1195,28 @@ func _pose_camera(delta: float) -> void:
 	_dip_vel += (-_dip * 120.0 - _dip_vel * 16.0) * delta
 	_dip += _dip_vel * delta
 	var bob := Vector3(sin(_bob_t) * BOB.x * k, -absf(cos(_bob_t)) * BOB.y * k, 0.0)
-	_head.position = Vector3(0, HEAD_Y + _dip, 0) + bob
+	var free := 1.0 - _lock_w  # an interaction clip holds the camera (and the hands) still where it wants them
+	_head.position = Vector3(0, HEAD_Y + _dip * free + _crouch, 0) + bob * free
 	var gust := _gust()
 	var left := skin.timer_seconds - elapsed
 	var breath := smoothstep(15.0, 0.0, left) * sin(elapsed * 2.4) * 1.6 if phase == Phase.PLAY else 0.0
 	var running := hs > skin.walk_speed + 0.4
 	var want := (skin.run_fov if running else skin.fov) + breath
 	_camera.fov = lerpf(_camera.fov, want, 1.0 - exp(-6.0 * delta))
-	_camera.rotation.z = deg_to_rad(sin(elapsed * 1.9) * 0.6 * gust + sin(_bob_t * 0.5) * 0.25 * k)
-	_camera.position.x = sin(elapsed * 23.0) * 0.006 * gust
+	_camera.rotation.z = deg_to_rad(sin(elapsed * 1.9) * 0.6 * gust + sin(_bob_t * 0.5) * 0.25 * k) * free
+	_camera.position.x = sin(elapsed * 23.0) * 0.006 * gust * free
 	# the hands swing with the steps and trail a little behind a turn
 	var turn := Vector2(wrapf(_yaw - _hand_yaw, -PI, PI), _pitch - _hand_pitch) / maxf(delta, 1e-4)
 	_hand_yaw = _yaw
 	_hand_pitch = _pitch
 	_hand_lag = _hand_lag.lerp((turn * 0.006).limit_length(0.035), 1.0 - exp(-10.0 * delta))
 	_hand.position = _hand_rest + Vector3(sin(_bob_t) * 0.012 * k + _hand_lag.x,
-			-absf(cos(_bob_t)) * 0.014 * k - _dip * 0.3 - _hand_lag.y, 0.0)
+			-absf(cos(_bob_t)) * 0.014 * k - _dip * 0.3 - _hand_lag.y, 0.0) * free
+	# the arms' own walk (fp_arms.gd): the same step phase as the bob
+	for prop: Node3D in [_hand_cutters, _hand_nozzle, _hand_empty]:
+		var m := prop.get_node_or_null("Model")
+		if prop.visible and m and m.has_method(&"set_move"):
+			m.call(&"set_move", k, _bob_t)
 
 
 ## 0..1 wind gust strength (grows with the smoke).
@@ -1033,7 +1306,16 @@ func _update_interact(dt: float) -> void:
 		_tap_buffer = 0.0
 	var pressed := _tap_buffer > 0.0
 	_tap_buffer = maxf(_tap_buffer - dt, 0.0)
-	var t := pick_target()
+	if (_act_id != &"" and _act_id != &"valve") or _stand_t >= 0.0:
+		_tap_buffer = 0.0
+		_target = {}
+		_hold = 0.0
+		_set_spray(false)
+		logic.regrow(skin.regrow_rate * dt)
+		_tick_act(dt)
+		return
+	# turning the valve the camera is held on it: the target stays
+	var t := _target if _act_id == &"valve" else pick_target()
 	if t.get("id", &"") != _target.get("id", &"") or t.get("kind", &"") != _target.get("kind", &""):
 		_hold = 0.0
 	_target = t
@@ -1059,14 +1341,14 @@ func _update_interact(dt: float) -> void:
 			if down:
 				_hold += dt
 				if t.id == &"valve":
-					_valve_turn = clampf(_hold / skin.valve_seconds, 0.0, 1.0)
+					_valve_turn = _valve_hold()
 				if _hold >= float(t.secs):
 					_hold = 0.0
 					_act(t.id)
 			else:
 				_hold = maxf(_hold - dt * 2.0, 0.0)
 				if t.id == &"valve" and not logic.valve_open:
-					_valve_turn = clampf(_hold / skin.valve_seconds, 0.0, 1.0)
+					_valve_turn = _valve_hold()
 	if t.kind == &"spray" and spraying:
 		if logic.douse(dt / skin.douse_seconds):
 			_on_flame_out()
@@ -1080,37 +1362,178 @@ func _act(id: StringName) -> void:
 			if logic.pick_cutters():
 				if not _model_state(_cutters, &"taken"):
 					_cutters.visible = false
-				_hand_cutters.visible = true
+				_take_out(_hand_cutters)
 				sound_event.emit(&"cutters", 0)
 		&"fence":
 			if logic.cut_fence():
 				_on_fence_cut()
 		&"hose":
-			if logic.pick_hose():
+			if _has_act(&"pickup") and not logic.hose_held and not logic.hose_attached:
+				_put_away(_hand_cutters)
+				_away_model(_hand_nozzle)
+				_hand_nozzle.visible = true
+				_empty_hands()
+				_start_act(&"pickup", _hose)
+			elif logic.pick_hose():
 				if not _model_state(_hose, &"held"):
 					_hose.visible = false
-				_hand_cutters.visible = false
-				_hand_nozzle.visible = true
+				_put_away(_hand_cutters)
+				_take_out(_hand_nozzle)
 				sound_event.emit(&"hose", 0)
 		&"valve":
 			if logic.hose_held and not logic.hose_attached:
-				if logic.attach_hose():
-					_hose.global_position = (_valve.get_node("Coil") as Node3D).global_position
-					_hose.visible = true
-					if not _model_state(_hose, &"attached"):
-						var nozzle := _hose.get_node_or_null("Model/Nozzle") as Node3D
-						if nozzle:
-							nozzle.visible = false
-					_hose_line.visible = true
+				if _has_act(&"attach"):
+					_start_act(&"attach", _valve)
+				elif logic.attach_hose():
+					_show_attached()
 					sound_event.emit(&"attach", 0)
 			elif logic.open_valve():
 				_valve_turn = 1.0
 				_model_state(_valve, &"open")
 				sound_event.emit(&"valve", 0)
+				if _act_id == &"valve":
+					_end_act()
+					_take_out(_hand_nozzle)  # the hands come back up with the nozzle (raise)
+					_stand_t = 0.0
+
+
+## The hose on the tap: its coupling on the outlet, the line from the tap to the hand.
+func _show_attached() -> void:
+	_hose.global_position = (_valve.get_node("Coil") as Node3D).global_position
+	_hose.visible = true
+	if not _model_state(_hose, &"attached"):
+		var nozzle := _hose.get_node_or_null("Model/Nozzle") as Node3D
+		if nozzle:
+			nozzle.visible = false
+	_model_state(_valve, &"attached")
+	_hose_line.visible = true
+
+
+# --- interaction clips ------------------------------------------------------------
+
+func _nozzle_model() -> Node3D:
+	return _hand_nozzle.get_node_or_null("Model") as Node3D
+
+
+## The nozzle's arms have interaction clip `id` (the placeholder models do not: their tasks happen at once).
+func _has_act(id: StringName) -> bool:
+	var m := _nozzle_model()
+	return m != null and m.has_method(&"has_act") and bool(m.call(&"has_act", id))
+
+
+func _locked() -> bool:
+	return _act_id != &"" or _stand_t >= 0.0
+
+
+## Starts interaction clip `id` on `prop`: where the player is now, where the clip wants the camera (the prop as
+## the clip sees it, hand_nozzle.gd act_ref: camera = prop * rel^-1), standing on the same ground, crouched.
+func _start_act(id: StringName, prop: Node3D) -> void:
+	var m := _nozzle_model()
+	_act_id = id
+	_act_t = 0.0
+	_act_done = false
+	_stand_t = -1.0
+	var rel := Transform3D(Basis(), _hand_rest) * _hand.global_transform.affine_inverse() * (m.call(&"act_ref", id) as Transform3D)
+	var cam := prop.global_transform * rel.affine_inverse()
+	var fwd := -cam.basis.z
+	var feet := Vector3(cam.origin.x, _player.global_position.y, cam.origin.z)
+	_lock_from = [_player.global_position, _yaw, _pitch]
+	_lock_to = [feet, atan2(-fwd.x, -fwd.z), asin(clampf(fwd.y, -1.0, 1.0)), cam.origin.y - feet.y - HEAD_Y]
+	m.call(&"set_act", id, 0.0)
+
+
+## Back to the player's own control (the clip off the arms, the lock let go where it is).
+func _end_act() -> void:
+	var m := _nozzle_model()
+	if m and m.has_method(&"set_act"):
+		m.call(&"set_act", &"", 0.0)
+	_act_id = &""
+	_act_t = 0.0
+
+
+## A tap clip's step (pickup, attach) or the stand-up after one: the camera brought in, the moment the prop changes
+## hands (act_event), standing up after it, the game's state at the clip's end.
+func _tick_act(dt: float) -> void:
+	if _stand_t >= 0.0:
+		_stand_t += dt
+		_apply_lock(1.0, smoothstep(0.0, 1.0, _stand_t / STAND_UP))
+		if _stand_t >= STAND_UP:
+			_stand_t = -1.0
+			_lock_w = 0.0
+			_crouch = 0.0
+		return
+	var m := _nozzle_model()
+	_act_t += dt
+	var ev: float = m.call(&"act_event", _act_id)
+	if not _act_done and _act_t >= ev:
+		_act_done = true
+		match _act_id:
+			&"pickup":
+				_model_state(_hose, &"grabbed")
+				sound_event.emit(&"hose", 0)
+			&"attach":
+				_show_attached()
+				sound_event.emit(&"attach", 0)
+	var stand := smoothstep(0.0, 1.0, (_act_t - ev) / STAND_UP) if _act_done else 0.0
+	_apply_lock(smoothstep(0.0, 1.0, _act_t / LOCK_IN), stand)
+	m.call(&"set_act", _act_id, _act_t)
+	if _act_t < float(m.call(&"act_length", _act_id)):
+		return
+	match _act_id:
+		&"pickup":
+			if logic.pick_hose():
+				_model_state(_hose, &"held")
+		&"attach":
+			logic.attach_hose()
+	_end_act()
+	_lock_w = 0.0
+	_crouch = 0.0
+
+
+## The valve hold (hold progress = the valve clip's time): the camera brought to the wheel with it, back as the
+## hold runs down; how far the wheel has turned (the arms' own count: act_turn).
+func _valve_hold() -> float:
+	var k := clampf(_hold / skin.valve_seconds, 0.0, 1.0)
+	if not _has_act(&"valve"):
+		return k
+	if _act_id != &"valve":
+		if k <= 0.0:
+			return 0.0
+		_start_act(&"valve", _valve)
+	var m := _nozzle_model()
+	_act_t = k * float(m.call(&"act_length", &"valve"))
+	_apply_lock(smoothstep(0.0, 1.0, _act_t / LOCK_IN), 0.0)
+	m.call(&"set_act", &"valve", _act_t)
+	var turn: float = m.call(&"act_turn", _act_t)
+	if k <= 0.0:
+		_end_act()
+		_lock_w = 0.0
+		_crouch = 0.0
+	return turn
+
+
+## Puts the player w of the way from where he was to the clip's camera, then `stand` of the way back up (the
+## crouch out, the view no lower than STAND_PITCH).
+func _apply_lock(w: float, stand: float) -> void:
+	var to_feet: Vector3 = _lock_to[0]
+	var feet := (_lock_from[0] as Vector3).lerp(to_feet, w)
+	var pitch := lerpf(_lock_from[2], _lock_to[2], w)
+	var crouch: float = float(_lock_to[3]) * w
+	if stand > 0.0:
+		pitch = lerpf(pitch, maxf(pitch, STAND_PITCH), stand)
+		crouch *= 1.0 - stand
+	_player.global_position = feet
+	_player.velocity = Vector3.ZERO
+	_yaw = wrapf(lerp_angle(_lock_from[1], _lock_to[1], w), -PI, PI)
+	_pitch = clampf(pitch, -PITCH_LIMIT, PITCH_LIMIT)
+	_player.rotation.y = _yaw
+	_head.rotation.x = _pitch
+	_crouch = crouch
+	_lock_w = w * (1.0 - stand)
 
 
 func _on_fence_cut() -> void:
-	_hand_cutters.visible = false
+	_put_away(_hand_cutters)
 	_marker_a.visible = false
 	_disable_body(_fence)
 	if not _model_state(_fence, &"cut"):
@@ -1131,7 +1554,7 @@ func _on_flame_out() -> void:
 	_set_spray(false)
 	_disable_body(_flame)
 	_marker_b.visible = false
-	_hand_nozzle.visible = false
+	_put_away(_hand_nozzle)
 	_hose_line.visible = false
 	if not _model_state(_hose, &"down"):
 		var nozzle := _hose.get_node_or_null("Model/Nozzle") as Node3D
@@ -1173,6 +1596,7 @@ func _set_spray(on: bool) -> void:
 		return
 	_spraying = on
 	_water.emitting = on
+	_model_call(_hand_nozzle, &"set_spray", 1.0 if on else 0.0)
 	sound_event.emit(&"water_on" if on else &"water_off", 0)
 
 
@@ -1423,7 +1847,7 @@ func _update_props(dt: float) -> void:
 ## into the nozzle in the hand (a chain of short tubes on a cubic curve).
 func _pose_hose_line() -> void:
 	var a := (_valve.get_node("Outlet") as Node3D).global_position
-	var inlet := _hand_nozzle.get_node_or_null("Inlet") as Node3D
+	var inlet := _tool_point(_hand_nozzle, &"Inlet", "Inlet")
 	if inlet == null:
 		inlet = _hand_nozzle.get_node("Tip") as Node3D
 	var b := inlet.global_position if _hand_nozzle.visible else _hose.global_position
@@ -1496,6 +1920,8 @@ func _apply_smoke(_dt: float) -> void:
 	var danger := smoothstep(HEART_FROM, 4.0, left) if phase == Phase.PLAY else 0.0
 	sm.set_shader_parameter(&"danger", danger)
 	sm.set_shader_parameter(&"pulse", _pulse())
+	# an urgent alert pulses a red band along the screen edges (light, a few beats while it is up)
+	sm.set_shader_parameter(&"alarm", alarm_level() * (0.65 + 0.35 * sin(_alert_t * TAU * 2.5)))
 	var fade := 0.0
 	if phase == Phase.END:
 		fade = _ending_look(smoke_col, sm)
@@ -1506,7 +1932,7 @@ func _apply_smoke(_dt: float) -> void:
 func _fp_amount() -> float:
 	if phase != Phase.OVERVIEW:
 		return 1.0
-	var k := clampf((_intro_t / skin.overview_seconds - (1.0 - SWOOP)) / SWOOP, 0.0, 1.0)
+	var k := clampf((_intro_t / skin.overview_seconds - INTRO_DIVE) / (INTRO_FACE - INTRO_DIVE), 0.0, 1.0)
 	return k * k * (3.0 - 2.0 * k)
 
 
@@ -1557,11 +1983,33 @@ func _update_hud(dt: float) -> void:
 	_place_banner()
 	var shown := elapsed if phase == Phase.PLAY else 0.0
 	var hud_a := 1.0 - clampf(_end_t / 0.5, 0.0, 1.0) if phase == Phase.END else 1.0
-	_timer.modulate.a = hud_a
-	(_hint.get_parent() as Control).modulate.a = hud_a
+	# the clock and the task plate come in at the end of the opening shot, as the view becomes first person
+	var plate_a := hud_a
+	if phase == Phase.OVERVIEW:
+		plate_a = clampf((_intro_t / skin.overview_seconds - 0.85) / 0.15, 0.0, 1.0)
+	_timer.modulate.a = plate_a
+	# the task plate waits for the context line (it opens play) to be read
+	if phase == Phase.PLAY:
+		plate_a = clampf((elapsed - (CONTEXT_DUR - 0.15)) / 0.4, 0.0, 1.0)
+	elif phase == Phase.OVERVIEW:
+		plate_a = 0.0
+	_red_clock(left)
+	_skip.visible = phase == Phase.OVERVIEW
+	_skip.modulate.a = clampf((0.9 - _intro_t / skin.overview_seconds) / 0.1, 0.0, 1.0)
+	_place_skip()
+	_update_alert(dt)
+	(_hint.get_parent() as Control).modulate.a = plate_a
+	_plate.modulate.a = plate_a
+	_plate.visible = plate_a > 0.0
 	_controls.visible = (phase == Phase.OVERVIEW or shown < CONTROLS_DUR + 1.0) and phase != Phase.END
 	_controls.modulate.a = 1.0 if phase == Phase.OVERVIEW else clampf(CONTROLS_DUR + 1.0 - shown, 0.0, 1.0)
+	# the whole task goes with the controls line: then the plate is the step line alone and covers less of the view
+	_task.modulate.a = _controls.modulate.a if phase != Phase.END else 1.0
+	_task.visible = phase == Phase.OVERVIEW or shown < CONTROLS_DUR + 1.0
+	if _hint_flash >= 0.0:
+		_hint_flash += dt
 	_update_hint()
+	_style_plate()
 	_update_prompt()
 	_reticle.queue_redraw()
 
@@ -1569,8 +2017,293 @@ func _update_hud(dt: float) -> void:
 func _update_hint() -> void:
 	var key := logic.hint_key()
 	if key != _hint_key:
+		if _hint_key != "" and phase == Phase.PLAY:
+			_hint_flash = 0.0
 		_hint_key = key
 		_hint.text = tr(key) if key != "" else ""
+		_place_plate()
+
+
+## Builds the task plate: Hud/Info (Hint, Task) moves to the bottom centre on a dark plate with an amber edge.
+func _build_plate() -> void:
+	var info := _hint.get_parent() as VBoxContainer
+	_plate_style = StyleBoxFlat.new()
+	_plate_style.bg_color = PLATE_BG
+	_plate_style.border_color = PLATE_EDGE
+	_plate_style.set_border_width_all(2)
+	_plate_style.shadow_color = Color(0, 0, 0, 0.35)
+	_plate_style.shadow_size = 6
+	_plate = Panel.new()
+	_plate.name = "TaskPlate"
+	_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_plate.add_theme_stylebox_override(&"panel", _plate_style)
+	info.add_sibling(_plate)
+	info.get_parent().move_child(_plate, info.get_index())
+	info.add_theme_constant_override(&"separation", 0)
+	for l: Label in [_hint, _task]:
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.add_theme_color_override(&"font_shadow_color", Color(0, 0, 0, 0.9))
+	_hint.add_theme_font_size_override(&"font_size", 36)
+	_hint.add_theme_color_override(&"font_color", PLATE_EDGE)
+	_hint.max_lines_visible = 2
+	_task.add_theme_font_size_override(&"font_size", 23)
+	_task.add_theme_color_override(&"font_color", Palette.HUD_WHITE)
+	_task.max_lines_visible = 2
+	# the done / lose banner on the same kind of plate (green edge for a task done, red for the lose line)
+	var bs := _plate_style.duplicate() as StyleBoxFlat
+	bs.border_color = Palette.SAFE
+	bs.content_margin_left = 24
+	bs.content_margin_right = 24
+	bs.content_margin_top = 6
+	bs.content_margin_bottom = 6
+	_banner.add_theme_stylebox_override(&"panel", bs)
+	get_viewport().size_changed.connect(_place_plate)
+	_place_plate()
+
+
+## Lays the plate out: as wide as its longest line (up to PLATE_MAX_W and the screen less a margin, wrapping beyond
+## that), centred, its bottom PLATE_BOTTOM above the screen's bottom edge (the controls line sits under it).
+func _place_plate() -> void:
+	if _plate == null:
+		return
+	var vp := get_viewport().get_visible_rect().size
+	var info := _hint.get_parent() as VBoxContainer
+	var max_w := minf(vp.x - 2.0 * PLATE_PAD.x - 120.0, PLATE_MAX_W)
+	var w := 0.0
+	for l: Label in [_hint, _task]:
+		if not l.visible:
+			continue
+		var font := l.get_theme_font(&"font")
+		var fs := l.get_theme_font_size(&"font_size")
+		w = maxf(w, font.get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 6.0)
+	w = clampf(w, 320.0, max_w)
+	for l: Label in [_hint, _task]:
+		l.custom_minimum_size = Vector2(w, 0.0)
+		l.size = Vector2(w, 0.0)
+	info.custom_minimum_size = Vector2(w, 0.0)
+	info.size = Vector2.ZERO
+	info.reset_size()
+	var h := info.get_combined_minimum_size().y
+	info.size = Vector2(w, h)
+	info.position = Vector2(roundf((vp.x - w) / 2.0), roundf(vp.y - PLATE_BOTTOM - PLATE_PAD.y - h))
+	_plate.position = info.position - PLATE_PAD
+	_plate.size = info.size + PLATE_PAD * 2.0
+	_plate_for = _plate_key()
+
+
+func _plate_key() -> String:
+	return "%s|%s|%s|%s" % [_hint.text, _task.text, _task.visible, get_viewport().get_visible_rect().size]
+
+
+## The plate's edge and step line flash when the step changes (white, then back to amber).
+func _style_plate() -> void:
+	if _plate_for != _plate_key():
+		_place_plate()
+	var f := 0.0
+	if _hint_flash >= 0.0:
+		f = clampf(1.0 - _hint_flash / PLATE_FLASH, 0.0, 1.0) * (0.55 + 0.45 * cos(_hint_flash * TAU * 2.2))
+		if _hint_flash > PLATE_FLASH:
+			_hint_flash = -1.0
+	_plate_style.border_color = PLATE_EDGE.lerp(Color.WHITE, f)
+	_plate_style.set_border_width_all(2 if f < 0.3 else 3)
+	_hint.add_theme_color_override(&"font_color", PLATE_EDGE.lerp(Color.WHITE, f * 0.8))
+
+
+# --- alerts ---------------------------------------------------------------------------
+
+## Builds the alert band (top centre) and the opening shot's "skip" chip (top right, where the clock comes later).
+func _build_alerts() -> void:
+	_alert_red = StyleBoxFlat.new()
+	_alert_red.bg_color = Color(0.66, 0.07, 0.03, 0.94)  # deeper than Fener's warn toast: it has to beat the orange
+	_alert_red.border_color = Color.WHITE
+	_alert_red.set_border_width_all(3)
+	_alert_red.shadow_color = Color(0, 0, 0, 0.45)
+	_alert_red.shadow_size = 8
+	_alert_red.content_margin_left = 30
+	_alert_red.content_margin_right = 30
+	_alert_red.content_margin_top = 6
+	_alert_red.content_margin_bottom = 8
+	_alert_white = _alert_red.duplicate() as StyleBoxFlat
+	_alert_white.bg_color = Color(0.03, 0.03, 0.06, 0.88)
+	_alert_white.border_color = Color(1, 1, 1, 0.85)
+	_alert_white.set_border_width_all(2)
+	_alert_box = PanelContainer.new()
+	_alert_box.name = "Alert"
+	_alert_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_alert_box.visible = false
+	_alert_label = Label.new()
+	_alert_label.name = "Label"
+	_alert_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_alert_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_alert_label.max_lines_visible = 2
+	_alert_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_alert_label.add_theme_color_override(&"font_color", Color.WHITE)
+	_alert_label.add_theme_color_override(&"font_outline_color", Color(0.12, 0.02, 0.0, 0.85))
+	_alert_label.add_theme_constant_override(&"outline_size", 6)
+	_alert_box.add_child(_alert_label)
+	_banner.add_sibling(_alert_box)
+	_skip = PanelContainer.new()
+	_skip.name = "Skip"
+	_skip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var ss := StyleBoxFlat.new()
+	ss.bg_color = Color(0.03, 0.03, 0.06, 0.7)
+	ss.border_color = Color(1, 1, 1, 0.35)
+	ss.set_border_width_all(1)
+	ss.content_margin_left = 14
+	ss.content_margin_right = 14
+	ss.content_margin_top = 4
+	ss.content_margin_bottom = 4
+	_skip.add_theme_stylebox_override(&"panel", ss)
+	var sl := Label.new()
+	sl.name = "Label"
+	sl.text = tr("FIRE_SKIP")
+	sl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sl.add_theme_font_size_override(&"font_size", 24)
+	sl.add_theme_color_override(&"font_color", Palette.HUD_WHITE)
+	_skip.add_child(sl)
+	_alert_box.add_sibling(_skip)
+	_place_skip()
+
+
+func _place_skip() -> void:
+	if not _skip.visible:
+		return
+	_skip.reset_size()
+	var vp := get_viewport().get_visible_rect().size
+	_skip.position = Vector2(vp.x - _skip.size.x - 20.0, 20.0)
+
+
+## Queues alert `id` (ALERTS) unless it came already: each alert shows once a game. Urgent ones go before the ordinary
+## ones still waiting.
+func alert(id: StringName) -> void:
+	if _alerts_done.has(id) or not ALERTS.has(id) or phase == Phase.END:
+		return
+	_alerts_done[id] = elapsed
+	var entry := [id, _world_t]
+	if ALERTS[id][1]:
+		var at := 0
+		while at < _alert_queue.size() and ALERTS[_alert_queue[at][0]][1]:
+			at += 1
+		_alert_queue.insert(at, entry)
+	else:
+		_alert_queue.append(entry)
+
+
+## The game's own moments that bring an alert: the time left (60 / 30 / 15 s), the first spot fire catching in the yard,
+## the wind bringing in a new stretch of the front (the smoke), the kangaroos gone, the last step (the way out open).
+func _check_alerts() -> void:
+	var left := skin.timer_seconds - elapsed
+	for id: StringName in ALERT_LEFT:
+		if left <= ALERT_LEFT[id] and left > ALERT_LEFT[id] - ALERT_STALE:
+			alert(id)
+	if elapsed >= SPOTS[0].z and elapsed < SPOTS[0].z + ALERT_STALE:
+		alert(&"embers")
+	var s := FireLogic.smoke(elapsed, skin)
+	if s >= ALERT_WIND_SMOKE and s < ALERT_WIND_SMOKE + 0.05:
+		alert(&"wind")
+	if _released_at >= 0.0 and _world_t > _released_at:
+		var gone := true
+		for i in mini(_roos.size(), skin.kangaroos):
+			gone = gone and not (_roos[i] as Node3D).visible
+		if gone:
+			alert(&"roos")
+	if logic.all_tasks():
+		alert(&"run")
+
+
+## Shows the next alert when the band is free, runs the one that is up (a quick punch in, a fade out).
+func _update_alert(dt: float) -> void:
+	if _alert_id == &"":
+		_alert_wait -= dt
+		while _alert_wait <= 0.0 and not _alert_queue.is_empty():
+			var e: Array = _alert_queue.pop_front()
+			if _world_t - float(e[1]) <= ALERT_STALE or e[0] == &"context":
+				_show_alert(e[0])
+				break
+	if _alert_id == &"":
+		_alert_box.visible = false
+		return
+	_alert_t += dt
+	var dur := alert_seconds(_alert_id)
+	if _alert_t >= dur:
+		_alert_id = &""
+		_alert_box.visible = false
+		_alert_wait = ALERT_GAP
+		return
+	_alert_box.modulate.a = clampf(minf(_alert_t / 0.08, (dur - _alert_t) / 0.3), 0.0, 1.0)
+	var punch := 1.0 + 0.16 * exp(-_alert_t * 16.0)
+	_alert_box.pivot_offset = _alert_box.size / 2.0
+	_alert_box.scale = Vector2(punch, punch)
+	if ALERTS[_alert_id][1]:  # the urgent band's edge flickers white / red
+		_alert_red.border_color = Palette.HUD_RED.lerp(Color.WHITE, 0.5 + 0.5 * cos(_alert_t * TAU * 2.5))
+
+
+func _show_alert(id: StringName) -> void:
+	_alert_id = id
+	_alert_t = 0.0
+	var urgent: bool = ALERTS[id][1]
+	var txt := tr(ALERTS[id][0])
+	_alert_label.text = txt if id == &"context" else TextFx.upper(txt)
+	_alert_label.add_theme_font_size_override(&"font_size", 38 if id == &"context" else 58)
+	_alert_box.add_theme_stylebox_override(&"panel", _alert_red if urgent else _alert_white)
+	_alert_box.visible = true
+	_place_alert()
+	sound_event.emit(&"alert", 1 if urgent else 0)
+
+
+## Top centre: under the clock (top left) and the done banner, at most PLATE_MAX_W wide (two lines at most).
+func _place_alert() -> void:
+	var vp := get_viewport().get_visible_rect().size
+	var font := _alert_label.get_theme_font(&"font")
+	var fs := _alert_label.get_theme_font_size(&"font_size")
+	var w := font.get_string_size(_alert_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 8.0
+	var max_w := minf(vp.x - 200.0, PLATE_MAX_W)
+	# too long for one line: two even lines (not a long line and a lone word)
+	_alert_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if w > max_w else TextServer.AUTOWRAP_OFF
+	_alert_label.custom_minimum_size = Vector2(w if w <= max_w else minf(max_w, w * 0.56 + 24.0), 0.0)
+	_alert_box.size = Vector2.ZERO
+	_alert_box.reset_size()
+	_alert_box.position = Vector2(roundf((vp.x - _alert_box.size.x) / 2.0), roundf(maxf(vp.y * ALERT_Y, ALERT_TOP_MIN)))
+
+
+## Seconds alert `id` stays up.
+static func alert_seconds(id: StringName) -> float:
+	return CONTEXT_DUR if id == &"context" else ALERT_DUR
+
+
+## The alert up now (&"" none) and its band on screen (tests).
+func alert_now() -> StringName:
+	return _alert_id
+
+
+func alert_rect() -> Rect2:
+	return Rect2(_alert_box.position, _alert_box.size)
+
+
+## 0..1: how hard an urgent alert flushes the screen edges red now (light: it rides on the smoke's vignette).
+func alarm_level() -> float:
+	if _alert_id == &"" or not ALERTS[_alert_id][1]:
+		return 0.0
+	return ALARM_MAX * clampf(minf(_alert_t / 0.1, (ALERT_DUR - _alert_t) / 0.4), 0.0, 1.0)
+
+
+## The last CLOCK_RED seconds: the clock's number and bar go red and the number blinks twice a second.
+func _red_clock(left: float) -> void:
+	if phase != Phase.PLAY or left >= CLOCK_RED or left <= 0.0:
+		return
+	var tl := _timer.get_node_or_null(^"Box/Row/Time") as Label
+	if tl:
+		tl.add_theme_color_override(&"font_color", Palette.DANGER)
+		tl.modulate.a = 1.0 if fmod(left, 0.5) >= 0.25 else 0.3
+	var fill: Variant = _timer.get(&"_fill")
+	if fill is StyleBoxFlat:
+		(fill as StyleBoxFlat).bg_color = Palette.DANGER
+
+
+## The task plate on screen (tests; the HUD markers keep above it).
+func plate_rect() -> Rect2:
+	return Rect2(_plate.position, _plate.size)
 
 
 func _update_prompt() -> void:
@@ -1588,6 +2321,9 @@ func _update_prompt() -> void:
 
 func _show_banner(key: String) -> void:
 	(_banner.get_node("Label") as Label).text = tr(key)
+	var bs := _banner.get_theme_stylebox(&"panel") as StyleBoxFlat
+	if bs:
+		bs.border_color = Palette.DANGER if key == skin.lose_key else Palette.SAFE
 	_banner.visible = true
 	_banner.modulate.a = 0.0
 	_banner_t = 0.0
@@ -1620,11 +2356,12 @@ func focus_point() -> Variant:
 	return null
 
 
-## Crosshair (a ring on a target, filling while a hold action runs) and an edge arrow towards the
-## current task when it is off screen.
+## Crosshair (a ring on a target, filling while a hold action runs), the task markers, and an edge arrow towards
+## the current task when it is off screen.
 func _draw_reticle() -> void:
 	if phase != Phase.PLAY:
 		return
+	_draw_markers()
 	var c := _reticle.size / 2.0
 	var gold := Color("f9c22b")
 	var shade := Color(0, 0, 0, 0.6)
@@ -1643,27 +2380,134 @@ func _draw_reticle() -> void:
 		elif _target.kind == &"spray":
 			var k := 1.0 - logic.flame
 			_reticle.draw_arc(c, 22.0, -PI / 2.0, -PI / 2.0 + TAU * k, 40, Color("8fd3ff"), 5.0, true)
+	var arrow := edge_arrow()
+	if not arrow.is_empty():
+		_draw_badge(arrow.pos, 1.0, 1.0, arrow.dir)
+
+
+## The edge arrow towards the current task while it is off screen: {pos, dir} (screen), else {}. It sits on the line
+## from the screen centre to the task (mirrored when the task is behind), inside a frame clear of the screen edge and
+## the task plate.
+func edge_arrow() -> Dictionary:
 	var fp: Variant = focus_point()
-	if fp == null:
-		return
+	if fp == null or phase != Phase.PLAY:
+		return {}
 	var p: Vector3 = fp
+	var c := _reticle.size / 2.0
 	var behind := _camera.is_position_behind(p)
 	var sp := _camera.unproject_position(p)
 	var vp := _reticle.size
-	var inside := not behind and Rect2(Vector2(40, 40), vp - Vector2(80, 80)).has_point(sp)
-	if inside:
-		return
+	if not behind and Rect2(Vector2(40, 40), vp - Vector2(80, 80)).has_point(sp):
+		return {}
 	var d := sp - c
 	if behind:
 		d = -d
 		if d.length() < 1.0:
 			d = Vector2(0, 1)
-	var half := vp / 2.0 - Vector2(56, 56)
-	var s := minf(half.x / maxf(absf(d.x), 0.001), half.y / maxf(absf(d.y), 0.001))
-	var at := c + d * s
-	var n := d.normalized()
+	var box := Rect2(Vector2(60, 60), Vector2(vp.x - 120.0, minf(vp.y - 60.0, _marker_floor() - 8.0) - 60.0))
+	var s := INF
+	if absf(d.x) > 0.001:
+		s = minf(s, ((box.end.x if d.x > 0.0 else box.position.x) - c.x) / d.x)
+	if absf(d.y) > 0.001:
+		s = minf(s, ((box.end.y if d.y > 0.0 else box.position.y) - c.y) / d.y)
+	return {"pos": c + d * s, "dir": d.normalized()}
+
+
+## The task markers (Markers/*, the open tasks and then the exit) as HUD pins over their places: a constant size at
+## any distance, a dark disc and halo so the gold mark reads against the fire and the smoke, a slow ping, the distance
+## under it. The current task's pin is full size, the other one smaller and dimmer. A pin fades out close by (the
+## prompt takes over) and over the crosshair, and keeps above the task plate.
+func _draw_markers() -> void:
+	var font := _reticle.get_theme_default_font()
+	for pin in marker_pins():
+		var s: float = pin.scale
+		var a: float = pin.alpha
+		var tip := _draw_badge(pin.pos, s, a, Vector2.ZERO)
+		if pin.dist > 6.0:
+			var txt := "%d m" % roundi(pin.dist)
+			var fs := roundi(20.0 * s)
+			var at := tip + Vector2(-font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x / 2.0, 4.0 + fs * 0.8)
+			_reticle.draw_string(font, at + Vector2(1.5, 1.5), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.9 * a))
+			_reticle.draw_string(font, at, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(Palette.HUD_WHITE, a))
+
+
+## The marker pins on screen now: [{marker, pos (disc centre), scale, alpha, dist (m, flat)}] (_draw_markers, tests).
+func marker_pins() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if phase != Phase.PLAY:
+		return out
+	var c := _reticle.size / 2.0
+	var eye := _camera.global_position
+	var focus := _focus_marker()
+	var floor_y := _marker_floor()
+	for mk: Node3D in [_marker_a, _marker_b, _marker_exit]:
+		if not mk.visible:
+			continue
+		var wp := mk.global_position + Vector3(0, MARKER_H, 0)
+		if _camera.is_position_behind(wp):
+			continue
+		var sp := _camera.unproject_position(wp)
+		if not Rect2(Vector2.ZERO, _reticle.size).grow(-MARKER_R).has_point(sp):
+			continue
+		var dist := Vector2(eye.x - mk.global_position.x, eye.z - mk.global_position.z).length()
+		var s := 1.0 if mk == focus else 0.78
+		var a := smoothstep(MARKER_NEAR.x, MARKER_NEAR.y, dist) * (1.0 if mk == focus else 0.7)
+		a *= lerpf(0.3, 1.0, smoothstep(28.0, 72.0, sp.distance_to(c)))
+		if a <= 0.01:
+			continue
+		if absf(sp.x - c.x) < _plate.size.x / 2.0 + MARKER_R * 2.0:
+			sp.y = minf(sp.y, floor_y - (MARKER_R + 34.0) * s)
+		# and out from under an alert band
+		var band := alert_rect().grow(MARKER_R * s + 6.0)
+		if _alert_box.visible and band.has_point(sp):
+			sp.y = band.end.y
+		out.append({"marker": mk, "pos": sp, "scale": s, "alpha": a, "dist": dist})
+	return out
+
+
+## One marker badge at `p` (scale s, alpha a): a dark disc with a gold edge and a gold "!", a soft halo and a ping
+## ring. `dir` zero: a pin with a pointer down at its place (returns the pointer tip); else an edge arrow that points
+## along `dir` (returns its tip).
+func _draw_badge(p: Vector2, s: float, a: float, dir: Vector2) -> Vector2:
+	var r := MARKER_R * s
+	var gold := Color(Palette.GOLD, a)
+	var dark := Color(0.05, 0.035, 0.04, 0.9 * a)
+	var ph := fposmod(_world_t, 1.6) / 1.6
+	_reticle.draw_arc(p, r + 3.0 + ph * 13.0 * s, 0.0, TAU, 40, Color(Palette.GOLD, a * 0.5 * (1.0 - ph) * (1.0 - ph)), 2.0, true)
+	_reticle.draw_circle(p, r + 6.0 * s, Color(0, 0, 0, 0.3 * a))
+	var n := dir if dir != Vector2.ZERO else Vector2.DOWN
 	var side := Vector2(-n.y, n.x)
-	var tip := at + n * 14.0
-	var pts := PackedVector2Array([tip, at - n * 8.0 + side * 12.0, at - n * 8.0 - side * 12.0])
-	_reticle.draw_colored_polygon(PackedVector2Array([tip + n * 3.0, at - n * 10.0 + side * 15.0, at - n * 10.0 - side * 15.0]), shade)
-	_reticle.draw_colored_polygon(pts, gold)
+	var reach := 9.0 * s if dir == Vector2.ZERO else 14.0 * s
+	var tip := p + n * (r + reach)
+	var base_l := p + n * (r * 0.55) + side * r * 0.62
+	var base_r := p + n * (r * 0.55) - side * r * 0.62
+	var pointer := PackedVector2Array([base_l, tip, base_r])
+	_reticle.draw_colored_polygon(pointer, dark if dir == Vector2.ZERO else gold)
+	if dir == Vector2.ZERO:
+		_reticle.draw_polyline(pointer, gold, 2.0 * s, true)
+	_reticle.draw_circle(p, r, dark)
+	_reticle.draw_arc(p, r, 0.0, TAU, 40, gold, 2.5 * s, true)
+	var bar := PackedVector2Array([p + Vector2(-2.6, -9.0) * s, p + Vector2(2.6, -9.0) * s,
+			p + Vector2(1.5, 2.6) * s, p + Vector2(-1.5, 2.6) * s])
+	_reticle.draw_colored_polygon(bar, gold)
+	_reticle.draw_circle(p + Vector2(0.0, 6.8) * s, 2.1 * s, gold)
+	return tip
+
+
+## The marker of the current focus (the area the hint sends the player to), or null.
+func _focus_marker() -> Node3D:
+	match logic.focus():
+		&"cutters", &"fence":
+			return _marker_a
+		&"hose", &"valve", &"flame":
+			return _marker_b
+		&"gate":
+			return _marker_exit
+	return null
+
+
+## Lowest screen y a marker may use: the top of the task plate when it shows.
+func _marker_floor() -> float:
+	if _plate and _plate.visible:
+		return _plate.position.y
+	return _reticle.size.y

@@ -1,19 +1,25 @@
-extends Node3D
-## First-person wire cutters (FireSkin.hand_cutters_model): the two halves of cutters_view_r / _l.glb, each in its
-## gloved hand, turned about the pivot (their local Y). set_snip(0..1): 0 = jaws open, 1 = closed on the wire.
+extends "res://scenes/minigames/fire/art/fp_arms.gd"
+## First-person bolt cutters (FireSkin.hand_cutters_model): the farmer's gloved hands on the handles of the cutters
+## (assets/3d/fire/fp_cutters.glb, see fp_arms.gd). set_snip(0..1): 0 = jaws open, 1 = closed on the wire; it picks
+## that moment of the snip clip (the handles close, both hands squeeze in, the fingers tighten), blended in while
+## the player cuts and out when he stops.
 
-## Half the opening angle of the arms (degrees) when open.
-const OPEN := 6.0
-
-@onready var _r: Node3D = $View/R
-@onready var _l: Node3D = $View/L
+var _snip := 0.0
+var _cut := 0.0
 
 
-func _ready() -> void:
-	set_snip(0.0)
+func _action(move: StringName) -> StringName:
+	return _blend2(&"cut", move, _seek(&"snip"), true)
 
 
 func set_snip(v: float) -> void:
-	var a := deg_to_rad(OPEN) * (1.0 - clampf(v, 0.0, 1.0))
-	_r.rotation.y = a
-	_l.rotation.y = -a
+	_snip = clampf(v, 0.0, 1.0)
+	if tree:
+		tree.set(&"parameters/snip_t/seek_request", _snip * _ap.get_animation(&"snip").length)
+
+
+func _process(delta: float) -> void:
+	if tree == null:
+		return
+	_cut = move_toward(_cut, 1.0 if _snip > 0.02 else 0.0, delta * 8.0)
+	tree.set(&"parameters/cut/blend_amount", _cut)

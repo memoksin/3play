@@ -183,6 +183,11 @@ const FIRE_EXIT_CUTOFF := 1200.0
 const FIRE_LOSE_CUTOFF := 800.0
 const FIRE_LOSE_PITCH := 0.85
 const FIRE_LOSE_DB := -4.0
+## Fire alert flash (FR14, no file): the FR1 fire and wind swells by FIRE_ALERT_DB (urgent alerts) or less, for a moment.
+const FIRE_ALERT_DB := 5.0
+const FIRE_ALERT_RISE := 0.12
+const FIRE_ALERT_HOLD := 0.6
+const FIRE_ALERT_FALL := 0.9
 const HISTORY_CAP := 256
 
 ## Test/debug log of every call: {op, id, t (Audio clock), played, fade}. Newest last.
@@ -372,6 +377,24 @@ func fire_ending(escaped: bool) -> void:
 		lp.cutoff_hz = FIRE_LOSE_CUTOFF
 		p.pitch_scale = FIRE_LOSE_PITCH
 		tw.tween_property(p, "volume_db", base + FIRE_LOSE_DB, 0.5)
+
+
+## Fire alert (FR14): the FR1 player swells for a moment (urgent: FIRE_ALERT_DB, else 60 % of it) and settles back.
+## Does nothing once the ending has taken FR1 (its own tween runs there).
+func fire_alert(urgent: bool) -> void:
+	var p := loop(&"FR1")
+	if p == null or p.bus == FIRE_END_BUS:
+		return
+	if p.has_meta(&"tween"):
+		var old: Tween = p.get_meta(&"tween")
+		if old.is_valid():
+			old.kill()
+	var base: float = p.get_meta(&"db")
+	var tw := p.create_tween()
+	p.set_meta(&"tween", tw)
+	tw.tween_property(p, "volume_db", base + FIRE_ALERT_DB * (1.0 if urgent else 0.6), FIRE_ALERT_RISE)
+	tw.tween_interval(FIRE_ALERT_HOLD)
+	tw.tween_property(p, "volume_db", base, FIRE_ALERT_FALL)
 
 
 ## Connect broken line (#95): spill_repeats splashes of C7, each starting before the previous ends.
@@ -838,6 +861,8 @@ func _hook_fire(f) -> void:
 					fire_ending(true)
 				&"lose":
 					fire_ending(false)
+				&"alert":
+					fire_alert(index == 1)
 				# jump, cut, hose, heartbeat, gust: no sound.
 		)
 		_bind_exit(f, [&"FR1", &"FR2", &"FR5", &"FR8", &"FR9", &"FR11a", &"FR11b", &"FR11c"], 0.5))

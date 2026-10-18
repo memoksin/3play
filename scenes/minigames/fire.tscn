@@ -2395,6 +2395,10 @@ scale_amount_curve = SubResource("Curve_nglkk")
 color = Color(0.78, 0.9, 1, 0.8)
 color_ramp = SubResource("Gradient_t6d3i")
 
+
+[node name="Empty" type="Node3D" parent="Player/Head/Camera/Hand" unique_id=1406823517]
+
+[node name="Model" type="Node3D" parent="Player/Head/Camera/Hand/Empty" unique_id=1406823518]
 [node name="Embers" type="CPUParticles3D" parent="Player" unique_id=1458421199]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, 0)
 amount = 140

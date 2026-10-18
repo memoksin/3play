@@ -1,7 +1,7 @@
 """Shared helpers for the Meshy -> UAL pipeline (run inside Blender's Python; numpy comes with Blender)."""
 import numpy as np
 
-NAMES = ["player", "mom", "child", "grandpa", "rescuer"]
+NAMES = ["player", "mom", "child", "grandpa", "rescuer", "farmer"]
 SIDES = (("Left", 1), ("Right", -1))
 # Meshy auto-rig: 24 bones. head_end / headfront are unanimated helpers under Head.
 CHILD = {"Hips": "Spine02", "Spine02": "Spine01", "Spine01": "Spine", "Spine": "neck", "neck": "Head",

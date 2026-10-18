@@ -9,6 +9,11 @@ extends SceneTree
 ##    the bottom (errand banner, messages) for at least SEEN_MIN seconds before the zone hands it out. Walking toward
 ##    the camera the view shows little ground ahead, and the bottom of the screen is the HUD: before the fix the
 ##    blanket at the camp crew, reached from the north, stayed under the errand banner until it was taken.
+## The crew zone is a place, not a person (#123): each supply lies on open ground of its zone, FIG_CLEAR m from every
+## rescuer's figure and RING_IN m inside the ring, with props clear of it; once it is needed the zone's ring is lit,
+## the HUD names the zone (the rescue crew area, never the crew) and points at its centre, and the supply is handed
+## out the moment the player crosses the ring, far from it and from every rescuer. Before: the zone centre was the
+## rescuer's post and every supply lay 2-3 m from him, so it read as his.
 ##   godot --headless --path . -s res://tests/test_fener_items.gd
 
 const FRAME_CAP := 600
@@ -18,6 +23,9 @@ const CELL := 0.5
 const SEEN_MIN := 1.0  # seconds the supply is in view (above the HUD) before it is handed out
 const SWEEP_R := 0.45  # the spinning model's reach around its spot
 const APPROACH := 22.0  # metres from the spot where a walk starts
+const FIG_CLEAR := 2.0  # metres between a supply and the figure of any rescuer
+const RING_IN := 1.0  # metres a supply lies inside its zone's ring
+const PROP_CLEAR := 0.3  # metres between the space the model spins in and any prop
 
 var ok := true
 var frames := 0
@@ -66,6 +74,7 @@ func _run() -> void:
 	_framing()
 	_spots()
 	_shown()
+	_zone()
 	_approaches()
 	print("test_fener_items ok" if ok else "test_fener_items FAIL")
 	quit(0 if ok else 1)
@@ -127,28 +136,117 @@ func _spots() -> void:
 		var s: Vector2 = e[1]
 		var tag := "%s at %s: " % [e[0], s]
 		var crew: Vector3 = FenerMap.CREWS[fener._crew_at(s)]
-		_check(tag + "walkable, inside its crew zone", fener.walkable(s) and Vector2(crew.x, crew.y).distance_to(s) < crew.z)
+		var in_d := Vector2(crew.x, crew.y).distance_to(s)
+		_check(tag + "walkable, %.1f m inside its crew zone's ring (>= %.1f)" % [crew.z - in_d, RING_IN], fener.walkable(s) and in_d <= crew.z - RING_IN)
+		var near := _figure_dist(s)
+		_check(tag + "%.1f m from the nearest rescuer's figure (>= %.1f): it is the zone's, not his" % [near, FIG_CLEAR], near >= FIG_CLEAR)
 		var box := _sweep_box(s)
-		var inside: Array[String] = []
-		for m in meshes:
-			var bb: AABB = m.global_transform * m.get_aabb()
-			if not bb.intersects(box):
-				continue
-			for si in m.mesh.get_surface_count():
-				var verts: PackedVector3Array = m.mesh.surface_get_arrays(si)[Mesh.ARRAY_VERTEX]
-				var hit := false
-				for v in verts:
-					if box.has_point(m.global_transform * v):
-						hit = true
-						break
-				if hit:
-					inside.append(String(world.get_path_to(m)))
-					break
+		var inside := _meshes_in(meshes, box)
 		_check(tag + "no mesh reaches into the space the model spins in %s" % str(inside), inside.is_empty())
+		var props := _meshes_in(meshes, box.grow(PROP_CLEAR))
+		_check(tag + "props stay %.1f m clear of it %s" % [PROP_CLEAR, str(props)], props.is_empty())
 		var lb := AABB(Vector3(s.x - 0.4, FenerMap.ground_y(s), s.y - 0.4), Vector3(0.8, 0.8, 0.8))
 		var fixed: Vector2i = budget.fixed_on(lb)
 		_check(tag + "a camp light reaches it (%d omni, %d spot), within the light budget %s" % [fixed.x, fixed.y, budget.count(lb)],
 				fixed.x + fixed.y >= 1 and budget.fits_renderer(lb))
+
+
+## Paths of the meshes with a vertex inside `box`.
+func _meshes_in(meshes: Array[MeshInstance3D], box: AABB) -> Array[String]:
+	var out: Array[String] = []
+	for m in meshes:
+		var bb: AABB = m.global_transform * m.get_aabb()
+		if not bb.intersects(box):
+			continue
+		for si in m.mesh.get_surface_count():
+			var verts: PackedVector3Array = m.mesh.surface_get_arrays(si)[Mesh.ARRAY_VERTEX]
+			var hit := false
+			for v in verts:
+				if box.has_point(m.global_transform * v):
+					hit = true
+					break
+			if hit:
+				out.append(String(world.get_path_to(m)))
+				break
+	return out
+
+
+## Ground rect of each rescuer's figure as drawn (its meshes, not his torch beam).
+func _figures() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	for a in world._crew:
+		var bb := AABB()
+		var first := true
+		for m in a.fig.find_children("*", "VisualInstance3D", true, false):
+			var b: AABB = (m as VisualInstance3D).global_transform * (m as VisualInstance3D).get_aabb()
+			bb = b if first else bb.merge(b)
+			first = false
+		if a.fig is VisualInstance3D:
+			var b: AABB = (a.fig as VisualInstance3D).global_transform * (a.fig as VisualInstance3D).get_aabb()
+			bb = b if first else bb.merge(b)
+			first = false
+		if not first:
+			out.append(Rect2(bb.position.x, bb.position.z, bb.size.x, bb.size.z))
+	return out
+
+
+func _figure_dist(p: Vector2) -> float:
+	var d := INF
+	for r in _figures():
+		d = minf(d, FenerMap.rect_dist(p, r))
+	return d
+
+
+# ---- the zone ----
+
+## Once a supply is needed: its zone's ring is lit, the HUD names the zone and points at its centre, and the supply is
+## handed out the moment the player crosses the ring, from the side away from it: far from it and from every rescuer.
+func _zone() -> void:
+	_check("the figures of the rescuers are found (%d)" % _figures().size(), _figures().size() == world._crew.size() and _figures().size() >= 2)
+	const AREA_WORDS := "rescue crew area"  # the test runs in English
+	var area := AREA_WORDS
+	_check("the ring's label names the zone: %s" % fener.skin.text("CREW_LABEL"), fener.skin.text("CREW_LABEL").to_lower() == AREA_WORDS)
+	for e in _all_spots():
+		_fresh(4)
+		var it = _need(e[0], e[1])
+		var s: Vector2 = e[1]
+		var tag := "%s at %s: " % [e[0], s]
+		var ci: int = fener.item_crew(it)
+		var c: Vector3 = FenerMap.CREWS[ci]
+		var centre := Vector2(c.x, c.y)
+		fener.ppos = centre + (centre - s).normalized() * (c.z + 12.0)
+		fener.step(DT)
+		world.show_state(fener, DT)
+		var g: Array = fener.goal()
+		_check(tag + "the errand and the arrow point at the zone's centre", not g.is_empty() and g[0] == centre and fener.goal_crew() == ci)
+		var ring: MeshInstance3D = world._crew_rings[ci]
+		_check(tag + "its zone's ring is shown and lit", ring.is_visible_in_tree() and float((ring.material_override as ShaderMaterial).get_shader_parameter(&"alpha")) >= 1.0)
+		var texts: Array[String] = [fener.skin.text(String(g[1])) if not g.is_empty() else "", fener.skin.text("BAT_LOW_CREW" if e[0] == &"battery" else "FOUND_COLD")]
+		_check(tag + "the HUD names the zone (%s), not the crew: %s" % [area, texts], texts.all(func(x: String) -> bool: return x.to_lower().contains(area)))
+		# walk in from the side away from the supply, a step of 10 cm a frame, and see where it is handed out
+		var dir: Vector2 = (centre - s).normalized()
+		var best := -INF
+		for k in 16:
+			var d := Vector2.from_angle(TAU * k / 16.0)
+			var edge := centre + d * c.z
+			var score := minf(edge.distance_to(s), _figure_dist(edge))
+			if fener.walkable(edge) and score > best:
+				best = score
+				dir = d
+		var r := c.z + 1.0
+		var at := Vector2.INF
+		var early := false
+		while r > 0.0 and not it.taken:
+			fener.ppos = centre + dir * r
+			fener.step(DT)
+			if it.taken:
+				at = fener.ppos
+				early = r >= c.z
+			r -= 0.1
+		_check(tag + "handed out on crossing the ring (%.2f m from the centre, ring %.1f)" % [at.distance_to(centre), c.z],
+				it.taken and not early and at.distance_to(centre) > c.z - 0.15)
+		_check(tag + "handed out %.1f m from it and %.1f m from any rescuer (>= %.1f): no need to walk up to them" % [at.distance_to(s), _figure_dist(at), FIG_CLEAR],
+				it.taken and at.distance_to(s) >= FIG_CLEAR and _figure_dist(at) >= FIG_CLEAR)
 
 
 ## Once needed, the supply's model and glow are drawn where it is, the glow on the ground under the model.

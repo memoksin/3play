@@ -5,6 +5,7 @@
 #   tools/models/meshy/gif.sh            # everything
 #   tools/models/meshy/gif.sh only=mom   # single GIFs only (gif.gd args)
 set -euo pipefail
+cd "$(dirname "$0")/../../.."
 GODOT=${GODOT:-$HOME/bin/godot}
 OUT=export/shots/meshy_gif
 FONT=/System/Library/Fonts/Supplemental/Arial.ttf
@@ -21,8 +22,8 @@ done
 
 # contact sheet: same 4 s window for every clip (loops repeat), one row per character
 "$GODOT" --path . -s res://tools/models/meshy/gif.gd -- size=180x240 secs=4 out=res://$OUT/cells/ | grep '^frames' || true
-names="player mom child grandpa rescuer"
-cols="idle walk walk_follow run walk_tired shiver trapped dig wave"
+names="player mom child grandpa rescuer farmer"
+cols="idle walk walk_follow jog run walk_tired shiver trapped dig wave crouch"
 mkdir -p "$OUT/contact"
 blank="$OUT/contact/blank.png"
 magick -size 180x240 xc:'#40444f' "$blank"

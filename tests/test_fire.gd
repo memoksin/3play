@@ -237,6 +237,33 @@ func _target_id(s: Node3D) -> StringName:
 	return s.pick_target().get("id", &"")
 
 
+## Plays the running interaction clip on (game time) until it is `secs` in, or over.
+func _act_until(s: Node3D, secs: float) -> void:
+	var n := 0
+	while (s.get("_act_id") != &"" or s.get("_stand_t") >= 0.0) and s.get("_act_t") < secs - 1e-4 and n < 200:
+		s.advance(minf(0.05, maxf(secs - float(s.get("_act_t")), 0.001)))
+		n += 1
+
+
+## Brings the camera, the hand and the arms' bones up to the game's state now (they follow in _process).
+func _sync(s: Node3D, arms: Node3D) -> void:
+	s.call("_pose_camera", 0.0)
+	var tree: AnimationTree = arms.get("tree")
+	tree.advance(0.0)
+
+
+func _arm_bone(arms: Node3D, bone: String) -> Transform3D:
+	var sk: Skeleton3D = arms.find_children("*", "Skeleton3D", true, false)[0]
+	sk.force_update_all_bone_transforms()
+	return sk.global_transform * sk.get_bone_global_pose(sk.find_bone(bone))
+
+
+## How far p is from the valve wheel's rim (the ring through the grips: valve.py wheel R).
+func _off_rim(valve: Node3D, p: Vector3) -> float:
+	var q := valve.to_local(p) - Vector3(0, 0.92, 0.26)
+	return Vector2(Vector2(q.x, q.y).length() - 0.095, q.z).length()
+
+
 func _hold(s: Node3D, secs: float) -> void:
 	s.interact_press()
 	var t := 0.0
@@ -264,6 +291,9 @@ func _walkthrough() -> void:
 	_check("scene: overview clock does not eat play time", s.elapsed == 0.0 and s.phase == s.Phase.OVERVIEW)
 	s.advance(skin.overview_seconds)
 	_check("scene: first person after the overview", s.phase == s.Phase.PLAY and (s.get_node("Player/Head/Camera") as Camera3D).current)
+	var empty: Node3D = s.get_node("Player/Head/Camera/Hand/Empty")
+	_check("hands: bare hands in view, no tool", empty.visible and empty.get_node("Model").has_method(&"raise") \
+			and not s.get_node("Player/Head/Camera/Hand/Cutters").visible and not s.get_node("Player/Head/Camera/Hand/Nozzle").visible)
 	s.advance(4.0)
 	_check("scene: clear air at 4 s", s.smoke == 0.0 and is_equal_approx((s.get_node("Env") as WorldEnvironment).environment.fog_density, skin.fog_clear))
 
@@ -290,6 +320,7 @@ func _walkthrough() -> void:
 	s.interact_release()
 	_check("cutters: picked up", s.logic.has_cutters and not cutters.visible and s.get_node("Player/Head/Camera/Hand/Cutters").visible)
 	_check("cutters: sound", sounds.has(&"cutters"))
+	_check("hands: the bare hands go down as the cutters come up", not empty.visible)
 	_check("cutters: hint now the fence", (s.get_node("Hud/Info/Hint") as Label).text == tr("FIRE_HINT_FENCE"))
 	_stand(s, _flat(fence.global_position) + fence_out * 0.8, fence.global_position + Vector3(0, 0.9, 0))
 	t = s.pick_target()
@@ -306,6 +337,9 @@ func _walkthrough() -> void:
 	_check("fence: marker A gone, cutters put away", not s.get_node("Markers/MarkerA").visible and not s.get_node("Player/Head/Camera/Hand/Cutters").visible)
 	await physics_frame
 	_check("fence: collider off", _body_off(fence))
+	_check("hands: not back while the cutters go down", not empty.visible)
+	await create_timer(0.6).timeout   # the cutters' lower clip runs on real time
+	_check("hands: the bare hands come back up once they are gone", empty.visible)
 	var fmodel: Node = fence.get_node("Model")
 	_check("fence: every tie snipped, stubs left", fmodel.get_node("Ties").get_children().all(func(n: Node3D) -> bool: return not n.visible) \
 			and fmodel.get_node("TiesCut").get_children().all(func(n: Node3D) -> bool: return n.visible))
@@ -349,22 +383,66 @@ func _walkthrough() -> void:
 	_check("valve without hose: info", t.get("id") == &"valve" and t.get("kind") == &"info")
 	_stand(s, hose.global_position + Vector3(-1.4, 0, 0), hose.global_position)
 	_check("hose: target", _target_id(s) == &"hose")
+	var arms: Node3D = s.get_node("Player/Head/Camera/Hand/Nozzle/Model")
 	s.interact_press()
 	s.advance(0.05)
 	s.interact_release()
-	_check("hose: in hand", s.logic.hose_held and s.get_node("Player/Head/Camera/Hand/Nozzle").visible)
+	_check("hose: the arms bend down for it (pickup clip), not in hand yet", s.get("_act_id") == &"pickup" \
+			and arms.call("act") == &"pickup" and not s.logic.hose_held)
+	_check("hands: no bare hands with the nozzle's arms", not empty.visible)
+	_act_until(s, float(arms.call("act_event", &"pickup")))
+	_check("hose: crouched by the coil, the view held (%.2f m)" % s.get("_crouch"), s.get("_crouch") < -0.5 \
+			and s.get("_lock_w") > 0.99 and sounds.has(&"hose"))
+	_sync(s, arms)
+	var noz_at := _arm_bone(arms, "Tool").origin
+	var noz_want := hose.to_global(Vector3(0.42, 0.033, 0.98))   # hose.py NOZZLE_LOC (Godot)
+	_check("sync: the hand's nozzle where the coil's lay (%.3f m)" % noz_at.distance_to(noz_want), noz_at.distance_to(noz_want) < 0.01)
+	var mz_b := Basis(Vector3.BACK, deg_to_rad(-70.0)) * Basis(Vector3.UP, deg_to_rad(90.0)) * Vector3(0.0, -0.248, 0.06)
+	var mz_want := hose.to_global(Vector3(0.42, 0.033, 0.98) + Vector3(mz_b.x, mz_b.z, -mz_b.y))
+	var mz_at := _arm_bone(arms, "Muzzle").origin
+	_check("sync: and turned the same way (muzzle %.3f m)" % mz_at.distance_to(mz_want), mz_at.distance_to(mz_want) < 0.015)
+	_check("sync: the coil's nozzle gone, the coil still there", not hose.get_node("Model/Nozzle").visible and hose.get_node("Model/Coil").visible)
+	_act_until(s, 3.0)
+	_check("hose: in hand, the coil taken", s.logic.hose_held and s.get_node("Player/Head/Camera/Hand/Nozzle").visible \
+			and not hose.get_node("Model/Coil").visible and s.get("_act_id") == &"" and absf(s.get("_crouch")) < 1e-3)
 	_stand(s, valve_stand, valve_pt)
 	t = s.pick_target()
 	_check("valve with hose: attach (tap)", t.get("id") == &"valve" and t.get("kind") == &"tap")
 	s.interact_press()
 	s.advance(0.05)
 	s.interact_release()
-	_check("hose: attached, line shows", s.logic.hose_attached and s.get_node("Props/HoseLine").visible and sounds.has(&"attach"))
+	_check("hose: the coupling goes on (attach clip), not attached yet", s.get("_act_id") == &"attach" and not s.logic.hose_attached)
+	var swap: float = arms.call("act_event", &"attach")
+	_act_until(s, swap - 0.04)
+	_sync(s, arms)
+	var cpl_at := _arm_bone(arms, "Coupling").origin
+	var cpl_want := valve.to_global(Vector3(0.16, 0.70, 0.12))   # valve.tscn Coupling
+	_check("sync: the hand's coupling seated on the outlet (%.3f m)" % cpl_at.distance_to(cpl_want), cpl_at.distance_to(cpl_want) < 0.01)
+	_check("sync: the tap's coupling not shown yet", not valve.get_node("Model/Coupling").visible)
+	_act_until(s, swap + 0.02)
+	_check("sync: let go, the tap's coupling shows, the line too", valve.get_node("Model/Coupling").visible \
+			and s.get_node("Props/HoseLine").visible and sounds.has(&"attach"))
+	_act_until(s, 3.0)
+	_check("hose: attached, line shows", s.logic.hose_attached and s.get_node("Props/HoseLine").visible and s.get("_act_id") == &"")
 	_check("hint: turn the valve", (s.get_node("Hud/Info/Hint") as Label).text == tr("FIRE_HINT_VALVE"))
+	_stand(s, valve_stand, valve_pt)
 	_hold(s, skin.valve_seconds * 0.4)
 	_check("valve: turning, not open yet", not s.logic.valve_open and s.get("_valve_turn") > 0.0)
+	_sync(s, arms)
+	var k: float = s.get("_valve_turn")
+	var turn_t: float = s.get("_act_t")
+	var wheel: Node3D = valve.get_node("Model/Wheel")
+	_check("sync: the wheel turned as the arms say (%.3f, clip %.3f, %.1f deg)" % [k, arms.call("act_turn", turn_t),
+			rad_to_deg(wheel.rotation.z)], is_equal_approx(k, arms.call("act_turn", turn_t)) \
+			and absf(wheel.rotation.z - k * TAU * float(wheel.get_parent().get("TURNS"))) < 1e-3)
+	for side in ["Right", "Left"]:
+		var d := 1.0
+		for f in ["Index", "Middle", "Ring", "Pinky"]:
+			for j in [1, 2, 3]:
+				d = minf(d, _off_rim(valve, _arm_bone(arms, "%sHand%s%d" % [side, f, j]).origin))
+		_check("sync: %s hand's fingers round the rim (nearest joint %.3f m off its line)" % [side.to_lower(), d], d < 0.035)
 	_hold(s, skin.valve_seconds + 0.1)
-	_check("valve: open", s.logic.valve_open and sounds.has(&"valve"))
+	_check("valve: open", s.logic.valve_open and sounds.has(&"valve") and absf(s.get("_valve_turn") - 1.0) < 1e-4)
 	_check("hint: the flame", (s.get_node("Hud/Info/Hint") as Label).text == tr("FIRE_HINT_FLAME"))
 
 	var flame: Node3D = props.get_node("Flame")
@@ -389,6 +467,8 @@ func _walkthrough() -> void:
 	_check("flame: banner", (s.get_node("Hud/Banner/Label") as Label).text == tr("FIRE_DONE_FLAME"))
 	_check("flame: water stops, hose put down", not (s.get_node("Player/Head/Camera/Hand/Nozzle/Water") as CPUParticles3D).emitting \
 			and not s.get_node("Player/Head/Camera/Hand/Nozzle").visible and not s.get_node("Props/HoseLine").visible)
+	await create_timer(0.6).timeout
+	_check("hands: bare hands again after the nozzle", empty.visible)
 	_check("exit: marker shows, hint exit", s.get_node("Markers/MarkerExit").visible and not s.get_node("Markers/MarkerB").visible \
 			and (s.get_node("Hud/Info/Hint") as Label).text == tr("FIRE_HINT_EXIT"))
 	await physics_frame
@@ -449,7 +529,7 @@ func _all_have_models(s: Node) -> bool:
 	for path in ["Farm", "Props/Cutters", "Props/FenceCut", "Props/Gate", "Props/Debris", "Props/Valve", "Props/Hose",
 			"Props/Flame", "Props/Farmer", "Props/Kangaroos/Kangaroo1", "Props/Kangaroos/Kangaroo2", "Props/Kangaroos/Kangaroo3",
 			"Markers/MarkerA", "Markers/MarkerB", "Markers/MarkerExit", "Player/Head/Camera/Hand/Cutters",
-			"Player/Head/Camera/Hand/Nozzle"]:
+			"Player/Head/Camera/Hand/Nozzle", "Player/Head/Camera/Hand/Empty"]:
 		if s.get_node_or_null(path + "/Model") == null:
 			print("  no Model under ", path)
 			return false
@@ -498,8 +578,8 @@ func _lose() -> void:
 	_check("lose run: no acting after the end", not s.logic.pick_hose())
 	s.advance(skin.lose_seconds * 0.5)
 	var fig: Node = s.get_node("Props/Farmer/Model")
-	_check("lose run: dark ending, the figure crouched in the smoke", got.is_empty() and fig.get_node("Crouch").visible \
-			and not fig.get_node("Run0").visible and float(env.ambient_light_energy) < skin.ambient_energy_smoke)
+	_check("lose run: dark ending, the figure crouched in the smoke", got.is_empty() and fig.call("gait") == {&"crouch": 1.0} \
+			and float(env.ambient_light_energy) < skin.ambient_energy_smoke)
 	s.skip_ending()
 	_check("lose run: a key cuts the ending to its fade", s.get("_end_t") >= s.get("_end_dur") - s.END_FADE - 1e-4)
 	s.advance(skin.lose_seconds)
@@ -759,7 +839,7 @@ func _pause() -> void:
 	s.advance(0.3)
 	s.aim_at(s.get_node("Props/Hose").global_position)
 	s.advance(0.05)
-	_check("tap buffer: an old press (0.3 s) has expired", not s.logic.hose_held)
+	_check("tap buffer: an old press (0.3 s) has expired", not s.logic.hose_held and s.get("_act_id") == &"")
 	await _free(s)
 
 

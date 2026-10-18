@@ -1,12 +1,15 @@
 extends SceneTree
 ## Fire minigame (#125) shots: plays scenes/minigames/fire.tscn through its tasks in one run and saves
-## first-person frames at 1920x1080 into export/shots/fire_<name>.png. Needs a window (not --headless):
-##   godot --path . -s res://tools/fire_shots.gd -- [only=pen,flame] [wait=1.2] [prefix=fire_]
+## first-person frames at 1920x1080 (or size=WxH) into export/shots/fire_<name>.png. Needs a window (not --headless):
+##   godot --path . -s res://tools/fire_shots.gd -- [only=pen,flame] [wait=1.2] [prefix=fire_] [size=1280x720] [locale=tr]
 ## The scene renders in a SubViewport (the shot size does not depend on the window). Game time is driven
-## with advance()/seek(); particles and shaders run on real time while each shot waits.
+## with advance()/seek(); particles and shaders run on real time while each shot waits. The HUD is laid out at the
+## project's 1280x720 and scaled to the shot size, as the game's canvas_items stretch does in a bigger window.
+## Alerts: context (the line that opens play), alert_<id> at the moment each comes, clock (the red last seconds).
+## The opening shot: intro_0 .. intro_7 (shares INTRO of it). intro=gif renders only the opening shot (and a second
+## of play after it) at 25 fps into export/shots/<prefix>intro_frames/ and quits; tools/fire_intro_gif.sh makes the GIF.
 
 const OUT := "res://export/shots/"
-const SIZE := Vector2i(1920, 1080)
 const FRAME_CAP := 20000
 const DISASTER := "res://data/disasters/black_saturday.tres"
 const SCENE := "res://scenes/minigames/fire.tscn"
@@ -15,6 +18,12 @@ var frames := 0
 var only: PackedStringArray = []
 var wait := 1.2
 var prefix := "fire_"
+var size := Vector2i(1920, 1080)
+var intro_gif := false
+var locale := "en"
+## Shares of the opening shot for the intro_N shots: the hero view, the dive, the face, the turn, first person.
+const INTRO: Array[float] = [0.06, 0.3, 0.45, 0.6, 0.72, 0.8, 0.88, 0.97]
+const GIF_FPS := 25.0
 var vp: SubViewport
 var s: Node3D
 
@@ -28,6 +37,11 @@ func _initialize() -> void:
 			"only": only = kv[1].split(",")
 			"wait": wait = float(kv[1])
 			"prefix": prefix = kv[1]
+			"intro": intro_gif = kv[1] == "gif"
+			"locale": locale = kv[1]
+			"size":
+				var wh := kv[1].split("x")
+				size = Vector2i(int(wh[0]), int(wh[1]))
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
 	_run.call_deferred()
 
@@ -47,14 +61,19 @@ func _run() -> void:
 		return
 	var game := root.get_node("Game")
 	game.store_path = ""
-	TranslationServer.set_locale("en")
+	TranslationServer.set_locale(locale)
 	game.disaster = load(DISASTER)
 	var svc := SubViewportContainer.new()
-	svc.size = Vector2(SIZE)
+	svc.size = Vector2(size)
 	vp = SubViewport.new()
-	vp.size = SIZE
+	vp.size = size
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	vp.msaa_3d = Viewport.MSAA_4X
+	var base := Vector2i(ProjectSettings.get_setting("display/window/size/viewport_width"),
+			ProjectSettings.get_setting("display/window/size/viewport_height"))
+	if size != base:
+		vp.size_2d_override = base
+		vp.size_2d_override_stretch = true
 	svc.add_child(vp)
 	root.add_child(svc)
 	s = (load(SCENE) as PackedScene).instantiate()
@@ -76,13 +95,19 @@ func _run() -> void:
 	var flame: Node3D = props.get_node("Flame")
 	var gate: Node3D = props.get_node("Gate")
 
+	if intro_gif:
+		await _intro_frames()
+		return
 	s.advance(0.4)
 	await _shot("overview")
-	s.advance(s.skin.overview_seconds * 0.75)
-	await _shot("swoop")
+	for k in INTRO.size():
+		s.advance(INTRO[k] * s.skin.overview_seconds - float(s.get("_intro_t")))
+		await _shot("intro_%d" % k)
 	s.skip_overview()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE  # a free mouse does not steer the view (a real mouse may be moving)
-	s.advance(1.5)
+	s.advance(0.6)
+	await _shot("context")
+	s.advance(2.9)
 	await _shot("start")
 	s.look(PI * 0.5, 0.0)
 	await _shot("start_left")
@@ -126,11 +151,28 @@ func _run() -> void:
 	_stand(hose.global_position + vn * 1.6 + _side(valve) * 0.6, valve.to_global(Vector3(0, 0.8, 0)))
 	s.look(0.0, -0.12)
 	await _shot("valve")
+	# the arms' clips with the camera held on the prop: bending down for the nozzle, the coupling going on, the
+	# wheel turning (the valve held)
+	_stand(hose.global_position + vn * 1.4, hose.global_position)
 	s.call("_act", &"hose")
-	_stand(valve.global_position + vn * 1.5, valve.to_global(Vector3(0, 0.95, 0.25)))
+	_play_act(0.8)
+	await _shot("pickup")
+	_play_act(9.0)
+	_stand(valve.global_position + vn * 1.5, valve.to_global(Vector3(0, 0.8, 0.2)))
 	s.call("_act", &"valve")
-	s.logic.open_valve()
-	s.set("_valve_turn", 1.0)
+	_play_act(1.15)
+	await _shot("attach")
+	_play_act(9.0)
+	_stand(valve.global_position + vn * 1.5, valve.to_global(Vector3(0, 0.95, 0.25)))
+	s.interact_press()
+	for i in 22:
+		s.advance(0.05)
+	await _shot("turn")
+	while not s.logic.valve_open:
+		s.advance(0.05)
+	s.interact_release()
+	_play_act(9.0)
+	_stand(valve.global_position + vn * 1.5, valve.to_global(Vector3(0, 0.95, 0.25)))
 	s.advance(0.1)
 	await _shot("attached")
 	s.seek(40.0)
@@ -168,6 +210,31 @@ func _run() -> void:
 	s.queue_free()
 	await process_frame
 
+	# the alerts, each at the moment the game brings it (alert_<id>), and the red clock of the last seconds
+	s = (load(SCENE) as PackedScene).instantiate()
+	s.submit = false
+	s.time_scale = 0.0
+	vp.add_child(s)
+	await process_frame
+	s.skip_overview()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	s.look(-0.5, 0.12)
+	s.logic.pick_cutters()
+	s.logic.cut_fence()
+	s.call("_on_fence_cut")
+	for id in ["roos", "front", "embers", "wind", "hurry", "now"]:
+		await _shot_alert(id)
+	s.logic.pick_hose()
+	s.logic.attach_hose()
+	s.logic.open_valve()
+	s.logic.douse(1.0)
+	s.call("_on_flame_out")
+	await _shot_alert("run")
+	s.seek(78.6)
+	await _shot("clock")
+	s.queue_free()
+	await process_frame
+
 	# out of time: the dark ending
 	s = (load(SCENE) as PackedScene).instantiate()
 	s.submit = false
@@ -188,6 +255,38 @@ func _run() -> void:
 	quit(0)
 
 
+## The opening shot frame by frame (game time GIF_FPS steps), then a second of first person.
+func _intro_frames() -> void:
+	var dir := OUT + prefix + "intro_frames/"
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir))
+	var n := ceili((s.skin.overview_seconds + 1.0) * GIF_FPS)
+	for i in n:
+		s.advance(1.0 / GIF_FPS)
+		await process_frame
+		await RenderingServer.frame_post_draw
+		var path := dir + "%04d.png" % i
+		if vp.get_texture().get_image().save_png(path) != OK:
+			push_error("fire_shots: could not save " + path)
+			quit(1)
+			return
+	print("frames %d in %s" % [n, ProjectSettings.globalize_path(dir)])
+	quit(0)
+
+
+## Game time runs (0.05 s steps) until alert `id` is up, a little more so it is fully in, then the shot alert_<id>.
+func _shot_alert(id: String) -> void:
+	var n := 0
+	while String(s.alert_now()) != id and n < 2400 and s.phase == s.Phase.PLAY:
+		s.advance(0.05)
+		n += 1
+	if String(s.alert_now()) != id:
+		push_error("fire_shots: alert %s never came" % id)
+		quit(1)
+		return
+	s.advance(0.3)
+	await _shot("alert_" + id)
+
+
 ## The yard side of a prop (its local +Z in the world, flat).
 func _front(n: Node3D) -> Vector3:
 	var z := n.global_basis.z
@@ -199,6 +298,12 @@ func _side(n: Node3D) -> Vector3:
 	var x := n.global_basis.x
 	x.y = 0.0
 	return x.normalized()
+
+
+## Runs the interaction clip that is playing (or the stand-up after one) to `secs` in, or to its end.
+func _play_act(secs: float) -> void:
+	while (s.get("_act_id") != &"" or s.get("_stand_t") >= 0.0) and float(s.get("_act_t")) < secs - 1e-4:
+		s.advance(0.05 if s.get("_act_id") == &"" else minf(0.05, secs - float(s.get("_act_t"))))
 
 
 func _stand(feet: Vector3, point: Vector3) -> void:
