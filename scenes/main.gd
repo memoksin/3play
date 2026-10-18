@@ -32,6 +32,7 @@ var _cards := {}      # Button -> {role, slot, desc, sil, g, s, l, d, q, tw, ptw
 var _open: Button = null
 var _pressing := false
 var _preview := false  # preview_hover pins the state; no mouse polling
+var _mouse := Vector2(-1.0e4, -1.0e4)  # last pointer position from input events, the same source the buttons hover from
 
 
 func _ready() -> void:
@@ -52,6 +53,11 @@ func _ready() -> void:
 	TextFx.fade_in($Center/Box/Roles, 0.7)
 	for n in [$YearCaption, %Year, $Hint]:
 		TextFx.fade_in(n, 1.0, 0.6)
+
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion:
+		_mouse = get_canvas_transform().affine_inverse() * (event as InputEventMouseMotion).position
 
 
 ## Esc or Back: back to the title screen. The Settings panel takes its own Esc first.
@@ -212,7 +218,7 @@ func _process(_delta: float) -> void:
 	if _open and not _preview and not (_open.is_hovered() or _open.has_focus()):
 		var slot: Rect2 = _cards[_open].slot.get_global_rect()
 		var zone := Rect2(slot.position - Vector2(0, LIFT), slot.size + Vector2(0, LIFT))
-		if not zone.has_point(get_global_mouse_position()):
+		if not zone.has_point(_mouse):
 			_set_open(null)
 	for k: Button in _cards:
 		_apply(k, _cards[k], t)
