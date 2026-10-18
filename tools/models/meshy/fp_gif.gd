@@ -1,20 +1,23 @@
 extends SceneTree
-## Frames for the first-person arms GIFs (fp_cutters / fp_nozzle, fp_arms.py): the fire game's camera view
+## Frames for the first-person arms GIFs (fp_cutters / fp_nozzle / fp_empty, fp_arms.py): the fire game's camera view
 ## (FOV 75, the arms on a Hand node at fire.gd's rest offset), a warm low sun, smoky air. Needs a window (no --headless).
 ##   ~/bin/godot --path . -s res://tools/models/meshy/fp_gif.gd -- [only=cutters,nozzle:spray] [size=640x360]
 ## -> export/shots/fp_gif/frames/<tool>_<clip>/NNNN.png at 30 fps (fp_gif.sh turns them into GIFs). The clips play
 ## straight from the AnimationPlayer: snip sweeps open -> closed -> open twice, spray is spray_start then the loop,
-## raise / lower hold a moment around the move, walk adds fire.gd's own hand bob on top.
+## raise / lower hold a moment around the move, walk adds fire.gd's own hand bob on top. The nozzle's interaction
+## clips (pickup, attach, valve) play once without their props (tools/fire_gif.gd shows them in the game).
 
 const FPS := 30.0
 const FRAME_CAP := 200000
 const TOOLS := {
 	"cutters": "res://scenes/minigames/fire/art/hand_cutters.tscn",
 	"nozzle": "res://scenes/minigames/fire/art/hand_nozzle.tscn",
+	"empty": "res://scenes/minigames/fire/art/hand_empty.tscn",
 }
 const CLIPS := {
 	"cutters": ["idle", "walk", "snip", "raise", "lower"],
-	"nozzle": ["idle", "walk", "spray", "raise", "lower"],
+	"nozzle": ["idle", "walk", "spray", "raise", "lower", "pickup", "attach", "valve"],
+	"empty": ["idle", "walk", "raise", "lower"],
 }
 const HAND_REST := Vector3(0.3, -0.27, -0.5)
 

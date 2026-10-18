@@ -1,7 +1,9 @@
 extends Node3D
 ## First-person arms of the fire game: the farmer's gloved forearms and hands (the Meshy farmer's own mesh, with
 ## finger joints) holding a tool, animated in Blender (tools/models/meshy/fp_arms.py -> assets/3d/fire/fp_*.glb).
-## Base of hand_cutters.gd and hand_nozzle.gd (FireSkin.hand_cutters_model / hand_nozzle_model).
+## Base of hand_cutters.gd and hand_nozzle.gd (FireSkin.hand_cutters_model / hand_nozzle_model); hand_empty.tscn
+## (FireSkin.hand_empty_model: the bare hands, no tool) uses it as it is. fire.gd shows the bare hands while no tool
+## is in hand: they go down (put_away) as a tool comes up (raise), and come back up after the tool is put away.
 ##
 ## The GLB is authored in camera space; its `View` node cancels the Hand node's rest offset in fire.gd, so the
 ## Hand node's sway, lag and landing dip still move the arms on top of the clips. Clips (all full poses):
@@ -9,7 +11,8 @@ extends Node3D
 ## tool's own (snip, spray). They are blended by an AnimationTree built here:
 ##   move = idle <-> walk (set_move: speed share, step phase)
 ##   act  = move <-> the tool's action pose (everything but the View bone, which keeps breathing / stepping)
-##   raise / lower one-shots on top (raise(), put_away(done)).
+##   raise / lower one-shots on top (raise(), put_away(done)); a tool's own layer over all (_over: the nozzle's
+##   interaction clips).
 ## Materials become viewmodel.gdshader (drawn in front of the world, glove / sleeve / skin detail); no shadows.
 
 const SHADER := preload("res://scenes/minigames/fire/art/viewmodel.gdshader")
@@ -34,7 +37,7 @@ func _ready() -> void:
 	var top := _action(move)
 	top = _one_shot(&"raise", top, _anim(&"raise"), 0.0, RAISE_FADE, false)
 	top = _one_shot(&"lower", top, _anim(&"lower"), 0.04, 0.0, false)
-	_bt.connect_node(&"output", 0, top)
+	_bt.connect_node(&"output", 0, _over(top))
 	tree = AnimationTree.new()
 	tree.name = "Arms"
 	tree.tree_root = _bt
@@ -54,6 +57,11 @@ func _ready() -> void:
 ## Tool-specific layer between the walk blend and the one-shots (hand_cutters.gd, hand_nozzle.gd).
 func _action(move: StringName) -> StringName:
 	return move
+
+
+## Tool-specific layer over everything (hand_nozzle.gd: the interaction clips, full poses with the View bone).
+func _over(top: StringName) -> StringName:
+	return top
 
 
 ## fire.gd, every frame: k = how fast the player walks (0 still .. 1 walk speed .. 1.3 running), phase = its step
