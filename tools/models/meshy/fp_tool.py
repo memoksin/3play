@@ -402,8 +402,9 @@ def step_bob(ph):
                                                        x=0.9 * math.sin(2 * w - 1.1))
 
 
-def raise_params(hold, c, n):
-    """n+1 frames from the tool down out of view to the hold pose (frame n = hold)."""
+def raise_params(hold, c, n, left_c=None):
+    """n+1 frames from the tool down out of view to the hold pose (frame n = hold). left_c: a free left hand
+    (the nozzle's, under the hose) comes up with it, a beat behind."""
     out = []
     for i in range(n + 1):
         u = i / n
@@ -412,6 +413,10 @@ def raise_params(hold, c, n):
         p = dict(hold)
         low = about(c, rot(x=-38 * k, y=14 * k, z=-8 * k), Vector((0.03 * k, -0.06 * k, -0.30 * k)))
         p["tool"] = low @ hold.get("tool", Matrix.Identity(4))
+        if left_c is not None:
+            kl = (1 - max(0.0, u - 0.15) / 0.85) ** 3             # starts a beat later, same settle
+            low_l = about(left_c, rot(x=-30 * kl, y=-12 * kl, z=10 * kl), Vector((-0.02 * kl, -0.14 * kl, -0.28 * kl)))
+            p["left"] = low_l @ hold.get("left", Matrix.Identity(4))
         p["view"] = hold.get("view", Matrix.Identity(4))
         out.append(p)
     return out
@@ -591,8 +596,8 @@ class Nozzle(ViewModel):
         out.append(("walk", [self.walk_p(i / FPS) for i in range(FPS + 1)], True))
         out.append(("spray", [self.spray_p(i / FPS) for i in range(FPS + 1)], True))
         out.append(("spray_start", [self.start_p(i / FPS) for i in range(10)], False))
-        out.append(("raise", raise_params(self.idle_p(0.0), self.GRIP, 12), False))
-        out.append(("lower", raise_params(self.idle_p(0.0), self.GRIP, 9)[::-1], False))
+        out.append(("raise", raise_params(self.idle_p(0.0), self.GRIP, 12, self.LEFT_PT), False))
+        out.append(("lower", raise_params(self.idle_p(0.0), self.GRIP, 9, self.LEFT_PT)[::-1], False))
         return out
 
     def idle_p(self, t):

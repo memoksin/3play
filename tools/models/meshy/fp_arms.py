@@ -12,9 +12,9 @@ Stages:
 - mesh: each arm cut from the full-detail mesh at mid upper arm (well below the frame in every pose), the cut
   capped; one Catmull-Clark level (Meshy's fingers are ~70 vertices each: they bend as round tubes now), the
   texture carried over exactly (linear UVs through the subdivision) and baked into its own 1024 px layout.
-- rig: bones per arm UpperArm, ForeArm, ForeArmTwist, Hand and 3 per finger (Thumb1-3 ... Pinky1-3), found on
-  the mesh: fingertips are the maxima of the surface distance from the wrist, each finger's centre line comes
-  from rings of equal distance from its tip, joints at anatomical shares of the finger length. Weights:
+- rig: bones per arm Arm, ForeArm, ForeArmTwist, Hand and 3 per finger (Thumb1-3 ... Pinky1-3), found on
+  the mesh: the hand sliced across its axis every 2 mm, each finger a track of section loops (shared vertices)
+  from its tip into the palm, joints at anatomical shares of the finger length. Weights:
   arm chain along the bone line; fingers by surface-distance cells around each fingertip, a phalanx per
   segment with narrow blends at the knuckles (clean glove creases), the knuckles blending into the palm.
 - anim: tool parts on their own bones, both hands placed on the grips by two-bone IK (elbows down and out),

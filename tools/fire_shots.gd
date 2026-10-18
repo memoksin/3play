@@ -1,12 +1,11 @@
 extends SceneTree
 ## Fire minigame (#125) shots: plays scenes/minigames/fire.tscn through its tasks in one run and saves
-## first-person frames at 1920x1080 into export/shots/fire_<name>.png. Needs a window (not --headless):
-##   godot --path . -s res://tools/fire_shots.gd -- [only=pen,flame] [wait=1.2] [prefix=fire_]
+## first-person frames at 1920x1080 (or size=WxH) into export/shots/fire_<name>.png. Needs a window (not --headless):
+##   godot --path . -s res://tools/fire_shots.gd -- [only=pen,flame] [wait=1.2] [prefix=fire_] [size=1280x720]
 ## The scene renders in a SubViewport (the shot size does not depend on the window). Game time is driven
 ## with advance()/seek(); particles and shaders run on real time while each shot waits.
 
 const OUT := "res://export/shots/"
-const SIZE := Vector2i(1920, 1080)
 const FRAME_CAP := 20000
 const DISASTER := "res://data/disasters/black_saturday.tres"
 const SCENE := "res://scenes/minigames/fire.tscn"
@@ -15,6 +14,7 @@ var frames := 0
 var only: PackedStringArray = []
 var wait := 1.2
 var prefix := "fire_"
+var size := Vector2i(1920, 1080)
 var vp: SubViewport
 var s: Node3D
 
@@ -28,6 +28,9 @@ func _initialize() -> void:
 			"only": only = kv[1].split(",")
 			"wait": wait = float(kv[1])
 			"prefix": prefix = kv[1]
+			"size":
+				var wh := kv[1].split("x")
+				size = Vector2i(int(wh[0]), int(wh[1]))
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
 	_run.call_deferred()
 
@@ -50,9 +53,9 @@ func _run() -> void:
 	TranslationServer.set_locale("en")
 	game.disaster = load(DISASTER)
 	var svc := SubViewportContainer.new()
-	svc.size = Vector2(SIZE)
+	svc.size = Vector2(size)
 	vp = SubViewport.new()
-	vp.size = SIZE
+	vp.size = size
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	vp.msaa_3d = Viewport.MSAA_4X
 	svc.add_child(vp)

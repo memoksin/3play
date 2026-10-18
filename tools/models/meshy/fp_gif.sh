@@ -4,6 +4,7 @@
 #   tools/models/meshy/fp_gif.sh                    # everything
 #   tools/models/meshy/fp_gif.sh only=nozzle:spray  # one clip
 set -euo pipefail
+cd "$(dirname "$0")/../../.."
 GODOT=${GODOT:-$HOME/bin/godot}
 OUT=export/shots/fp_gif
 mkdir -p "$OUT"
