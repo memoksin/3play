@@ -38,6 +38,10 @@ const MAIN_ODDS := 0.65
 const EASTER_EGG := "res://data/disasters/solar_flare.tres"
 const NOTICE := "res://scenes/egg_notice.tscn"
 const SET_SCENE := "res://scenes/diorama/set_%s.tscn"
+## Minigames whose _ready loads more scenes by path (not dependencies of their .tscn, so the threaded preload
+## misses them): minigame -> script with a static `scene_paths()`. Fener loads ~70 .glb models in its setup:
+## ~5 s of one (covered) warm-up frame on the main thread unless they are preloaded here.
+const MINI_ASSETS := {&"fener": "res://scenes/minigames/fener/fener_world.gd"}
 ## Off-screen warm-up viewport size.
 const WARM_SIZE := Vector2i(128, 72)
 ## Fade of the loading cover in / out (seconds).
@@ -310,8 +314,8 @@ func _save_settings(section: String, values: Dictionary) -> void:
 		push_warning("Game: cannot save settings to %s (error %d)" % [settings_path, err])
 
 
-## Starts a run. Without `path` the role's disaster comes from the launch path (the first run of a launch
-## picks the path); with one (replay, path partner) exactly that disaster is played, no notice.
+## Starts a run. Without `path` (a pick on the role menu) a new path is rolled every time and the launch
+## starts over (nothing counts as played); with one (replay, path partner) exactly that disaster is played, no notice.
 ## `auto_spin`: the globe spins by itself (the path partner run).
 func start(new_role: StringName, path := "", auto_spin := false) -> void:
 	role = new_role
@@ -327,15 +331,10 @@ func start(new_role: StringName, path := "", auto_spin := false) -> void:
 			launch_path = path_of(path)
 		_launch()
 		return
-	var first := launch_path.is_empty()
+	reset_launch()
 	_pick = pick_for(new_role)
-	egg_pending = first and _pick == EASTER_EGG
+	egg_pending = _pick == EASTER_EGG
 	_launch()
-
-
-## Same disaster again (a disaster made on the fly has no file: it gets a new pick).
-func replay() -> void:
-	start(role, disaster.resource_path if disaster else "")
 
 
 func _launch() -> void:
@@ -344,6 +343,18 @@ func _launch() -> void:
 		next()  # nothing to warm up, nothing to cover
 	else:
 		_open_run()
+
+
+## Plays the same disaster's minigame again (the result card's Replay), skipping globe and diorama.
+func replay() -> void:
+	if disaster == null:
+		start(role)
+		return
+	saved = 0
+	total = 0
+	extra = {}
+	_step = FLOW.find(&"minigame") - 1
+	next()
 
 
 ## The egg card (scenes/egg_notice.gd, shown by the globe) is answered. `real` swaps the easter egg for the
@@ -382,7 +393,7 @@ static func path_of(disaster_path: String) -> Dictionary:
 	return {}
 
 
-## Forgets the launch: the next run picks a path again, nothing counts as played. Tests.
+## Forgets the launch: the next run picks a path again, nothing counts as played (every role menu pick).
 func reset_launch() -> void:
 	launch_path = {}
 	played_ids = {}
@@ -520,6 +531,13 @@ func preload_for(d: Disaster) -> void:
 	preload_scene(SET_SCENE % d.id)
 	if SCENES.has(d.minigame):
 		preload_scene(scene_path(&"minigame"))
+
+
+## The scene files minigame `d` loads by itself in its _ready (see MINI_ASSETS), [] for most.
+func mini_assets(d: Disaster) -> PackedStringArray:
+	if not MINI_ASSETS.has(d.minigame):
+		return PackedStringArray()
+	return load(MINI_ASSETS[d.minigame]).scene_paths()
 
 
 func preload_scene(path: String) -> void:
@@ -674,23 +692,19 @@ func _warm_up(gen: int) -> void:
 		if file.get_extension() in ["jpg", "png"]:
 			_pending.erase(file)
 			_textures.append(ResourceLoader.load_threaded_get(file))
+	# the minigame's own models load on the loader threads while the globe warms up (asked only now: they
+	# would hold up the globe's load)
+	var assets := mini_assets(disaster)
+	for path in assets:
+		preload_scene(path)
 	if globe:
 		_loaded[scene_path(&"globe")] = globe
 		await _warm_globe(globe, gen)
 		if gen != _warm_gen:
 			return
 	var mini_path := scene_path(&"minigame")
-	var paths := [scene_path(&"diorama"), set_path, mini_path]
-	while true:
-		var busy := false
-		for path: String in paths:
-			if _pending.has(path) and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
-				busy = true
-		if not busy:
-			break
-		await get_tree().process_frame
-		if gen != _warm_gen:
-			return
+	if not await _wait_loads([scene_path(&"diorama"), set_path, mini_path], gen):
+		return
 	if ResourceLoader.exists(set_path):
 		packed_scene(set_path)  # the diorama takes the set from here (no set yet: it falls back to another)
 	var diorama := packed_scene(scene_path(&"diorama"))
@@ -707,7 +721,28 @@ func _warm_up(gen: int) -> void:
 		await _draw_once(_prepared_vp, gen, false)
 		_prepared.warm_view(false)
 		_prepared_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	if not await _wait_loads(Array(assets), gen):  # loading meanwhile, behind the globe and the diorama
+		return
+	for path in assets:  # taken (and kept in _loaded): the minigame's own load() then finds them cached
+		packed_scene(path)
 	await _warm_minigame(mini_path, gen)
+
+
+## Waits (a frame at a time) until none of `paths` is still loading on the loader threads; false when the
+## warm-up was cancelled meanwhile.
+func _wait_loads(paths: Array, gen: int) -> bool:
+	while true:
+		var busy := false
+		for path: String in paths:
+			if _pending.has(path) and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+				busy = true
+				break
+		if not busy:
+			return true
+		await get_tree().process_frame
+		if gen != _warm_gen:
+			return false
+	return true
 
 
 ## Builds the minigame (its _ready costs tens of ms: the solar flare backdrop simulates its damage)
