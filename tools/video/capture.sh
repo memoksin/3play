@@ -1,6 +1,7 @@
 #!/bin/bash
-# Captures one Godot clip for the pitch film: export/video/clips/<name>/%05d.png (1920x1080, 60 fps) + clip.json.
-# usage: tools/video/capture.sh <kahr_diorama|kahr_mini|globe_spin|globe_lock_io|io_mini|menu_roles|globe_spin2|result_card>
+# Captures one Godot clip for the pitch film: export/video/clips/<name>/%05d.png (1920x1080, 60 fps) + clip.json
+# + clip.wav (the game's own sound of those frames, 48 kHz stereo, Music bus muted; Movie Maker writes f.wav).
+# usage: tools/video/capture.sh <kahr_diorama|fener_mini|globe_full|io_mini|menu_roles|globe_spin2|fire_mini (also: globe_spin, globe_lock_io, title)>
 set -eu
 name=${1:?clip name}
 root=$(cd "$(dirname "$0")/../.." && pwd)
@@ -21,5 +22,12 @@ for f in $(command ls "$out"/f*.png | sort); do
   n=$((n + 1))
 done
 frames=$((n - skip))
+if [ -f "$out/f.wav" ]; then
+  ffmpeg -v error -y -i "$out/f.wav" -af "atrim=start_sample=$((skip * 800)),asetpts=N/SR/TB" -c:a pcm_s16le "$out/clip.wav"
+  rm -f "$out/f.wav" "$out/f.wav.import"
+fi
 printf '{"frames": %d, "notes": "%s"}\n' "$frames" "captured by tools/video/capture.sh, locale tr, 1920x1080 60 fps" > "$out/clip.json"
 echo "$name: $frames frames"
+# a covered window stops drawing and Movie Maker repeats the last frame: report runs of 6+ identical frames
+md5 -q "$out"/[0-9]*.png | awk '$0 == last { run++; next } { if (run >= 5) printf "WARNING: frames %05d-%05d identical (window not drawing?)\n", NR - 2 - run, NR - 2; run = 0; last = $0 }
+  END { if (run >= 5) printf "WARNING: frames %05d-%05d identical (window not drawing?)\n", NR - 1 - run, NR - 1 }'

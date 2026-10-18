@@ -2,13 +2,34 @@
 
 Each segment is a self-contained HTML page (`tools/video/<segment>.html`) that draws one frame with
 `window.renderAt(t)`. It is a pure function of `t`: no wall clock, no requestAnimationFrame state, randomness only from
-seeded PRNGs. So frame N = `renderAt(N / 60)` comes out the same on every render. Visuals only, no audio.
-No Godot is involved.
+seeded PRNGs. So frame N = `renderAt(N / 60)` comes out the same on every render. The pages draw pictures only; the
+sound is mixed afterwards by `mix.py` from the cue tables in `film.html`.
 
 | Segment | Length | Output |
 |---|---|---|
 | `intro_stack` | 6.5 s, 390 frames | `export/video/intro_stack.mp4` |
-| `film` | 42.3 s, 2538 frames | `export/video/film.mp4` (storyboard steps 5-19, plays after the approved intro) |
+| `film` | 53.95 s, 3237 frames | `export/video/film.mp4` (storyboard steps 5-19, plays after the approved intro) |
+
+## The whole pitch film, start to finish
+
+```sh
+for c in kahr_diorama fener_mini globe_full io_mini menu_roles globe_spin2 fire_mini; do
+  bash tools/video/capture.sh $c                 # Godot clips + their game sound (~2-6 min each)
+done
+node tools/video/render.mjs film                 # ~1 h: export/video/film.mp4 + film_cues.json + film_audio.json
+bash tools/video/assemble.sh                     # approved intro (first 2 s cut) + film -> export/video/pitch_film.mp4
+python3 tools/video/mix.py --mux --web           # sound -> pitch_audio.wav, pitch.mp4 and the web copy pitch_web.mp4
+```
+
+`export/video/pitch.mp4` is the deliverable: H.264 1920x1080 60 fps + AAC 48 kHz, 59.95 s, -14 LUFS (~45 Mb/s).
+The music bed is a file in the repo (`assets/audio/trailer/t33_music_bed.ogg`); rebuild it only when the logo moves
+("Music bed" below).
+`export/video/pitch_web.mp4` is the same film for the web: same picture and sound, 2-pass x264 at 5.8 Mb/s + AAC
+192 kb/s, about 45 MB (`WEB_KBPS` in `mix.py`).
+After a change late in the film, `render.mjs film --resume` keeps the frames already in `export/video/frames/film/`
+and renders only the missing ones: delete the frames from the first changed one on, then resume.
+`export/` is not in git. After a picture-only change of the cue tables (`SFX`, `STEMS`, `MUSIC`) a still render is
+enough to rewrite `film_audio.json`: `node tools/video/render.mjs film --still 1`, then `mix.py --mux` again.
 
 ## Render
 
@@ -61,114 +82,174 @@ ffmpeg -framerate 60 -start_number 66 -i export/video/frames/intro_stack_v2/%05d
   -c:v libx264 -crf 16 -preset slow -pix_fmt yuv420p export/video/intro_stack_v2_cut.mp4
 ```
 
-Frozen copy: `export/video/approved/intro_stack_v2_cut.mp4` (8.0 s, 1920x1080, 60 fps).
+Frozen copy: `export/video/approved/intro_stack_v2_cut.mp4` (8.0 s, 1920x1080, 60 fps). The pitch film plays it from
+2.0 s (`INTRO_CUT` in `film.html` and `assemble.sh`): `assemble.sh` writes the trimmed copy, with a 0.3 s fade-in,
+to `export/video/intro_cut.mp4` and leaves the approved file untouched.
 
 ## Godot clips
 
-`bash tools/video/capture.sh <clip>` plays the real scenes by scripted input (`tools/video/capture.gd`, locale tr, Movie Maker, no AUDIO) and writes `export/video/clips/<clip>/%05d.png` (1920x1080, 60 fps) + `clip.json`; clips: kahr_diorama, kahr_mini, globe_spin, globe_lock_io, io_mini, menu_roles, globe_spin2, result_card (~20 s each).
+`bash tools/video/capture.sh <clip>` plays the real scenes by scripted input (`tools/video/capture.gd`, locale tr, Movie
+Maker) and writes `export/video/clips/<clip>/%05d.png` (1920x1080, 60 fps), `clip.json` and `clip.wav`: the game's own
+sound of exactly those frames (48 kHz stereo, the Music bus muted: the film has one music bed of its own). Clips:
+
+| Clip | Length | What is played |
+|---|---|---|
+| `kahr_diorama` | 7.5 s | the Kahramanmaras diorama, the intro card hidden, framed closer |
+| `fener_mini` | 8.7 s | Fener at night (five people, the HUD reads 0/5), staged on the avenue (seed 2): lamp off, the mother's whistle, the lamp clicks on at 1.25 s, the beam finds her (the game's slow motion and name), she, the sister and the grandfather follow the player across the street to the ambulance |
+| `globe_full` | 8.4 s | the game's whole globe animation in one take: the spin through the years, the lock on the Indian Ocean (crosshair closes at ~4.95 s), the zoom to Sumatra and the fade |
+| `io_mini` | 19.4 s | Connect from 13 s before the wave: the pipes turned (they lock at 1.1 and 2.4 s), one line left open; the sea draws back, the swell rises into a wall and breaks over the whole town at ~13.15 s, the flood fills the pipes |
+| `menu_roles` | 7.0 s | the role menu: prompt, hover on Devlet (~2.8 s), then Vatandaş (~4.8 s) |
+| `globe_spin2` | 5.0 s | a second spin from another angle |
+| `fire_mini` | 9.8 s | Black Saturday as the citizen, first person, the hands as they are now: the wire cutters cut the fence ties (cut at 1.08 s), step back, the kangaroos run out through the gap (~3.6-5.2 s); jump cut at 5.5 s to the hose on the open valve: the player sprays the flame in the way out (from 6.0 s) until it goes out (7.6 s), steam and the banner |
+
+`globe_spin`, `globe_lock_io` and `title` can still be captured (older cut); the film no longer uses them.
+
+The `~/bin/godot` wrapper opens offscreen windows on a virtual render screen, near its top left, where other Godot
+windows also open. A window that others cover completely stops drawing, and Movie Maker then writes the last frame
+again (frozen runs in the clip). So `capture.gd` moves its window to the free bottom right corner of that screen
+(only with `PF_OFFSCREEN=1`, which the wrapper sets), and `capture.sh` prints `WARNING: frames a-b identical` for any
+run of 6 or more identical frames: capture again if it falls inside the part the film uses.
 
 ## Film body: `film.html` (storyboard steps 5-19)
 
 `film.html` is the rest of the pitch film after the approved intro. It works like `intro_stack`, with one difference:
 `renderAt(t)` returns a Promise, because it loads Godot gameplay frames on demand. `render.mjs` waits for it.
 Title cards (`TAHMİN ET`, `KEŞFET`, `MÜDAHALE ET`, `TERCİH ET`, `FARK ET`) reuse the STACK PRESENTS type-on: glitch
-split, white-hot arrival, block cursor, side rules. The verb is amber and the closing "ET" is teal. Statements
-(`s_*` rows) are smaller, in the fg colour, and `*stars*` mark the amber words. The post pass matches the intro: bloom,
-chromatic aberration, grain, vignette. On top of that it adds glitch cuts, zoom blur, pixelation and a CRT power-off.
+split, white-hot arrival, block cursor, side rules. The verb is amber and the closing "ET" is teal. `AAA` is the same
+card with `calm: true`: all amber, a soft arrival, no jitter, no chroma split, no shake, and no cursor (so it does not
+look like another letter is coming). The side rules sit at the same distance left and right of the text. A small
+teal "GAME" (`GAME`) sits under "AAA" and stays, unchanged, under "3play". Statements (`s_*` rows) are
+smaller, in the fg colour, and `*stars*` mark the amber words. The `logo` row draws the game's logo (`ui/logo.tscn`:
+VT323 "3play", a red copy left and a blue copy right) landing with a soft flash. The film has no developers part: it
+ends on FARK ET, which does not fade but is closed by the CRT power-off. The post pass matches the intro: bloom,
+chromatic aberration, grain, vignette. On top of that it adds glitch cuts, zoom blur, pixelation and the CRT power-off
+that ends the film (`CRT`, the last 0.65 s of FARK ET).
 
 ```sh
-node tools/video/render.mjs film --still 4.85,16.6,33.9,41.3     # stills in export/video/stills/film/
-node tools/video/render.mjs film                                 # ~30 min: export/video/film.mp4 (+ export/video/film_cues.json)
+node tools/video/render.mjs film --still 8.7,17.4,27.4,37.4,41.2,47.4   # stills in export/video/stills/film/
+node tools/video/render.mjs film                                 # ~1 h: export/video/film.mp4 (+ film_cues.json, film_audio.json)
+node tools/video/render.mjs film --resume                        # only the frames missing in export/video/frames/film/
 node tools/video/render.mjs film --clips /abs/path/to/clips      # clips from another folder (served at /__clips/)
 bash tools/video/assemble.sh                                     # approved intro + film -> export/video/pitch_film.mp4
 INTRO=/abs/path/intro_stack_v2_cut.mp4 bash tools/video/assemble.sh   # when approved/ lives in another checkout
+python3 tools/video/mix.py --mux --web                           # the sound -> export/video/pitch.mp4 + pitch_web.mp4
+python3 tools/video/contact_sheet.py export/video/stills/pitch_sheet.png export/video/stills/film/*.png
 ```
 
-`assemble.sh` never writes into `approved/`. It joins the two parts by stream copy when their codec, profile, size,
+`assemble.sh` never writes into `approved/`. It cuts the intro's first `INTRO_CUT` s (default 2.0) into
+`export/video/intro_cut.mp4`, then joins the two parts by stream copy when their codec, profile, size,
 pix_fmt and fps match and the joined file decodes cleanly. Otherwise, or with `MODE=reencode`, it re-encodes once with
 the render settings (H.264 crf 16 slow, yuv420p, 60 fps, no audio). It fails if the result is longer than 60 s.
 
 ### Timeline table
 
 All timing lives in the `TL` table at the top of `film.html`. Times are film-local seconds. In the final film add
-8.0 s (`INTRO_LEN`). Each row has `step`, `id`, `start`, `len`, and either `clip` + `in` (clip in-point in seconds) or
-`text`. Effects read their times from the rows, so changing a row retimes everything tied to it. `SCENARIO_COUNT`
-(step 16) is a single constant.
+6.0 s (`INTRO_LEN`: the 8.0 s approved intro minus `INTRO_CUT` 2.0). Each row has `step`, `id`, `start`, `len`, and
+either `clip` + `in` (clip in-point in seconds, optional `speed`) or `text`. Effects and sounds read their times from
+the rows, so changing a row retimes everything tied to it. `SCENARIO_COUNT` (step 16) is a single constant.
 
-| Step | Row | Film s | Final s | Len | Content |
+The cuts sit on the music's grid (`GRID`): 96 BPM, a beat every 0.625 s, the first downbeat at final 0.9 s, a bar
+every 4 beats. `B(k)` is beat k in film seconds and `span(a, b)` a row from beat a to beat b. Moments inside the clips
+are placed through their in-points: the lamp (`LAMP_CLIP`), the crosshair lock (`LOCK_CLIP`), the wave break
+(`HIT_CLIP`), the fence cut (`CUT_CLIP`) and the flame going out (`OUT_CLIP`) land on beats. No clip plays faster
+than before (Fener 1x, globe 1.1x, Connect 2.9x / 1.25x, fire 1.15x / 1.1x).
+
+| Step | Row | Final s | Beat | Len | Content |
 |---|---|---|---|---|---|
-| 5 | `dark`, `s_hayat` | 0.00 | 8.00 | 4.4 | near-black, heartbeat glow, voice echo rings; "Hayatın göremediğimiz boyutları vardır" at 2.0 |
-| 6 | `diorama` | 4.40 | 12.40 | 4.2 | eye-shaped tear of light opens on `kahr_diorama`, extra snow, place caption |
-| 7 | `c_tahmin` | 6.30 | 14.30 | 2.3 | TAHMİN ET over the diorama |
-| 8 | `kahr_mini` | 8.60 | 16.60 | 2.9 | glitch cut in, zoom-blur whip out |
-| 9 | `globe`, `c_kesfet` | 11.50 | 19.50 | 3.0 | `globe_spin`, KEŞFET at 12.2 |
-| 10 | `lock` | 14.50 | 22.50 | 3.6 | `globe_lock_io` from 1.6 s at 1.5x: the game's own crosshair + readout + zoom to Sumatra; our corner brackets converge and lock with it (+2.05), extra push + teal flash from +3.2 |
-| 11 | `c_mudahale` | 18.10 | 26.10 | 1.9 | MÜDAHALE ET on dark water (no diorama) |
-| 12 | `io_mini` | 20.00 | 28.00 | 3.0 | glitch cut in, hard cut out |
-| 13 | `black` | 23.00 | 31.00 | 0.7 | black, two faint heartbeats |
-| 14 | `menu`, `s_fark`, `c_tercih` | 23.70 | 31.70 | 4.6 | `menu_roles` opens like the eye; statement 24.25, TERCİH ET 26.3 |
-| 15-16 | `globe2`, `s_dunya`, `s_count` | 28.30 | 36.30 | 3.8 | `globe_spin2`; "Dünyanın dört bir yanından" + "3 afet senaryosu" (digit slot-roll) |
-| 17-18 | `bunny`, `s_easter` | 32.10 | 40.10 | 3.7 | pixelate into the pixel-art egg; it cracks, the bunny pops out; "Belki bir de easter egg, kim bilir…" |
-| 19 | `result`, `c_fark`, `end` | 35.80 | 43.80 | 6.5 | `result_card` (glitch cut in), it sinks to dark, FARK ET, CRT power-off at 41.1, black from 41.8 |
+| - | intro | 0.00 | - | 6.0 | the approved intro from 2.0 s: rain, lightning, STACK PRESENTS, push into the eye; the bed's quiet opening under it |
+| 5 | `dark`, `s_hayat` | 6.00 | - | 4.28 | near-black, heartbeat glow, voice echo rings; "Hayatın göremediğimiz boyutları vardır" at 7.8 |
+| 6 | `diorama` | 10.275 | 15 | 3.75 | eye-shaped tear of light opens on `kahr_diorama`, extra snow, place caption |
+| 7 | `c_tahmin` | 12.15 | 18 | 1.88 | TAHMİN ET over the diorama |
+| 8 | `fener` | 14.025 | 21 | 5.0 | `fener_mini` from 0.625 s at 1x (glitch cut in): a whistle in the dark, the lamp clicks on at 14.65 (beat 22), "ANNE" found, the mother, the sister and the grandfather follow; zoom-blur whip out |
+| 9 | `globe`, `c_kesfet` | 19.025 | 29 | 3.8 | `globe_full` from 0.1075 s at 1.1x: the spin; KEŞFET at 19.65 (beat 30) |
+| 10 | `lock` | 22.825 | - | 3.075 | the same take, no cut: the game's crosshair locks on the Indian Ocean at 23.4 (bar, beat 36), the zoom to Sumatra, extra push + teal flash |
+| 11 | `c_mudahale` | 25.9 | 40 | 1.88 | MÜDAHALE ET on dark water; bar 10: the drums come in |
+| 12 | `io_a` | 27.775 | 43 | 2.665 | `io_mini` from 1.72 s at 2.9x (glitch cut in), slow push to the beach: the pipes lock, the sea draws back |
+| 12 | `io_b` | 30.44 | - | 4.21 | the same take from 9.45 s at 1.25x: the wall rises, breaks over the town at 33.4 (bar, beat 52), the town floods; hard cut out |
+| 13 | `black` | 34.65 | 54 | 0.625 | black, one faint heartbeat, the music stops for the beat |
+| 14 | `menu`, `s_fark`, `c_tercih` | 35.275 | 55 | 4.375 | `menu_roles` from 1.7 s opens like the eye; "Farkındalık tek taraflı değildir" at 35.9 (bar; typed by 36.9, held to 38.45); TERCİH ET at 38.4 (bar; "Devlet" hovered at 36.4, "Vatandaş" at 38.5) |
+| 15-16 | `globe2`, `s_dunya`, `s_count` | 39.65 | 62 | 3.125 | `globe_spin2` at 1.1x (glitch cut in); "Dünyanın dört bir yanından" (40.275) + "3 afet senaryosu" (40.9, bar; digit slot-roll) |
+| 16 | `fire_a`, `fire_b`, `fire_c` | 42.775 | 67 | 5.0 | `fire_mini` (glitch cut in): the cutters cut the fence (from 0.36 s at 1.15x, the cut on bar 43.4), hard cut to the kangaroos running out (44.025, from 3.55 s at 1.15x), hard cut to the hose on the flame (45.275, from 5.54 s at 1.1x, the flame goes out at 47.15); caption VICTORIA, AVUSTRALYA · 2009 |
+| 17-18 | `bunny`, `s_easter` | 47.775 | 75 | 3.125 | pixelate into the pixel-art egg; it cracks (its cracks on the normal-speed sound), "Belki bir de easter egg, kim bilir…" at 48.4 (bar), the bunny pops out at 49.025 (beat 77) |
+| 19 | `c_aaa`, `s_yok` | 50.9 | 80 | 2.5 | "AAA" with a small "GAME" under it, calm (bar 20); it settles, then "yok yok" types on (52.15) into the music's half-beat break |
+| 19 | `logo` | 53.4 | 84 | 2.5 | "3play" lands on the music's strongest hit (bar 21), the same "GAME" under it, held |
+| 19 | `c_fark`, `end` | 55.9 | 88 | 4.05 | FARK ET (bar 22), held; CRT power-off at 59.025 (beat 93), black from 59.675 |
 
-Final film: 8.0 s intro + 42.3 s film = 50.3 s.
+Final film: 6.0 s intro + 53.95 s film (`FILM_LEN`) = 59.95 s.
+Fener went from 6.8 s to 5.0 s, the Black Saturday fire from 2.2 s to 5.0 s (now with the hose on the flame).
 
-### Silent beats for the team's audio
+### Sound
 
-The film has no audio. The cue sheet is generated at `export/video/film_cues.json` on every render (final-film seconds =
-film seconds + 8.0). Current values:
+`film.html` also holds the mix plan, next to the picture it belongs to: `MUSIC` (one bed, `t33_music_bed.ogg`, see
+"Music bed"; a dB curve `keys` and `duck` moments), `STEMS` (the game sound recorded with a clip, placed under its row)
+and `SFX` (one row per cue, T numbers as in `docs/audio.md`). Every time is derived from the `TL` rows. `render.mjs`
+writes the plan in final-film seconds to `export/video/film_audio.json` (also on a `--still` run). `mix.py` cuts every
+sound (trim, loop, tempo for the sped-up clips, fades), measures it (EBU R128) and sets its gain to the planned
+loudness (`lu`) or peak (`peak`), caps hard transients per layer (`ceil`), sums them and masters to -14 LUFS integrated
+with a 4x oversampled -2.5 dBTP limiter (no compressor; about -2 dBTP after AAC). It prints the loudness of each cue,
+of the two buses (the music bed against all game sound and effects) and of the master. Files, trims and levels:
+`assets/audio/trailer/README.md`; cue list: `docs/audio.md` ("Pitch film").
 
-| Final s | Film s | Cue |
-|---|---|---|
-| 8.22 / 8.50 | 0.22 / 0.50 | heartbeat lub / dub (the vignette and a dim red glow pulse on each beat) |
-| 8.80 - 10.00 | 0.80 - 2.00 | voice, echoing: "Sesimi duyan var mı?" (three faint rings) |
-| 9.22 / 9.50 | 1.22 / 1.50 | heartbeat lub / dub |
-| 10.00 | 2.00 | statement types on: "Hayatın göremediğimiz boyutları vardır" |
-| 12.40 | 4.40 | darkness tears open (light slit, then the lids part), snowy Kahramanmaraş |
-| 14.30 | 6.30 | title card TAHMİN ET |
-| 16.60 | 8.60 | glitch cut: Kahramanmaraş minigame |
-| 19.20 | 11.20 | zoom-blur whip to the globe |
-| 20.20 | 12.20 | title card KEŞFET |
-| 24.55 | 16.55 | target lock (Indian Ocean) |
-| 25.75 | 17.75 | zoom flash into the ocean |
-| 26.10 | 18.10 | title card MÜDAHALE ET |
-| 28.00 | 20.00 | glitch cut: Indian Ocean minigame |
-| 31.00 | 23.00 | hard cut to black |
-| 31.12 / 31.40 | 23.12 / 23.40 | heartbeat lub / dub (fainter) |
-| 31.70 | 23.70 | menu opens |
-| 32.25 | 24.25 | statement: "Farkındalık tek taraflı değildir" |
-| 34.30 | 26.30 | title card TERCİH ET |
-| 36.30 | 28.30 | glitch cut: second globe spin |
-| 36.60 | 28.60 | statement: "Dünyanın dört bir yanından" |
-| 37.90 | 29.90 | statement: "3 afet senaryosu" |
-| 39.70 | 31.70 | pixelate into the bunny scene |
-| 41.50 | 33.50 | egg bursts, bunny pops out (egg wobbles at 40.4 and 41.0) |
-| 41.60 | 33.60 | statement: "Belki bir de easter egg, kim bilir…" |
-| 43.80 | 35.80 | glitch cut: result card |
-| 47.40 | 39.40 | title card FARK ET |
-| 49.10 | 41.10 | CRT power-off |
-| 49.80 - 50.30 | 41.80 - 42.30 | black |
+Balance: the music bus and the effects bus sit about level over the film (music +0.8 LU now). The bed steps back
+2-3 dB (`duck`: 0.06 s down, held, 0.35 s back) while a key game sound plays: the lamp, the globe lock, the wave
+break, the fence cut, the kangaroos and the hose, the AAA swell and the "yok yok" typing. In between the music is
+level or a little ahead. Check it with the bus report, or compare `export/video/mix/bus_music.wav` and
+`bus_effects.wav` over time (ffmpeg `ebur128`, short-term loudness).
+
+The visual cue sheet (heartbeats, cuts, cards) is still written to `export/video/film_cues.json` on every render.
+
+### Music bed
+
+`assets/audio/trailer/t33_music_bed.ogg` (60 s, 48 kHz, starts at final 0) is built for this film from two tracks on
+one 96 BPM grid: Opening Theme [Action/Suspense] V2 by nene (OpenGameArt, CC0) opens it; on the downbeat of bar 10
+the drums of Mountain Emperor by Kevin MacLeod (incompetech.com, CC BY 4.0; the drum section after 1:05, stretched from
+120 to 96 BPM) take over, build, stop for half a beat and hit hardest on the logo bar, where the theme returns quietly.
+Credits: `assets/CREDITS.md`.
+
+The bed is made for one logo time. The builder lives outside git with its sources, in
+`export/video/music_try/build/scripts/combo.py` (variant 2, Python venv `export/video/music_try/.venv`: librosa,
+Rubber Band). When the logo moves, rebuild it for the logo's final second and copy it in:
+
+```sh
+export/video/music_try/.venv/bin/python export/video/music_try/build/scripts/combo.py 53.4   # -> build/combo_2.wav + combo_2_beats.json
+# write combo_2.wav as Ogg Vorbis (48 kHz) to assets/audio/trailer/t33_music_bed.ogg (soundfile, the venv has it),
+# then set GRID.first in film.html to the first bar_starts value of combo_2_beats.json and re-place the rows on it
+```
+
+Its first downbeat sits at logo time modulo 2.5 s (0.9 s now). The part before it is muted in `MUSIC.keys` (the
+builder rolls the theme by that offset, so the first 0.9 s hold its wrapped end).
 
 ### Godot clips and swapping one
 
-Clips live in `export/video/clips/<name>/%05d.png` (1920x1080, 60 fps) with `clip.json` `{ "frames": N }`. Numbering
-may start at 00000 or 00001; the page detects which. A clip with no `clip.json` draws a labelled PLACEHOLDER, so the
-film always renders. A clip that is too short holds its last frame. Frame shown = `in + (t - start) * speed`, in
-seconds × 60.
+Clips live in `export/video/clips/<name>/%05d.png` (1920x1080, 60 fps) with `clip.json` `{ "frames": N }` and
+`clip.wav`. Numbering may start at 00000 or 00001; the page detects which. A clip with no `clip.json` draws a labelled
+PLACEHOLDER, so the film always renders. A clip that is too short holds its last frame. Frame shown =
+`in + (t - start) * speed`, in seconds × 60; `mix.py` cuts the clip's sound the same way.
 
-To swap a clip, for example if the Kahramanmaraş minigame becomes "Fener":
-1. Capture it as `export/video/clips/fener_mini/` (PNG sequence + `clip.json`).
-2. In `TL`, change the `kahr_mini` row to `clip: "fener_mini"` and set `in` to the best moment. Change `len` only if
-   the cut needs to be longer; later rows do not shift by themselves, so move their `start` too.
-3. If the place changes, also edit the caption in `drawScene` (`KAHRAMANMARAŞ, TÜRKİYE`, coordinates) and the card text.
-4. Render stills around the cut, then the full film, then `assemble.sh`.
+To swap a clip:
+1. Add its scripted play to `capture.gd` and capture it with `capture.sh` (PNG sequence + `clip.json` + `clip.wav`).
+2. In `TL`, point the row at it and set `in` to the best moment. Later rows do not shift by themselves: move their
+   `start` too (their sounds follow).
+3. If the place changes, also edit the caption in `drawScene` and the card text.
+4. Render stills around the cut, then the full film, `assemble.sh` and `mix.py --mux`.
 
-For `globe_lock_io`, set `in`/`speed` so that the game's crosshair closes `lock` seconds after the row start (now:
-clip 4.67 s = 1.6 + 1.5 × 2.05). Set `target` to the Indian Ocean's screen position in the locked frame (frame
-centre). `hud: "brackets"` draws only corner brackets and a lock pulse, because the clip has the game's own crosshair
-and readout. `hud: "full"` adds our own crosshair, rings and a typed readout (HEDEF KİLİTLENDİ, coordinates) for a
-clip without the game's lock UI.
+For the globe, `globe` and `lock` play one take (`globe_full`) back to back: `lock.in` = `globe.in` +
+`globe.len` × `speed`, so there is no cut. `GLOBE_IN` is set so that the game's crosshair (clip 4.92 s, `LOCK_CLIP`)
+closes on beat 36, and `lock` is that moment in `lock` row seconds. Set `target` to the Indian Ocean's screen position in the locked frame
+(frame centre). `hud: "brackets"` draws only corner brackets and a lock pulse, because the clip has the game's own
+crosshair and readout. `hud: "full"` adds our own crosshair, rings and a typed readout (HEDEF KİLİTLENDİ, coordinates)
+for a clip without the game's lock UI.
 
-Current in-points: the diorama starts at 0.9 s (after the game's fly-in). `kahr_mini` starts at 2.6 s, so two drags
-land in the cut. `io_mini` starts at 6.5 s at 1.1x: the last rotations, "Dalga geldi!", water flowing. In
-`menu_roles`, "Devlet" is hovered right under TERCİH ET. In `result_card`, the closing line types on at 36.4-37.9.
+Current in-points: the diorama starts at 0.9 s (after the game's fly-in). `fener_mini` starts at 0.625 s, so the
+whistle is heard in the dark before the lamp clicks on (on beat 22). `io_mini` plays twice from one take: `io_a`
+1.72-9.45 s fast, `io_b` from 9.45 s near real speed; the wave breaks at clip 13.15 s (`hit: 2.96`, on bar 13). In
+`menu_roles` (from 1.7 s), "Devlet" is hovered under the statement and "Vatandaş" under TERCİH ET.
+
+The fire shot is one capture, `fire_mini`, so it can be swapped alone (for example once the first-person hands are
+improved): `bash tools/video/capture.sh fire_mini`, find the fence cut, the kangaroos and the flame going out in the
+new frames, set `CUT_CLIP` and `OUT_CLIP` (the rows' in-points follow; `fire_b` keeps `in: 3.55` while the kangaroos
+run from ~3.6 s), keep `fire_c.in` after the jump cut (5.5 s), delete frames 02200-02506 of `export/video/frames/film/`
+(film 36.7-41.78 s: the glitch cut in to the pixelate out), render with `--resume`, then `assemble.sh` and
+`mix.py --mux --web`.
+
+The 3026 solar flare stays out of the film: it is the easter egg the bunny step teases.
