@@ -169,7 +169,7 @@ One block per category: visual, audio, code, text, other. Write "None" if not us
 | Visual | Claude Code (Blender Python scripts, not a generator) | Re-rig of the Meshy characters (joints, skin weights), retarget of Quaternius UAL animations, extra clips built on them, GIF previews | `tools/models/meshy/**`, `assets/3d/kahramanmaras/meshy_*.glb` |
 | Audio | Claude Code (Sonnet) | Downloaded the chosen CC0 sounds, trimmed and converted them to .ogg with ffmpeg (no AI-generated audio) | `assets/audio/**` |
 | Code | Claude Code | Game code and tooling | `scenes/**`, `scripts/**`, `data/**`, `tests/**`, `tools/**`, `ui/**` (incl. `scenes/globe*`, `tools/globe/**`, `tools/build_theme.gd` which generates `ui/theme.tres`, `tools/render_mockups.gd`) |
-| Text | Claude | Drafts of design specs, intro and result card text; facts checked against sources | `docs/minigames/**`, `docs/ui.md`, `locale/strings.csv` |
+| Text | Claude | Drafts of design specs, intro and result card text; facts checked against sources. Also the submission documents written with Claude: run instructions, video script, audio list | `docs/minigames/**`, `docs/ui.md`, `locale/strings.csv`, `docs/submission/run-instructions.md`, `docs/submission/video-script.md`, `docs/audio.md` |
 | Other | Claude Code | Repo workflow, issue and PR handling | repo-wide |
 | Other | Claude Code | Globe look prototypes (three.js web pages, not shipped) used to pick the globe style | Design decision for issue #6 |
 | Other | Claude Code | "Işın Ağı" solar flare web prototype (not shipped): its rules, waves and texts were ported to Godot | `scenes/minigames/beam*`, `scripts/beam_*.gd`, `data/skins/solar_flare_beam.tres`, SF_BEAM_* in `locale/strings.csv` (#124) |
