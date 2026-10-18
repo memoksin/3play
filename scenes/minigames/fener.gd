@@ -1,8 +1,8 @@
 extends Control
 ## Fener minigame (Kahramanmaras, 6 Feb 2023, between the 04:17 and 13:24 quakes; #123), from the
 ## team's HTML prototype (kahr-proto/fener). Dark, snowy neighbourhood: only your flashlight (and the
-## few fires of the camp) shows the way. Find six people by their whistles, taps and calls; some
-## follow you, some need a first aid kit or a blanket first, one is under rubble and must be reported
+## few fires of the camp) shows the way. Find five people by their whistles, taps and calls; some
+## follow you, one needs a blanket first, one is under rubble and must be reported
 ## to a rescue crew. Lead them to the assembly area. Aftershocks drop debris near buildings; live
 ## cables spark, holes hide under the snow, leaning walls shed pieces, cracks split on a shock.
 ##
@@ -334,6 +334,8 @@ func _place_people() -> void:
 func _place_items() -> void:
 	items.clear()
 	for k: StringName in ITEM_KINDS:
+		if k == &"kit" and not skin.people.any(func(d: FenerPerson) -> bool: return d.kind == FenerPerson.Kind.INJURED):
+			continue  # nobody in this skin needs first aid: no kit is put out
 		var cand: Array = FenerMap.ITEMS[k]
 		for i in mini(int(FenerMap.ITEM_COUNT[k]), cand.size()):
 			var it := Item.new()

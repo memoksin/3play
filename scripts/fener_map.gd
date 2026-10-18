@@ -265,7 +265,6 @@ const SPOTS := {
 	&"lost_b": [Vector2(-38.0, 23.2), Vector2(46.0, -21.0), Vector2(-9.0, -26.0), Vector2(-4.5, 33.0)],
 	&"slow": [Vector2(-48.0, 23.0), Vector2(-4.4, 25.0), Vector2(18.0, -24.6), Vector2(46.0, 33.0)],
 	&"trapped": [Vector2(-24.2, -23.4), Vector2(34.5, -23.6), Vector2(-15.6, 21.4)],
-	&"injured": [Vector2(-6.6, -1.4), Vector2(12.4, -16.2), Vector2(-42.0, 21.8)],
 	&"cold": [Vector2(-30.0, 30.0), Vector2(-14.0, 3.9), Vector2(40.0, -4.8)],
 }
 ## Pickups belong to a rescue crew zone (CREWS: the nearest one to the spot) and are taken by walking into

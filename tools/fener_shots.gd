@@ -2,7 +2,7 @@ extends SceneTree
 ## Fener (#123) frames at 1920x1080 into export/shots/fener_<state>.png. Needs a window (not --headless):
 ##   godot --path . -s res://tools/fener_shots.gd [-- states=hero,start,found,shock,hazards,houses,area,market seed=4]
 ## Each state places the player and the people, steps the rules, then renders a few frames.
-## The people states (follow, trapped, crew_*, cold, injured, grandpa, area_live) run the game in real time (the
+## The people states (follow, trapped, crew_*, cold, grandpa, area_live) run the game in real time (the
 ## figures play their clips by their real speed) and have a `_close` twin: the same frame through a 9 degree lens.
 
 const OUT := "res://export/shots/"
@@ -242,7 +242,7 @@ func _train(start: Vector2, dir: Vector2) -> void:
 	f.world._cam_target = Vector3.ZERO
 	var k := 0
 	for p in f.people:
-		if p.def.kind == FenerPerson.Kind.TRAPPED or p.def.kind == FenerPerson.Kind.INJURED:
+		if p.def.kind == FenerPerson.Kind.TRAPPED:
 			continue
 		p.st = f.St.FOLLOW
 		f.follow.append(p)
@@ -286,25 +286,6 @@ func _s_cold() -> void:
 	_steps(3)
 	f.slowmo = 0.0
 	await _frames(60)
-
-
-## The hurt one (Hasan Amca): needs the first aid kit, then gets up.
-func _s_injured() -> void:
-	_fresh()
-	var p = _person(FenerPerson.Kind.INJURED)
-	_goto(_near_spot(p.pos, 4.0), p.pos)
-	_steps(3)
-	f.slowmo = 0.0
-	await _frames(60)
-
-
-func _s_injured_up() -> void:
-	await _s_injured()
-	var p = _person(FenerPerson.Kind.INJURED)
-	f.kits = 1
-	f.ppos = p.pos + Vector2(1.0, 1.0)
-	hold_cb = Callable()
-	await _live(int(f.TREAT_TIME * 60.0) + 12)
 
 
 ## The crew at work (nobody reported yet).
@@ -412,29 +393,6 @@ func _s_zone() -> void:
 	_fresh()
 	_goto(Vector2(-37.0, -6.0), Vector2(-30.5, -10.5))
 	_steps(2)
-	await _frames(50)
-
-
-## The hurt man was found and waits: the kit is out in the crew zone, the errand names it at the bottom.
-func _hurt_found() -> void:
-	_fresh()
-	var p = _person(FenerPerson.Kind.INJURED)
-	f._found(p)
-	f.slowmo = 0.0
-	_goto(Vector2(-37.0, -6.0), Vector2(-30.5, -10.5))
-	_steps(2)
-
-
-func _s_supplies() -> void:
-	_hurt_found()
-	await _frames(50)
-
-
-## Walked into the zone, away from the rescuer: the kit is in hand and the errand is gone.
-func _s_supplies_in() -> void:
-	_hurt_found()
-	f.ppos = Vector2(-35.0, -10.5)
-	_steps(3)
 	await _frames(50)
 
 
