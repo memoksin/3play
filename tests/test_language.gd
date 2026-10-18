@@ -49,7 +49,7 @@ func _run() -> void:
 	_check("has_locale after save", game.has_locale())
 	TranslationServer.set_locale("en")
 	game.load_locale()
-	_check("load_locale round trip", TranslationServer.get_locale().begins_with("tr"))
+	_check("load_locale: Turkish", TranslationServer.get_locale().begins_with("tr"))
 	DirAccess.remove_absolute(abs_path)
 	_check("removed file: no locale again", not game.has_locale())
 	TranslationServer.set_locale("en")
@@ -96,7 +96,7 @@ func _run() -> void:
 	await _wait_scene(game.scene_path(&"main"))
 	_check("prologue seen: splash -> title -> menu", current_scene.scene_file_path == game.scene_path(&"main"))
 	game.load_locale()
-	_check("saved English wins over the default", TranslationServer.get_locale().begins_with("en"))
+	_check("a saved English does not carry over: every launch is Turkish", TranslationServer.get_locale().begins_with("tr"))
 
 	DirAccess.remove_absolute(abs_path)
 	game.settings_path = ""

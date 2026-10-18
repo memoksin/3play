@@ -12,7 +12,7 @@ const SCENES := {
 	&"fire": "res://scenes/minigames/fire.tscn",
 	&"result": "res://scenes/result.tscn",
 }
-const DEFAULT_LOCALE := "tr"  # until the player picks another with the menu's TR / EN switch
+const DEFAULT_LOCALE := "tr"  # every launch; the menu's TR / EN switch lasts until quit
 const FLOW: Array[StringName] = [&"globe", &"diorama", &"minigame", &"result", &"main"]
 ## Disasters a role can get; the file name (without .tres) is the id in the play counts.
 const POOL := {
@@ -141,10 +141,9 @@ func has_locale() -> bool:
 	return saved_locale() != ""
 
 
-## Applies the saved locale; with none saved, Turkish is the default.
+## Every launch starts in Turkish (jam default); the menu's TR / EN switch only changes this session.
 func load_locale() -> void:
-	var code := saved_locale()
-	TranslationServer.set_locale(code if code != "" else DEFAULT_LOCALE)
+	TranslationServer.set_locale(DEFAULT_LOCALE)
 
 
 ## Applies the locale and saves it.
