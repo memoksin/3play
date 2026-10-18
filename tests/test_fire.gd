@@ -13,7 +13,7 @@ const KEYS := ["FIRE_PLACE", "FIRE_YEAR", "FIRE_INTRO_1", "FIRE_INTRO_2", "FIRE_
 	"FIRE_CARD_NUMBERS", "FIRE_CARD_FACT", "FIRE_CARD_HELP", "FIRE_HINT_CUTTERS", "FIRE_HINT_FENCE",
 	"FIRE_DONE_FENCE", "FIRE_HINT_HOSE", "FIRE_HINT_VALVE", "FIRE_HINT_FLAME", "FIRE_DONE_FLAME",
 	"FIRE_HINT_EXIT", "FIRE_LOSE", "FIRE_USE_CUTTERS", "FIRE_USE_FENCE", "FIRE_NEED_CUTTERS", "FIRE_USE_HOSE",
-	"FIRE_USE_ATTACH", "FIRE_USE_VALVE", "FIRE_NEED_HOSE", "FIRE_USE_SPRAY", "FIRE_CONTROLS"]
+	"FIRE_USE_ATTACH", "FIRE_USE_VALVE", "FIRE_NEED_HOSE", "FIRE_USE_SPRAY", "FIRE_CONTROLS", "FIRE_TUT_TITLE", "FIRE_TUT_MOVE", "FIRE_TUT_USE", "FIRE_TUT_START"]
 
 var ok := true
 var frames := 0
@@ -60,11 +60,13 @@ func _run() -> void:
 	_smoke_curve()
 	_panel_sim()
 	await _walkthrough()
+	await _tutorial()
 	await _lose()
 	await _physics()
 	await _swap()
 	await _pause()
 	await _game_flow()
+	await _sign_thought()
 	print("test_fire ok" if ok else "test_fire FAIL")
 	quit(0 if ok else 1)
 
@@ -202,6 +204,7 @@ func _new_scene(disaster: Disaster = null) -> Node3D:
 	var s: Node3D = load(SCENE).instantiate()
 	s.submit = false
 	s.time_scale = 0.0
+	s.tutorial = false  # the how-to-play modal has its own test (_tutorial)
 	sounds.clear()
 	s.sound_event.connect(func(kind: StringName, _i: int) -> void: sounds.append(kind))
 	root.add_child(s)
@@ -296,6 +299,8 @@ func _walkthrough() -> void:
 			and not s.get_node("Player/Head/Camera/Hand/Cutters").visible and not s.get_node("Player/Head/Camera/Hand/Nozzle").visible)
 	s.advance(4.0)
 	_check("scene: clear air at 4 s", s.smoke == 0.0 and is_equal_approx((s.get_node("Env") as WorldEnvironment).environment.fog_density, skin.fog_clear))
+	_check("glow: cutters, fence, hose, valve all glow while active", s.has_glow(&"cutters") and s.has_glow(&"fence") \
+			and s.has_glow(&"hose") and s.has_glow(&"valve"))
 
 	var cutters: Node3D = props.get_node("Cutters")
 	var fence: Node3D = props.get_node("FenceCut")
@@ -319,6 +324,8 @@ func _walkthrough() -> void:
 	s.advance(0.05)
 	s.interact_release()
 	_check("cutters: picked up", s.logic.has_cutters and not cutters.visible and s.get_node("Player/Head/Camera/Hand/Cutters").visible)
+	s.advance(0.05)
+	_check("glow: cutters off once taken, fence still on", not s.has_glow(&"cutters") and s.has_glow(&"fence"))
 	_check("cutters: sound", sounds.has(&"cutters"))
 	_check("hands: the bare hands go down as the cutters come up", not empty.visible)
 	_check("cutters: hint now the fence", (s.get_node("Hud/Info/Hint") as Label).text == tr("FIRE_HINT_FENCE"))
@@ -329,9 +336,14 @@ func _walkthrough() -> void:
 	_check("fence: prompt shows", s.get_node("Hud/Prompt").visible and (s.get_node("Hud/Prompt/Row/Text") as Label).text == tr("FIRE_USE_FENCE"))
 	_hold(s, skin.cut_seconds * 0.5)
 	_check("fence: half a hold does not cut", not s.logic.fence_cut)
-	_check("fence: half a hold snips some ties (%d)" % sounds.count(&"snip"), sounds.count(&"snip") >= 2 and sounds.count(&"snip") < 6)
+	_check("fence: no tie breaks before the snap (%d)" % sounds.count(&"snip"), sounds.count(&"snip") == 0)
+	_check("fence: cut takes 1.6-2.2 s", skin.cut_seconds >= 1.6 and skin.cut_seconds <= 2.2)
+	_hold(s, skin.cut_seconds * 0.4)
+	_check("fence: ties snip at the snap (%d)" % sounds.count(&"snip"), sounds.count(&"snip") >= 1 and not s.logic.fence_cut)
 	_hold(s, skin.cut_seconds + 0.1)
 	_check("fence: cut after a full hold", s.logic.fence_cut)
+	s.advance(0.05)
+	_check("glow: fence off once cut", not s.has_glow(&"fence"))
 	_check("fence: success sounds", sounds.has(&"cut") and sounds.has(&"success"))
 	_check("fence: banner", s.get_node("Hud/Banner").visible and (s.get_node("Hud/Banner/Label") as Label).text == tr("FIRE_DONE_FENCE"))
 	_check("fence: marker A gone, cutters put away", not s.get_node("Markers/MarkerA").visible and not s.get_node("Player/Head/Camera/Hand/Cutters").visible)
@@ -405,6 +417,8 @@ func _walkthrough() -> void:
 	_act_until(s, 3.0)
 	_check("hose: in hand, the coil taken", s.logic.hose_held and s.get_node("Player/Head/Camera/Hand/Nozzle").visible \
 			and not hose.get_node("Model/Coil").visible and s.get("_act_id") == &"" and absf(s.get("_crouch")) < 1e-3)
+	s.advance(0.05)
+	_check("glow: hose off once picked up, valve still on", not s.has_glow(&"hose") and s.has_glow(&"valve"))
 	_stand(s, valve_stand, valve_pt)
 	t = s.pick_target()
 	_check("valve with hose: attach (tap)", t.get("id") == &"valve" and t.get("kind") == &"tap")
@@ -443,6 +457,8 @@ func _walkthrough() -> void:
 		_check("sync: %s hand's fingers round the rim (nearest joint %.3f m off its line)" % [side.to_lower(), d], d < 0.035)
 	_hold(s, skin.valve_seconds + 0.1)
 	_check("valve: open", s.logic.valve_open and sounds.has(&"valve") and absf(s.get("_valve_turn") - 1.0) < 1e-4)
+	s.advance(0.05)
+	_check("glow: valve off once open", not s.has_glow(&"valve"))
 	_check("hint: the flame", (s.get_node("Hud/Info/Hint") as Label).text == tr("FIRE_HINT_FLAME"))
 
 	var flame: Node3D = props.get_node("Flame")
@@ -863,3 +879,82 @@ func _game_flow() -> void:
 	_check("flow: on to the result card", current_scene != null and current_scene.scene_file_path == game.scene_path(&"result"))
 	if is_instance_valid(s):
 		await _free(s)
+
+
+## The farmer thinks aloud once at the fire danger sign: near it and looking at it.
+func _sign_thought() -> void:
+	var s := await _new_scene()
+	s.set_physics_process(false)
+	s.skip_overview()
+	var sg := s.get_node_or_null("Farm/Model/World/FireSign") as Node3D
+	_check("sign: FireSign in the farm", sg != null)
+	if sg == null:
+		await _free(s)
+		return
+	var c := sg.global_position + Vector3(0, 1.5, 0)
+	var far := _flat(sg.global_position) + Vector3(0, 0, -10.0)
+	_stand(s, far, c)
+	s.advance(0.1)
+	_check("sign: far away no thought", s.alert_now() != &"sign" and not s.get("_alerts_done").has(&"sign"))
+	var near := _flat(sg.global_position) + Vector3(2.5, 0, 0)
+	_stand(s, near, c + Vector3(0, 0, 6.0))
+	s.advance(0.1)
+	_check("sign: near but looking away no thought", not s.get("_alerts_done").has(&"sign"))
+	_stand(s, near, c)
+	var shown := 0
+	for i in 400:
+		s.advance(0.05)
+		if s.alert_now() == &"sign" and (i == 0 or s.get("_alert_t") < 0.06):
+			shown += 1
+	_check("sign: thought shown once", shown == 1 and s.get("_alerts_done").has(&"sign"))
+	_check("sign: line is FIRE_SIGN_THOUGHT", s.ALERTS[&"sign"][0] == "FIRE_SIGN_THOUGHT")
+	_check("sign: line is short lived", s.alert_seconds(&"sign") <= 4.0)
+	await _free(s)
+
+
+func _tutorial() -> void:
+	var s := await _new_scene()
+	s.tutorial = true
+	s.set_physics_process(false)
+	var dive: float = s.INTRO_DIVE * skin.overview_seconds
+	s.advance(dive * 0.5)
+	_check("tutorial: not yet open early in the intro", s.get_node_or_null("Tutorial") == null)
+	s.advance(dive)
+	var t: Node = s.get_node_or_null("Tutorial")
+	_check("tutorial: opens before the zoom", t != null and s.phase == s.Phase.OVERVIEW \
+			and is_equal_approx(s._intro_t, dive) and s._fp_amount() == 0.0)
+	if t == null:
+		await _free(s)
+		return
+	_check("tutorial: heading, rows and start text", (t.find_child("Heading", true, false) as Label).text == TextFx.upper(tr("FIRE_TUT_TITLE")) \
+			and t.find_child("Move", true, false) != null and t.find_child("Use", true, false) != null \
+			and (t.find_child("Start", true, false) as Button).text == tr("FIRE_TUT_START").to_upper())
+	s.advance(30.0)
+	_check("tutorial: intro and timer wait while open", is_equal_approx(s._intro_t, dive) and s.elapsed == 0.0 \
+			and s.phase == s.Phase.OVERVIEW)
+	t.pose(0.2)  # keys animate without errors
+	var enter := InputEventKey.new()
+	enter.physical_keycode = KEY_ENTER
+	enter.keycode = KEY_ENTER
+	enter.pressed = true
+	Input.parse_input_event(enter)
+	await process_frame
+	await process_frame
+	var enter_up := enter.duplicate()
+	enter_up.pressed = false
+	Input.parse_input_event(enter_up)
+	_check("tutorial: Enter closes it", s.get_node_or_null("Tutorial") == null and s.phase == s.Phase.OVERVIEW)
+	s.advance(dive)
+	_check("tutorial: the intro continues after Start", s._intro_t > dive + 0.1 and s._fp_amount() > 0.0)
+	s.advance(skin.overview_seconds)
+	_check("tutorial: then first person, once", s.phase == s.Phase.PLAY and s.get_node_or_null("Tutorial") == null)
+	await _free(s)
+
+	s = await _new_scene()
+	s.tutorial = true
+	s.advance(skin.overview_seconds * 0.5)
+	(s.get_node("Tutorial").find_child("Start", true, false) as Button).pressed.emit()
+	await process_frame
+	s.advance(skin.overview_seconds)
+	_check("tutorial: the Start button continues the intro", s.phase == s.Phase.PLAY and s.get_node_or_null("Tutorial") == null)
+	await _free(s)

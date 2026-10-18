@@ -33,13 +33,15 @@ func _check(name: String, cond: bool) -> void:
 func _run() -> void:
 	var game := root.get_node("Game")
 	game.store_path = ""
-	# the roll: 65% the first path, 35% the second
+	# the roll: Devlet 65% the first path, 35% the second; Vatandaş 50 / 50
 	_check("roll 0.0 -> Indian Ocean path", game.path_for_roll(0.0)[&"state"] == IO)
-	_check("roll 0.649 -> Indian Ocean path", game.path_for_roll(0.649)[&"citizen"] == KAHR)
-	_check("roll 0.65 -> Solar Flare path", game.path_for_roll(0.65)[&"state"] == SF)
-	_check("roll 0.999 -> Black Saturday path", game.path_for_roll(0.999)[&"citizen"] == BS)
+	_check("state roll 0.649 -> Indian Ocean path", game.path_for_roll(0.649, &"state")[&"state"] == IO)
+	_check("state roll 0.65 -> Solar Flare path", game.path_for_roll(0.65, &"state")[&"state"] == SF)
+	_check("citizen roll 0.499 -> Kahramanmaras", game.path_for_roll(0.499, &"citizen")[&"citizen"] == KAHR)
+	_check("citizen roll 0.5 -> Black Saturday", game.path_for_roll(0.5, &"citizen")[&"citizen"] == BS)
+	_check("roll 0.999 -> Black Saturday path", game.path_for_roll(0.999, &"citizen")[&"citizen"] == BS)
 
-	# first picks with a seeded rng: ~65 / 35 for either role
+	# first picks with a seeded rng: ~65 / 35 for Devlet, ~50 / 50 for Vatandaş
 	for role: StringName in [&"state", &"citizen"]:
 		game.pick_rng.seed = 7
 		var main := 0
@@ -49,7 +51,8 @@ func _run() -> void:
 			if game.pick_for(role) == (IO if role == &"state" else KAHR):
 				main += 1
 		var share := float(main) / runs
-		_check("%s first pick: main disaster %.3f of %d (0.65 +- 0.04)" % [role, share, runs], absf(share - 0.65) < 0.04)
+		var want: float = game.MAIN_ODDS[role]
+		_check("%s first pick: main disaster %.3f of %d (%.2f +- 0.04)" % [role, share, runs, want], absf(share - want) < 0.04)
 
 	# the path holds for the rest of the launch, for both roles
 	game.pick_rng.seed = 3

@@ -136,7 +136,12 @@ const ALERTS := {
 	&"now": ["FIRE_ALERT_NOW", true],
 	&"roos": ["FIRE_ALERT_ROOS", false],
 	&"run": ["FIRE_ALERT_RUN", true],
+	&"sign": ["FIRE_SIGN_THOUGHT", false],
 }
+## The farmer's thought at the fire danger sign: how near (m), how far off the view axis (degrees), the sign's centre height.
+const SIGN_NEAR := 4.0
+const SIGN_ANGLE := 20.0
+const SIGN_H := 1.5
 ## Seconds left at which the front, hurry and now alerts come; the smoke at which the wind brings a new stretch of the
 ## front in (farm.gd CREEP Front3) for the wind alert (the embers alert comes with the first spot fire, SPOTS[0]).
 const ALERT_LEFT := {&"front": 60.0, &"hurry": 30.0, &"now": 15.0}
@@ -208,6 +213,9 @@ var saved_count := -1
 var smoke := 0.0
 
 var _intro_t := 0.0
+## The "how to play" modal opens once, as the shot is about to zoom onto the farmer (INTRO_DIVE); the intro waits.
+var tutorial := true
+var _tut: FireTutorial
 var _end_t := 0.0
 var _end_dur := 0.0
 var _finished := false
@@ -232,6 +240,9 @@ var _target: Dictionary = {}
 var _hold := 0.0
 var _spraying := false
 var _valve_turn := 0.0
+const GLOW_SHADER := "res://scenes/minigames/fire/art/guide_glow.gdshader"
+var _glow_mat: ShaderMaterial
+var _glow_on := {}
 var _act_id := &""
 var _act_t := 0.0
 var _act_done := false
@@ -781,11 +792,16 @@ func advance(dt: float) -> void:
 		return
 	match phase:
 		Phase.OVERVIEW:
-			_intro_t += dt
-			if _intro_t >= skin.overview_seconds:
-				_begin_play()
+			if _tut != null:
+				pass  # the modal is open: the intro (and the clock) wait for Start
+			elif tutorial and _intro_t + dt >= INTRO_DIVE * skin.overview_seconds:
+				_open_tutorial()
 			else:
-				_pose_overview(_intro_t)
+				_intro_t += dt
+				if _intro_t >= skin.overview_seconds:
+					_begin_play()
+				else:
+					_pose_overview(_intro_t)
 		Phase.PLAY:
 			_world_t += dt
 			elapsed = minf(elapsed + dt, skin.timer_seconds)
@@ -794,6 +810,7 @@ func advance(dt: float) -> void:
 			_update_interact(dt)
 			_check_exit()
 			_check_alerts()
+			_check_sign()
 			if phase == Phase.PLAY and elapsed >= skin.timer_seconds:
 				_end(false)
 		Phase.END:
@@ -819,6 +836,16 @@ func seek(time: float) -> void:
 		advance(time - elapsed + _end_dur)
 
 
+func _open_tutorial() -> void:
+	tutorial = false
+	_intro_t = INTRO_DIVE * skin.overview_seconds
+	_pose_overview(_intro_t)
+	_tut = FireTutorial.new()
+	_tut.started.connect(func() -> void: _tut = null)
+	add_child(_tut)
+	_update_hud(0.0)
+
+
 func skip_overview() -> void:
 	if phase == Phase.OVERVIEW:
 		_begin_play()
@@ -826,6 +853,10 @@ func skip_overview() -> void:
 
 func _begin_play() -> void:
 	phase = Phase.PLAY
+	tutorial = false
+	if _tut != null:
+		_tut.queue_free()
+		_tut = null
 	_intro_t = skin.overview_seconds
 	_farmer.visible = false
 	_hand.visible = true
@@ -1329,7 +1360,7 @@ func _update_interact(dt: float) -> void:
 	var cutting: bool = t.get("id", &"") == &"fence" and t.get("kind", &"") == &"hold" and down
 	if cutting:
 		_cut_k = clampf((_hold + dt) / float(t.secs), 0.0, 1.0)
-		_model_call(_fence, &"set_cut", _cut_k)
+		_model_call(_fence, &"set_cut", clampf((_cut_k - CUT_SNAP_AT) / (1.0 - CUT_SNAP_AT - 0.04), 0.0, 1.0))
 	elif t.get("id", &"") != &"fence":
 		_cut_k = 0.0
 	match t.kind:
@@ -1797,14 +1828,79 @@ func _update_roos() -> void:
 				m.rotation.x = 0.35 * hop
 
 
+# --- guide glow -------------------------------------------------------------------
+
+## Which props the player still has to use (cutters, fence, hose, valve) wear the cyan guide glow overlay.
+func glow_wanted() -> Dictionary:
+	var L := logic
+	return {
+		&"cutters": not L.has_cutters and not L.fence_cut,
+		&"fence": not L.fence_cut,
+		&"hose": not L.hose_held and not L.hose_attached,
+		&"valve": not L.valve_open,
+	}
+
+
+func glow_prop(id: StringName) -> Node3D:
+	match id:
+		&"cutters":
+			return _cutters
+		&"fence":
+			return _fence
+		&"hose":
+			return _hose
+		&"valve":
+			return _valve
+	return null
+
+
+## True when every mesh under the prop carries the glow overlay.
+func has_glow(id: StringName) -> bool:
+	var meshes := glow_prop(id).find_children("*", "MeshInstance3D", true, false)
+	for mi: MeshInstance3D in meshes:
+		if mi.material_overlay == _glow_mat:
+			return true
+	return false
+
+
+func _update_glow() -> void:
+	if _glow_mat == null:
+		_glow_mat = ShaderMaterial.new()
+		_glow_mat.shader = load(GLOW_SHADER)
+	var want := glow_wanted()
+	for id: StringName in want:
+		var on: bool = want[id]
+		if _glow_on.get(id, null) == on:
+			continue
+		_glow_on[id] = on
+		for mi: MeshInstance3D in glow_prop(id).find_children("*", "MeshInstance3D", true, false):
+			mi.material_overlay = _glow_mat if on else null
+
+
+# The bolt-cutter jaws over the hold p (0..1): close steadily (ease-in), strain with a small shake and a short
+# hold below the wire, then snap through at CUT_SNAP_AT, where the ties actually break.
+const CUT_SNAP_AT := 0.86
+
+
+func _jaw(p: float) -> float:
+	if p < 0.62:
+		var u := p / 0.62
+		return 0.8 * (u * (2.0 - u) * 0.5 + u * 0.5)  # steady, slightly easing out into the strain
+	if p < CUT_SNAP_AT:
+		var u := (p - 0.62) / (CUT_SNAP_AT - 0.62)
+		return 0.8 + 0.08 * u + 0.025 * sin(u * 55.0) * sin(u * PI)  # slow creep + shake
+	return lerpf(0.88, 1.0, clampf((p - CUT_SNAP_AT) / 0.05, 0.0, 1.0))  # the snap
+
+
 # --- per-frame look ---------------------------------------------------------------
 
 func _update_props(dt: float) -> void:
+	_update_glow()
 	_model_call(_fence, &"tick", dt)
 	# the cutters close on a tie at every snip of the hold (set_cut on the fence snips them in step)
 	var want := 0.0
 	if phase == Phase.PLAY and _target.get("id", &"") == &"fence" and _hold > 0.0 and _cut_k > 0.0:
-		want = 0.5 + 0.5 * cos(TAU * _cut_k * 7.0)
+		want = _jaw(_cut_k)
 	_snip_v = lerpf(_snip_v, want, 1.0 - exp(-28.0 * dt))
 	if _hand_cutters.visible:
 		_model_call(_hand_cutters, &"set_snip", _snip_v)
@@ -1994,7 +2090,7 @@ func _update_hud(dt: float) -> void:
 	elif phase == Phase.OVERVIEW:
 		plate_a = 0.0
 	_red_clock(left)
-	_skip.visible = phase == Phase.OVERVIEW
+	_skip.visible = phase == Phase.OVERVIEW and _tut == null
 	_skip.modulate.a = clampf((0.9 - _intro_t / skin.overview_seconds) / 0.1, 0.0, 1.0)
 	_place_skip()
 	_update_alert(dt)
@@ -2212,6 +2308,20 @@ func _check_alerts() -> void:
 		alert(&"run")
 
 
+## The farmer looks at the fire danger sign from close by: he thinks aloud (once a game, a plain alert).
+func _check_sign() -> void:
+	if _alerts_done.has(&"sign"):
+		return
+	var sg := get_node_or_null(^"Farm/Model/World/FireSign") as Node3D
+	if sg == null:
+		return
+	var to := sg.global_position + Vector3(0.0, SIGN_H, 0.0) - _camera.global_position
+	if Vector2(to.x, to.z).length() > SIGN_NEAR:
+		return
+	if rad_to_deg((-_camera.global_basis.z).angle_to(to)) <= SIGN_ANGLE:
+		alert(&"sign")
+
+
 ## Shows the next alert when the band is free, runs the one that is up (a quick punch in, a fade out).
 func _update_alert(dt: float) -> void:
 	if _alert_id == &"":
@@ -2244,8 +2354,9 @@ func _show_alert(id: StringName) -> void:
 	_alert_t = 0.0
 	var urgent: bool = ALERTS[id][1]
 	var txt := tr(ALERTS[id][0])
-	_alert_label.text = txt if id == &"context" else TextFx.upper(txt)
-	_alert_label.add_theme_font_size_override(&"font_size", 38 if id == &"context" else 58)
+	var plain := id == &"context" or id == &"sign"
+	_alert_label.text = txt if plain else TextFx.upper(txt)
+	_alert_label.add_theme_font_size_override(&"font_size", 38 if plain else 58)
 	_alert_box.add_theme_stylebox_override(&"panel", _alert_red if urgent else _alert_white)
 	_alert_box.visible = true
 	_place_alert()
@@ -2269,7 +2380,7 @@ func _place_alert() -> void:
 
 ## Seconds alert `id` stays up.
 static func alert_seconds(id: StringName) -> float:
-	return CONTEXT_DUR if id == &"context" else ALERT_DUR
+	return CONTEXT_DUR if id == &"context" else (3.5 if id == &"sign" else ALERT_DUR)
 
 
 ## The alert up now (&"" none) and its band on screen (tests).
