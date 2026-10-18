@@ -8,7 +8,8 @@ extends Control
 signal finished(saved: int, total: int)
 ## Audio hooks (docs/audio.md, scripts/audio.gd). sound_event kinds: wave_rising, wave_hit, flow,
 ## basin (index = basin), spill (index = line), flood (index = village), drain, locked (index = line:
-## a turn completed the line and locked it; sent during play, before the hit).
+## a turn made the line correct, i.e. it reaches its own basin; not sent again for the same line within
+## LOCK_REPEAT s; sent during play, before the hit). Nothing locks: a correct line can still be turned.
 signal pipe_turned
 signal sound_event(kind: StringName, index: int)
 
@@ -21,8 +22,8 @@ const ROCK_ORDER: Array[int] = [0, 1, 2, 0, 2, 1]
 const AMBIENT_FADE := 6.0
 
 const TURN_DUR := 0.1
-const DENY_DUR := 0.3  # the "locked" wiggle of a pipe that was clicked in a locked line
-const LOCK_FLASH := 0.8  # the glint on a line's pipes when it locks
+const LOCK_FLASH := 0.8  # the glint on a line's pipes when it becomes correct
+const LOCK_REPEAT := 1.0  # a line that turns correct again within this many s makes no second sound or glint
 ## Seconds before the hit that the wave comes into view.
 const WAVE_LEAD := 15.0
 const WAVE_BREAK_DUR := 1.8  # the wave crosses the bay and breaks on the beach
@@ -41,8 +42,9 @@ const SHAKE_PX := 10.0
 const SHAKE_CAM := 0.012  # camera shake, fraction of the view
 const GUSH_DUR := 0.3
 const NAME_SIZE := 22
-## Every line locked (the puzzle is solved): the clock drops to RUSH_TIME seconds (only if more is
+## Every line correct (the puzzle is solved): the clock drops to RUSH_TIME seconds (only if more is
 ## left, once), the scene shakes (RUSH_SHAKE_PX fading to RUSH_TREMOR_PX) and "the wave is coming" shows.
+## Once started the clock never lengthens again, even if the player breaks a line afterwards.
 const RUSH_TIME := 5.0
 const RUSH_SHAKE_PX := 12.0
 const RUSH_TREMOR_PX := 3.0
@@ -65,9 +67,8 @@ var _hit := false
 var _finished := false
 var _hover := Vector2i(-1, -1)
 var _turning := {}  # cell index -> seconds left of the turn animation
-var _lock_at := {}  # cell index -> game time its line locked (a completed line stays as it is)
-var _deny := {}  # cell index -> seconds left of the "locked" wiggle
-var _lines_locked: Array[int] = []  # line (inlet) indices already locked
+var _glint_at := {}  # cell index -> game time its line last turned correct (drives the glint)
+var _lock_sound_at := {}  # line (inlet) index -> game time of its last lock sound
 var _rock_variant := {}  # cell index -> sheet column
 var _lines: Array[Dictionary] = []
 var _saved: Array[bool] = []
@@ -135,10 +136,6 @@ func advance(dt: float) -> void:
 		_turning[i] -= dt
 		if _turning[i] <= 0.0:
 			_turning.erase(i)
-	for i in _deny.keys():
-		_deny[i] -= dt
-		if _deny[i] <= 0.0:
-			_deny.erase(i)
 	_banner.visible = _hit and _hit_t() < BANNER_DUR
 	_rush.visible = rushed and not _hit
 	if _rush.visible:
@@ -169,45 +166,44 @@ func seek(time: float) -> void:
 	advance(maxf(time - elapsed, 0.0))
 
 
-## True when pipe (c, r) belongs to a line that was completed and locked.
-func is_cell_locked(c: int, r: int) -> bool:
-	return c >= 0 and r >= 0 and c < skin.cols and r < skin.rows and _lock_at.has(skin.index(c, r))
-
-
-## Debug and click target: turns pipe (c, r) one quarter turn clockwise. A pipe in a locked line does
-## not turn: it only wiggles (false).
+## Debug and click target: turns pipe (c, r) one quarter turn clockwise. Nothing is locked: pipes of a
+## correct line turn too (and break it).
 func rotate_cell(c: int, r: int, animate := false) -> bool:
 	if locked or c < 0 or r < 0 or c >= skin.cols or r >= skin.rows:
 		return false
 	var i := skin.index(c, r)
 	if not ConnectLogic.rotatable(skin.tiles[i]):
 		return false
-	if _lock_at.has(i):
-		_deny[i] = DENY_DUR
-		return false
+	var was := ConnectLogic.traces(skin, rots)
 	rots[i] = (rots[i] + 1) % 4
 	clicks += 1
 	pipe_turned.emit()
 	if animate:
 		_turning[i] = TURN_DUR
-	_lock_completed(c, r)
+	_check_lines(was)
 	queue_redraw()
 	return true
 
 
-## After a turn at (c, r): a line that is now complete and runs through that pipe locks. Other lines
-## stay free until the wave (the rule is unchanged).
-func _lock_completed(c: int, r: int) -> void:
-	var traces := ConnectLogic.traces(skin, rots)
-	for li in traces.size():
-		var t: Dictionary = traces[li]
-		if not t.complete or li in _lines_locked or not t.cells.has(Vector2i(c, r)):
-			continue
-		_lines_locked.append(li)
-		for cell: Vector2i in t.cells:
-			_lock_at[skin.index(cell.x, cell.y)] = elapsed
-		sound_event.emit(&"locked", li)
-	if _lines_locked.size() == traces.size():
+## After a turn: `was` are the traces before it. A line that just became correct (reaches its own
+## basin) glints and sounds, at most once per LOCK_REPEAT s; a line that stopped being correct loses its
+## glint. When every line is correct the rush starts.
+func _check_lines(was: Array[Dictionary]) -> void:
+	var now := ConnectLogic.traces(skin, rots)
+	var all_ok := not now.is_empty()
+	for li in now.size():
+		var ok := ConnectLogic.line_correct(skin, now[li], li)
+		var was_ok := ConnectLogic.line_correct(skin, was[li], li)
+		all_ok = all_ok and ok
+		if was_ok and not ok:
+			for cell: Vector2i in was[li].cells:
+				_glint_at.erase(skin.index(cell.x, cell.y))
+		elif ok and not was_ok and elapsed - _lock_sound_at.get(li, -LOCK_REPEAT) >= LOCK_REPEAT:
+			_lock_sound_at[li] = elapsed
+			for cell: Vector2i in now[li].cells:
+				_glint_at[skin.index(cell.x, cell.y)] = elapsed
+			sound_event.emit(&"locked", li)
+	if all_ok:
 		_rush_clock()
 
 
@@ -252,9 +248,16 @@ func _start_hit() -> void:
 	_hover = Vector2i(-1, -1)
 	mouse_default_cursor_shape = Control.CURSOR_ARROW
 	_turning.clear()
-	_deny.clear()
 	_lines = ConnectLogic.traces(skin, rots)
 	_saved = ConnectLogic.saved_basins(skin, rots)
+	# a line that ends in the wrong basin is shown as an open one: the water stops at the last pipe
+	var inlets := ConnectLogic.inlets(skin)
+	for li in _lines.size():
+		var w: Dictionary = _lines[li]
+		if w.complete and not _saved[li]:
+			w.complete = false
+			w.break_cell = w.cells.back() if not w.cells.is_empty() else inlets[li]
+			w.break_side = ConnectLogic.STEP.find(w.basin - w.break_cell)
 	_flow_total = 0.0
 	_flood_at.clear()
 	_flood_at.resize(_saved.size())
@@ -358,7 +361,7 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseMotion:
 		var c := _cell_at(event.position)
-		var ok := c.x >= 0 and c.y >= 0 and c.x < skin.cols and c.y < skin.rows and ConnectLogic.rotatable(skin.tile(c.x, c.y)) and not _lock_at.has(skin.index(c.x, c.y))
+		var ok := c.x >= 0 and c.y >= 0 and c.x < skin.cols and c.y < skin.rows and ConnectLogic.rotatable(skin.tile(c.x, c.y))
 		if not ok:
 			c = Vector2i(-1, -1)
 		if c != _hover:

@@ -12,6 +12,9 @@ const SOLVED := [
 	"I---┘└B",
 ]
 
+## Rotations that send line 1 (inlet r0) into basin 3 (row 3): complete but the wrong basin. Line 4 stays right.
+const WRONG: Array[int] = [0, 1, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 1, 0, 0, 0, 1, 0, 2, 3, 0, 0, 1, 3, 0, 0, 0, 0, 0, 3, 2, 0, 0, 1, 0, 0, 0, 0, 0, 2, 3, 0]
+
 var ok := true
 var frames := 0
 var skin: ConnectSkin
@@ -86,6 +89,17 @@ func _logic() -> void:
 	_check("solved: every line is 9 tiles", through9)
 	_check("solved: every inlet reaches its own basin", own)
 	_check("solved: min clicks 0", L.min_clicks(skin, solved) == 0)
+	var pairs_ok := true
+	for i in 4:
+		pairs_ok = pairs_ok and L.line_correct(skin, ts[i], i)
+	_check("solved: the shipped solution has every line correct (inlet i -> basin i)", pairs_ok and L.saved_basins(skin, solved) == [true, true, true, true])
+
+	# a line into another basin is complete but not correct and saves nothing
+	var wrong := PackedInt32Array(WRONG)
+	var tw := L.traces(skin, wrong)
+	_check("wrong: line 1 reaches basin 3, the trace is complete", tw[0].complete and tw[0].basin == L.basins(skin)[2])
+	_check("wrong: ...but it is not correct", not L.line_correct(skin, tw[0], 0))
+	_check("wrong: nothing is saved but the untouched line 4", L.saved_basins(skin, wrong) == [false, false, false, true] and L.complete_lines(skin, wrong) == 1)
 
 	var start := L.start_rotations(skin)
 	_check("start: deterministic", start == L.start_rotations(skin))
@@ -134,6 +148,11 @@ func _logic() -> void:
 	none.resize(42)
 	for t in L.traces(skin, none):
 		_check("start-ish: trace ends without error", t.cells.size() < 42)
+
+
+## The `locked` events of a recorded sound_event list.
+func _locks(events: Array) -> Array:
+	return events.filter(func(e: Array) -> bool: return e[0] == &"locked")
 
 
 func _new_scene() -> Control:
@@ -285,7 +304,7 @@ func _scene() -> void:
 	s.queue_free()
 	await process_frame
 
-	# rush: the last line locking cuts the clock to 5 s, once; the level ends through the normal flow
+	# rush: the last line turning correct cuts the clock to 5 s, once; it never lengthens; the level ends normally
 	s = _new_scene()
 	await process_frame
 	s.time_scale = 0.0
@@ -294,25 +313,36 @@ func _scene() -> void:
 	s.finished.connect(func(a: int, b: int) -> void: done.append([a, b]))
 	s.solve()
 	s.seek(10.0)
+	_check("rush: solve() alone starts nothing", not s.rushed)
 	var solved_r := L.solved_rotations(skin)
-	var first := true
+	var broken_cells: Array[Vector2i] = []
 	for li in 4:
 		var cell: Vector2i = L.traces(skin, solved_r)[li].cells[1]
-		var ci := skin.index(cell.x, cell.y)
-		s.rots[ci] = (solved_r[ci] + 3) % 4
+		broken_cells.append(cell)
+		s.rots[skin.index(cell.x, cell.y)] = (solved_r[skin.index(cell.x, cell.y)] + 3) % 4
+	_check("rush: all four lines broken", L.complete_lines(skin, s.rots) == 0)
+	for li in 4:
+		var cell: Vector2i = broken_cells[li]
 		var guard := 0
-		while not s.is_cell_locked(cell.x, cell.y) and guard < 4:
+		while not L.saved_basins(skin, s.rots)[li] and guard < 4:
 			s.rotate_cell(cell.x, cell.y)
 			guard += 1
 		if li < 3:
-			_check("rush: not before the last line (%d)" % li, not s.rushed and s.skin.timer_seconds == 60.0)
-	_check("rush: all locked -> rushed", s._lines_locked.size() == 4 and s.rushed)
+			_check("rush: not before the last line is correct (%d)" % li, not s.rushed and s.skin.timer_seconds == 60.0)
+	_check("rush: all correct -> rushed", s.rushed and L.complete_lines(skin, s.rots) == 4)
 	_check("rush: clock now 5 s", is_equal_approx(s.skin.timer_seconds - s.elapsed, 5.0) and s.get_node("Hud/Box/Row/Timer").text == "5")
 	s.advance(0.1)
 	_check("rush: warning shows (TR/EN text)", s._rush.visible and s._rush.text != "IO_CONNECT_RUSH" and s._rush.text != "")
 	_check("rush: screen shakes", s.position != Vector2.ZERO)
 	s._rush_clock()
 	_check("rush: never extends again", is_equal_approx(s.skin.timer_seconds, 15.0))
+	var bc: Vector2i = broken_cells[0]
+	s.rotate_cell(bc.x, bc.y)
+	_check("rush: breaking a line afterwards does not lengthen the clock, no flapping",
+		L.complete_lines(skin, s.rots) == 3 and s.rushed and is_equal_approx(s.skin.timer_seconds, 15.0))
+	for k in 3:
+		s.rotate_cell(bc.x, bc.y)
+	_check("rush: fixing it again changes nothing either", L.complete_lines(skin, s.rots) == 4 and is_equal_approx(s.skin.timer_seconds, 15.0))
 	s.seek(14.0)
 	_check("rush: still playable before the 5 s are up", not s.locked and not s._hit)
 	s.seek(15.5)
@@ -320,6 +350,20 @@ func _scene() -> void:
 	s.seek(200.0)
 	_check("rush: level ends with the normal result 4/4", done == [[4, 4]] and s.saved_count == 4)
 	_check("rush: the shared skin is untouched", (load(SKIN_PATH) as ConnectSkin).timer_seconds == 60.0)
+	s.queue_free()
+	await process_frame
+
+	# rush: three correct lines and a wrong match do not start it
+	s = _new_scene()
+	await process_frame
+	s.time_scale = 0.0
+	s.submit = false
+	s.rots = PackedInt32Array(WRONG)
+	s.seek(10.0)
+	var w9 := skin.index(2, 1)
+	s.rots[w9] = 0
+	s.rotate_cell(2, 1)  # -> WRONG: line 1 is complete in basin 3, three lines are not correct
+	_check("rush: a wrong-basin line does not count", s.rots == PackedInt32Array(WRONG) and not s.rushed and s.skin.timer_seconds == 60.0)
 	s.queue_free()
 	await process_frame
 
@@ -357,7 +401,7 @@ func _scene() -> void:
 	s.queue_free()
 	await process_frame
 
-	# lock: a line completed by a turn locks, the others stay free until the wave
+	# nothing locks: a line that turns correct glints and sounds, and can be turned (and broken) afterwards
 	s = _new_scene()
 	await process_frame
 	s.time_scale = 0.0
@@ -365,39 +409,107 @@ func _scene() -> void:
 	var events := []
 	s.sound_event.connect(func(kind: StringName, index: int) -> void: events.append([kind, index]))
 	s.solve()
-	_check("lock: solve() locks nothing", s._lock_at.is_empty() and events.is_empty())
+	_check("lock: solve() sounds nothing", s._glint_at.is_empty() and events.is_empty())
 	var solved := L.solved_rotations(skin)
 	var c1 := skin.index(1, 0)  # corner of line 0
 	s.rots[c1] = (solved[c1] + 1) % 4
 	_check("lock: line 0 is broken first", L.complete_lines(skin, s.rots) == 3)
 	var turns := 0
 	while L.complete_lines(skin, s.rots) < 4 and turns < 4:
-		_check("lock: free until complete", not s.is_cell_locked(1, 0) and s.rotate_cell(1, 0, true))
+		_check("lock: free until correct", s.rotate_cell(1, 0, true))
 		turns += 1
-	_check("lock: 3 turns complete it and lock line 0", turns == 3 and s._lines_locked == [0] and s.is_cell_locked(1, 0))
-	_check("lock: signal `locked` for line 0, once", events == [[&"locked", 0]])
-	_check("lock: all 7 pipes of line 0 locked, no other line",
-		s._lock_at.size() == 7 and s.is_cell_locked(6 - 1, 0) and not s.is_cell_locked(1, 2) and not s.is_cell_locked(1, 3))
-	var kept: int = s.rots[c1]
-	var clicks_before: int = s.clicks
-	_check("lock: a click on a locked pipe does not turn it", not s.rotate_cell(1, 0, true) and s.rots[c1] == kept and s.clicks == clicks_before)
-	_check("lock: it wiggles instead", s._deny.has(c1) and events.size() == 1)
+	_check("lock: 3 turns make line 0 correct, `locked` for line 0 once", turns == 3 and _locks(events) == [[&"locked", 0]])
+	_check("lock: all 7 pipes of line 0 glint, no other line",
+		s._glint_at.size() == 7 and s._glint_at.has(c1) and not s._glint_at.has(skin.index(1, 2)))
 	var w: Node3D = s.get_node("World")
 	w.show_state(s)
-	var piv: Node3D = w._pivots[c1]
-	s.advance(0.025)
-	w.show_state(s)
-	_check("lock: wiggle moves the pipe off its angle", not is_equal_approx(piv.rotation.z, -float(kept) * PI / 2.0))
-	_check("lock: glint frame on the locked pipes", w._lock_frames.has(c1) and (w._lock_frames[c1] as Node3D).visible)
+	_check("lock: glint frame on the pipes", w._lock_frames.has(c1) and (w._lock_frames[c1] as Node3D).visible)
 	s.advance(1.0)
 	w.show_state(s)
-	_check("lock: glint and wiggle fade", not (w._lock_frames[c1] as Node3D).visible and s._deny.is_empty()
-		and is_equal_approx(piv.rotation.z, -float(kept) * PI / 2.0))
-	_check("lock: other lines still free", s.rotate_cell(1, 2) and s.rotate_cell(1, 3) and s._lines_locked == [0])
+	_check("lock: glint fades", not (w._lock_frames[c1] as Node3D).visible)
+	# a correct line still turns: nothing is locked, there is no wiggle
+	var kept: int = s.rots[c1]
+	var clicks_before: int = s.clicks
+	_check("lock: a correct line's pipe still turns", s.rotate_cell(1, 0, true) and s.rots[c1] == (kept + 1) % 4 and s.clicks == clicks_before + 1)
+	_check("lock: ...and that breaks the line (score drops)", L.complete_lines(skin, s.rots) == 3 and not L.saved_basins(skin, s.rots)[0])
+	_check("lock: no sound for breaking", _locks(events) == [[&"locked", 0]])
+	w.show_state(s)
+	var piv: Node3D = w._pivots[c1]
+	s.advance(0.1)
+	w.show_state(s)
+	_check("lock: the pipe sits at its turned angle, no deny wiggle", is_equal_approx(piv.rotation.z, -float(s.rots[c1]) * PI / 2.0))
+	_check("lock: other lines free too", s.rotate_cell(1, 2) and s.rotate_cell(1, 3))
+	for k in 3:
+		s.rotate_cell(1, 0)
+	_check("lock: fixing line 0 again after 1.1 s plays the lock sound again", L.saved_basins(skin, s.rots)[0] and _locks(events) == [[&"locked", 0], [&"locked", 0]])
 	s.seek(60.5)
-	_check("lock: hit keeps the locked line, no extra lock event", s._lines_locked == [0] and events.filter(func(e: Array) -> bool: return e[0] == &"locked").size() == 1)
+	_check("lock: hit sends no extra lock event", _locks(events).size() == 2)
 	s.seek(200.0)
-	_check("lock: locked line is saved", s.saved_count >= 1 and s._saved[0])
+	_check("lock: score counts only the lines correct at the end (lines 1 and 4)", s.saved_count == 2 and s._saved == [true, false, false, true])
+	s.queue_free()
+	await process_frame
+
+	# the lock sound for one line does not repeat within LOCK_REPEAT
+	s = _new_scene()
+	await process_frame
+	s.time_scale = 0.0
+	s.submit = false
+	events = []
+	s.sound_event.connect(func(kind: StringName, index: int) -> void: events.append([kind, index]))
+	s.solve()
+	s.seek(10.0)
+	var flick := func() -> void:  # break line 0 and fix it again
+		for k in 4:
+			s.rotate_cell(1, 0)
+	flick.call()
+	_check("repeat: first time plays", _locks(events) == [[&"locked", 0]])
+	s.advance(0.5)
+	flick.call()
+	_check("repeat: again 0.5 s later is silent, no new glint", _locks(events) == [[&"locked", 0]] and not s._glint_at.has(c1))
+	s.advance(0.4)
+	flick.call()
+	_check("repeat: still silent at 0.9 s", _locks(events).size() == 1)
+	s.advance(0.2)
+	flick.call()
+	_check("repeat: plays again after 1 s (%d)" % _locks(events).size(), _locks(events) == [[&"locked", 0], [&"locked", 0]] and s._glint_at.has(c1))
+	s.rotate_cell(1, 2)  # a straight of line 2: broken by one turn, right again after the second
+	s.rotate_cell(1, 2)
+	_check("repeat: each line has its own timer", _locks(events) == [[&"locked", 0], [&"locked", 0], [&"locked", 1]])
+	s.queue_free()
+	await process_frame
+
+	# wrong match: the line reaches another basin -> no sound, no glint, not saved, shown as spilling
+	s = _new_scene()
+	await process_frame
+	s.time_scale = 0.0
+	s.submit = false
+	events = []
+	s.sound_event.connect(func(kind: StringName, index: int) -> void: events.append([kind, index]))
+	var got_w := []
+	s.finished.connect(func(a: int, b: int) -> void: got_w.append([a, b]))
+	s.solve()
+	s.rots = PackedInt32Array(WRONG)
+	s.rots[skin.index(2, 1)] = 0
+	s.seek(10.0)
+	s.rotate_cell(2, 1)  # the turn that makes line 1 reach basin 3
+	_check("wrong: line 1 reaches basin 3", L.traces(skin, s.rots)[0].complete and L.traces(skin, s.rots)[0].basin == L.basins(skin)[2])
+	_check("wrong: no lock sound, no glint, no rush", _locks(events).is_empty() and s._glint_at.is_empty() and not s.rushed)
+	_check("wrong: nothing is locked, the pipes still turn", s.rotate_cell(2, 1) and s.rotate_cell(1, 0))
+	s.rotate_cell(1, 0)
+	s.rotate_cell(1, 0)
+	s.rotate_cell(1, 0)
+	for k in 3:
+		s.rotate_cell(2, 1)
+	_check("wrong: back in the wrong state", s.rots == PackedInt32Array(WRONG))
+	s.seek(200.0)
+	_check("wrong: not saved at the hit", s._saved == [false, false, false, true] and s.saved_count == 1 and got_w == [[1, 4]])
+	_check("wrong: the water ends as a spill at line 1, not in a basin",
+		events.filter(func(e: Array) -> bool: return e[0] == &"basin") == [[&"basin", 3]]
+		and events.filter(func(e: Array) -> bool: return e[0] == &"spill").any(func(e: Array) -> bool: return e[1] == 0)
+		and not s._lines[0].complete)
+	_check("wrong: the spill is at the last pipe, on the side of the wrong basin",
+		s._lines[0].break_cell == s._lines[0].cells.back() and s._lines[0].break_cell + ConnectLogic.STEP[s._lines[0].break_side] == s._lines[0].basin)
+	_check("wrong: communities 1-3 flood", s._flood_at[0] >= 0.0 and s._flood_at[2] >= 0.0 and s._flood_at[3] < 0.0)
 	s.queue_free()
 	await process_frame
 

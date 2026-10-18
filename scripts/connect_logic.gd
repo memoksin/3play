@@ -82,7 +82,7 @@ static func min_clicks(skin: ConnectSkin, rots: PackedInt32Array) -> int:
 
 
 ## Follows the water from inlet cell `inlet`:
-## {cells: wet pipe cells in order, basin: reached basin cell or (-1,-1), complete,
+## {cells: wet pipe cells in order, basin: reached basin cell or (-1,-1), complete (any basin; see line_correct),
 ##  break_cell, break_side: where water spills and the side of that cell it comes in at}.
 static func trace(skin: ConnectSkin, rots: PackedInt32Array, inlet: Vector2i) -> Dictionary:
 	var res := {"cells": [] as Array[Vector2i], "basin": Vector2i(-1, -1), "complete": false,
@@ -127,17 +127,22 @@ static func traces(skin: ConnectSkin, rots: PackedInt32Array) -> Array[Dictionar
 	return out
 
 
-## Per basin (top to bottom): does water reach it?
-static func saved_basins(skin: ConnectSkin, rots: PackedInt32Array) -> Array[bool]:
+## Is line `line` (trace `t` of inlet `line`) correct: does it reach its own basin (same position from the top)?
+## A line that reaches another basin is wrong.
+static func line_correct(skin: ConnectSkin, t: Dictionary, line: int) -> bool:
 	var bs := basins(skin)
+	return t.complete and line < bs.size() and t.basin == bs[line]
+
+
+## Per basin (top to bottom): is its own line (inlet i -> basin i) correct? Water in a wrong basin saves nothing.
+static func saved_basins(skin: ConnectSkin, rots: PackedInt32Array) -> Array[bool]:
 	var out: Array[bool] = []
-	out.resize(bs.size())
-	out.fill(false)
-	for t in traces(skin, rots):
-		if t.complete:
-			out[bs.find(t.basin)] = true
+	var ts := traces(skin, rots)
+	for li in basins(skin).size():
+		out.append(li < ts.size() and line_correct(skin, ts[li], li))
 	return out
 
 
+## Number of correct lines.
 static func complete_lines(skin: ConnectSkin, rots: PackedInt32Array) -> int:
 	return saved_basins(skin, rots).count(true)
