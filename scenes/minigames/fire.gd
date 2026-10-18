@@ -78,10 +78,10 @@ const RISE_LOSE := Vector2(1.1, 5.6)
 const END_FADE := 1.3
 const END_SKIP_AFTER := 1.0
 ## Out of the gate the figure runs straight down the track (the way the kangaroos went), flat out at the run clip's
-## foot speed (m/s, so the feet do not slide), and fades out past the slab's edge: the point it runs at, metres it
-## takes to fade once it is past that point.
-const RUN_TO := Vector3(6.3, 0.0, 17.1)
-const RUN_FADE := 2.5
+## foot speed (m/s, so the feet do not slide), into the smoke bank on the slab's south edge (EdgeSmoke, z ~17.9,
+## edge 19.4) and is gone inside it, never past the edge: the point it starts to fade at, metres it takes to fade.
+const RUN_TO := Vector3(6.3, 0.0, 17.3)
+const RUN_FADE := 1.2
 const RUN_SPEED := 4.228
 const STRIDE := 0.55
 ## Air in the ending shot: fog density and screen smoke at the hero view (escape, lose).
@@ -845,6 +845,26 @@ func _open_tutorial() -> void:
 	_tut = FireTutorial.new()
 	_tut.started.connect(func() -> void: _tut = null)
 	add_child(_tut)
+	_update_hud(0.0)
+
+
+## Game's off-screen warm-up: true shows the play look (first person, hand, HUD, alert band) for one draw, as its
+## first frame stalls ~0.1 s (a skip lands right on it); false puts the intro back as it was.
+func warm_view(on: bool) -> void:
+	phase = Phase.PLAY if on else Phase.OVERVIEW
+	_farmer.visible = not on
+	_hand.visible = on
+	_alert_box.visible = on
+	if on:
+		_camera.current = true
+		_alert_label.text = tr(ALERTS[&"context"][0])
+		_alert_label.add_theme_font_size_override(&"font_size", 38)
+		_alert_box.add_theme_stylebox_override(&"panel", _alert_white)
+		_place_alert()
+	else:
+		_overview.current = true
+		_pose_overview(_intro_t)
+	_apply_smoke(0.0)
 	_update_hud(0.0)
 
 
@@ -1671,15 +1691,17 @@ func _pose_ending() -> void:
 	var hero_target := HERO_TARGET
 	# the figure
 	var fig := _end_feet
+	var gone := false
 	if esc:
 		# a flat-out run at the run clip's own foot speed (the feet do not slide), from the first frame to the fade
 		var run := RUN_SPEED * t
-		var d := 0.6 + run
+		# he stops where the fade ends, inside the smoke bank: never out over the edge
+		var d := minf(0.6 + run, _end_run_len + RUN_FADE)
 		fig = _end_feet + _end_run_dir * d
+		gone = d >= _end_run_len + RUN_FADE
 		var fade := clampf((d - _end_run_len) / RUN_FADE, 0.0, 1.0)
 		for g: GeometryInstance3D in _farmer.find_children("*", "GeometryInstance3D", true, false):
 			g.transparency = fade
-		_farmer.visible = fade < 1.0
 		var m := _farmer.get_node_or_null("Model")
 		if m and m.has_method(&"run_to_metres"):
 			m.call(&"run_to_metres", run, RUN_SPEED)
@@ -1700,7 +1722,7 @@ func _pose_ending() -> void:
 	_overview.fov = lerpf(_end_fov_from, HERO_FOV, smoothstep(0.0, 1.0, e))
 	_overview.near = lerpf(0.05, 1.0, e)
 	# the figure shows once the camera is out of it
-	_farmer.visible = pos.distance_to(fig + Vector3(0.0, 1.2, 0.0)) > 1.6
+	_farmer.visible = not gone and pos.distance_to(fig + Vector3(0.0, 1.2, 0.0)) > 1.6
 	# the fire takes the farm (the escape ends with the front just behind the runner; the lose takes it all)
 	_end_engulf = smoothstep(0.0, 1.0, t / maxf(_end_dur - 0.8, 0.1))
 	var farm := get_node_or_null(^"Farm/Model")

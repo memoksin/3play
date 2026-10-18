@@ -7,7 +7,7 @@ extends Control
 const PULSE_PERIOD := 2.0   # seconds per glow breath
 const GLOW_LOW := 0.16      # glow alpha at rest, low and high point of the breath
 const GLOW_HIGH := 0.46
-const GLOW_SIZE := 18.0
+const GLOW_SIZE := 8.0
 const SHINE_PERIOD := 2.0   # seconds between shine sweeps
 const GROW := 1.07          # scale of the hovered / focused button
 const GROW_TIME := 0.14

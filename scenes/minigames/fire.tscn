@@ -9,6 +9,7 @@
 [ext_resource type="Shader" path="res://scenes/minigames/fire/smoke_overlay.gdshader" id="7_wb0a7"]
 [ext_resource type="PackedScene" path="res://scenes/ui/hud_timer.tscn" id="8_k27gf"]
 [ext_resource type="Script" path="res://scenes/ui/hud_timer.gd" id="9_o70v6"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/fire/edge_smoke.tscn" id="10_edge"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_svlje"]
 shader = ExtResource("2_4e61n")
@@ -2317,6 +2318,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
 material_override = SubResource("StandardMaterial3D_grh7m")
 cast_shadow = 0
 mesh = SubResource("CylinderMesh_eb3hh")
+
+[node name="EdgeSmoke" parent="." instance=ExtResource("10_edge")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.3, 1.0, 17.9)
 
 [node name="Player" type="CharacterBody3D" parent="." unique_id=27356454]
 transform = Transform3D(0.30901697, 0, 0.95105654, 0, 1, 0, -0.95105654, 0, 0.30901697, -1.2, 0, 7.4)
