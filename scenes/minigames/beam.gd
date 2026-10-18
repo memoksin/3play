@@ -2,8 +2,9 @@ extends Control
 ## Beam minigame (solar flare 3026, #124), a port of the team's "Işın Ağı" prototype. The flare
 ## comes down as one beam; the player turns satellites (45 degree steps) so every part of it ends in
 ## a collector. Every city the beam touches loses power. Four waves: briefing, countdown (a solved puzzle
-## cuts it short and the flare fires by itself), the shot, a result card (retry or go on); a summary
-## hands the best run of every wave to Game.finish_minigame(saved, total, extra).
+## cuts it short and the flare fires by itself), the shot, a result card (retry or go on); after the last
+## wave the best run of every wave goes to Game.finish_minigame(saved, total, extra), through the mission
+## summary card only when BeamSkin.show_summary is on (default off).
 ## Rules: BeamLogic. Data: Game.disaster.skin (BeamSkin). Look: scenes/minigames/beam/ (board and
 ## placeholder pieces, each replaceable by a skin field). Spec: docs/minigames/beam-solar-flare.md.
 ## Time runs in game seconds (real time * time_scale); tests drive it with advance().
@@ -314,7 +315,8 @@ func _finish_wave() -> void:
 	_stat(_t("STAT_LOST"), ", ".join(names) if lost > 0 else _t("STAT_NONE"), BAD if lost > 0 else OK)
 	_stat(_t("STAT_ENERGY"), _t("PERCENT") % res.energy, OK if res.energy >= 100 else Color.WHITE)
 	_stat(_t("STAT_TIME_LEFT"), _t("CHIP_TIME") % res.early, Color.WHITE)
-	_buttons([["Retry", _t("RETRY"), retry, false], ["Next", _t("SUMMARY") if last else _t("NEXT_WAVE"), next_wave, true]])
+	var next_key := "NEXT_WAVE" if not last else ("SUMMARY" if skin.show_summary else "CONTINUE")
+	_buttons([["Retry", _t("RETRY"), retry, false], ["Next", _t(next_key), next_wave, true]])
 	_update_hud()
 
 
@@ -322,9 +324,13 @@ func retry() -> void:
 	show_brief(wave_index)
 
 
+## After the last wave: the mission summary card when BeamSkin.show_summary, else straight on to the result card.
 func next_wave() -> void:
 	if wave_index >= skin.waves.size() - 1:
-		show_final()
+		if skin.show_summary:
+			show_final()
+		else:
+			submit_result()
 	else:
 		show_brief(wave_index + 1)
 
