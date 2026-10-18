@@ -77,12 +77,11 @@ func _run() -> void:
 func _flow(game: Node, key: String) -> void:
 	var role: String = RUNS[key][0]
 	var path: String = RUNS[key][1]
-	# the launch path that makes `path` the pick (a chosen path: no first-pick notice); counts go nowhere
+	# `path` played directly (no easter-egg card); counts go nowhere
 	game.store_path = ""
 	game.reset_launch()
-	game.launch_path = game.path_of(path)
 	print("== ", key, " (", path.get_file(), ")")
-	game.start(StringName(role))
+	game.start(StringName(role), path)
 	var last := Time.get_ticks_usec()
 	var t0 := 0
 	var globe_up := false
