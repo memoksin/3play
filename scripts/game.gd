@@ -300,6 +300,15 @@ func start(new_role: StringName) -> void:
 		_open_run()
 
 
+## Plays the same disaster's minigame again (the result card's Replay), skipping globe and diorama.
+func replay() -> void:
+	saved = 0
+	total = 0
+	extra = {}
+	_step = FLOW.find(&"minigame") - 1
+	next()
+
+
 ## Picks the disaster and starts loading its scenes in the background.
 func _begin_run() -> void:
 	disaster = load(pick_for(role))

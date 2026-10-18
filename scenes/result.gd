@@ -31,7 +31,7 @@ func _ready() -> void:
 	_optional(%Co, d, "CARD_CO")
 	%Replay.text = TextFx.upper(tr("RESULT_REPLAY"))
 	%Menu.text = TextFx.upper(tr("RESULT_MENU"))
-	%Replay.pressed.connect(Game.start.bind(Game.role))
+	%Replay.pressed.connect(Game.replay)
 	%Menu.pressed.connect(Game.next)
 	get_viewport().size_changed.connect(fit)
 	fit.call_deferred()
