@@ -255,6 +255,15 @@ func _run() -> void:
 	game.start(&"citizen")
 	_check("role menu pick again: a new roll gives Kahramanmaras", await _at(&"globe") and game.disaster.resource_path == KAHR)
 
+	# 9. Vatandaş first on the main path: Kahramanmaras offers Devlet (Indian Ocean)
+	_first_run(0, &"citizen")
+	_check("Kahramanmaras run reaches its result card", await _to_result())
+	_check("result after Kahramanmaras: block shown", (current_scene.get_node("%Partner") as Control).visible)
+	_check("result after Kahramanmaras: asks for the Devlet perspective",
+			(current_scene.get_node("%PartnerText") as Label).text == "Devlet perspektifinden de oynamanız önerilir")
+	current_scene.get_node("%PartnerPlay").pressed.emit()
+	_check("Oyna after Kahramanmaras: Indian Ocean as Devlet", await _at(&"globe") and game.disaster.resource_path == IO and game.role == &"state")
+
 	game.reset_launch()
 	print("test_partner ok" if ok else "test_partner FAIL")
 	quit(0 if ok else 1)

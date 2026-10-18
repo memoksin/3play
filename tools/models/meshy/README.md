@@ -28,6 +28,8 @@ walk / jog / run by the speed it reads from `set_run(phase)` and seeks them by d
 
 Clips are in place. Move the character at the ground speed above (planted-foot speed, `work/<name>_report.json`
 `foot_speed_mps`) or the feet slide; scale playback with the move speed for in-between speeds.
+In Fener the player walks 5.2 m/s and followers can catch up at 6.5: `run` then plays at 1.4x (adults, 3.8) and 2.0-2.5x (child, 2.6),
+which is why `fener_rig.gd` lets `run` speed up to 2.6x (feet still keep still).
 Clip set per character: `CLIPS_OF` in `clips.py` (any clip can be given to anyone: add it there and rebuild).
 
 ## Rebuild

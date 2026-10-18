@@ -1,6 +1,7 @@
 extends SceneTree
 ## Fener (#123): full runs by a path-finding bot (every kind of person: follow, slow, trapped -> report,
-## injured -> first aid kit, cold -> blanket), the finish payload, the map (spots reachable, also after
+## cold -> blanket; the first aid kit mechanic runs on a copy of the skin with an injured person added, the
+## shipped skin has nobody who needs it), the finish payload, the map (spots reachable, also after
 ## every aftershock change), flashlight and line of sight, aftershocks, each hazard, pickups, pointer
 ## input, time up, audio signals.
 ##   godot --headless --path . -s res://tests/test_fener.gd
@@ -12,6 +13,7 @@ const CELL := 0.5
 var ok := true
 var frames := 0
 var fener
+var shipped: FenerSkin
 var got: Array = []
 var sounds: Array[StringName] = []
 
@@ -57,6 +59,7 @@ func _run() -> void:
 		print("FAIL scene loads")
 		quit(1)
 		return
+	shipped = game.disaster.skin
 	fener = scene.instantiate()
 	fener.submit = false
 	fener.finished.connect(func(s: int, t: int, e: Dictionary) -> void: got = [s, t, e])
@@ -65,20 +68,29 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	_check("text is translated", tr("KAHR_FENER_START") != "KAHR_FENER_START")
-	_check("6 people of 5 kinds", fener.people.size() == 6 and _kinds() == 5)
+	_check("5 people of 4 kinds", fener.people.size() == 5 and _kinds() == 4)
+	_check("nobody is injured: no first aid kit is put out and none is ever needed",
+			not fener.people.any(func(p) -> bool: return p.def.kind == FenerPerson.Kind.INJURED)
+			and not fener.items.any(func(it) -> bool: return it.kind == &"kit") and not fener.needs(&"kit"))
 	_check("people start lost", fener.people.all(func(p) -> bool: return p.st == fener.St.LOST))
-	_check("pickups placed", fener.items.size() == 4)
+	_check("pickups placed: two batteries and a blanket", fener.items.size() == 3)
 	_check("hazards of every kind", _hazard_kinds() == 5)
 	_check("opening glide runs before play", fener.intro_left > 0.0 and fener.t == 0.0)
 	_map()
 	for sd in [11, 4242, 7, 99]:
 		await _playthrough(sd)
+	fener.skin = _kit_skin()
+	_check("kit skin: six people, the injured one and a kit", _kit_skin().people.size() == 6)
+	await _playthrough(11, "kit skin, ")
+	fener.skin = shipped
 	_lamp()
 	_light()
 	_shocks()
 	_hazards()
+	fener.skin = _kit_skin()
 	_items_and_care()
 	_supplies()
+	fener.skin = shipped
 	_events()
 	_pointer()
 	_cues()
@@ -87,6 +99,24 @@ func _run() -> void:
 	_figures()
 	print("test_fener ok" if ok else "test_fener FAIL")
 	quit(0 if ok else 1)
+
+
+## The shipped skin has nobody who needs first aid (no kit is put out), but the kit mechanic stays in the rules:
+## its tests run on a copy of the skin with one injured person added (before Can, as the old Hasan stood).
+func _kit_skin() -> FenerSkin:
+	var sk: FenerSkin = shipped.duplicate()
+	var d := FenerPerson.new()
+	d.id = &"hurt"
+	d.name_key = "GRANDPA"
+	d.kind = FenerPerson.Kind.INJURED
+	d.spot_group = &"slow"
+	d.color = Color(1, 0.42, 0.42)
+	d.figure = shipped.people[2].figure
+	var arr: Array[FenerPerson] = []
+	arr.assign(shipped.people)
+	arr.insert(arr.size() - 1, d)
+	sk.people = arr
+	return sk
 
 
 func _kinds() -> int:
@@ -249,8 +279,8 @@ func _item(kind: StringName):
 	return null
 
 
-func _playthrough(sd: int) -> void:
-	var tag := "seed %d: " % sd
+func _playthrough(sd: int, label := "") -> void:
+	var tag := label + "seed %d: " % sd
 	_fresh(sd)
 	var start: Vector2 = fener.ppos
 	var guard := 0
@@ -277,7 +307,7 @@ func _playthrough(sd: int) -> void:
 			_check(tag + "a %s is at a crew" % need, it != null)
 			if it == null:
 				return
-			_check(tag + "the %s lies by a rescue crew" % need, FenerMap.CREWS.any(func(c: Vector3) -> bool: return Vector2(c.x, c.y).distance_to(it.pos) < 4.0))
+			_check(tag + "the %s lies in a rescue crew zone" % need, FenerMap.CREWS.any(func(c: Vector3) -> bool: return Vector2(c.x, c.y).distance_to(it.pos) < c.z))
 			# the zone is the pickup: walk to where the HUD points and stop at its edge
 			_walk_to(g[0], func() -> bool: return it.taken)
 			_check(tag + "picked up the %s" % need, it.taken)
@@ -299,14 +329,14 @@ func _playthrough(sd: int) -> void:
 		_check(tag + "followers trail the player", near)
 		_check(tag + "path to the assembly area", _walk_to(FenerMap.AREA.get_center(), func() -> bool: return fener.follow.is_empty()))
 	print("  %sbot time %.1f s, injuries %d" % [tag, fener.t, fener.inj])
-	_check(tag + "all 6 safe before time ran out (%.0f s, %d injuries)" % [fener.t, fener.inj], fener.saved_n == 6 and fener.t < fener.skin.time_seconds)
+	_check(tag + "all %d safe before time ran out (%.0f s, %d injuries)" % [fener.people.size(), fener.t, fener.inj], fener.saved_n == fener.people.size() and fener.t < fener.skin.time_seconds)
 	_check(tag + "every person safe or reported", fener.people.all(func(p) -> bool: return p.st == fener.St.SAVED or p.st == fener.St.REPORTED))
 	_wait(fener.FIN_DELAY + 0.2)
-	_check(tag + "finished emitted, 6/6", got.size() == 3 and got[0] == 6 and got[1] == 6)
+	_check(tag + "finished emitted, all of them (%d/%d)" % [fener.people.size(), fener.people.size()], got.size() == 3 and got[0] == fener.people.size() and got[1] == fener.people.size())
 	if got.size() == 3:
 		var e: Dictionary = got[2]
 		_check(tag + "extra keys", e.has("injuries") and e.has("battery") and e.has("time_left") and e.has("aftershocks_dodged") and e.has("found"))
-		_check(tag + "extra matches the run", e.battery == roundi(fener.bat) and e.injuries == fener.inj and e.found == 6)
+		_check(tag + "extra matches the run", e.battery == roundi(fener.bat) and e.injuries == fener.inj and e.found == fener.people.size())
 	_check(tag + "moved across the map", fener.ppos.distance_to(start) > 40.0)
 	_check(tag + "found + heartbeat + saved + report signals", sounds.has(&"found") and sounds.has(&"heartbeat") and sounds.has(&"saved") and sounds.has(&"report") and sounds.has(&"step"))
 	await process_frame
@@ -529,7 +559,7 @@ func _supplies() -> void:
 	# inside the zone, but away from the rescuer at its centre and from the supplies
 	var inside := zone + Vector2(-4.5, 0.0)
 	var near_crew := func(it) -> bool:
-		return FenerMap.CREWS.any(func(cc: Vector3) -> bool: return Vector2(cc.x, cc.y).distance_to(it.pos) < 4.0)
+		return FenerMap.CREWS.any(func(cc: Vector3) -> bool: return Vector2(cc.x, cc.y).distance_to(it.pos) < cc.z)
 	_check("kit and batteries belong to a crew zone from the start", kit != null and near_crew.call(kit) and fener.items.filter(func(it) -> bool: return it.kind == &"battery").all(near_crew))
 	_check("the blanket is not out yet", blanket != null and not blanket.active)
 	_check("inside the zone, away from the figure and the supplies", fener.in_crew(0) == false and inside.distance_to(zone) > 4.0 and inside.distance_to(kit.pos) > fener.REACH and inside.distance_to(bat.pos) > fener.REACH)
@@ -741,7 +771,15 @@ func _cues() -> void:
 func _easy() -> void:
 	_fresh(21)
 	fener.next_shock = 999.0
-	_check("easy: 5 minutes and a battery that outlasts them", fener.skin.time_seconds >= 270.0 and 100.0 / fener.skin.drain >= 100.0)
+	_check("easy: 4 minutes and a battery that outlasts them", is_equal_approx(fener.skin.time_seconds, 240.0) and 100.0 / fener.skin.drain >= 100.0)
+	_check("pace: the player walks 5.2 m/s, the first aftershock comes after about a minute",
+			is_equal_approx(fener.skin.walk_speed, 5.2) and fener.skin.shock_first.x >= 55.0 and fener.skin.shock_first.y <= 65.0)
+	var tick: float = fener.skin.time_seconds
+	fener.t = 0.0
+	var c0: String = fener.story_clock()
+	fener.t = tick
+	_check("story clock: 04:38 to 05:18 over the 4 minutes (the same pace as before)", c0 == "04:38" and fener.story_clock() == "05:18")
+	fener.t = 0.0
 	var m = fener.people[0]
 	m.pos = fener.ppos + Vector2(6.0, 0.0)
 	fener.aim = 0.0
@@ -794,9 +832,9 @@ func _figures() -> void:
 	var clips := {}
 	for i in fener.people.size():
 		clips[fener.people[i].def.id] = w._people[i].rig.clip
-	_check("waiting: mom and sister idle, grandpa idle, Ayse and Hasan lying (trapped), Can shivers",
+	_check("waiting: mom and sister idle, grandpa idle, Ayse lying (trapped), Can shivers",
 			clips[&"mom"] == &"idle" and clips[&"sister"] == &"idle" and clips[&"grandpa"] == &"idle"
-			and clips[&"ayse"] == &"trapped" and clips[&"hasan"] == &"trapped" and clips[&"can"] == &"shiver")
+			and clips[&"ayse"] == &"trapped" and clips[&"can"] == &"shiver")
 	_check("standing player idles", w._me.rig.clip == &"idle")
 	_check("rescuers dig while nobody has reported", w._crew.all(func(a) -> bool: return a.rig.clip == &"dig"))
 	# the player runs: the clip rate times its ground speed is the real speed (no sliding feet)
@@ -842,7 +880,12 @@ func _figures() -> void:
 	var rp = Rig.new(bare, {})
 	_check("a figure without clips is left alone", not rp.ok and rp.loco(3.0, 0.1) == &"")
 	bare.free()
-	# first aid: the hurt man lies, gets up, then walks tired
+	# first aid (on the kit skin copy): the hurt man lies, gets up, then walks tired
+	fener.skin = _kit_skin()
+	_fresh(31)
+	fener.next_shock = 999.0
+	fener.l_on = false
+	w.show_state(fener, 0.0)
 	var hasan = fener.people.filter(func(p) -> bool: return p.def.kind == FenerPerson.Kind.INJURED)[0]
 	var ah = w._people[hasan.idx]
 	hasan.st = fener.St.TREAT
@@ -853,6 +896,31 @@ func _figures() -> void:
 	hasan.treat_t = fener.TREAT_TIME * 0.8
 	w.show_state(fener, DT)
 	_check("hurt man gets up during first aid", ah.rig.clip == &"idle")
+	fener.skin = shipped
+	_fresh(31)
+	fener.next_shock = 999.0
+	fener.l_on = false
+	w.show_state(fener, 0.0)
+	# the child at the new pace: the run clip keeps up with the player and a catching-up follower (no sliding feet)
+	var mom2 = fener.people[0]
+	var sis = fener.people[1]
+	for q in [mom2, sis]:
+		q.st = fener.St.FOLLOW
+		fener.follow.append(q)
+	fener.ov_move = Vector2.RIGHT
+	_sim(1.5)
+	var pre: Vector2 = fener.ppos
+	_sim(DT * 6.0)
+	var vp: float = fener.ppos.distance_to(pre) / (DT * 6.0)
+	var a_mom = w._people[mom2.idx]
+	var a_sis = w._people[sis.idx]
+	_check("the player runs near 5.2 m/s (%.2f)" % vp, vp > 4.0 and vp < 5.3)
+	_check("mom keeps up at that pace: run clip rate x clip speed = ground speed",
+			a_mom.rig.clip == &"run" and absf(a_mom.rig.rate * mom2.def.figure_speeds[&"run"] - a_mom.rig.speed) < 0.3)
+	_check("the child keeps up too (rate %.2f, her clip 2.6 m/s)" % a_sis.rig.rate,
+			a_sis.rig.clip == &"run" and absf(a_sis.rig.rate * sis.def.figure_speeds[&"run"] - a_sis.rig.speed) < 0.3)
+	_check("a catching-up child's clip is not capped below the follower cap (6.5 m/s)", a_sis.rig.rate < 2.6 and fener.skin.walk_speed * 1.25 / sis.def.figure_speeds[&"run"] <= 2.6)
+	fener.ov_move = Vector2.ZERO
 	# cold child: blanket, then follows
 	var can = fener.people.filter(func(p) -> bool: return p.def.kind == FenerPerson.Kind.COLD)[0]
 	can.st = fener.St.FOLLOW
@@ -903,7 +971,7 @@ func _time_up() -> void:
 	fener.next_shock = 999.0
 	fener.t = fener.skin.time_seconds - 0.01
 	fener.step(DT)
-	_check("time up finishes with saved 0 of 6", fener.done and got.size() == 3 and got[0] == 0 and got[1] == 6)
+	_check("time up finishes with saved 0 of 5", fener.done and got.size() == 3 and got[0] == 0 and got[1] == 5)
 	var n := got.size()
 	fener.step(DT)
 	_check("no steps after finish", fener.done and got.size() == n)
