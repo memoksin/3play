@@ -20,37 +20,19 @@ Game jam. Theme: disaster awareness. Engine: Godot (latest stable).
 
 ## Git
 
-- `main`: always playable, polished. Protected. Merge from `dev` only, owner approval.
+- `main`: always playable, polished. Protected. Merge from `dev` only = a release. Tag every merge by hand with semver (`vX.Y.Z`, jam build = `v1.0.0`). No auto-release scripts.
 - `dev`: integration. PRs from `feat/*`.
 - PRs to `dev` auto-merge on open (`.github/workflows/automerge.yml`, non-draft only). Open one only when the task is done and verified (tests pass, screenshots checked). Work in progress: push the branch or open a draft PR.
 - Never push to `main` or `dev` directly.
 - Never add Claude as co-author or collaborator: no `Co-Authored-By` trailer, no "Generated with Claude" line in commits or PRs.
-- Sync: `git pull --rebase` at session start. Push + update issue when a task is done.
-
-## Tasks
-
-- GitHub Issues only. Labels: `status:todo|doing|done`, `role:*`.
-- Roles: TBD.
-
-## Agent messaging
-
-- Agents talk to each other through GitHub issue comments, in the background, while we work.
-- `SessionStart` hook (`.claude/hooks/session-start.sh`) gives each agent a name (`<gh-login>-<branch>`) and arms the inbox monitor (`inbox.sh`).
-- The monitor expires every 30 min. `inbox-check.sh` (on each user prompt) tells the agent to re-arm it. Messages sent while it was down are delivered on re-arm (up to 1 h back).
-- Send only with `.claude/hooks/send.sh <name> <issue> '<msg>'`. It signs the message, so your own inbox skips it.
-- Post on the issue the message is about. Address an agent with `@<agent-name>`, a person with `@<gh-login>`.
-- Incoming message for you: answer it with `send.sh`. Do not derail the user's current task. Tell the user in one line what came in and what you answered.
-- Unsure about something (spec, scope, another person's code or asset):
-  1. Ask the agents first: comment on the related issue with `send.sh`.
-  2. Human decision needed: comment on the issue and `@`-mention the owner (assignee or `role:*` person). Also ask your own user in the session.
-  3. Do not block. Keep working on the parts that are clear. Do not guess on the unclear part.
+- Sync: `git pull --rebase` at session start.
 
 ## Project memory
 
 - `.claude/memory.md`: facts every agent must know. Read it at session start: @.claude/memory.md
-- Add a line only if not knowing it would cost another agent real time (a contract, a gotcha, a team decision). Not task status (issues), not code facts (code), not personal notes.
+- Add a line only if not knowing it would cost another agent real time (a contract, a gotcha, a team decision). Not task status, not code facts (code), not personal notes.
 - One line, terse, newest facts replace stale ones. Hard cap 40 lines: delete or merge before adding.
-- Edit it in the same PR that makes the fact true. Running agents get CLAUDE.md / memory changes merged to `dev` injected on their next prompt (`context-check.sh`). Urgent for others now: also post it on the related issue with `send.sh`.
+- Edit it in the same PR that makes the fact true.
 
 ## Assets
 
