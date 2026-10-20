@@ -145,7 +145,10 @@ func _ready() -> void:
 	apply_audio_settings.call_deferred()  # the Audio autoload makes its buses in its own _ready
 	if DisplayServer.get_name() != "headless":
 		_warm_globe_once()
-		_preload_mini_assets()
+		# web: ~110 MB of Fener models decoded at the launch notice ran small tabs out of memory (the browser
+		# reloads the page); there they load only on a Fener run's own cover
+		if not OS.has_feature("web"):
+			_preload_mini_assets()
 
 
 ## Requested scenes nobody took (e.g. the game quits on the globe) are collected, so none leaks.
